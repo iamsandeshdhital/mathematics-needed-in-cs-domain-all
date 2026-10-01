@@ -1,0 +1,11 @@
+# Mathematics Needed in Computer Science — runnable examples
+#
+# Every lesson in this repository runs with the Python standard library alone.
+# The libraries below are only used in the clearly marked "With Libraries"
+# subsections, which you can skip entirely.
+
+# --- optional, for the "With Libraries" sections ---------------------
+numpy>=1.24          # vectors, matrices, eigenvalues
+matplotlib>=3.7      # plotting functions, distributions, gradient descent
+scipy>=1.10          # optimisation, statistical tests
+sympy>=1.12          # symbolic algebra, exact fractions
