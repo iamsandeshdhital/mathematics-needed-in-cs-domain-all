@@ -20,3 +20,6 @@ desktop.ini
 .env
 .env.*
 *.log
+# agent scratch files and generated plots
+cv.py
+*.png
