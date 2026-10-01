@@ -34,10 +34,10 @@ trials).
 - **A/B test conversion.** "Did the user sign up" is Bernoulli with p equal to
   the conversion rate; "how many of 10,000 users signed up" is Binomial with
   n = 10,000. The variance of that count decides whether the result is real
-  ([Lesson 64](64_expectation_variance.md)).
+  ([Lesson 64](../part05_probability_statistics/64_expectation_variance.md)).
 - **Binomial CIs.** Every standard error formula for a proportion, and the
   normal-approximation p-value, is derived from the Binomial
-  ([Lesson 69](69_estimation_and_hypothesis_testing.md)).
+  ([Lesson 69](../part05_probability_statistics/69_estimation_and_hypothesis_testing.md)).
 - **Tail-latency modelling.** Whether a request takes 1 ms or 2 ms is Bernoulli;
   the count of slow requests in a batch is Binomial.
 - **Interviews.** "If p = 0.1, what is the chance of at least 3 successes in 5
@@ -99,7 +99,7 @@ Then
 **Proof.** For any outcome, if X = 3 then precisely I₁, I₂, I₃ are 1 and the rest
 are 0, so the sum equals 3 = X. Summing probabilities over outcomes gives the
 expectation identity, which is linearity of expectation
-([Lesson 64](64_expectation_variance.md)).  ∎
+([Lesson 64](../part05_probability_statistics/64_expectation_variance.md)).  ∎
 
 This is sometimes called the tail-sum formula, and it is a genuine piece of
 mathematical engineering: **every discrete distribution can be built from
@@ -115,7 +115,7 @@ and it is the conceptual bridge from Bernoulli to Binomial.
 for a parameter p ∈ [0, 1]. It models one trial with two outcomes, and only
 those two.
 
-Its mean and variance (proved in [Lesson 64](64_expectation_variance.md)) are
+Its mean and variance (proved in [Lesson 64](../part05_probability_statistics/64_expectation_variance.md)) are
 
     E[X] = p        Var(X) = p(1 − p)
 
@@ -149,7 +149,7 @@ by linearity, and Var(S) = ΣVar(Xᵢ) = np(1−p) by independence.
 
 The mean is the count you would expect, np, and the standard deviation
 √(np(1−p)) is the spread around it. These two numbers determine everything
-practical — [Lesson 68](68_law_of_large_numbers_and_clt.md) shows that for large
+practical — [Lesson 68](../part05_probability_statistics/68_law_of_large_numbers_and_clt.md) shows that for large
 np the shape is approximately normal, so these two alone predict the tail
 probabilities.
 
@@ -244,7 +244,7 @@ X ~ Bernoulli(0.25). Enumerate a long run and watch the average settle.
 Over 4 flips, "success" happens with probability 0.25 per flip. The average of
 the indicator values over many flips should approach 0.25 — which is p. This is
 the whole content of the claim E[X] = p for a Bernoulli, and it is also the law
-of large numbers ([Lesson 68](68_law_of_large_numbers_and_clt.md)) in its
+of large numbers ([Lesson 68](../part05_probability_statistics/68_law_of_large_numbers_and_clt.md)) in its
 smallest form.
 
 For a fair coin (p = 0.5), the sample average of 20 flips is 0.5 only in
@@ -511,7 +511,7 @@ whenever you write down a Binomial, and check whether the mechanism deserves it.
 | `k` | `$k \in \{0, 1, \dots, n\}$` | The number of successes counted. | Every Binomial PMF query; $P(S=k) = 0$ outside $\{0,\dots,n\}$. |
 | `$S \sim \mathrm{Binomial}(n,p)$` | `$P(S=k) = \binom{n}{k} p^k (1-p)^{n-k}$`, needs **`0 \le p \le 1`** and **`n` a non-negative integer** | Count of successes in $n$ **independent** trials each succeeding with probability $p$. | Conversions in a fixed-size sample, cache hits in a batch, failures in a window. |
 | `E[S]` (Binomial) | `$= np$` | The expected count. Often not an achievable outcome — for $n=8, p=0.4$ it is 3.2. | Capacity planning. Not a prediction for one run. |
-| `Var(S)` (Binomial) | `$= np(1-p)$` | Spread of the count. From independence plus $\operatorname{Var}(X_1 + \cdots + X_n) = \sum \operatorname{Var}(X_i)$. | Every standard error for a proportion ([Lesson 68](68_law_of_large_numbers_and_clt.md)). |
+| `Var(S)` (Binomial) | `$= np(1-p)$` | Spread of the count. From independence plus $\operatorname{Var}(X_1 + \cdots + X_n) = \sum \operatorname{Var}(X_i)$. | Every standard error for a proportion ([Lesson 68](../part05_probability_statistics/68_law_of_large_numbers_and_clt.md)). |
 | `sd(S)` | `$\sqrt{np(1-p)}$` | The spread in original units. | "Typically between 29 and 51" out of an expected 40. |
 | `mode` (Binomial) | `$\lfloor (n+1)p \rfloor$` | The peak. Equals the mean only for symmetric distributions. | The single most likely count, which is usually not the expected count for small $np$. |
 | `$\binom{n}{k}$` | `$= \dfrac{n!}{k!\,(n-k)!}$` | Choosing which $k$ of the $n$ trials succeeded. | The combinatorial reason the Binomial exists; needs the counting of [Lesson 21](../part02_discrete_combinatorics/21_permutations_and_combinations.md). |
@@ -537,7 +537,7 @@ $n = 1000$ fixed trials, $p = 0.2$ miss rate, independence given — that *is* t
 definition of Binomial. Mean $= 1000 \times 0.2 = 20$; variance $= 1000 \times
 0.2 \times 0.8 = 160$, so $sd = \sqrt{160} \approx 4.43$. Option A imports a
 different distribution (introduced in
-[Lesson 66](66_common_distributions.md)) for a count that has a hard bound of
+[Lesson 66](../part05_probability_statistics/66_common_distributions.md)) for a count that has a hard bound of
 1000. Option C flips $p$ — hits are $p = 0.8$, misses are $p = 0.2$ — giving the
 right shape with the wrong mean, which is Mistake 4 in this lesson. Option D
 confuses the miss count with the retry structure from Exercise 3; retries would
@@ -725,7 +725,7 @@ Option B is the count and its spread ($np = 1000$, $\sqrt{np(1-p)} = 30$) left
 unconverted. Option C divides by 100 twice. Option D is off by a factor of 100 in
 the estimate — the reciprocal error. Note how small the standard error is: that is
 why an A/B test needs thousands of users, and why the whole machinery of
-[Lesson 69](69_estimation_and_hypothesis_testing.md) is needed to say whether a
+[Lesson 69](../part05_probability_statistics/69_estimation_and_hypothesis_testing.md) is needed to say whether a
 difference this size is real.
 
 </details>
@@ -965,7 +965,7 @@ way to zero.
 It is also why the lesson's last code block reports the *distribution* of $\hat{p}$
 rather than a single number: an estimate without its spread is not an answer, and
 the spread is what a confidence interval is built from
-([Lesson 69](69_estimation_and_hypothesis_testing.md)).
+([Lesson 69](../part05_probability_statistics/69_estimation_and_hypothesis_testing.md)).
 
 </details>
 
@@ -1500,7 +1500,7 @@ print(f"  sd: naive {sqrt(var_naive):.6f} vs true {sqrt(var_struct):.6f}")
 
 ## Next
 
-[64 — Expectation, Variance, and Laws](64_expectation_variance.md) computes the
+[64 — Expectation, Variance, and Laws](../part05_probability_statistics/64_expectation_variance.md) computes the
 mean and spread of any random variable, proves linearity of expectation without
 any independence assumption, and shows why the square of a mean is not the mean
 of squares.

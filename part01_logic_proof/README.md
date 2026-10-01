@@ -8,12 +8,12 @@ take this one.
 
 | # | Lesson | What it does |
 | --- | --- | --- |
-| 10 | [Propositions and Connectives](10_propositions_and_connectives.md) | Statements, AND, OR, NOT, implication, biconditional, and why `if p then q` is not `p and q`. Negating a compound statement correctly. The single most misused piece of notation in all of programming. |
-| 11 | [Truth Tables, Equivalence, and Normal Forms](11_truth_tables_and_equivalence.md) | Truth tables, tautologies, contradictions, logical equivalence, De Morgan's laws, disjunctive and conjunctive normal form, and why that matters for circuit design and for simplifying a condition in your code. |
-| 12 | [Predicates and Quantifiers](12_predicates_and_quantifiers.md) | Predicates over a stated domain, universal and existential quantification, negating quantifiers, nested quantifiers, and the connection to SQL, type systems and test coverage. |
-| 13 | [Proof Techniques](13_proof_techniques.md) | Direct proof, contrapositive, contradiction, the anatomy of a proof, and how each one appears in program verification. |
-| 14 | [Mathematical Induction](14_mathematical_induction.md) | The induction template, why both halves are load-bearing, strong induction, and the exact correspondence with recursive functions and loop invariants. |
-| 15 | [Sets and Cardinality](15_sets_and_cardinality.md) | Set operations, power sets, cardinality, infinite sets and countability including why pairs of naturals can be counted, and how sets appear in data structures. |
+| 10 | [Propositions and Connectives](../part01_logic_proof/10_propositions_and_connectives.md) | Statements, AND, OR, NOT, implication, biconditional, and why `if p then q` is not `p and q`. Negating a compound statement correctly. The single most misused piece of notation in all of programming. |
+| 11 | [Truth Tables, Equivalence, and Normal Forms](../part01_logic_proof/11_truth_tables_and_equivalence.md) | Truth tables, tautologies, contradictions, logical equivalence, De Morgan's laws, disjunctive and conjunctive normal form, and why that matters for circuit design and for simplifying a condition in your code. |
+| 12 | [Predicates and Quantifiers](../part01_logic_proof/12_predicates_and_quantifiers.md) | Predicates over a stated domain, universal and existential quantification, negating quantifiers, nested quantifiers, and the connection to SQL, type systems and test coverage. |
+| 13 | [Proof Techniques](../part01_logic_proof/13_proof_techniques.md) | Direct proof, contrapositive, contradiction, the anatomy of a proof, and how each one appears in program verification. |
+| 14 | [Mathematical Induction](../part01_logic_proof/14_mathematical_induction.md) | The induction template, why both halves are load-bearing, strong induction, and the exact correspondence with recursive functions and loop invariants. |
+| 15 | [Sets and Cardinality](../part01_logic_proof/15_sets_and_cardinality.md) | Set operations, power sets, cardinality, infinite sets and countability including why pairs of naturals can be counted, and how sets appear in data structures. |
 
 ## What this part assumes
 

@@ -34,7 +34,7 @@ transformations collapses into a single matrix.
   [lesson 91](../part07_geometry_graphics/91_transformations_graphics.md). Order
   matters because the matrices do not commute.
 - **PageRank** is one matrix `P` with `Pᵀ` in the update; the two being different
-  is the whole subtlety. [Lesson 41](41_matrices_graphs_and_applications.md).
+  is the whole subtlety. [Lesson 41](../part03_linear_algebra/41_matrices_graphs_and_applications.md).
 - **Databases and state.** A transition matrix over states, and matrix
   exponentiation for "how many paths of length k", shows up in scheduling,
   queueing, and Markov chain work.
@@ -47,7 +47,7 @@ transformations collapses into a single matrix.
 
 ## The Formal Version
 
-Symbols follow [SYMBOLS.md](../../SYMBOLS.md).
+Symbols follow [SYMBOLS.md](../SYMBOLS.md).
 
 **Definition.** An `m × n` matrix `A` over a field `F` is a function
 `{1, …, m} × {1, …, n} → F`, written `A = (a_ij)` with `m` rows and `n` columns.
@@ -1136,7 +1136,7 @@ entries of `BᵀAᵀ`. This is the rule the lesson's code checks directly with
   becomes correct only if you also swap `A` and `B`, which is the whole point.
 - D) is a different operation entirely. `AB` and `A⁻¹B` are unrelated; the
   transpose has nothing to do with inversion, and the inverse is
-  [lesson 33](33_determinant_and_inverse.md).
+  [lesson 33](../part03_linear_algebra/33_determinant_and_inverse.md).
 
 </details>
 
@@ -1378,7 +1378,7 @@ the basis determines `A` everywhere, which is why
   coefficient lists. Rows and columns are both real; you only have to know which
   question you are asking.
 - C) confuses `A` with the output of a solver. Row reduction happens to
-  [lesson 32](32_linear_systems_gaussian_elimination.md) and changes the matrix;
+  [lesson 32](../part03_linear_algebra/32_linear_systems_gaussian_elimination.md) and changes the matrix;
   the original columns of `A` are untouched.
 - D) is about a different decomposition. Singular values come from `AᵀA`, not
   from the columns directly, and are not introduced in this lesson.
@@ -2485,7 +2485,7 @@ million samples is the difference between the numbers the code prints.
 
 ## Next
 
-[32 — Linear Systems and Gaussian Elimination](32_linear_systems_gaussian_elimination.md)
+[32 — Linear Systems and Gaussian Elimination](../part03_linear_algebra/32_linear_systems_gaussian_elimination.md)
 uses everything here to answer one question: given `Ax = b`, what is `x`? It
 builds the row-reduction algorithm by hand, explains partial pivoting and why it
 is numerically stable, and works through a system that has no unique solution.

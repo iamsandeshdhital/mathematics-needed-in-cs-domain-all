@@ -28,7 +28,7 @@ they overlap.
 
 This lesson builds the vocabulary — sample space, event, probability model — and
 shows why counting is the engine behind all of it. The formal rules arrive in
-[61 — Probability Axioms and Rules](61_probability_axioms_and_rules.md).
+[61 — Probability Axioms and Rules](../part05_probability_statistics/61_probability_axioms_and_rules.md).
 
 ## Why Computer Science Cares
 
@@ -78,7 +78,7 @@ function defined on subsets, not on individual outcomes.
 
 **Definition.** A *probability* (or probability measure) on (Ω, 𝒫(Ω)) is a
 function P from subsets of Ω to real numbers satisfying the three rules in
-[Lesson 61](61_probability_axioms_and_rules.md). Written P(A), it is read "the
+[Lesson 61](../part05_probability_statistics/61_probability_axioms_and_rules.md). Written P(A), it is read "the
 probability of A". Its output is always in [0, 1].
 
 ### Three ways to give a number to an event
@@ -124,7 +124,7 @@ Three consequences of taking frequency seriously:
   axiomatic view have no trouble with it.
 - **It is a real measurement, so it can be wrong.** A biased die gives a stable
   wrong frequency — stable is what makes it dangerous.
-- **It is the bridge to statistics.** [Lesson 68](68_law_of_large_numbers_and_clt.md)
+- **It is the bridge to statistics.** [Lesson 68](../part05_probability_statistics/68_law_of_large_numbers_and_clt.md)
   turns this convergence into a theorem, which is what lets you quote an error
   bar.
 
@@ -172,7 +172,7 @@ adds nothing new here; it just divides the answer by |Ω|.
 
 Where counting stops working is when the sample space is infinite. Then
 |A|/|Ω| is not defined, and you must switch to the axiomatic definition and use
-the limit machinery of [Lesson 65](65_continuous_random_variables.md). When you
+the limit machinery of [Lesson 65](../part05_probability_statistics/65_continuous_random_variables.md). When you
 see "probability" in a machine learning paper, check which world you are in: if
 they write a finite sum, they are counting; if they write an integral, they are
 in the continuous world.
@@ -209,7 +209,7 @@ Compare with "the sum is 7 **or** the die 1 shows a 6":
 
 Naively 12/36 = 1/3, but (6,1) was counted twice, so the true answer is
 (6 + 6 − 1)/36 = 11/36 ≈ 0.3056. The subtraction is not a trick; it is the
-consequence of counting a set union, and [Lesson 61](61_probability_axioms_and_rules.md)
+consequence of counting a set union, and [Lesson 61](../part05_probability_statistics/61_probability_axioms_and_rules.md)
 states it as a rule.
 
 ### Example B — "at least one ace", where the complement does the work
@@ -252,7 +252,7 @@ draws would be a failure. The 20 is a long-run average over the whole minute, no
 a promise about any particular minute. This distinction is why a per-minute
 dashboard of an error *percentage* is often less useful than a count, and why
 monitoring needs the variance machinery of
-[Lesson 64](64_expectation_variance.md) before you trust an average.
+[Lesson 64](../part05_probability_statistics/64_expectation_variance.md) before you trust an average.
 
 ## Runnable Code
 
@@ -389,7 +389,7 @@ every type check your code can write.
 **Mistake 5 — forgetting to distinguish "0.2% of requests fail" from "20 requests
 will fail".** The first is an average over a long run; the second is a
 prediction about a specific interval, which needs variance and quantiles
-([Lesson 64](64_expectation_variance.md), [Lesson 65](65_continuous_random_variables.md)).
+([Lesson 64](../part05_probability_statistics/64_expectation_variance.md), [Lesson 65](../part05_probability_statistics/65_continuous_random_variables.md)).
 The temptation is that dashboards constantly show the average, and averages read
 like promises.
 
@@ -408,7 +408,7 @@ like promises.
 | Uniformity assumption | `$\lvert\{o\}\rvert = 1$ for all $o \in \Omega$` | "Each outcome is equally likely." Not a theorem — an assumption about the mechanism. | State it explicitly whenever you divide by $|\Omega|$. |
 | `$P(\{6\}) = 0.27$` | `$\sum_{o \in \Omega} P(\{o\}) = 1$` | A **loaded die**: keep all six faces in Ω and attach weights that sum to 1. | When outcomes are not equally likely. Counting cannot help; the weights are data. |
 | `$f_n(A) = \dfrac{k_n}{n}$` | $k_n$ = number of runs in which A happened | **Relative frequency**: the observed fraction over $n$ runs. | Monitoring dashboards, load tests, "this endpoint fails 0.1% of the time". |
-| `$f_n(A) \to P(A)$` | $\lim_{n \to \infty} f_n(A) = P(A)$ | Run it more and the observed fraction settles on the true probability of a stable mechanism. | Justifying simulation as an estimate. Made precise by [Lesson 68](68_law_of_large_numbers_and_clt.md). |
+| `$f_n(A) \to P(A)$` | $\lim_{n \to \infty} f_n(A) = P(A)$ | Run it more and the observed fraction settles on the true probability of a stable mechanism. | Justifying simulation as an estimate. Made precise by [Lesson 68](../part05_probability_statistics/68_law_of_large_numbers_and_clt.md). |
 | `$P(A \cup B)$` | `$= P(A) + P(B) - P(A \cap B)$` | **Addition rule with overlap.** You may only skip the last term when $A \cap B = \varnothing$. | Whenever two events can happen together. Also states inclusion–exclusion ([Lesson 23](../part02_discrete_combinatorics/23_inclusion_exclusion_and_pigeonhole.md)). |
 | disjoint events | `$P(A \cup B) = P(A) + P(B)$ | P(\Omega) = 1$` for disjoint events | Adding "sum is 7" and "sum is 11" — no outcome is in both. | The dice example: `(6 + 2)/36 = 8/36`. |
 | `$P(A^c)$` | `$P(A^c) = 1 - P(A)$` | **Complement rule**: flip the outcome and subtract from 1. | Any "at least one" question. Count the single easy "none" case instead. |
@@ -462,7 +462,7 @@ minutes with 23 or 31 failures are entirely ordinary, and there is no upper
 bound at 20. Option D makes the same average-into-prediction error as A, just
 about a different minute. Turning any of these into a decision needs the
 variance and quantile machinery of
-[Lesson 64](64_expectation_variance.md), which this lesson deliberately
+[Lesson 64](../part05_probability_statistics/64_expectation_variance.md), which this lesson deliberately
 withholds. Note that a *separate* true statement is that any single request,
 viewed across many requests, has a 0.2% failure rate — that is a claim about the
 mechanism, not about one request's fate.
@@ -608,7 +608,7 @@ says there is none. Option B is an over-correction: the point of the frequency
 view is that the number *does* pin down the mechanism once $n$ is large. Option
 D confuses the estimate with the truth; 0.16691 is what *you* measured, and it
 moves every time you re-run the experiment. Formalising "moves by $1/\sqrt{n}$"
-is [Lesson 68](68_law_of_large_numbers_and_clt.md).
+is [Lesson 68](../part05_probability_statistics/68_law_of_large_numbers_and_clt.md).
 
 </details>
 
@@ -816,7 +816,7 @@ axioms). Relative frequency is provably an instance of it in the limit
 (the law of large numbers, Lesson 68). Subjective belief is an instance of it
 whenever the assignment obeys the axioms — which is precisely the Bayesian
 position that degrees of belief *are* probabilities and therefore update by
-Bayes' rule ([Lesson 62](62_conditional_probability_and_bayes.md)).
+Bayes' rule ([Lesson 62](../part05_probability_statistics/62_conditional_probability_and_bayes.md)).
 
 So the gain is not elegance, it is *transfer*: a theorem proved from the axioms,
 such as the central limit theorem, applies simultaneously to a mechanical
@@ -848,10 +848,10 @@ This is why `random.seed` matters even for a monitoring script: a demonstration
 that re-runs to the same healthy number teaches the reader that the number is
 stable, when it was only stable because the randomness was pinned. The
 countermeasures are all in the later lessons — variance so you know what
-deviation is normal ([Lesson 64](64_expectation_variance.md)), the central limit
-theorem so you know how much ([Lesson 68](68_law_of_large_numbers_and_clt.md)),
+deviation is normal ([Lesson 64](../part05_probability_statistics/64_expectation_variance.md)), the central limit
+theorem so you know how much ([Lesson 68](../part05_probability_statistics/68_law_of_large_numbers_and_clt.md)),
 and hypothesis testing so you can say whether a 12-to-15 shift is signal
-([Lesson 69](69_estimation_and_hypothesis_testing.md)).
+([Lesson 69](../part05_probability_statistics/69_estimation_and_hypothesis_testing.md)).
 
 </details>
 
@@ -867,7 +867,7 @@ force every single trial to succeed. Take a fair coin and ask for the event
 with probability exactly 1 that still fails in practice: in a model where a
 continuous quantity is drawn uniformly, the event $X = 5$ has probability 1
 under the discrete-style reasoning "P(5) = 1 out of 1" but probability 0 in the
-continuous world ([Lesson 65](65_continuous_random_variables.md)), and even
+continuous world ([Lesson 65](../part05_probability_statistics/65_continuous_random_variables.md)), and even
 $P(X \ne 5) = 1$ does not mean $X \ne 5$ in any individual draw — it means the
 draw lands somewhere other than exactly 5, which is not the same as being able to
 name the point in advance.
@@ -1082,8 +1082,8 @@ failure. It is *not* a prediction that the next hour produces exactly 12.
 sample, and the mean count over that hour is 12, so a few extra failures are
 ordinary variation. From the information given you cannot conclude a break: you
 would need to know how much a single hour normally fluctuates, which is variance
-([Lesson 64](64_expectation_variance.md)) and hypothesis testing
-([Lesson 69](69_estimation_and_hypothesis_testing.md)).
+([Lesson 64](../part05_probability_statistics/64_expectation_variance.md)) and hypothesis testing
+([Lesson 69](../part05_probability_statistics/69_estimation_and_hypothesis_testing.md)).
 
 (c) Total failures $15 + 9 \times 12 = 123$, total requests $10 \times 6000 =
 60000$, so the ten-hour rate is $123/60000 = 0.00205 = 0.205\%$, essentially
@@ -1184,7 +1184,7 @@ print(f"naive double-counted answer = {(a + b) / n:.6f}  (too large)")
 - An **event** is a subset of Ω, so it is defined by set membership alone; with
   n outcomes there are 2ⁿ events.
 - Probability is a function on events, defined by three axioms rather than by
-  picking one interpretation ([Lesson 61](61_probability_axioms_and_rules.md)).
+  picking one interpretation ([Lesson 61](../part05_probability_statistics/61_probability_axioms_and_rules.md)).
 - Classical probability is a **ratio of cardinalities**, |A| / |Ω|, which is why
   [Part 02](../part02_discrete_combinatorics/) is a hard prerequisite.
 - Relative frequency and subjective belief are both *examples* of the
@@ -1198,6 +1198,6 @@ print(f"naive double-counted answer = {(a + b) / n:.6f}  (too large)")
 
 ## Next
 
-[61 — Probability Axioms and Rules](61_probability_axioms_and_rules.md) states
+[61 — Probability Axioms and Rules](../part05_probability_statistics/61_probability_axioms_and_rules.md) states
 the three axioms and derives every computational rule from them: the addition
 rule, complements, multiplication, and inclusion–exclusion.

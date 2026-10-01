@@ -1961,6 +1961,6 @@ survives, and report the retained fraction per feature group rather than overall
 
 ## Next
 
-[Lesson 01 — How to Read Mathematical Notation](01_how_to_read_notation.md)
+[Lesson 01 — How to Read Mathematical Notation](../part00_orientation/01_how_to_read_notation.md)
 takes the ideas here and teaches you to read them off a page. It assumes you can
 run Python and nothing else.

@@ -28,7 +28,7 @@ pieces the network falls into. One eigenvector tells you where to cut.
 
 - **PageRank, again.** Every ranking system built on links, from Google's
   original to modern recommendation, is an eigenvector of a graph matrix. This
-  lesson and [lesson 36](36_eigenvalues_and_eigenvectors.md) are the same idea
+  lesson and [lesson 36](../part03_linear_algebra/36_eigenvalues_and_eigenvectors.md) are the same idea
   from two directions.
 - **`scipy.sparse.csgraph`.** `connected_components`, `laplacian`, `degree`,
   `breadth_first_order` — all of it is matrix arithmetic on a sparse matrix, and
@@ -122,7 +122,7 @@ always exists.
 **Theorem (PageRank).** PageRank scores are the normalised stationary
 distribution of a damped random walk on the link graph.
 
-See [SYMBOLS.md](../../SYMBOLS.md) for `A`, `Aᵀ`, `λ`, `I`, `tr(A)`, `Q`.
+See [SYMBOLS.md](../SYMBOLS.md) for `A`, `Aᵀ`, `λ`, `I`, `tr(A)`, `Q`.
 
 ## Worked Example
 
@@ -1106,7 +1106,7 @@ print("form only makes sense for symmetric A.")
 The dangerous version of this bug is not a crash but a plausible answer. A
 non-symmetric matrix passed to `eigh` reads only the lower triangle, so you get
 the spectrum of a different matrix entirely — the same trap as in
-[lesson 39](39_diagonalization_and_spectral.md).
+[lesson 39](../part03_linear_algebra/39_diagonalization_and_spectral.md).
 
 **2. Assuming the top singular value carries the community structure.**
 
@@ -1237,11 +1237,11 @@ Tempting because a sign looks like a fact. It is not: `v` and `−v` are both
 eigenvectors for the same eigenvalue, and which one you get depends on the
 algorithm, the sign conventions inside LAPACK, and the matrix layout. The same
 applies to PCA components, which is why the component sign caveat appears in
-[lesson 40](40_svd_and_pca.md) too.
+[lesson 40](../part03_linear_algebra/40_svd_and_pca.md) too.
 
 ## Formula Sheet
 
-Symbols follow [SYMBOLS.md](../../SYMBOLS.md). `A` is the `n × n` adjacency
+Symbols follow [SYMBOLS.md](../SYMBOLS.md). `A` is the `n × n` adjacency
 matrix, `D` the degree matrix, `L = D − A` the Laplacian, `P` a transition
 matrix, `r` the stationary distribution, `n` the number of vertices,
 `0 = μ₁ ≤ μ₂ ≤ … ≤ μ_n`.
@@ -1372,7 +1372,7 @@ B is the classic misreading — it treats positivity as a quality score when it 
 only a yes/no. It is a real error to conclude "connected, therefore robust". C is
 confusing `μ₃` with the zero count; components come from *zeros*. D is
 impossible: `L` is symmetric, so the spectral theorem
-([39](39_diagonalization_and_spectral.md)) guarantees real eigenvalues and an
+([39](../part03_linear_algebra/39_diagonalization_and_spectral.md)) guarantees real eigenvalues and an
 orthogonal eigenbasis.
 
 </details>
@@ -1507,7 +1507,7 @@ user–item rating matrix?
 the embedding dimension must be chosen, and the result is sensitive to scaling.**
 
 Every step is a choice. Truncation at `k` components is the
-[40](40_svd_and_pca.md) decision again — the error is `√(Σ_{i>k}σᵢ²)` and the
+[40](../part03_linear_algebra/40_svd_and_pca.md) decision again — the error is `√(Σ_{i>k}σᵢ²)` and the
 cliff heuristic can be misled by a vanishing last value. Then `k`-means on the
 embedding needs `k` and a random seed. And the input scale decides the spectrum,
 so raw ratings in `[1,5]` behave differently from the same ratings rescaled.
@@ -1517,7 +1517,7 @@ clustering step or the Fiedler gap is for. B is false — `k` is required. D is 
 categorical claim with no theorem behind it, and the lesson's own two-community
 example is precisely a case where the SVD needed a k-means pass and the Laplacian
 did not. What the SVD *does* have is a guarantee: the rank-`k` approximation is
-provably the best one ([40](40_svd_and_pca.md), Eckart–Young). Everything after
+provably the best one ([40](../part03_linear_algebra/40_svd_and_pca.md), Eckart–Young). Everything after
 that step is heuristic.
 
 </details>
@@ -1854,7 +1854,7 @@ uniform. Concretely: `A`'s score drops from `0.444444` to `0.429209`, and the
 dead page rises from `0` to `0.0375`. It is a real loss of sharpness, bought for
 a guarantee. If you change the damping factor from 0.85 to 0.50 you change the
 ranking on any graph with dead ends or link farms — so `alpha` is a modelling
-choice, like the norm in [37](37_inner_products_norms_geometry.md), not a
+choice, like the norm in [37](../part03_linear_algebra/37_inner_products_norms_geometry.md), not a
 constant to copy.
 
 **What breaks if you skip it.** You get plausible, defensible-looking numbers
@@ -2378,7 +2378,7 @@ embedding step, an extra parameter, and an extra random seed.
 **(e)** With `4 → 5` directed and not `5 → 4`, the graph is no longer symmetric.
 `A` is not symmetric, so `L = D − A` is not symmetric, the spectral theorem no
 longer applies, and `np.linalg.eigh` would silently read only the lower triangle
-— Common Mistake 1 in [39](39_diagonalization_and_spectral.md). The clean `[0,2]`
+— Common Mistake 1 in [39](../part03_linear_algebra/39_diagonalization_and_spectral.md). The clean `[0,2]`
 bound and the minimum-cut relaxation are gone too.
 
 The right tool is now the **SVD of the asymmetric adjacency matrix**. Its singular
@@ -2408,7 +2408,7 @@ Why does that work here, and what would make it wrong?
 (c) Suppose instead you kept only the top 1 singular vector and clustered in 1-D.
 What happens, and what does that tell you about choosing the truncation rank?
 (d) Suppose you did **not** centre the matrix before the SVD. What changes, and
-which step of [40](40_svd_and_pca.md) does that violate?
+which step of [40](../part03_linear_algebra/40_svd_and_pca.md) does that violate?
 (e) Explain in one sentence why "the number of clusters" is a different question
 from "the number of connected components", and which one the SVD can answer.
 
@@ -2431,7 +2431,7 @@ the SVD never tells you `k`. Three quantities must be chosen, and they are
 different questions — the truncation rank (how many singular vectors to keep), the
 embedding dimension, and the number of clusters. Each is a hyperparameter, and
 the choice is unstable in a specific way: Eckart–Young
-([40](40_svd_and_pca.md)) guarantees the rank-`r` approximation is the *best*
+([40](../part03_linear_algebra/40_svd_and_pca.md)) guarantees the rank-`r` approximation is the *best*
 rank-`r` one, but guarantees nothing about `r` matching the number of clusters.
 
 **(c)** With one singular vector the embedding is 1-D, so points differ by a
@@ -2444,7 +2444,7 @@ groups depending on which vector the algorithm happened to return first.
 The general lesson: the truncation rank must be chosen *from the spectrum* — the
 `σ` ratios, the scree cliff, or held-out downstream performance — and must not
 be set equal to the cluster count by coincidence. When the spectrum decays
-smoothly with noise mixed in, as in [40](40_svd_and_pca.md)'s Challenge
+smoothly with noise mixed in, as in [40](../part03_linear_algebra/40_svd_and_pca.md)'s Challenge
 Exercise 6, there is no elbow, and the choice has to be made on error grounds.
 
 **(d)** Not centring means the SVD finds the direction of largest *magnitude*, not
@@ -2453,7 +2453,7 @@ dominated by the difference in level between them — a property of scoring habi
 not of taste. The embedding then encodes "how generous a rater is this person",
 and `k`-means clusters raters by generosity rather than by taste.
 
-This violates the centring step of [40](40_svd_and_pca.md), where it is Common
+This violates the centring step of [40](../part03_linear_algebra/40_svd_and_pca.md), where it is Common
 Mistake 3. The recommendation analogue is not centring *items*: popular items
 have high means and will dominate `σ₁`. Both the row and the column means matter.
 

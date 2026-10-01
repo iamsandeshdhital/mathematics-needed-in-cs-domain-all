@@ -35,7 +35,7 @@ matrix**, whose inverse is its own transpose.
 - **`np.linalg.lstsq` vs `np.linalg.solve`.** The normal equations square the
   condition number (`cond(AᵀA) = cond(A)²`) and are correspondingly less
   accurate. `lstsq` uses SVD and does not have this problem. Lesson
-  [40](40_svd_and_pca.md) explains the algorithm underneath.
+  [40](../part03_linear_algebra/40_svd_and_pca.md) explains the algorithm underneath.
 - **QR factorisation** is Gram-Schmidt applied to a matrix's columns, and it is
   the standard numerically-safe way to solve least squares problems.
 - **Ridge regression** is least squares plus `λI`, the fix for ill-conditioned
@@ -129,7 +129,7 @@ singular, because the eigenvalues of `AᵀA + λI` are all at least `λ`. In
 practice you do not penalise the intercept, so `λ` goes on all but the first
 diagonal entry.
 
-See [SYMBOLS.md](../../SYMBOLS.md) for `xᵀy`, `‖x‖`, `x ⊥ y`, `A⁻¹`, `Aᵀ`.
+See [SYMBOLS.md](../SYMBOLS.md) for `xᵀy`, `‖x‖`, `x ⊥ y`, `A⁻¹`, `Aᵀ`.
 
 ## Worked Example
 
@@ -920,7 +920,7 @@ data, not training data.
 
 ## Formula Sheet
 
-Symbols follow [SYMBOLS.md](../../SYMBOLS.md). `A` is `m × n` with `m > n`,
+Symbols follow [SYMBOLS.md](../SYMBOLS.md). `A` is `m × n` with `m > n`,
 `y ∈ ℝ^m`, `β ∈ ℝ^n`, `u, v ∈ ℝ^n` with `u ≠ 0`, `Q` is `n × n` orthogonal,
 `λ > 0`, `I` is the `n × n` identity.
 
@@ -1008,7 +1008,7 @@ only two nonzero vectors.
 A is wrong because Gram–Schmidt is a single fixed-pass recipe, not an iterative
 refinement. C is nonsense: the zero vector spans nothing, and admitting it is
 exactly the confusion the eigenvector definition of
-[36](36_eigenvalues_and_eigenvectors.md) exists to prevent. D reverses the
+[36](../part03_linear_algebra/36_eigenvalues_and_eigenvectors.md) exists to prevent. D reverses the
 mechanism — Gram–Schmidt *creates* orthogonality, so a near-zero output is
 evidence it succeeded in removing the component along the previous directions.
 
@@ -1214,7 +1214,7 @@ never does?
 **B) Because for a symmetric matrix the geometric and algebraic multiplicities
 always agree, so a full basis of eigenvectors exists.**
 
-That is the precise criterion from [36](36_eigenvalues_and_eigenvectors.md):
+That is the precise criterion from [36](../part03_linear_algebra/36_eigenvalues_and_eigenvectors.md):
 diagonalisable iff `dim E_λ = mult_alg(λ)` for every `λ`, and symmetry guarantees
 the equality for all of them. This is why `np.linalg.eigh` both exists and beats
 `eig` on speed and accuracy — it exploits orthogonality of the eigenvectors, which
@@ -1440,7 +1440,7 @@ preserves lengths and angles: it is a pure rotation (`det = +1`) or a reflection
 possible value: no input error is amplified and none is lost. That is why QR
 factorisation, which builds `Q` by Gram–Schmidt, is the numerically safe way to
 solve least squares, and why the SVD route in
-[40](40_svd_and_pca.md) works in these coordinates.
+[40](../part03_linear_algebra/40_svd_and_pca.md) works in these coordinates.
 
 **What breaks.** "Orthogonal" is not a yes/no property in floating point; it is a
 measurement. With `C = [[1,1],[1,1.001]]` the matrix stays invertible but
@@ -1563,7 +1563,7 @@ on the worked example.
     ‖y‖₂² = (Aβ̂ + r)ᵀ(Aβ̂ + r) = β̂ᵀAᵀAβ̂ + 2β̂ᵀAᵀr + rᵀr
           = ‖Aβ̂‖₂² + ‖r‖₂²       because Aᵀr = 0
 
-This is [37](37_inner_products_norms_geometry.md)'s Pythagoras identity for
+This is [37](../part03_linear_algebra/37_inner_products_norms_geometry.md)'s Pythagoras identity for
 vectors: perpendicular pieces have squared lengths that add, with no cross term.
 It is also what makes RSS a genuine measure of the *unexplained* variance rather
 than partly double-counting the model.
@@ -2077,7 +2077,7 @@ symbolic algebra, and for teaching. They are the wrong way to compute.
 
 ## Next
 
-[39 — Diagonalization and Spectral Theory](39_diagonalization_and_spectral.md)
+[39 — Diagonalization and Spectral Theory](../part03_linear_algebra/39_diagonalization_and_spectral.md)
 asks when these eigenvalues can actually be used to simplify a matrix. Not
 always: defective matrices refuse to diagonalise, and this lesson's
 Gram–Schmidt output, applied to a matrix's columns, is the QR factorisation

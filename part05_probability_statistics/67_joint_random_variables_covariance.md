@@ -1039,7 +1039,7 @@ dependence. So it will understate the probability of the *combination* that
 actually causes trouble: two components each at their 99th percentile are far
 more likely to be simultaneously extreme if they share a cause than if they are
 independent. This is the same mechanism as the variance-of-a-sum formula from
-[Lesson 64](64_expectation_variance.md), where dropping the covariance terms
+[Lesson 64](../part05_probability_statistics/64_expectation_variance.md), where dropping the covariance terms
 understates spread.
 
 Two concrete habits follow. Store and inspect the **joint**, not only the
@@ -1390,7 +1390,7 @@ easy cases. The second factor dominates. This is Simpson's paradox — a trend
 reverses or an apparent effect is created when you aggregate over a variable that
 confounds the comparison. The fix is to stratify, or to adjust for the
 confounder, exactly as the variance decomposition in
-[Lesson 64](64_expectation_variance.md) recommends.
+[Lesson 64](../part05_probability_statistics/64_expectation_variance.md) recommends.
 
 (c) Joint tables, cells = (difficulty, correct) with counts per 1000:
 
@@ -1433,7 +1433,7 @@ Dataset Hard is ahead by 5 percentage points, exactly as part (d) found by
 comparing within levels.
 
 This is the variance decomposition of
-[Lesson 64](64_expectation_variance.md) in action: the aggregate differs because
+[Lesson 64](../part05_probability_statistics/64_expectation_variance.md) in action: the aggregate differs because
 the *weights* differ, not because the *values* do. The practical rule follows
 directly — **always report metrics stratified by any variable that could confound,
 and never compare aggregate metrics across populations with different
@@ -1906,7 +1906,7 @@ print("line fits a curve. Correlation describes linearity, not predictability.")
 
 ## Next
 
-[68 — Law of Large Numbers and the Central Limit Theorem](68_law_of_large_numbers_and_clt.md)
+[68 — Law of Large Numbers and the Central Limit Theorem](../part05_probability_statistics/68_law_of_large_numbers_and_clt.md)
 explains why averages converge, defines the four types of convergence, shows why
 sums become approximately normal, and builds the standard error, confidence
 interval, and simulation that the rest of this part depends on.

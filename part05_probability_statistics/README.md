@@ -51,17 +51,17 @@ for Kolmogorov's axioms and Gibbs' inequality.
 
 | # | Lesson | What you get out of it |
 | --- | --- | --- |
-| 60 | [Probability Foundations](60_probability_foundations.md) | Sample spaces, events, and the three ways people mean "probability" |
-| 61 | [Probability Axioms and Rules](61_probability_axioms_and_rules.md) | Kolmogorov's axioms; addition, complement, multiplication, inclusion–exclusion |
-| 62 | [Conditional Probability and Bayes](62_conditional_probability_and_bayes.md) | The chain rule, Bayes' theorem, the base-rate fallacy, naive Bayes |
-| 63 | [Discrete Random Variables](63_discrete_random_variables.md) | PMFs, CDFs, Bernoulli, Binomial, and the indicator decomposition |
-| 64 | [Expectation, Variance, and Laws](64_expectation_variance.md) | Linearity without independence, variance formulas, why E[X²] ≠ E[X]² |
-| 65 | [Continuous Random Variables](65_continuous_random_variables.md) | Densities, Uniform, Exponential (memoryless), Normal, the 68-95-99.7 rule |
-| 66 | [Common Distributions](66_common_distributions.md) | Seven distributions with from-scratch samplers and a plotting section |
-| 67 | [Joint Variables and Covariance](67_joint_random_variables_covariance.md) | Marginals, independence, correlation is not causation, regression as conditional expectation |
-| 68 | [Law of Large Numbers and the CLT](68_law_of_large_numbers_and_clt.md) | Why averages converge and become normal; standard errors; confidence intervals |
-| 69 | [Estimation and Hypothesis Testing](69_estimation_and_hypothesis_testing.md) | MLE, bias and variance, p-values, Type I/II errors, power, A/B testing |
-| 70 | [Information Theory and Entropy](70_information_theory_entropy.md) | Bits, entropy, KL divergence, cross-entropy loss, perplexity |
+| 60 | [Probability Foundations](../part05_probability_statistics/60_probability_foundations.md) | Sample spaces, events, and the three ways people mean "probability" |
+| 61 | [Probability Axioms and Rules](../part05_probability_statistics/61_probability_axioms_and_rules.md) | Kolmogorov's axioms; addition, complement, multiplication, inclusion–exclusion |
+| 62 | [Conditional Probability and Bayes](../part05_probability_statistics/62_conditional_probability_and_bayes.md) | The chain rule, Bayes' theorem, the base-rate fallacy, naive Bayes |
+| 63 | [Discrete Random Variables](../part05_probability_statistics/63_discrete_random_variables.md) | PMFs, CDFs, Bernoulli, Binomial, and the indicator decomposition |
+| 64 | [Expectation, Variance, and Laws](../part05_probability_statistics/64_expectation_variance.md) | Linearity without independence, variance formulas, why E[X²] ≠ E[X]² |
+| 65 | [Continuous Random Variables](../part05_probability_statistics/65_continuous_random_variables.md) | Densities, Uniform, Exponential (memoryless), Normal, the 68-95-99.7 rule |
+| 66 | [Common Distributions](../part05_probability_statistics/66_common_distributions.md) | Seven distributions with from-scratch samplers and a plotting section |
+| 67 | [Joint Variables and Covariance](../part05_probability_statistics/67_joint_random_variables_covariance.md) | Marginals, independence, correlation is not causation, regression as conditional expectation |
+| 68 | [Law of Large Numbers and the CLT](../part05_probability_statistics/68_law_of_large_numbers_and_clt.md) | Why averages converge and become normal; standard errors; confidence intervals |
+| 69 | [Estimation and Hypothesis Testing](../part05_probability_statistics/69_estimation_and_hypothesis_testing.md) | MLE, bias and variance, p-values, Type I/II errors, power, A/B testing |
+| 70 | [Information Theory and Entropy](../part05_probability_statistics/70_information_theory_entropy.md) | Bits, entropy, KL divergence, cross-entropy loss, perplexity |
 
 ## The five ideas that matter most
 

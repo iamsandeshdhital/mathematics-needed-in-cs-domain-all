@@ -126,7 +126,7 @@ is why eigendecomposition of the covariance and the SVD of the data agree.
 **Theorem.** `cond(A) = σ₁/σ_r`. The matrix is well conditioned exactly when
 its singular values are all of comparable size.
 
-See [SYMBOLS.md](../../SYMBOLS.md) for `A`, `A⁺`, `Q`, `xᵀy`, `‖x‖`, `Aᵀ`.
+See [SYMBOLS.md](../SYMBOLS.md) for `A`, `A⁺`, `Q`, `xᵀy`, `‖x‖`, `Aᵀ`.
 
 ## Worked Example
 
@@ -145,7 +145,7 @@ AᵀA = [3 1]  [3  1]     [10  6]
 ```
 
 **Step 3: eigen-decompose `AᵀA`.** It is symmetric, so use the spectral
-theorem from [lesson 39](39_diagonalization_and_spectral.md). Its eigenvalues:
+theorem from [lesson 39](../part03_linear_algebra/39_diagonalization_and_spectral.md). Its eigenvalues:
 
 ```
 det(AᵀA − λI) = (10−λ)² − 36 = λ² − 20λ + 64 = (λ−16)(λ−4)
@@ -1032,7 +1032,7 @@ singular values automatically, or switch to a method designed for `p ≫ n`.
 
 ## Formula Sheet
 
-Symbols follow [SYMBOLS.md](../../SYMBOLS.md). `A` is a real `m × n` matrix,
+Symbols follow [SYMBOLS.md](../SYMBOLS.md). `A` is a real `m × n` matrix,
 `U` is `m × r`, `V` is `n × r`, `r = min(m, n)`, `Σ` is the diagonal factor,
 `u_i, v_i` are column vectors, `σ_i` are singular values with
 `σ₁ ≥ σ₂ ≥ ⋯ ≥ σ_r ≥ 0`.
@@ -1124,7 +1124,7 @@ though it has no direction it leaves fixed.**
 `cond(R) = σ₁/σ_r = 1/1 = 1`, the smallest possible value, and `RᵀR = I` so it
 preserves every length and angle. Its eigenvalues `±i` are perfectly correct
 information too — a real rotation genuinely has no real eigenvector, which is
-[36](36_eigenvalues_and_eigenvectors.md)'s conjugate-pair theorem in action. The
+[36](../part03_linear_algebra/36_eigenvalues_and_eigenvectors.md)'s conjugate-pair theorem in action. The
 point is that the *singular values* answer a different, better-conditioned
 question: "how much does this transform stretch things?", not "is there a
 direction it only scales?".
@@ -1153,7 +1153,7 @@ impossible?
 
 Impossible, because a real symmetric matrix is **always** diagonalisable by an
 orthogonal matrix — that is the spectral theorem from
-[39](39_diagonalization_and_spectral.md), and the proof sketch is exactly this:
+[39](../part03_linear_algebra/39_diagonalization_and_spectral.md), and the proof sketch is exactly this:
 `(λ − μ)(uᵀv) = 0` by symmetry, so distinct eigenvalues give perpendicular
 eigenvectors, and equal eigenvalues can be re-orthonormalised by Gram-Schmidt. A
 symmetric matrix with fewer than `n` independent eigenvectors does not exist.
@@ -1341,7 +1341,7 @@ A is the inference the warning exists to prevent. C is unwarranted — a
 correlated pair of features is exactly what PCA is *for*, since combining them
 removes redundancy. D confuses a statistical caveat with a preprocessing step;
 standardising may or may not be appropriate ([40] and
-[37](37_inner_products_norms_geometry.md)), but it has nothing to do with
+[37](../part03_linear_algebra/37_inner_products_norms_geometry.md)), but it has nothing to do with
 causality. The honest statement is that PCA is a **descriptive** tool: it
 compresses variance, and establishing direction requires an experiment.
 
@@ -1578,7 +1578,7 @@ orthonormalised.
 Two differences matter in practice. First, **the SVD needs no `W⁻¹`**: `U` and
 `V` are orthonormal, so `cond = 1` on the basis. That is why `np.linalg.lstsq`
 uses the SVD rather than forming `AᵀA`
-([38](38_orthogonality_and_least_squares.md)). Second, **the SVD sorts and
+([38](../part03_linear_algebra/38_orthogonality_and_least_squares.md)). Second, **the SVD sorts and
 signs**: `σ₁ ≥ σ₂ ≥ ⋯ ≥ 0` is a guarantee, while `λ` may be complex, negative, or
 returned in arbitrary order. The loss is the *sign* information — the SVD tells
 you how much each direction is stretched, not whether it is flipped, so it cannot
@@ -1624,7 +1624,7 @@ equicorrelated and its top eigenvector is nearly flat.
   amazing and means nothing; it is a report on units, not on structure.
 - **Regularisation interacts badly.** Ridge's single `λ` implicitly assumes
   comparable scales; that is why scikit-learn pipelines start with
-  `StandardScaler` ([38](38_orthogonality_and_least_squares.md)).
+  `StandardScaler` ([38](../part03_linear_algebra/38_orthogonality_and_least_squares.md)).
 
 **The counter-case.** Do **not** standardise when the features are already the
 same unit and you care about absolute magnitudes — raw pixel intensities, a
@@ -1632,7 +1632,7 @@ temperature range, anything where a ten-fold difference in variance is genuine
 signal. Standardising equalises variance by fiat and will promote a direction
 that is numerically large but semantically empty. This is the same
 "scale is a modelling decision, not bookkeeping" point as
-[37](37_inner_products_norms_geometry.md): L1 gave sparsity, L2 gave smooth
+[37](../part03_linear_algebra/37_inner_products_norms_geometry.md): L1 gave sparsity, L2 gave smooth
 shrinkage, and standardisation gives every feature equal say.
 
 </details>
@@ -1656,7 +1656,7 @@ cond(A)²`. For the near-collinear matrix `[[1, 0.999999], [0.999999,
 0.999999]]`, `cond = 3.999998 × 10⁶`; the covariance route squares that to
 `1.6 × 10¹³` and the smallest component direction is gone. That is the same
 mechanism as the normal equations in
-[38](38_orthogonality_and_least_squares.md): the answer is a difference of
+[38](../part03_linear_algebra/38_orthogonality_and_least_squares.md): the answer is a difference of
 quantities that have already lost their digits.
 
 Worse, the covariance route forces you to build the `p × p` matrix, which is
@@ -2024,7 +2024,7 @@ The failure is reporting the truth: **`M` has only two independent directions,
 and the third is identically zero.** There is no third singular value to divide
 by, so the normal equations ask for something that does not exist. This is the
 same under-determination as the rank-deficient least-squares problem in
-[38](38_orthogonality_and_least_squares.md), seen from the rectangular side — and
+[38](../part03_linear_algebra/38_orthogonality_and_least_squares.md), seen from the rectangular side — and
 here it is detectable *in advance*: a `2 × 3` matrix can never have rank 3, so its
 `3 × 3` Gram matrix is guaranteed singular.
 
@@ -2114,7 +2114,7 @@ features. It has discovered that income is recorded in large numbers:
 `Var(income) = 3026.67` against `Var(spend) = 1.10`, a factor of 2752, so income
 wins before any correlation is even considered. The `0.999979` figure is a report
 on **units**, not on structure. This is the identical trap to the norm-choice
-question in [37](37_inner_products_norms_geometry.md): the measurement instrument,
+question in [37](../part03_linear_algebra/37_inner_products_norms_geometry.md): the measurement instrument,
 not the subject, is doing the deciding.
 
 **(e)** The correlation matrix is `Σᵢⱼ/(stdᵢ·stdⱼ)` — exactly the standardised
@@ -2246,7 +2246,7 @@ What would change the decision:
 - **A downstream task with a validation set.** Then choose `k` by held-out
   performance. PCA is usually preprocessing, and preprocessing tuned on training
   error is the overfitting trap from
-  [38](38_orthogonality_and_least_squares.md).
+  [38](../part03_linear_algebra/38_orthogonality_and_least_squares.md).
 - **A plotting requirement.** `k = 1` gives one number per row and therefore a
   two-dimensional scatter plot, using `84%` of the variance. That is usually
   plenty for a plot, and much better than an unreadable cloud.
@@ -2255,7 +2255,7 @@ What would change the decision:
   question trivial. The smoothness of this tail is exactly the evidence that the
   matrix is not clean.
 - **A need to invert the matrix.** Never truncate something you intend to invert
-  ([38](38_orthogonality_and_least_squares.md)). Dropping a component changes the
+  ([38](../part03_linear_algebra/38_orthogonality_and_least_squares.md)). Dropping a component changes the
   answer by a factor of at least `σₖ/σₖ₊₁`, and here that is already `3.13` for
   the very first drop.
 
@@ -2319,7 +2319,7 @@ against `24` for the raw matrix, a ratio of `1.38×`.
 
 ## Next
 
-[41 — Matrices, Graphs, and Applications](41_matrices_graphs_and_applications.md)
+[41 — Matrices, Graphs, and Applications](../part03_linear_algebra/41_matrices_graphs_and_applications.md)
 puts matrices back to work on real structures. A network is a matrix, its
 adjacency matrix has an SVD and an eigendecomposition, and the *graph
 Laplacian* — which is symmetric positive definite by construction — turns

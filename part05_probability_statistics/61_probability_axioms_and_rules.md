@@ -37,10 +37,10 @@ picture never lies.
 - **Independent feature assumptions.** Naive Bayes assumes features are
   independent precisely because the multiplication rule then factors, turning
   an intractable joint distribution into a product of small ones
-  ([Lesson 62](62_conditional_probability_and_bayes.md)).
+  ([Lesson 62](../part05_probability_statistics/62_conditional_probability_and_bayes.md)).
 - **Monte Carlo error bars.** Union bound gives the "at most this many standard
   errors" reasoning behind simulation confidence intervals
-  ([Lesson 68](68_law_of_large_numbers_and_clt.md)).
+  ([Lesson 68](../part05_probability_statistics/68_law_of_large_numbers_and_clt.md)).
 - **A/B test overlap.** If variants A and B are not disjoint — for instance two
   mutually exclusive UI states on the same page — naive addition of their
   click-through rates double counts, and the discrepancy grows with the number
@@ -49,7 +49,7 @@ picture never lies.
 ## The Formal Version
 
 All statements below assume an experiment with sample space Ω and a function P
-defined on subsets of Ω. From [Lesson 60](60_probability_foundations.md), we
+defined on subsets of Ω. From [Lesson 60](../part05_probability_statistics/60_probability_foundations.md), we
 now say precisely what "a function P" means.
 
 **Axiom 1 (non-negativity).** For every event A, P(A) ≥ 0.
@@ -201,7 +201,7 @@ people has a 1/365 ≈ 0.00274 chance of colliding, and there are C(23,2) = 253
 pairs. Summing gives 253/365 ≈ 0.693 — an *over*estimate, because a birthday
 shared by three people gets counted three times. The union bound (0.693) is an
 upper bound and the exact answer (0.507) is lower, exactly as the theory in
-[Lesson 60](60_probability_foundations.md) predicts: more overlap ⇒ smaller
+[Lesson 60](../part05_probability_statistics/60_probability_foundations.md) predicts: more overlap ⇒ smaller
 union. This is a nice demonstration that intuition about "how full the calendar
 is" is the wrong model, and pair counting is the right one.
 
@@ -419,7 +419,7 @@ usually fine, but quoting it as a precise forecast is not. Report it as a bound.
 | `$A \subseteq B$` | `$P(A) \le P(B)$` | **Monotonicity.** A smaller set cannot be more likely. | Sanity-checking models; rules out $P(A \cap B) > P(A)$ immediately. |
 | `$P(A \cup B)$` | `$= P(A) + P(B) - P(A \cap B)$` | **Addition rule**, overlap or not. | Combining two events you know individually. |
 | disjoint | `$P(A \cup B) = P(A) + P(B)$` | For **disjoint / mutually exclusive** events the intersection is empty, so the subtraction vanishes. | Dice sums, distinct categories, "both aces *or* both kings". |
-| `$P(A \cap B)$` | `$= P(B) \cdot P(A \mid B)$`, needs `$P(B) > 0$` | **Multiplication rule.** Joint = conditioner × conditional. Defined in detail in [Lesson 62](62_conditional_probability_and_bayes.md). | Any "and" question where the second draw's rate changes. |
+| `$P(A \cap B)$` | `$= P(B) \cdot P(A \mid B)$`, needs `$P(B) > 0$` | **Multiplication rule.** Joint = conditioner × conditional. Defined in detail in [Lesson 62](../part05_probability_statistics/62_conditional_probability_and_bayes.md). | Any "and" question where the second draw's rate changes. |
 | independent | `$P(A \cap B) = P(A) \cdot P(B)`, equivalently `$P(A \mid B) = P(A)$` | Knowing one event tells you nothing about the other. | Coin flips, separate requests to independent backends. **Must be argued from the mechanism.** |
 | `$A \cap B \cap C$` | `$P(A \cup B \cup C) = P(A)+P(B)+P(C) - P(A \cap B) - P(A \cap C) - P(B \cap C) + P(A \cap B \cap C)$` | **Inclusion–exclusion for three events**: add singles, subtract pairs, add the triple. | Deck questions, A/B tests with several mutually exclusive UI states. |
 | `$\sum_{j<k<l} |A_j \cap A_k \cap A_l|$` | general form: add singles, subtract pairs, add triples, subtract quadruples, … | More than three events, or as an upper/lower bound when you only know the first few levels. |
@@ -1290,7 +1290,7 @@ print(f"exact product              = {exact:.4f}")
 
 ## Next
 
-[62 — Conditional Probability and Bayes' Theorem](62_conditional_probability_and_bayes.md)
+[62 — Conditional Probability and Bayes' Theorem](../part05_probability_statistics/62_conditional_probability_and_bayes.md)
 uses the product rule to define conditioning, builds the chain rule and the law
 of total probability from it, and derives Bayes' theorem — then explains the
 base-rate fallacy, which is the most consequential misreading of probability in

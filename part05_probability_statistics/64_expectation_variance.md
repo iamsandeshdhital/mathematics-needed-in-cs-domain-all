@@ -26,8 +26,8 @@ shows exactly how much they differ, and that the difference is precisely Var.
 
 ## Why Computer Science Cares
 
-- **Every standard error in [Lesson 68](68_law_of_large_numbers_and_clt.md) and
-  [Lesson 69](69_estimation_and_hypothesis_testing.md) is a variance divided by
+- **Every standard error in [Lesson 68](../part05_probability_statistics/68_law_of_large_numbers_and_clt.md) and
+  [Lesson 69](../part05_probability_statistics/69_estimation_and_hypothesis_testing.md) is a variance divided by
   n.** The confidence interval formula and the p-value formula are both this.
 - **Algorithmic runtime analysis for randomised algorithms.** Expected cost is
   E[cost]; Quicksort's expected depth is 2 ln n, and the variance is what tells
@@ -37,7 +37,7 @@ shows exactly how much they differ, and that the difference is precisely Var.
   hashing.
 - **Queueing theory.** Average wait time is an expectation; the tail is a variance
   or a higher moment. SLOs are about tails
-  ([Lesson 65](65_continuous_random_variables.md)).
+  ([Lesson 65](../part05_probability_statistics/65_continuous_random_variables.md)).
 - **Risk and optimisation.** Minimising expected loss is the entire framing of
   decision-making under uncertainty, and a portfolio's risk is its variance.
 
@@ -165,7 +165,7 @@ form of "squares over-weight large values".
 ### Example A — a small hand-built distribution
 
 Let X be the number of heads in two fair coin flips, so p(0) = 1/4, p(1) = 1/2,
-p(2) = 1/4 (from [Lesson 63](63_discrete_random_variables.md)).
+p(2) = 1/4 (from [Lesson 63](../part05_probability_statistics/63_discrete_random_variables.md)).
 
 **Expectation:**
 
@@ -535,7 +535,7 @@ alone is incomplete.
 | `$\bar{X}$` (sample mean of n) | `$E[\bar{X}] = \mu$`, `$\mathrm{Var}(\bar{X}) = \sigma^2/n$` | Averaging n samples divides the *variance* by n, so the standard error falls as $1/\sqrt{n}$. | Every standard error. Omitting the `/n` inflates error bars by $\sqrt{n}$ — a factor of 10 for n = 100. |
 | `$\mathrm{Var}(X\mid Y)$` | `$\mathrm{Var}(X) = E[\mathrm{Var}(X\mid Y)] + \mathrm{Var}(E[X\mid Y])$` | **Law of total variance**: spread = average within-group spread + spread of group means. | Decomposing risk into attackable pieces; the formal "systematic + idiosyncratic". |
 | `$E[X\mid Y=y_j]$` | `$\mu_j$` with weights $P(Y=y_j)$ | Group means; `$\mathrm{Var}(E[X\mid Y])$` is their weighted spread. | Between-segment variance. Segments at 200 ms and 50 ms give 5400 here. |
-| `$\bar X - \mu$` | `$= O(\sigma/\sqrt{n})$` | How far a sample mean typically sits from the true mean. | Sizing a test or a load run; the basis of [Lesson 68](68_law_of_large_numbers_and_clt.md). |
+| `$\bar X - \mu$` | `$= O(\sigma/\sqrt{n})$` | How far a sample mean typically sits from the true mean. | Sizing a test or a load run; the basis of [Lesson 68](../part05_probability_statistics/68_law_of_large_numbers_and_clt.md). |
 | RMSE vs MAE | `$\mathrm{RMSE} = \sqrt{E[E^2]}`, `$\mathrm{MAE} = E\lvert E\rvert` | RMSE is dominated by outliers; MAE is robust to them. | In the lesson's code RMSE = 195.0 ms against MAE = 97.7 ms — a factor of 2.00, entirely because of the single 390 ms error. |
 
 ## Multiple Choice Questions
@@ -732,7 +732,7 @@ most requests are faster than the mean.**
 This is Mistake 4 in this lesson, and it is why percentiles appear in latency
 dashboards. Option A is a practical objection, not a mathematical one. Option C
 replaces rather than supplements: you want both, and the tail is a quantile
-question ([Lesson 65](65_continuous_random_variables.md)). Option D is false for
+question ([Lesson 65](../part05_probability_statistics/65_continuous_random_variables.md)). Option D is false for
 any distribution with more than one value.
 
 </details>
@@ -886,7 +886,7 @@ user type or report per-segment SLOs, not to micro-tune individual requests.
 
 So: mean, then variance, then check for mixtures. Only then is a comparison
 meaningful, and only then do percentiles
-([Lesson 65](65_continuous_random_variables.md)) become the right vocabulary.
+([Lesson 65](../part05_probability_statistics/65_continuous_random_variables.md)) become the right vocabulary.
 
 </details>
 
@@ -1280,7 +1280,7 @@ Neither error metric describes a "typical" request well, but MAE at least keeps
 the two fast requests visible, whereas RMSE has all but forgotten them: RMSE is
 1.73× MAE, and RMSE − MAE $= 95$ ms is almost entirely the outlier's penalty. For
 "typical" you want percentiles
-([Lesson 65](65_continuous_random_variables.md)); RMSE is justified only when a
+([Lesson 65](../part05_probability_statistics/65_continuous_random_variables.md)); RMSE is justified only when a
 large error is catastrophic.
 
 (d) In seconds the measurements are 0.010, 0.0105, 0.400. The variance becomes
@@ -1492,7 +1492,7 @@ enough. This is why teams pre-register large-effect experiments, report
 underpowered results as inconclusive rather than negative, and are tempted by
 sequential designs that peek and stop early — a temptation worth resisting,
 because each peek inflates the false-positive rate ([Lesson
-69](69_estimation_and_hypothesis_testing.md)).
+69](../part05_probability_statistics/69_estimation_and_hypothesis_testing.md)).
 
 ```python
 from math import sqrt
@@ -1549,7 +1549,7 @@ for delta in (0.01, 0.005, 0.0025):
 
 ## Next
 
-[65 — Continuous Random Variables](65_continuous_random_variables.md) replaces
+[65 — Continuous Random Variables](../part05_probability_statistics/65_continuous_random_variables.md) replaces
 the PMF with a density, explains why a density can exceed 1, and introduces the
 uniform, exponential (with its memoryless property), and normal distributions
 including the 68-95-99.7 rule.

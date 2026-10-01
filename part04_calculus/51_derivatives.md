@@ -39,7 +39,7 @@ differences leave a first-order error behind, two-sided ones cancel it.
 - **Newton's method needs a derivative.** Root finding (`scipy.optimize.newton`), the
   Babylonian square root, Newton's iteration for square roots of matrices
   (`scipy.linalg.sqrtm`), and second-order optimisers like L-BFGS all consume a
-  derivative at every step. Lesson [54](54_taylor_series.md) explains why the derivative
+  derivative at every step. Lesson [54](../part04_calculus/54_taylor_series.md) explains why the derivative
   alone converges quadratically while the function value alone converges only linearly.
 - **Derivative signs drive control flow.** Convex-hull and line-intersection routines,
   polygon clipping (Sutherland–Hodgman), and root finders all branch on whether a slope
@@ -160,7 +160,7 @@ shows the $F_y = 0$ singularity is genuine.
 
 ### Example 4: why forward differences lose accuracy
 
-Expand to second order (this is [Taylor series](54_taylor_series.md), used early):
+Expand to second order (this is [Taylor series](../part04_calculus/54_taylor_series.md), used early):
 
 $$f(x+h) = f(x) + h f'(x) + \frac{h^2}{2} f''(x) + O(h^3)$$
 
@@ -983,7 +983,7 @@ function values are all `1.0`.
 | forward difference | `$\frac{f(a+h)-f(a)}{h} = f'(a) + \frac{h}{2}f''(a) + O(h^2)$` | one-sided slope estimate; error shrinks like $h$ | cheapest gradient probe; one function evaluation |
 | backward difference | `$\frac{f(a)-f(a-h)}{h} = f'(a) - \frac{h}{2}f''(a) + O(h^2)$` | the same estimate approached from the left | when you can only step backwards, e.g. at a boundary |
 | central difference | `$\frac{f(a+h)-f(a-h)}{2h} = f'(a) + \frac{h^2}{6}f'''(a) + O(h^4)$` | two-sided slope estimate; the $h$ term cancels, error shrinks like $h^2$ | gradient *checking*; two extra evaluations buy a factor of $h$ |
-| Taylor expansion used above | `$f(a+h) = f(a) + h f'(a) + \frac{h^2}{2}f''(a) + O(h^3)$` | near $a$ the curve is a quadratic plus a small remainder | deriving both error formulas; full version in Lesson [54](54_taylor_series.md) |
+| Taylor expansion used above | `$f(a+h) = f(a) + h f'(a) + \frac{h^2}{2}f''(a) + O(h^3)$` | near $a$ the curve is a quadratic plus a small remainder | deriving both error formulas; full version in Lesson [54](../part04_calculus/54_taylor_series.md) |
 | symmetric expansion | `$f(a+h)-f(a-h) = 2h f'(a) + \frac{h^3}{3}f'''(a) + O(h^5)$` | the even-order terms cancel, the odd ones survive | why central differences gain a full order of accuracy |
 | truncation error | `$\Theta(h)$` forward, `$\Theta(h^2)$` central, valid while truncation dominates | how wrong you are for being too bold with $h$ | choosing a step size; the left arm of the U-curve |
 | roundoff error | `$\sim \frac{\varepsilon\lvert f\rvert}{h}` with `$\varepsilon = 2^{-53} \approx 2.22\times10^{-16}$` | differencing two near-equal floats loses about $\log_{10}(1/h)$ significant digits | the reason a *smaller* $h$ can be worse |
@@ -2122,7 +2122,7 @@ The two Newton runs are the punchline. On $F$ the error falls `1.642e-01`, `7.67
 $10^{-9}$ where the Babylonian iteration gets there in 3. On $g$ the error falls
 `8.579e-02`, `2.453e-03`, `2.124e-06`, `1.595e-12` — each term the square of the last
 times a constant, which is the quadratic convergence of Lesson
-[50](50_functions_limits_continuity.md) Exercise 7 and of [54](54_taylor_series.md).
+[50](../part04_calculus/50_functions_limits_continuity.md) Exercise 7 and of [54](../part04_calculus/54_taylor_series.md).
 
 The reason is not the algorithm, it is the multiplicity of the root. Newton's error
 relation is $e_{k+1} \approx \frac{f''(\alpha)}{2f'(\alpha)}e_k^2$, and for a double root
@@ -2305,6 +2305,6 @@ to use finite differences for training.
 
 ## Next
 
-[52 — Integration](52_integration.md) goes the other way: from rates of change back to
+[52 — Integration](../part04_calculus/52_integration.md) goes the other way: from rates of change back to
 totals, introduces the Fundamental Theorem of Calculus, and shows why numerical
 integration needs the same error analysis you just saw for differentiation.

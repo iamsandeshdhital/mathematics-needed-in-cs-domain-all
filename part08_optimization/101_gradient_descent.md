@@ -52,7 +52,7 @@ clever stepping removes it.
 
 ## The Formal Version
 
-Notation follows [SYMBOLS.md](../../SYMBOLS.md).
+Notation follows [SYMBOLS.md](../SYMBOLS.md).
 
 **Definition.** For f : ℝⁿ → ℝ differentiable at **x**, the *gradient* is the
 vector of partial derivatives ∇f(x) = (∂f/∂x₁, …, ∂f/∂xₙ).

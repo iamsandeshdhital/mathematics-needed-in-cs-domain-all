@@ -30,7 +30,7 @@ lesson does that computation by hand, in plain Python, and then shows that
 - **PageRank.** Google's original ranking algorithm is literally the statement
   "find the eigenvector of the web's link matrix with eigenvalue 1". Every
   search engine since has been a variant of that one sentence. Lesson
-  [41](41_matrices_graphs_and_applications.md) builds the matrix.
+  [41](../part03_linear_algebra/41_matrices_graphs_and_applications.md) builds the matrix.
 - **`numpy.linalg.eig`, `scipy.sparse.linalg.eigs`.** You call these constantly
   in ML. Knowing that `eig` can return complex numbers even for a real matrix —
   and why — saves hours of confusion.
@@ -102,9 +102,9 @@ directions than copies.
 
 **Explanation.** Equivalently: `A` is diagonalisable if and only if it has `n`
 linearly independent eigenvectors, if and only if there is a basis of
-[34](34_basis_dimension_rank.md) consisting entirely of eigenvectors. A matrix
+[34](../part03_linear_algebra/34_basis_dimension_rank.md) consisting entirely of eigenvectors. A matrix
 that fails this is called **defective**. Lesson
-[39](39_diagonalization_and_spectral.md) works through what to do about it.
+[39](../part03_linear_algebra/39_diagonalization_and_spectral.md) works through what to do about it.
 
 **Theorem.** A real matrix with a real eigenvalue can still have complex
 eigenvalues, but they arrive in conjugate pairs `λ, λ̄`.
@@ -113,7 +113,7 @@ eigenvalues, but they arrive in conjugate pairs `λ, λ̄`.
 p̄(z)`, so `p(z) = 0` forces `p(z̄) = 0`. This is why a rotation matrix has no
 real eigenvectors at all.
 
-See [SYMBOLS.md](../../SYMBOLS.md) for `λ`, `x`, `Aᵀ`, `ker(A)`, `det(A)`, `tr(A)`.
+See [SYMBOLS.md](../SYMBOLS.md) for `λ`, `x`, `Aᵀ`, `ker(A)`, `det(A)`, `tr(A)`.
 
 ## Worked Example
 
@@ -770,7 +770,7 @@ print("both are exactly 1.0 -- a rotation has no 'largest' direction")
 
 Tempting because every matrix in an intro course has real eigenvalues. But any
 rotation has none, and `numpy` is being honest with you. Lesson
-[37](37_inner_products_norms_geometry.md) explains why the *singular values* of
+[37](../part03_linear_algebra/37_inner_products_norms_geometry.md) explains why the *singular values* of
 that same matrix are perfectly real.
 
 **2. Using the zero vector as an eigenvector.**
@@ -851,14 +851,14 @@ with eigenvalue 1 rather than about eigenvectors in general.
 
 ## Formula Sheet
 
-Symbols follow [SYMBOLS.md](../../SYMBOLS.md). `A` is an `n × n` matrix over `ℝ` or
+Symbols follow [SYMBOLS.md](../SYMBOLS.md). `A` is an `n × n` matrix over `ℝ` or
 `ℂ`, `x` is a column vector, `I` is the `n × n` identity, `λ` is a scalar.
 
 | Symbol | Formula | In plain words | When you use it |
 | --- | --- | --- | --- |
 | eigenvalue | `$\lambda$` | the single number by which one special direction is scaled | listing the spectrum of `A` |
 | eigenvector | `$A x = \lambda x$`, `$x \ne 0$` | a nonzero direction that `A` leaves pointing the same way | finding the directions `A` does not rotate |
-| eigenspace | `$E_\lambda = \ker(A - \lambda I)$` | **all** solutions of the eigenvector equation for one `λ`, zero vector included | listing every eigenvector for a given `λ`; needs `rank(A − λI)` from [32](32_linear_systems_gaussian_elimination.md) |
+| eigenspace | `$E_\lambda = \ker(A - \lambda I)$` | **all** solutions of the eigenvector equation for one `λ`, zero vector included | listing every eigenvector for a given `λ`; needs `rank(A − λI)` from [32](../part03_linear_algebra/32_linear_systems_gaussian_elimination.md) |
 | characteristic polynomial | `$p_A(\lambda) = \det(A - \lambda I)$` | one polynomial in `λ` whose roots are exactly the eigenvalues | finding eigenvalues by hand for small `n` |
 | eigenvalue test | `$\det(A - \lambda I) = 0$ | there is a nonzero `$x$` with `$Ax = \lambda x$` **iff** the shifted matrix is singular | turning "is `λ` an eigenvalue?" into a determinant |
 | algebraic multiplicity | `$\operatorname{mult}_{alg}(\lambda) = $ count of copies of `λ` in `p_A` | how many times `λ` appears as a root | diagnosing repeated eigenvalues; needs counting roots, not just finding them |
@@ -867,7 +867,7 @@ Symbols follow [SYMBOLS.md](../../SYMBOLS.md). `A` is an `n × n` matrix over `�
 | root count | `$\sum_i \operatorname{mult}_{alg}(\lambda_i) = n$ | the eigenvalues, counted with multiplicity, fill exactly `n` slots | spotting arithmetic errors: the multiplicities must add to `n` |
 | sum rule (trace) | `$\sum_i \lambda_i = \operatorname{tr}(A) = \sum_i a_{ii}$` | eigenvalues add up to the diagonal sum | free sanity check; `tr(A)` is cheap, eigenvalues are not |
 | product rule (determinant) | `$\prod_i \lambda_i = \det(A)$` | eigenvalues multiply to the determinant | second free check; `det(A) = 0` means "some eigenvalue is 0" |
-| diagonalisable test | `$A$ is diagonalisable $\iff \dim E_\lambda = \operatorname{mult}_{alg}(\lambda)$ for every `λ` | there is a basis made entirely of eigenvectors | deciding whether `A = V D V^{-1}` exists — see [39](39_diagonalization_and_spectral.md) |
+| diagonalisable test | `$A$ is diagonalisable $\iff \dim E_\lambda = \operatorname{mult}_{alg}(\lambda)$ for every `λ` | there is a basis made entirely of eigenvectors | deciding whether `A = V D V^{-1}` exists — see [39](../part03_linear_algebra/39_diagonalization_and_spectral.md) |
 | conjugate pairs | `$\lambda \in \mathbb{C} \setminus \mathbb{R} \implies \bar\lambda$ is also an eigenvalue | real matrices have non-real eigenvalues only in twos | explaining why `numpy.linalg.eig` on a real matrix can return complex numbers |
 | sign convention note | `$\det(\lambda I - A) = (-1)^n \det(A - \lambda I)$ | same roots, opposite overall sign when `n` is odd | the Faddeev–LeVerrier code in this lesson prints `det(L*I - A)`; roots are identical |
 | power iteration | `$x_{k+1} = A x_k / \lVert A x_k \rVert_2$` | multiply over and over, rescale each time | finding the dominant eigenvector of a huge sparse matrix, as in PageRank |
@@ -875,7 +875,7 @@ Symbols follow [SYMBOLS.md](../../SYMBOLS.md). `A` is an `n × n` matrix over `�
 | growth of one mode | `$x_k = \lambda^k x_0$` if `Ax₀ = λx₀` | each eigen-direction inflates or decays by its own factor per step | stability analysis: `|λ| > 1` diverges, `|λ| < 1` decays, `|λ| = 1` neither |
 
 Two restrictions worth memorising. Eigenvalues are defined only for **square**
-matrices, so a non-square matrix has none — Lesson [40](40_svd_and_pca.md)
+matrices, so a non-square matrix has none — Lesson [40](../part03_linear_algebra/40_svd_and_pca.md)
 replaces them with singular values. And the eigenvector must be **nonzero**:
 `x = 0` satisfies `Ax = λx` for every `λ`, which would make every scalar an
 eigenvalue.
@@ -1067,7 +1067,7 @@ by 90° are only the zero vector. B and D are the same mistake in different clot
 a rotation preserves lengths and angles, but it preserves no *direction* at all
 when the angle is not 0 or 180°, and `(1,1)` is turned to `(−1,1)`, a 90° change,
 not a scaling. This failure is what motivates singular values in
-[40](40_svd_and_pca.md): they are always real and nonnegative, so a rotation's
+[40](../part03_linear_algebra/40_svd_and_pca.md): they are always real and nonnegative, so a rotation's
 spectrum is perfectly well behaved.
 
 </details>
@@ -1741,7 +1741,7 @@ So the consequences are:
 - **Practical rule.** For stability over long horizons, bound `‖A^k‖` directly —
   via repeated squaring, or with an induced norm such as `‖A‖₁` — rather than
   from `ρ(A) = max|λ|`, which is only a good approximation when `A` is
-  diagonalisable. Lesson [39](39_diagonalization_and_spectral.md) develops the
+  diagonalisable. Lesson [39](../part03_linear_algebra/39_diagonalization_and_spectral.md) develops the
   Jordan form that makes this precise.
 
 </details>
@@ -1769,7 +1769,7 @@ So the consequences are:
 
 ## Next
 
-[37 — Inner Products, Norms, and Geometry](37_inner_products_norms_geometry.md)
+[37 — Inner Products, Norms, and Geometry](../part03_linear_algebra/37_inner_products_norms_geometry.md)
 adds the missing ingredient from this lesson. So far "direction" has been
 informal, because linear algebra has no built-in notion of length or angle.
 This lesson finally defines both, and the choice turns out to change what

@@ -46,12 +46,12 @@ way graph theory predicts.
 - **Shortest path is a whole product category.** Dijkstra, A\*, and Bellman–Ford
   are graph algorithms on weighted graphs, and they underpin routing protocols,
   link-state routing, and every map API. Lesson
-  [27](27_trees_and_spanning_trees.md) implements Dijkstra and explains when
+  [27](../part02_discrete_combinatorics/27_trees_and_spanning_trees.md) implements Dijkstra and explains when
   Dijkstra's non-negativity requirement matters.
 - **Minimum spanning trees.** A network designer's problem — connect everything as
   cheaply as possible — is exactly Kruskal's or Prim's algorithm, and it is how
   cable networks, cluster topologies, and image segmentation boundaries get
-  designed. They use union–find from [Lesson 25](25_relations_and_equivalence_classes.md).
+  designed. They use union–find from [Lesson 25](../part02_discrete_combinatorics/25_relations_and_equivalence_classes.md).
 - **Bipartite matching and flow.** Bipartite graphs are the structure underneath
   the Hungarian algorithm, Hopcroft–Karp, and every assignment problem: matching
   candidates to jobs, users to ads, packets to links.
@@ -250,7 +250,7 @@ interleavings of depth k" without enumerating anything by hand.
 
 **Step 8 — What a spanning tree would cost.** Any spanning tree of G has exactly
 6 − 1 = 5 edges. Choosing the 5 cheapest by some weight is a minimum spanning tree,
-which is [Lesson 27](27_trees_and_spanning_trees.md).
+which is [Lesson 27](../part02_discrete_combinatorics/27_trees_and_spanning_trees.md).
 
 ## Runnable Code
 
@@ -1066,7 +1066,7 @@ print("cyclic build graph has_cycle:", has_cycle(cyclic))
 
 ## Next
 
-[Lesson 27 — Trees and Spanning Trees](27_trees_and_spanning_trees.md) assumes you
+[Lesson 27 — Trees and Spanning Trees](../part02_discrete_combinatorics/27_trees_and_spanning_trees.md) assumes you
 can use degrees, connectivity, and the handshake lemma; it takes the special
 graph with exactly n − 1 edges and builds shortest paths, minimum spanning trees,
 and the tree data structures that index every database you have ever used.

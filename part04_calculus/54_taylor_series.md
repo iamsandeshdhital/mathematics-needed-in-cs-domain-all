@@ -1097,7 +1097,7 @@ print("  know it -- which is why the remainder bound is the right tool.")
 | remainder `$R_n$` | `$R_n(x)=f(x)-T_n(x)$` | everything the truncation threw away | the quantity you must bound |
 | Lagrange remainder | `$R_n(x)=\frac{f^{(n+1)}(c)}{(n+1)!}(x-a)^{n+1}$` for some `$c$` **between** `$a$` and `$x$` | there is one unknown point whose derivative size sets the error | deriving every `O(h^n)` claim in this repository |
 | Lagrange **bound** | `$\lvert R_n\rvert\le\frac{M_{n+1}}{(n+1)!}\lvert x-a\rvert^{n+1}$` with `$\max\lvert f^{(n+1)}\rvert\le M_{n+1}$` | a computable promise, given a bound on one derivative | **certifying** `$n$ before computing anything |
-| hypothesis of the bound | $f$ must have $n+1$ continuous derivatives on an interval containing $a$ and $x$ | no kinks, no jumps | a kink voids the bound — as in [52](52_integration.md)'s $\lvert x-0.3\rvert$ |
+| hypothesis of the bound | $f$ must have $n+1$ continuous derivatives on an interval containing $a$ and $x$ | no kinks, no jumps | a kink voids the bound — as in [52](../part04_calculus/52_integration.md)'s $\lvert x-0.3\rvert$ |
 | index convention | the bound uses the **$(n+1)$-st** derivative, so `$M_{n+1}=\max\lvert f^{(n+1)}\rvert$` | off-by-one here silently invalidates the bound | for `$\ln(1+x)$`, `$M_{n+1}=n!$`, giving bound `$\lvert x\rvert^{n+1}/(n+1)$` |
 | `e^x` | `$\sum_{k\ge0}x^k/k!$`, radius `$\infty$` | the factorial makes it converge instantly | the model exponential-type function; 17 terms for `1e-15` on $[0,1]$ |
 | `$\sin x$`, `$\cos x$` | `$\sum (-1)^k x^{2k+1}/(2k+1)!$, `$\sum(-1)^k x^{2k}/(2k)!$`, radius `$\infty$`; derivatives all bounded by 1 | alternating but factorial-damped | cheap high accuracy: `$\sin(1)$ is exact to `0.00e+00` at 16 terms |
@@ -1144,7 +1144,7 @@ actually suffices — "the bound over-provisions by 5 terms, correct and cheap."
 Option A inverts the relationship: the bound is almost always *larger* than the error, by
 a factor of about 1.6 in the code's $e^x$ table. Option C is impossible — the theorem
 says "for some $c$", and identifying $c$ would require knowing $f$. Option D is the trap
-from [52](52_integration.md): for $\lvert x - 0.3\rvert$ there is no valid $M_4$, so the
+from [52](../part04_calculus/52_integration.md): for $\lvert x - 0.3\rvert$ there is no valid $M_4$, so the
 $h^4$ bound is void, and the code measures an error 150 000 times larger than promised.
 
 </details>
@@ -1510,7 +1510,7 @@ $$\lvert R_n(x)\rvert \le \frac{M_{n+1}}{(n+1)!}\lvert x-a\rvert^{n+1}.$$
 
 The hypothesis is load-bearing. Continuity of $f^{(n+1)}$ is what lets the mean value
 theorem be applied to the difference $f(x) - T_n(x)$ over the whole interval; a kink
-voids it, as in [52](52_integration.md)'s $\lvert x-0.3\rvert$, where Simpson's $h^4$
+voids it, as in [52](../part04_calculus/52_integration.md)'s $\lvert x-0.3\rvert$, where Simpson's $h^4$
 bound failed by a factor of about 150 000.
 
 </details>
@@ -2816,7 +2816,7 @@ loses.
 
 ## Next
 
-[55 — Fourier Series and Transforms](55_fourier_series_and_transforms.md) turns to the other
+[55 — Fourier Series and Transforms](../part04_calculus/55_fourier_series_and_transforms.md) turns to the other
 kind of expansion: instead of describing a function by how fast it changes, it describes
 it as a sum of sinusoids — which turns differentiation into multiplication, convolution into
 multiplication, and filtering into deleting coefficients.

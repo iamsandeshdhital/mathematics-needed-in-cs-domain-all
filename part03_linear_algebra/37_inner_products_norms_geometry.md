@@ -126,7 +126,7 @@ in the L2 geometry. In L1 the shortest route is any monotone staircase, and
 "distance" no longer behaves the way the picture in your head suggests. That is
 the whole reason to care which norm you picked.
 
-See [SYMBOLS.md](../../SYMBOLS.md) for `xᵀy`, `‖x‖`, `x ⊥ y`.
+See [SYMBOLS.md](../SYMBOLS.md) for `xᵀy`, `‖x‖`, `x ⊥ y`.
 
 ## Worked Example
 
@@ -619,12 +619,12 @@ print("Orthogonal => independent always. Independent => orthogonal NEVER.")
 Tempting because in `ℝⁿ` an orthogonal set is automatically a basis, so the two
 words blur together. The converse fails hard: in `ℝ²` you can have three
 independent vectors, and at most two mutually orthogonal ones. Lesson
-[38](38_orthogonality_and_least_squares.md) separates them properly and builds
+[38](../part03_linear_algebra/38_orthogonality_and_least_squares.md) separates them properly and builds
 orthogonal bases on purpose.
 
 ## Formula Sheet
 
-Symbols follow [SYMBOLS.md](../../SYMBOLS.md). `x, y ∈ ℝⁿ` are column vectors,
+Symbols follow [SYMBOLS.md](../SYMBOLS.md). `x, y ∈ ℝⁿ` are column vectors,
 `W` is a diagonal weighting matrix, `p ≥ 1`.
 
 | Symbol | Formula | In plain words | When you use it |
@@ -644,13 +644,13 @@ Symbols follow [SYMBOLS.md](../../SYMBOLS.md). `x, y ∈ ℝⁿ` are column vect
 | angle | `$\theta = \arccos\!\big(\langle x,y\rangle / (\lVert x\rVert\lVert y\rVert)\big)$` | the angle between two directions | only defined for nonzero `x` and `y` — dividing by `‖0‖` gives 0/0 |
 | cosine similarity | `$\cos\theta = \dfrac{x^{\mathsf T}y}{\lVert x\rVert_2\lVert y\rVert_2}$` | agreement of direction, ignoring size | text retrieval, `cosine_similarity`, `metric='cosine'`; values in `[−1, 1]` |
 | rescaled cosine | `$(1 + \cos\theta)/2$ | the same thing moved from `[−1,1]` into `[0,1]` | needed when a downstream API insists on nonnegative scores |
-| orthogonal | `$x \perp y \iff x^{\mathsf T}y = 0$` | the two vectors make a right angle | checking a basis is orthogonal; the precondition for everything in [38](38_orthogonality_and_least_squares.md) |
+| orthogonal | `$x \perp y \iff x^{\mathsf T}y = 0$` | the two vectors make a right angle | checking a basis is orthogonal; the precondition for everything in [38](../part03_linear_algebra/38_orthogonality_and_least_squares.md) |
 | parallel | `$y = cx$ for some scalar $c$ | one vector is a scalar copy of the other | the equality case of Cauchy–Schwarz |
 | Cauchy–Schwarz | `$\lvert x^{\mathsf T}y\rvert \le \lVert x\rVert_2\lVert y\rVert_2$` | the dot product can never exceed the product of lengths | the reason `arccos` never sees an argument outside `[−1, 1]`; requires a real inner product |
 | Pythagoras for vectors | `$x \perp y \Rightarrow \lVert x+y\rVert_2^2 = \lVert x\rVert_2^2 + \lVert y\rVert_2^2$` | squared lengths of perpendicular pieces just add | the entire reason orthogonal bases are worth building — no cross terms |
 | distance | `$d(x,y) = \lVert x - y\rVert$` | how far apart two points are | `k`-NN, clustering, `math.dist` |
 | norm axioms | `$\lVert x\rVert \ge 0$`, `$\lVert x\rVert = 0 \iff x = 0$`, `$\lVert cx\rVert = \lvert c\rVert\lVert x\rVert$`, `$\lVert x+y\rVert \le \lVert x\rVert + \lVert y\rVert$` | positivity, homogeneity, triangle inequality | what makes "length" a length; the triangle inequality is false for L1-style *paths* |
-| projection preview | `$\text{proj}_p(t) = \dfrac{p^{\mathsf T}t}{p^{\mathsf T}p}\,p$` | the point on the line through `p` nearest to `t` | introduced at the end of this lesson, derived fully in [38](38_orthogonality_and_least_squares.md); needs `p ≠ 0` |
+| projection preview | `$\text{proj}_p(t) = \dfrac{p^{\mathsf T}t}{p^{\mathsf T}p}\,p$` | the point on the line through `p` nearest to `t` | introduced at the end of this lesson, derived fully in [38](../part03_linear_algebra/38_orthogonality_and_least_squares.md); needs `p ≠ 0` |
 | residual | `$t - \text{proj}_p(t)$, with `$p^{\mathsf T}\bigl(t - \text{proj}_p(t)\bigr) = 0$` | what is left over, and it is perpendicular to `p` | the leftover is the smallest achievable error — this is least squares |
 | condition number | `$\text{cond}(B) = \sigma_{\max}(B)/\sigma_{\min}(B) \ge 1$ | worst-case amplification of input error by `B⁻¹` | `np.linalg.cond`; equals 1 exactly when `B` is a scalar multiple of an orthogonal matrix |
 | Gram matrix | `$G = V^{\mathsf T}V$ | cross-multiplies a set of vectors into a matrix | testing orthogonality: `V` has orthogonal columns **iff** `G` is diagonal. Diagonal entries are `‖vᵢ‖²` |
@@ -809,7 +809,7 @@ nonsense: matching coordinates has nothing to do with orthogonality, and
 orthogonality is a *stronger* condition than independence, so it can never hold
 for more vectors than the dimension allows. Every orthogonal set is a basis of
 its span, but not every basis is orthogonal — which is why
-[38](38_orthogonality_and_least_squares.md) has to work to build one.
+[38](../part03_linear_algebra/38_orthogonality_and_least_squares.md) has to work to build one.
 
 </details>
 
@@ -1038,7 +1038,7 @@ The absolute value is necessary because a length is nonnegative and lengths do
 not carry a sign. Scaling by `c = −2` moves a vector to the opposite side of the
 origin, which is a distance of twice as much, not "negative twice as much". Drop
 the bars and `‖−x‖₂ = −‖x‖₂ < 0`, which contradicts the positivity axiom. This is
-exactly the same reason `λ < 0` in `Ax = λx` in [36](36_eigenvalues_and_eigenvectors.md)
+exactly the same reason `λ < 0` in `Ax = λx` in [36](../part03_linear_algebra/36_eigenvalues_and_eigenvectors.md)
 flips a direction end to end rather than shrinking it.
 
 </details>
@@ -1462,7 +1462,7 @@ condition but `⟨u,(1,−2)⟩_W = 8 − 2 = 6 ≠ 0`.
 
 That is the whole content of "changing the inner product changes the geometry":
 orthogonality is defined *relative to* the inner product, not intrinsic to the
-coordinates. This is why [38](38_orthogonality_and_least_squares.md) has to say
+coordinates. This is why [38](../part03_linear_algebra/38_orthogonality_and_least_squares.md) has to say
 "orthonormal with respect to the standard inner product" rather than just
 "orthonormal".
 
@@ -1546,7 +1546,7 @@ inside the span and an orthogonal leftover, and the leftover is the error you
 cannot remove.
 
 Two practical corollaries worth stating, because they are what
-[38](38_orthogonality_and_least_squares.md) turns into algorithms. First,
+[38](../part03_linear_algebra/38_orthogonality_and_least_squares.md) turns into algorithms. First,
 `‖p‖₂²` must be positive, which is another way of saying `p ≠ 0`: a zero direction
 means the line is a single point and the whole construction divides by zero.
 Second, once the basis is orthogonal, minimising `‖Ax − b‖₂` separates
@@ -1577,7 +1577,7 @@ coordinate-wise with no cross terms at all — that is why the normal equations
 
 ## Next
 
-[38 — Orthogonality and Least Squares](38_orthogonality_and_least_squares.md)
+[38 — Orthogonality and Least Squares](../part03_linear_algebra/38_orthogonality_and_least_squares.md)
 turns projection into an algorithm. This lesson showed that the leftover after
 projecting is orthogonal to what you projected onto; the next one builds
 orthogonal bases deliberately with Gram-Schmidt, introduces the orthogonal

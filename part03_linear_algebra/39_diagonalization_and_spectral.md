@@ -6,7 +6,7 @@
 
 ## In Plain Words
 
-[Lesson 36](36_eigenvalues_and_eigenvectors.md) found the special directions a
+[Lesson 36](../part03_linear_algebra/36_eigenvalues_and_eigenvectors.md) found the special directions a
 matrix stretches or squashes. This lesson asks the obvious follow-up: can you
 use those directions to make the matrix *simple*?
 
@@ -39,7 +39,7 @@ well-behaved.
   `O(n³ log k)` computation into `O(n³)`. This is how long-run Markov chain
   behaviour and the Kalman filter are computed.
 - **PCA** is literally the eigendecomposition of a covariance matrix, which is
-  symmetric positive definite. [Lesson 40](40_svd_and_pca.md) derives it.
+  symmetric positive definite. [Lesson 40](../part03_linear_algebra/40_svd_and_pca.md) derives it.
 - **Convexity.** A symmetric matrix is positive definite exactly when all its
   eigenvalues are positive, which is exactly when `xᵀAx > 0` for all nonzero
   `x`. That is the algebraic condition for a convex loss, so "the Hessian is
@@ -48,7 +48,7 @@ well-behaved.
 - **Condition numbers and stability.** `np.linalg.cond` on a covariance matrix
   is how you detect collinear features before they silently destroy your fit.
 - **Graph algorithms.** The Laplacian (lesson
-  [41](41_matrices_graphs_and_applications.md)) is symmetric positive definite,
+  [41](../part03_linear_algebra/41_matrices_graphs_and_applications.md)) is symmetric positive definite,
   so spectral clustering and the algebraic connectivity of a network both fall
   out of this lesson.
 - **Interview questions.** "Why are the eigenvalues of a symmetric matrix
@@ -146,7 +146,7 @@ information the eigenvalues discard. Computationally it is numerically
 delicate — an arbitrarily small perturbation can split one block into several
 — so in practice use the Schur decomposition or avoid it entirely via the SVD.
 
-See [SYMBOLS.md](../../SYMBOLS.md) for `λ`, `x`, `Aᵀ`, `A⁻¹`, `tr(A)`, `det(A)`, `Q`.
+See [SYMBOLS.md](../SYMBOLS.md) for `λ`, `x`, `Aᵀ`, `A⁻¹`, `tr(A)`, `det(A)`, `Q`.
 
 ## Worked Example
 
@@ -1300,7 +1300,7 @@ multiplicities — you should get from `np.linalg.eigvals` and count.
 
 ## Formula Sheet
 
-Symbols follow [SYMBOLS.md](../../SYMBOLS.md). `A` is `n × n` over `ℝ` or `ℂ`,
+Symbols follow [SYMBOLS.md](../SYMBOLS.md). `A` is `n × n` over `ℝ` or `ℂ`,
 `V` is `n × n` invertible, `D` is diagonal, `Q` orthogonal, `p_A(λ) =
 det(λI − A) = λⁿ + c_{n−1}λ^{n−1} + ⋯ + c₀`.
 
@@ -1421,7 +1421,7 @@ A is wrong — both use the same IEEE 754 double. C is wrong — `eig` works fin
 it just returns complex numbers in general and does not guarantee orthogonality;
 the lesson's Common Mistake 1 shows it succeeding, only slowly and less accurately.
 D is wrong — `eigh` returns eigenvalues. It is `np.linalg.svd` that returns
-singular values, and [40](40_svd_and_pca.md) covers why those are different.
+singular values, and [40](../part03_linear_algebra/40_svd_and_pca.md) covers why those are different.
 
 </details>
 
@@ -1620,7 +1620,7 @@ badly conditioned.**
 This is not a small difference. `V⁻¹` computed by Gaussian elimination on a
 matrix with near-parallel columns is where precision dies — the same phenomenon
 that makes the normal equations of
-[38](38_orthogonality_and_least_squares.md) square the condition number.
+[38](../part03_linear_algebra/38_orthogonality_and_least_squares.md) square the condition number.
 Orthogonality removes that step entirely: `Q⁻¹ = Qᵀ` is a reshape, exact, and
 `cond(Q) = 1`.
 
@@ -1652,10 +1652,10 @@ Diagonalisable means there *is* a basis in which `A` does nothing but scale each
 axis independently — the columns of `V` are the eigenvectors and the diagonal of
 `D` is the eigenvalues.
 
-The equivalent form, from [36](36_eigenvalues_and_eigenvectors.md): `A` is
+The equivalent form, from [36](../part03_linear_algebra/36_eigenvalues_and_eigenvectors.md): `A` is
 diagonalisable iff `dim E_λ = mult_alg(λ)` for every eigenvalue `λ`, iff it has
 `n` linearly independent eigenvectors, iff a basis of
-[34](34_basis_dimension_rank.md) consists entirely of eigenvectors. A matrix that
+[34](../part03_linear_algebra/34_basis_dimension_rank.md) consists entirely of eigenvectors. A matrix that
 fails is **defective**.
 
 </details>
@@ -1719,7 +1719,7 @@ block has `m_A = p_A`, the full degree, and is the worst case.
 so `(λ − μ)(uᵀv) = 0`. Distinct eigenvalues therefore give **perpendicular**
 eigenvectors. For equal eigenvalues, any spanning set of the eigenspace can be
 replaced by an orthonormal one via Gram–Schmidt
-([38](38_orthogonality_and_least_squares.md)). Either way an orthonormal eigenbasis
+([38](../part03_linear_algebra/38_orthogonality_and_least_squares.md)). Either way an orthonormal eigenbasis
 exists, and `Q⁻¹ = Qᵀ`.
 
 </details>
@@ -1810,7 +1810,7 @@ spectrum. This is the same failure as `V⁻¹AV` in general, and it is exactly w
 symmetry removes by guaranteeing `cond(Q) = 1`.
 
 **What to use instead.** The **singular value decomposition**,
-`A = UΣVᵀ` ([40](40_svd_and_pca.md)), which exists for *every* matrix, has
+`A = UΣVᵀ` ([40](../part03_linear_algebra/40_svd_and_pca.md)), which exists for *every* matrix, has
 `σᵢ ≥ 0` always real, sorted descending, and `U, V` always orthogonal. When `A`
 is symmetric the two coincide up to signs: `σᵢ = |λᵢ|` and `U` can be taken as
 `V` (up to sign flips for negative eigenvalues). So the SVD is not a different
@@ -1856,7 +1856,7 @@ not to lean on defective matrices numerically.
    correct version of "diagonalising what you can and discarding the rest".
 2. **Pseudoinverse** (`np.linalg.pinv(A)`) — the minimum-norm answer computed
    stably, which is what `np.linalg.lstsq` uses internally for rank-deficient
-   input ([38](38_orthogonality_and_least_squares.md)).
+   input ([38](../part03_linear_algebra/38_orthogonality_and_least_squares.md)).
 3. **Regularisation.** Adding `λI` (ridge) or dropping to `lstsq` sidesteps the
    question entirely; the lesson's ridge table is a demonstration that you can
    trade a little bias for a large reduction in variance.
@@ -1904,7 +1904,7 @@ no minimum at all.
   `cond ≈ 4 × 10⁶`, so six digits vanish from any solve against it. This is the
   collinear-features case: two nearly-parallel columns make the direction they
   span indistinguishable, and the coefficient along it is determined by noise.
-- **Wrong Gauss–Newton.** In [38](38_orthogonality_and_least_squares.md) the
+- **Wrong Gauss–Newton.** In [38](../part03_linear_algebra/38_orthogonality_and_least_squares.md) the
   Gauss–Newton matrix is `JᵀJ`, which is positive *semidefinite*, never negative.
   The failure is therefore the singular/flat case, and ridge's `+λI` is exactly
   the cure: it lifts every zero eigenvalue to `λ` and makes the system solvable.
@@ -2414,7 +2414,7 @@ coincide, which is why `cond` of a symmetric matrix can be read straight off the
 spectrum you already computed.
 
 **(e)** **The fix is regularisation** — exactly ridge from
-[38](38_orthogonality_and_least_squares.md). Replace `C` by `C + λI`. The
+[38](../part03_linear_algebra/38_orthogonality_and_least_squares.md). Replace `C` by `C + λI`. The
 eigenvalues become `5e-7 + λ` and `1.9999985 + λ`, so
 `cond = (1.9999985 + λ)/(5e-7 + λ)`, and with `λ = 10⁻⁶` the ratio drops from
 `4 × 10⁶` to about `1 × 10⁶`; with `λ = 10⁻³` it is about `2`. The solves agree:
@@ -2465,7 +2465,7 @@ when you cannot.
 
 ## Next
 
-[40 — SVD and PCA](40_svd_and_pca.md) fixes everything this lesson could only
+[40 — SVD and PCA](../part03_linear_algebra/40_svd_and_pca.md) fixes everything this lesson could only
 work around. The spectral theorem needs symmetry; the SVD needs nothing. It
 exists for **every** matrix, its singular values are always real and
 non-negative and always sorted, its basis vectors are always orthogonal, and

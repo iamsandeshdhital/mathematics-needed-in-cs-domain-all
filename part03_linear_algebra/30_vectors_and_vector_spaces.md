@@ -51,7 +51,7 @@ data, and error-correcting codes.
 
 ## The Formal Version
 
-Symbols follow [SYMBOLS.md](../../SYMBOLS.md).
+Symbols follow [SYMBOLS.md](../SYMBOLS.md).
 
 **Definition.** Let `F` be a *field* of scalars — a set of numbers where
 addition, subtraction, multiplication, and division by nonzero elements all
@@ -105,7 +105,7 @@ dependent.
 its columns. `A` has `n` rows and `m > n` columns, so it has more unknowns than
 equations, and any homogeneous system with more unknowns than equations has a
 nontrivial solution. The full algorithm is in
-[lesson 34](34_basis_dimension_rank.md).
+[lesson 34](../part03_linear_algebra/34_basis_dimension_rank.md).
 
 **Definition.** A **subspace** `W ⊆ V` is a subset that is itself a vector space
 under the same operations.
@@ -130,7 +130,7 @@ has dimension `k`.
 
 **Explanation.** This is why "independent" and "a basis of its span" mean the
 same thing from two directions. See
-[lesson 34](34_basis_dimension_rank.md).
+[lesson 34](../part03_linear_algebra/34_basis_dimension_rank.md).
 
 ## Worked Example
 
@@ -222,7 +222,7 @@ spanning all of `ℝ³`.
 
 This is the whole practical content of the lesson: three feature columns of a
 dataset may carry two independent factors, not three, and knowing which and why
-is what [lesson 34](34_basis_dimension_rank.md) is for.
+is what [lesson 34](../part03_linear_algebra/34_basis_dimension_rank.md) is for.
 
 ## Runnable Code
 
@@ -313,7 +313,7 @@ print(f"dot([1,0], [0,5]) = {dot(right_a, right_b)}  (perpendicular)")
 
 The span is the set of everything reachable by scaling and adding generators.
 To ask whether a target is reachable, we form a linear system and solve it. The
-solver here is a preview; [lesson 32](32_linear_systems_gaussian_elimination.md)
+solver here is a preview; [lesson 32](../part03_linear_algebra/32_linear_systems_gaussian_elimination.md)
 builds the real one and explains why partial pivoting matters.
 
 ```python
@@ -2493,7 +2493,7 @@ telling you which of those two situations you are in.
 
 ## Next
 
-[31 — Matrices and Matrix Algebra](31_matrices_and_matrix_algebra.md) takes the
+[31 — Matrices and Matrix Algebra](../part03_linear_algebra/31_matrices_and_matrix_algebra.md) takes the
 list of vectors from this lesson and puts them in a grid, then makes the grid do
 arithmetic: multiplication, transpose, powers, and the special shapes that
 structured problems rely on.

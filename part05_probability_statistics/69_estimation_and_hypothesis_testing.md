@@ -149,7 +149,7 @@ of intervals built this way would capture the true rate. This particular number,
 0.0775, is a fixed point estimate and the true rate is a fixed number — the 95%
 belongs to the *procedure*, not to this measurement. Writing "there is a 95%
 chance the true rate is between 5.1% and 10.4%" is the base-rate fallacy from
-[Lesson 62](62_conditional_probability_and_bayes.md) applied to a frequentist
+[Lesson 62](../part05_probability_statistics/62_conditional_probability_and_bayes.md) applied to a frequentist
 object, and it is the single most common statistical misstatement in product work.
 
 ### Example B — a two-sided test, worked by hand
@@ -220,7 +220,7 @@ ineffective treatments swamps the true positives from a small pool of effective
 ones.
 
 **Note what this is.** This is exactly the base-rate fallacy of
-[Lesson 62](62_conditional_probability_and_bayes.md), now applied to
+[Lesson 62](../part05_probability_statistics/62_conditional_probability_and_bayes.md), now applied to
 frequentist output. "Significant" ≠ "probably true". The correct conclusion from
 "p < 0.05" is narrow: *if the null were true, data this extreme would be
 unusual.* Nothing more.
@@ -927,7 +927,7 @@ statement is correct?
 fixed true rate; this particular interval either covers or it does not.**
 
 Mistake 5 in this lesson, and the base-rate fallacy of
-[Lesson 62](62_conditional_probability_and_bayes.md) applied to a frequentist
+[Lesson 62](../part05_probability_statistics/62_conditional_probability_and_bayes.md) applied to a frequentist
 object: the parameter is fixed, so it does not "have a probability" of lying
 somewhere. Option C confuses the parameter with individuals. Option D is a
 frequentist non-sequitur; without a prior, no value inside the interval is more
@@ -1075,7 +1075,7 @@ the prior and the alternative likelihood entirely.
 Example C puts numbers on the damage. Take $\pi = 0.001$, 80% power, and
 $\alpha = 0.05$. Then $P(\text{works} \mid \text{sig}) = 0.0008/0.05075 =
 0.0158$ — about 1.6%, not 95%. The reason is a base-rate effect straight out of
-[Lesson 62](62_conditional_probability_and_bayes.md): the pool of ineffective
+[Lesson 62](../part05_probability_statistics/62_conditional_probability_and_bayes.md): the pool of ineffective
 treatments is 999× larger, so even a 5% false alarm rate produces 999 false
 positives for every 80 true ones.
 
@@ -1407,7 +1407,7 @@ one.** Control: 1,200 conversions from 20,000 users (6.0%). Variant: 1,240 from
 the difference, and the decision. (b) A colleague says "ship it, we saw a lift".
 Give the strongest honest objection. (c) Compute the power of this experiment to
 detect the observed 0.2 percentage-point effect, and to detect 1 point. (d) Using
-the formula from [Lesson 68](68_law_of_large_numbers_and_clt.md), compute how many
+the formula from [Lesson 68](../part05_probability_statistics/68_law_of_large_numbers_and_clt.md), compute how many
 users per arm would be needed to detect 1 percentage point at 80% power and 5%
 significance. (e) Give one recommendation about the *next* experiment that is not
 "get more users".
@@ -1707,7 +1707,7 @@ discards the prior. The "null pool" is $(1-\pi)$ times as large as the real pool
 and the false positives from it scale with $\alpha$ while the true positives
 scale with power × $\pi$. Whenever $\alpha(1-\pi) \gg \text{power}\cdot\pi$, the
 posterior collapses — and that condition is just a restatement of the base-rate
-problem from [Lesson 62](62_conditional_probability_and_bayes.md).
+problem from [Lesson 62](../part05_probability_statistics/62_conditional_probability_and_bayes.md).
 
 Two levers, with very different reach. **Raise power**: at 0.99 instead of 0.90
 the posterior goes from 0.90 to 0.95 with prior 0.5, but with prior 0.01 only
@@ -1978,7 +1978,7 @@ print("    prompts the reader to ask whether the test could answer the question.
 
 ## Next
 
-[70 — Information Theory and Entropy](70_information_theory_entropy.md) measures
+[70 — Information Theory and Entropy](../part05_probability_statistics/70_information_theory_entropy.md) measures
 how surprising an outcome is in bits, and shows that cross-entropy — the loss
 every neural network minimises — is just entropy computed against the wrong
 distribution.

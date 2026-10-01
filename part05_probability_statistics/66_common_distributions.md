@@ -834,7 +834,7 @@ $np(1-p) \le np$, and Poisson is the $n \to \infty$, $p \to 0$, $np \to \lambda$
 limit where $p \to 0$.**
 
 This is why the variance-to-mean ratio is a usable diagnostic
-([Lesson 63](63_discrete_random_variables.md) and Exercise 3 here):
+([Lesson 63](../part05_probability_statistics/63_discrete_random_variables.md) and Exercise 3 here):
 $\mathrm{Binomial}(30,0.1)$ gives ratio $2.7/3.0 = 0.9 < 1$, so a ratio below 1
 points at a fixed-trial model. Option A is descriptive, not explanatory. Option C
 is false; λ is any positive real. Option D denies a relationship that is exactly
@@ -986,7 +986,7 @@ of errors in one minute and near-zero in the next, so the distribution is a
 mean $\sum w_i\lambda_i$ and variance $\sum w_i\lambda_i^2$, and
 $\sum w_i \lambda_i^2 > (\sum w_i\lambda_i)^2$ by strict convexity of the square.
 So the excess variance is exactly the *between-state* variance — the same law of
-total variance from [Lesson 64](64_expectation_variance.md), applied to arrival
+total variance from [Lesson 64](../part05_probability_statistics/64_expectation_variance.md), applied to arrival
 rates instead of latency.
 
 What breaks is the tail, and always in the optimistic direction. Poisson has no
@@ -1024,7 +1024,7 @@ ziggurat algorithm, or acceptance–rejection with an envelope.
 
 The reason this matters beyond tidiness is that the normal is the distribution you
 most want to sample from — it is the CLT limit and the basis of every simulation
-in [Lesson 68](68_law_of_large_numbers_and_clt.md). So "the sampler for the most
+in [Lesson 68](../part05_probability_statistics/68_law_of_large_numbers_and_clt.md). So "the sampler for the most
 important distribution needs a trick" is not a trivial gap in the method, it is
 the gap the whole Box–Muller derivation exists to fill. And note the shape of the
 trick: Box–Muller is not a rejection scheme with an envelope, it is a *change of
@@ -1095,7 +1095,7 @@ There is a second failure mode, specific to this lesson's Normal. Everything els
 in the table follows from the *mechanism*: a queue with constant arrival rate and
 constant service rate really is exponential, whatever the data looks like. The
 normal, by contrast, is usually a *consequence* — of averaging many small things
-via the CLT ([Lesson 68](68_law_of_large_numbers_and_clt.md)) — and so it is
+via the CLT ([Lesson 68](../part05_probability_statistics/68_law_of_large_numbers_and_clt.md)) — and so it is
 legitimate for a sum of many terms and illegitimate for a single latency. Mistake
 5's warning is the version that bites: fitting a normal to hard-bounded,
 right-skewed data reproduces the mean exactly and gets the percentiles badly
@@ -1763,7 +1763,7 @@ print("    So: excess zeros -- buckets where traffic genuinely stopped.")
 
 ## Next
 
-[67 — Joint Random Variables and Covariance](67_joint_random_variables_covariance.md)
+[67 — Joint Random Variables and Covariance](../part05_probability_statistics/67_joint_random_variables_covariance.md)
 handles two variables at once: joint and marginal distributions, independence,
 covariance and correlation, why correlation is not causation, and how conditional
 expectation turns least-squares regression into a prediction problem.

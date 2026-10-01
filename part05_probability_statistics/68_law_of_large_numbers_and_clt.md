@@ -31,7 +31,7 @@ with a margin of error.
 
 - **Every confidence interval ever reported** uses the standard error, which is
   σ/√n — a direct application of the variance of a sum of independent variables
-  from [Lesson 64](64_expectation_variance.md).
+  from [Lesson 64](../part05_probability_statistics/64_expectation_variance.md).
 - **A/B tests.** Deciding whether a 1.2% conversion lift is real is exactly the
   question the CLT exists to answer.
 - **Benchmark variance.** Reporting "runs in 42 ms" without a standard deviation
@@ -121,7 +121,7 @@ Since (X̄ₙ − μ)/(σ/√n) ≈ N(0,1) and P(|Z| ≤ 1.96) = 0.95,
 ### A theorem about the tail, not just the body
 
 WLLN plus Chebyshev's inequality (from
-[Lesson 64](64_expectation_variance.md)) gives a bound that holds at **every** n:
+[Lesson 64](../part05_probability_statistics/64_expectation_variance.md)) gives a bound that holds at **every** n:
 
     P(|X̄ₙ − μ| ≥ kσ/√n) ≤ 1/k²
 
@@ -177,7 +177,7 @@ That is the CLT in one sentence: **the distribution of the average converges to
 normal even when the distribution of the summands is nothing like normal.** The
 smoothing comes from the averaging itself. What does *not* converge to normal is
 the shape of the raw variable — so never report a normal assumption for the raw
-metric ([Lesson 65](65_continuous_random_variables.md)).
+metric ([Lesson 65](../part05_probability_statistics/65_continuous_random_variables.md)).
 
 ### Example C — a confidence interval, and why the width matters
 
@@ -201,7 +201,7 @@ Anyone who divides p̂ by √n gets an interval more than ten times too wide.
 built an interval each time, about 95% of them would contain the true conversion
 rate. It is a statement about *the procedure's long-run accuracy*, not a
 95% probability that this particular fixed number is right — that distinction
-matters and is the subject of [Lesson 69](69_estimation_and_hypothesis_testing.md).
+matters and is the subject of [Lesson 69](../part05_probability_statistics/69_estimation_and_hypothesis_testing.md).
 
 **Why the width is the real story.** To halve the interval width you must
 quadruple the sample. Going from 4,000 users to 16,000 halves the standard error,
@@ -544,7 +544,7 @@ The parameter is fixed; the interval is random. Correct statement: if you repeat
 the whole experiment many times and constructed an interval each time, about 95%
 of those intervals would contain the fixed true value. Writing "there is a 95%
 chance the true value is in this interval" is the base-rate fallacy of
-[Lesson 62](62_conditional_probability_and_bayes.md) applied to frequentist
+[Lesson 62](../part05_probability_statistics/62_conditional_probability_and_bayes.md) applied to frequentist
 objects.
 
 ## Formula Sheet
@@ -652,7 +652,7 @@ about 95% of them would contain the fixed true rate.**
 
 This is Mistake 5, and the statement about *the procedure's long-run accuracy* is
 the one the lesson insists on. Option A is the base-rate fallacy of
-[Lesson 62](62_conditional_probability_and_bayes.md) applied to a frequentist
+[Lesson 62](../part05_probability_statistics/62_conditional_probability_and_bayes.md) applied to a frequentist
 object: the parameter is fixed, so it does not "have a probability" of lying
 somewhere. Option C confuses a statement about the parameter with one about
 individuals. Option D makes the parameter random, which is the same error as A in
@@ -907,14 +907,14 @@ between, and its variance is $n^2\sigma^2$ rather than $\sigma^2$ — ten times
 worse. Retries against a struggling dependency, and users sampled from one session
 or one region, fail the same way. So the CLT's error bars become optimistic by
 exactly the factor the dependency contributes, and the error is worst in the tail
-([Lesson 64](64_expectation_variance.md)'s covariance terms).
+([Lesson 64](../part05_probability_statistics/64_expectation_variance.md)'s covariance terms).
 
 The second failure mode is heavy tails. The CLT needs a finite variance; if the
 mean exists but the variance does not — a Pareto tail, a sum of heavy-tailed
 services — then $\sigma/\sqrt n$ is meaningless and the standard error does not
 exist at the rate the theorem predicts. There the stable-LLN regime (a rate
 faster than $1/\sqrt n$, but slower than $1/n$) is the right framework, and
-[Lesson 70](70_information_theory_entropy.md)'s tail-sum route is a practical
+[Lesson 70](../part05_probability_statistics/70_information_theory_entropy.md)'s tail-sum route is a practical
 substitute for an expectation you cannot normalise.
 
 </details>
@@ -968,7 +968,7 @@ one draw from that distribution — it either covers or it does not, and there i
 no probability attached to which.
 
 Reading it the other way is Mistake 5, and it is the base-rate fallacy of
-[Lesson 62](62_conditional_probability_and_bayes.md) applied to a frequentist
+[Lesson 62](../part05_probability_statistics/62_conditional_probability_and_bayes.md) applied to a frequentist
 object. "There is a 95% chance the true rate is in [0.0256, 0.0364]" treats $p$ as
 a random quantity with its own distribution, which is the Bayesian view and is
 not what the interval encodes. The two readings lead to different decisions: the
@@ -1212,7 +1212,7 @@ The standard two-proportion z-test sample size formula for equal-sized arms is
 
 with p̄ the pooled mean of the two rates, z_{1−α/2} = 1.96 for α = 0.05, and
 z_{1−β} = 0.8416 for 80% power (β = 0.2). Values of Φ⁻¹ come from
-`normal_quantile` in [Lesson 65](65_continuous_random_variables.md).
+`normal_quantile` in [Lesson 65](../part05_probability_statistics/65_continuous_random_variables.md).
 
 (a) p₁ = 0.04, p₂ = 0.0408, p̄ = 0.0404. The difference is 0.0008.
 
@@ -1682,7 +1682,7 @@ print("a high quantile instead, or use a trimmed mean.")
 
 ## Next
 
-[69 — Estimation and Hypothesis Testing](69_estimation_and_hypothesis_testing.md)
+[69 — Estimation and Hypothesis Testing](../part05_probability_statistics/69_estimation_and_hypothesis_testing.md)
 turns these theorems into decisions: maximum likelihood estimation, bias and
 variance of estimators, what a p-value actually means, the errors you can make,
 power, and A/B testing applied to a real product decision.

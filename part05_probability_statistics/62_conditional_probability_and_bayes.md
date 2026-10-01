@@ -1506,7 +1506,7 @@ print(f"coverage lost in (c): {1 - 0.85:.0%} of attacks never flagged at all")
 
 ## Next
 
-[63 — Discrete Random Variables](63_discrete_random_variables.md) stops asking
+[63 — Discrete Random Variables](../part05_probability_statistics/63_discrete_random_variables.md) stops asking
 about events and starts naming outcomes: it introduces random variables as
 functions on the sample space, probability mass functions, cumulative
 distributions, and the Bernoulli and Binomial distributions in full.

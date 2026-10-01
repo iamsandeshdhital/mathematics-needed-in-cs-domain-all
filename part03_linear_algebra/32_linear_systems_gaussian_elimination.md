@@ -36,7 +36,7 @@ apart takes one more look than counting pivots.
 - **Every linear regression is a system of equations.** Least squares solves a
   huge, badly conditioned, sparse system on every model fit. The condition
   number of the design matrix is how you decide whether to normalise your
-  features first. [Lesson 38](38_orthogonality_and_least_squares.md).
+  features first. [Lesson 38](../part03_linear_algebra/38_orthogonality_and_least_squares.md).
 - **Graphics and physics engines** solve systems every frame: a rigid body has 6
   degrees of freedom and a constraint solver is a 6-by-6 solve.
 - **Shortest path, Markov chains, PageRank** all involve solving a linear system
@@ -52,7 +52,7 @@ apart takes one more look than counting pivots.
 
 ## The Formal Version
 
-Symbols follow [SYMBOLS.md](../../SYMBOLS.md).
+Symbols follow [SYMBOLS.md](../SYMBOLS.md).
 
 **Definition.** A **linear system** over `F` in `n` unknowns is `Ax = b` with
 `A` an `m × n` matrix, `x ∈ Fⁿ`, and `b ∈ F^m`. The **augmented matrix** is the
@@ -1320,7 +1320,7 @@ The pivot count is therefore at most 2 and can never equal `n = 3`. With no
 contradictory row you get a free variable and a one-parameter family; with a
 contradictory row you get `0 = c`. Uniqueness is structurally impossible, which
 is the `k ≤ n` side of the counting argument from
-[lesson 30](30_vectors_and_vector_spaces.md). This is Mistake 3: reporting
+[lesson 30](../part03_linear_algebra/30_vectors_and_vector_spaces.md). This is Mistake 3: reporting
 "no unique solution" as an *error* for a rectangular system is wrong; an
 underdetermined system is an ordinary situation, and `np.linalg.lstsq` exists
 to answer it.
@@ -1361,7 +1361,7 @@ column. The lesson's Case 1 says exactly this — "every column is a pivot, so t
 answer is unique and is the last column, read straight off the RREF with no back
 substitution at all" — and the code prints `x = [2.0, 3.0, -1.0]`. Full pivot
 coverage is also exactly invertibility, which is the bridge to
-[lesson 33](33_determinant_and_inverse.md)'s one-line test.
+[lesson 33](../part03_linear_algebra/33_determinant_and_inverse.md)'s one-line test.
 
 - B) is true of *echelon* form and false of RREF. In the upper-triangular `U`
   from the worked example, `x₂` must be read first and substituted upward, which
@@ -1408,7 +1408,7 @@ above, so `x₂ = (-1/5)/(1/5) = -1` immediately. Then
 `x₁ = (13/3 - (2/3)(-1)) / (5/3) = 3` and `x₀ = (-11 + 3 + 2) / (-3) = 2`,
 giving `x = [2, 3, -1]`, which the lesson verifies against all three original
 equations. The product formula is the one from
-[lesson 31](31_matrices_and_matrix_algebra.md): a row of the left factor dotted
+[lesson 31](../part03_linear_algebra/31_matrices_and_matrix_algebra.md): a row of the left factor dotted
 with a column of the right factor.
 
 - B) confuses the matrix product with the Hadamard product, Mistake 1 in that
@@ -1958,7 +1958,7 @@ they go wrong.
 The general principle underneath: prefer the operation that computes what you
 need. `solve(A, b)` computes one solution; `inv(A) @ b` computes an entire
 operator in order to apply it once. The same logic reappears in
-[lesson 33](33_determinant_and_inverse.md), where the determinant is introduced
+[lesson 33](../part03_linear_algebra/33_determinant_and_inverse.md), where the determinant is introduced
 precisely so you can *test* invertibility in `O(n³/3)` multiplications without
 forming anything — and the `O(n³)` closed form via the adjugate is explicitly
 marked as the thing not to compute.
@@ -2004,7 +2004,7 @@ of `A` itself, so the squaring never happens.
 `O(mn²)` rather than `O(mn² + n³)` for the normal equations, and with
 `κ` unchanged rather than squared. That is why `np.linalg.lstsq` uses a
 least-squares routine that does not build the normal equations, and why
-[lesson 38](38_orthogonality_and_least_squares.md) develops the orthogonal
+[lesson 38](../part03_linear_algebra/38_orthogonality_and_least_squares.md) develops the orthogonal
 machinery.
 
 **When the normal equations are fine.** When the problem is small and
@@ -2921,7 +2921,7 @@ no solution at all.
 
 ## Next
 
-[33 — Determinant and Inverse](33_determinant_and_inverse.md) asks the same
+[33 — Determinant and Inverse](../part03_linear_algebra/33_determinant_and_inverse.md) asks the same
 question without doing the work: is this square matrix invertible? The
 determinant answers it with a formula involving no division, it tells you the
 volume scale factor of the corresponding transformation, and it gives the

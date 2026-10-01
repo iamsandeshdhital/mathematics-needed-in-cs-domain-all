@@ -37,7 +37,7 @@ chain of derivatives. That matrix form is exactly what backpropagation computes,
   normalise layers, use careful initialisation, and clip gradients.
 - **The Jacobian is the derivative of a linear map.** For a layer $y = Wx$ the Jacobian is
   $W$ itself, so backprop is literally "multiply by the weight matrices again". See
-  [31 — Matrices and Matrix Algebra](../part03_linear_algebra/31_matrices_matrix_algebra.md).
+  [31 — Matrices and Matrix Algebra](../part03_linear_algebra/31_matrices_and_matrix_algebra.md).
 - **Optimisers are gradient methods.** L-BFGS uses the gradient and an estimate of its
   inverse from recent steps; `scipy.optimize.minimize(method="BFGS")` and `trust-exact`
   build a curvature model from gradients alone. Newton needs the full Hessian.
@@ -1744,7 +1744,7 @@ $\frac12(0.934)d^2 = 0.467d^2$ — at $d = 0.5$ that is `0.117`, and the measure
 `0.622`. The rest is the third-order term, which is no longer small at that distance.
 **The linear prediction degrades exactly as the square of the distance travelled**, which
 is precisely why Newton and gradient descent behave so differently, and why
-[lesson 54](54_taylor_series.md) exists.
+[lesson 54](../part04_calculus/54_taylor_series.md) exists.
 
 </details>
 
@@ -2408,7 +2408,7 @@ quadratic above, the predicted change is monotone but the actual change at $d=0.
 "linearise, then solve the linearisation exactly", is *defined* by being valid only near
 $a$, which is why it takes a fresh step from the new point instead of one long step from
 the start. And any bound that grows like the squared distance — the trapezoid-style error
-estimates of [52](52_integration.md), or a Hessian-based step-size cap — is silently void
+estimates of [52](../part04_calculus/52_integration.md), or a Hessian-based step-size cap — is silently void
 once the model is used far enough away.
 
 </details>
@@ -2643,7 +2643,7 @@ computing a curvature estimate once.
 
 ## Next
 
-[54 — Taylor Series](54_taylor_series.md) answers the question this lesson kept
+[54 — Taylor Series](../part04_calculus/54_taylor_series.md) answers the question this lesson kept
 gesturing at: why does linearisation describe a function near a point, how big is the
 error, and what happens when you truncate a series in floating point and lose every digit
 you have.

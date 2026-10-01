@@ -36,7 +36,7 @@ Diffie-Hellman key exchange.
 
 ## The Formal Version
 
-Notation follows [SYMBOLS.md](../../SYMBOLS.md). Used here: `a ≡ b (mod m)`,
+Notation follows [SYMBOLS.md](../SYMBOLS.md). Used here: `a ≡ b (mod m)`,
 `gcd(a, b)`, `φ(n)`, `a⁻¹ mod m`, `O()`.
 
 ### Congruences
@@ -978,7 +978,7 @@ treats signatures as unique.
 ## Formula Sheet
 
 Every formula, notation and definition this lesson uses. Symbols follow
-[SYMBOLS.md](../../SYMBOLS.md). "Restriction" columns are not optional: dropping
+[SYMBOLS.md](../SYMBOLS.md). "Restriction" columns are not optional: dropping
 the coprimality condition is the single most common way to get one of these wrong.
 
 | Symbol | Formula | In plain words | When you use it |

@@ -38,7 +38,7 @@ for computing with numbers or a reason that computing with numbers is hard.
 
 ## The Formal Version
 
-Notation follows [SYMBOLS.md](../../SYMBOLS.md). Symbols used here: `a | b`,
+Notation follows [SYMBOLS.md](../SYMBOLS.md). Symbols used here: `a | b`,
 `a mod b`, `gcd(a, b)`, `lcm(a, b)`, `π(N)`, `O()`, `Θ()`.
 
 ### Divisibility and the division algorithm
@@ -789,7 +789,7 @@ finding a 2048-bit prime takes a variable number of tries.
 ## Formula Sheet
 
 Every formula, notation and definition this lesson uses. Symbols follow
-[SYMBOLS.md](../../SYMBOLS.md). A prime is always taken positive.
+[SYMBOLS.md](../SYMBOLS.md). A prime is always taken positive.
 
 | Symbol | Formula | In plain words | When you use it |
 | --- | --- | --- | --- |

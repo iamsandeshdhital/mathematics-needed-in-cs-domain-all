@@ -87,25 +87,25 @@ mechanically. Every branch cites the lesson that owns the technique.
 - **S2 — Are there constraints ("must", "at least", "at most", "distinct",
   "exactly")?** Constraints are handled by:
   - "at most / at least k" → complement plus binomial sums (Lesson
-    [22](22_binomial_theorem.md)), or inclusion–exclusion
-    ([Lesson 23](23_inclusion_exclusion_and_pigeonhole.md)).
+    [22](../part02_discrete_combinatorics/22_binomial_theorem.md)), or inclusion–exclusion
+    ([Lesson 23](../part02_discrete_combinatorics/23_inclusion_exclusion_and_pigeonhole.md)).
   - "exactly k of a kind" → C(n, k) positions (Lesson
-    [21](21_permutations_and_combinations.md)).
+    [21](../part02_discrete_combinatorics/21_permutations_and_combinations.md)).
   - "no repeats" → falling factorial P(n, r).
   - "pairs forbidden together" → inclusion–exclusion.
 - **S3 — Do the choices decompose?** If the answer is a product of independent
   choices, apply the product rule. Decide ordered vs unordered by asking whether
   swapping two chosen items changes the object (Lesson
-  [21](21_permutations_and_combinations.md)).
+  [21](../part02_discrete_combinatorics/21_permutations_and_combinations.md)).
 - **S4 — Are the cases disjoint?** If yes, add. If you cannot prove disjointness,
   they overlap, and you need inclusion–exclusion (Lesson
-  [23](23_inclusion_exclusion_and_pigeonhole.md)).
+  [23](../part02_discrete_combinatorics/23_inclusion_exclusion_and_pigeonhole.md)).
 - **S5 — Is there a bijection available?** Subsets ↔ bit strings ↔ functions
-  (Lesson [20](20_counting_principles.md)); multisets ↔ multiset permutations;
-  paths ↔ sequences (Lesson [24](24_recurrence_relations.md)).
+  (Lesson [20](../part02_discrete_combinatorics/20_counting_principles.md)); multisets ↔ multiset permutations;
+  paths ↔ sequences (Lesson [24](../part02_discrete_combinatorics/24_recurrence_relations.md)).
 - **S6 — Does the object have internal structure that repeats?** Then find a
   recurrence and solve it by expansion, characteristic roots, or the master
-  theorem (Lesson [24](24_recurrence_relations.md)).
+  theorem (Lesson [24](../part02_discrete_combinatorics/24_recurrence_relations.md)).
 - **S7 — Is the count exponential and too large to enumerate?** Stop doing
   mathematics. Choose an exact method (DP with memoisation, bitmask DP,
   coefficient extraction) or an approximation (sampling). If the problem is
@@ -123,7 +123,7 @@ n!; there is none known for the number of Hamiltonian paths, and finding one wou
 be a major result.
 
 **Theorem (Cayley).** The number of labelled trees on n vertices is n^(n−2)
-(Lesson [27](27_trees_and_spanning_trees.md)) — a reminder that closed forms
+(Lesson [27](../part02_discrete_combinatorics/27_trees_and_spanning_trees.md)) — a reminder that closed forms
 exist in surprising places and that their *proof* usually uses a bijection rather
 than algebra.
 
@@ -153,7 +153,7 @@ practically absurd.
 **Step S5 — Look for a better decomposition.** The local constraint is the clue.
 Count strings position by position, remembering only whether the previous
 character was a digit. That is a two-state recurrence — exactly Lesson
-[24](24_recurrence_relations.md), and it is a *much* smaller computation.
+[24](../part02_discrete_combinatorics/24_recurrence_relations.md), and it is a *much* smaller computation.
 
 This is the real lesson of the worked example: **a local constraint is a signal to
 use a recurrence, not inclusion–exclusion.** Inclusion–exclusion handles global
@@ -860,7 +860,7 @@ Product rule.
 singles = 15 items to order, giving 15! ≈ 1.3 × 10¹², and no internal order
 matters because a pair's two members can go either way — so the count is
 15! · 2⁵ = 4.2 × 10¹³. Bijection: collapse the pairs (Lesson
-[24](24_recurrence_relations.md)/[27](27_trees_and_spanning_trees.md)).
+[24](../part02_discrete_combinatorics/24_recurrence_relations.md)/[27](../part02_discrete_combinatorics/27_trees_and_spanning_trees.md)).
 
 (c) **Exact but expensive.** The Matrix–Tree Theorem gives it as a determinant
 of the Laplacian's cofactor — a closed form of sorts, computable in O(n³) with

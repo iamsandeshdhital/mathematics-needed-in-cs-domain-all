@@ -36,10 +36,10 @@ second half of this part.
   code.
 - **Monte Carlo integration.** Uniform sampling turns a multi-dimensional volume
   into an average, which is how numerical integration is done without a formula
-  ([Lesson 70](70_information_theory_entropy.md) uses this idea).
+  ([Lesson 70](../part05_probability_statistics/70_information_theory_entropy.md) uses this idea).
 - **Averaging many small things.** Gradient descent updates, shuffled SGD
   minibatch means, and averaged sensor readings are all approximately normal by
-  the central limit theorem ([Lesson 68](68_law_of_large_numbers_and_clt.md)),
+  the central limit theorem ([Lesson 68](../part05_probability_statistics/68_law_of_large_numbers_and_clt.md)),
   which is why normal-based confidence intervals work at all.
 - **`numpy.random` and friends.** `np.random.normal`, `np.random.exponential`,
   `np.random.uniform` are exactly these three, and their `scale`/`loc` arguments
@@ -197,7 +197,7 @@ Let T ~ Exp(λ) with λ = 0.5, so the mean waiting time is 1/0.5 = 2 seconds.
 median (1.386) is
 well below the mean (2.0) because the distribution is right-skewed — the long tail
 pulls the mean up. This is the concrete demonstration of the mistake in
-[Lesson 63](63_discrete_random_variables.md): for a skewed distribution, the
+[Lesson 63](../part05_probability_statistics/63_discrete_random_variables.md): for a skewed distribution, the
 mean is not a typical value.
 
 **Step 3 — memorylessness, computed.** Using the numbers above:
@@ -234,7 +234,7 @@ For X ~ Uniform(1, 5), find P(2 ≤ X ≤ 4).
 is constant, so the approximation is exact to floating point — it returns
 0.5000000000.
 
-**By Monte Carlo**, the trick from [Lesson 60](60_probability_foundations.md):
+**By Monte Carlo**, the trick from [Lesson 60](../part05_probability_statistics/60_probability_foundations.md):
 sample uniformly from a wide window and count the fraction landing in the region
 of interest. Sampling over [0, 6] and asking what fraction falls in [2, 4] gives
 roughly 0.333, which is the area ratio 2/6 — exactly what we want, since we want
@@ -530,7 +530,7 @@ gamma, or a mixture.
 | survival function | `$P(T > t) = 1 - F_T(t) = e^{-\lambda t}$` | **Simpler than the CDF** for the exponential — one `exp`, no branching. | Tail probabilities, timeouts, retry budgets. `Exp(0.5)`: 0.367879 at t = 2. |
 | **memorylessness** | `$P(X > s+t \mid X > s) = P(X > t)$` | Having already waited s, the residual wait is a fresh draw. | Why timeout-and-retry ladders behave as they do. Holds *exactly* for Exp, only approximately for real systems. |
 | median of Exp | `$\ln 2 / \lambda$ | **Median $\ln 2/\lambda = 1.3863$ against mean 2** at λ = 0.5. | The right-skew demonstration: the mean is not a typical value. |
-| `$X \sim \mathcal{N}(\mu,\sigma^2)$` | `$f_X(x) = \dfrac{1}{\sigma\sqrt{2\pi}} e^{-\dfrac{(x-\mu)^2}{2\sigma^2}}$` | The bell curve, parameterised by mean and variance. | Averaging many things ([Lesson 68](68_law_of_large_numbers_and_clt.md)), measurement error, and anything approximately normal. |
+| `$X \sim \mathcal{N}(\mu,\sigma^2)$` | `$f_X(x) = \dfrac{1}{\sigma\sqrt{2\pi}} e^{-\dfrac{(x-\mu)^2}{2\sigma^2}}$` | The bell curve, parameterised by mean and variance. | Averaging many things ([Lesson 68](../part05_probability_statistics/68_law_of_large_numbers_and_clt.md)), measurement error, and anything approximately normal. |
 | normal CDF | `$F_X(x) = \dfrac{1 + \mathrm{erf}\!\left(\dfrac{x-\mu}{\sigma\sqrt{2}}\right)}{2}$` | Exact closed form via `math.erf`. No elementary formula otherwise. | Any normal probability. `N(100,5²)`: F(105) = 0.8413447, F(112) = 0.9918025. |
 | quantile | `$F^{-1}(q)$ | "What value do I set so only $(1-q)$ exceed it?" | SLO thresholds. By **bisection**, since no elementary inverse exists. `N(100,5²)`: 99th percentile = 111.632. |
 | `$Z = \dfrac{X-\mu}{\sigma}$` | `$\sim \mathcal{N}(0,1)$` | Standardisation: absorbs μ and σ entirely, leaving a parameter-free law. | Every z-score, every two-sided comparison. F_Z(1.96) = 0.9750. |
@@ -708,7 +708,7 @@ to match numerical quadrature's accuracy on a $10^{-15}$ target.**
 The lesson's code makes the comparison: Simpson's rule returns 0.5000000000 for
 the uniform case, while 400,000 Monte Carlo samples give something like 0.333
 with visible run-to-run wobble. Option A is false; it is precisely how
-Monte Carlo integration works ([Lesson 70](70_information_theory_entropy.md)
+Monte Carlo integration works ([Lesson 70](../part05_probability_statistics/70_information_theory_entropy.md)
 uses it). Option C is wrong; non-negativity is a requirement of the *density*,
 not a limitation of the method. Option D is not a real property.
 
@@ -731,10 +731,10 @@ at a constant rate.**
 Inter-arrival gaps in Poisson traffic, time to first failure on a component, and
 gap between retries all satisfy this, which is why the exponential appears in
 queues and timeout logic. Option A is Binomial
-([Lesson 63](63_discrete_random_variables.md)). Option C is normal. Option D is
+([Lesson 63](../part05_probability_statistics/63_discrete_random_variables.md)). Option C is normal. Option D is
 Geometric, the *discrete* memoryless distribution — the right shape, but counted
 in trials rather than measured in time, and introduced in
-[Lesson 66](66_common_distributions.md).
+[Lesson 66](../part05_probability_statistics/66_common_distributions.md).
 
 </details>
 
@@ -787,7 +787,7 @@ area.
 
 $f_X(x) \ge 0$ for all $x$, and $\int_{-\infty}^{\infty} f_X(x)\,dx = 1$. These
 play exactly the role the two PMF conditions play in
-[Lesson 63](63_discrete_random_variables.md): they determine the distribution
+[Lesson 63](../part05_probability_statistics/63_discrete_random_variables.md): they determine the distribution
 completely, and nothing else does. Note what is *not* required — $f_X(x) \le 1$
 nowhere appears, and that omission is what makes Q1's surprise possible.
 
@@ -913,7 +913,7 @@ if the hazard looks roughly constant, the exponential is a reasonable starting
 point and its algebra will be simple. Confirm it by comparing the empirical
 conditional survival at several values of s — if
 $P(T > s+t \mid T > s)$ drifts with s, you need a different distribution
-([Lesson 66](66_common_distributions.md)) or a segmented model.
+([Lesson 66](../part05_probability_statistics/66_common_distributions.md)) or a segmented model.
 
 </details>
 
@@ -946,7 +946,7 @@ sizes and request counts, all of which have hard floors and structural modes. Th
 fix is to decompose first — split by cached/uncached, hot/cold, small/large
 tenant — and then model each mode, which is the continuous-world version of the
 variance decomposition in
-[Lesson 64](64_expectation_variance.md).
+[Lesson 64](../part05_probability_statistics/64_expectation_variance.md).
 
 </details>
 
@@ -978,7 +978,7 @@ Monte Carlo does not — 100 dimensions costs 100× the samples, not
 $2^{100}$), the integrand is a complicated expression better evaluated
 statistically, or the quantity is itself random. That is why it underpins
 Monte Carlo integration in graphics and rare-event simulation, and why
-[Lesson 70](70_information_theory_entropy.md) uses the area-ratio idea to turn
+[Lesson 70](../part05_probability_statistics/70_information_theory_entropy.md) uses the area-ratio idea to turn
 averages into probabilities. The rule of thumb the lesson states is right: use
 Monte Carlo when you cannot integrate, not when you could.
 
@@ -1176,7 +1176,7 @@ bimodal, so there is no single "normal-ish" behaviour to tighten. The fix is to
 separate the modes (fast path vs slow path) and set a per-mode SLO, or to fit a
 mixture, or to model the slow path with a log-normal. This is exactly the
 bimodality from
-[Lesson 64](64_expectation_variance.md)'s variance-decomposition exercise,
+[Lesson 64](../part05_probability_statistics/64_expectation_variance.md)'s variance-decomposition exercise,
 wearing a latency costume.
 
 ```python
@@ -1498,7 +1498,7 @@ order of magnitude, and the real tail at 1.66 s never gets examined.
 
 The fix is not to widen the threshold blindly but to model the right distribution:
 the sum of independent stages has a Gamma CDF, whose 99th percentile is exactly
-computable, and [Lesson 68](68_law_of_large_numbers_and_clt.md) explains *why*
+computable, and [Lesson 68](../part05_probability_statistics/68_law_of_large_numbers_and_clt.md) explains *why*
 the normal approximation degrades here — two stages is nowhere near enough
 averaging for the CLT to apply.
 
@@ -1599,7 +1599,7 @@ print("    -> the normal understates the far tail, where SLOs live.")
 
 ## Next
 
-[66 — Common Distributions](66_common_distributions.md) collects Bernoulli,
+[66 — Common Distributions](../part05_probability_statistics/66_common_distributions.md) collects Bernoulli,
 Binomial, Poisson, Geometric, Uniform, Exponential, and Normal into one reference
 table, with a from-scratch pure-Python sampler for each and a matplotlib section
 that plots them all together.

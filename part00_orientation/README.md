@@ -7,9 +7,9 @@ mathematics, and they convince you that the mathematics is worth reading.
 
 | # | Lesson | What it does |
 | --- | --- | --- |
-| 00 | [Why Mathematics Matters in Computer Science](00_why_math_matters.md) | Eight concrete places the mathematics is already in your code: hash map lookup cost, floating point failure, neural network training, RSA, PCA, and more. No abstraction, only specifics you can check. |
-| 01 | [How to Read Mathematical Notation](01_how_to_read_notation.md) | A translation table for the notation you will meet in every later part: set-builder, summation, product, quantifiers, big-O, subscripts, free versus bound variables. Each one gets a plain-English sentence and a Python equivalent. |
-| 02 | [Study Plan and Prerequisites](02_study_plan.md) | Three concrete week-by-week plans (fast, thorough, interview), a 20-question self-diagnostic, and the prerequisite graph of the whole course as runnable data. |
+| 00 | [Why Mathematics Matters in Computer Science](../part00_orientation/00_why_math_matters.md) | Eight concrete places the mathematics is already in your code: hash map lookup cost, floating point failure, neural network training, RSA, PCA, and more. No abstraction, only specifics you can check. |
+| 01 | [How to Read Mathematical Notation](../part00_orientation/01_how_to_read_notation.md) | A translation table for the notation you will meet in every later part: set-builder, summation, product, quantifiers, big-O, subscripts, free versus bound variables. Each one gets a plain-English sentence and a Python equivalent. |
+| 02 | [Study Plan and Prerequisites](../part00_orientation/02_study_plan.md) | Three concrete week-by-week plans (fast, thorough, interview), a 20-question self-diagnostic, and the prerequisite graph of the whole course as runnable data. |
 
 ## What this part assumes
 

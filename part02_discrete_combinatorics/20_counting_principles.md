@@ -81,7 +81,7 @@ of them), then |A₁ ∪ … ∪ A_k| = |A₁| + … + |A_k|.
 *Explanation.* Disjointness is the entire hypothesis and it does real work. If
 the sets overlap, an element in the overlap is counted once per set it appears
 in, and the sum overshoots. Correcting for overlaps is the subject of
-[Lesson 23](23_inclusion_exclusion_and_pigeonhole.md).
+[Lesson 23](../part02_discrete_combinatorics/23_inclusion_exclusion_and_pigeonhole.md).
 
 **Theorem (Counting compositions).** If a process consists of k steps, step i
 having n_i outcomes, and every sequence of choices is distinguishable, then the
@@ -157,7 +157,7 @@ the cases are disjoint and the sum rule applies:
 This is exactly why the word "or" in a counting question is a warning sign. "Two
 or three characters" means add. "A letter and a digit" means multiply. When you
 see "or", check whether the two branches can overlap; if they can, you owe the
-reader an inclusion–exclusion correction, which is [Lesson 23](23_inclusion_exclusion_and_pigeonhole.md).
+reader an inclusion–exclusion correction, which is [Lesson 23](../part02_discrete_combinatorics/23_inclusion_exclusion_and_pigeonhole.md).
 
 **Scheme C — three distinct letters, order matters.** Without repetition the
 choice sets shrink as you go:
@@ -289,7 +289,7 @@ print(f"bijections 3 -> 3 : {len(list(permutations(B3, 3)))}")
 
 Counting paths in a directed acyclic graph. This is a product rule (choose one
 incoming edge at each step) accumulated over levels, and it is the prototype
-for the dynamic programming in [Lesson 24](24_recurrence_relations.md).
+for the dynamic programming in [Lesson 24](../part02_discrete_combinatorics/24_recurrence_relations.md).
 
 ```python
 # A tiny dependency graph, given by outgoing edges in a safe processing order.
@@ -470,7 +470,7 @@ sort the counts (3), (2,1), (1,1,1):
 
     6  +  6·5  +  C(6,3)  =  6 + 30 + 20 = 56
 
-This is a preview of [Lesson 21](21_permutations_and_combinations.md): an
+This is a preview of [Lesson 21](../part02_discrete_combinatorics/21_permutations_and_combinations.md): an
 unordered selection with repetition is a combination *with repetition*, and
 C(6 + 3 − 1, 3) = C(8, 3) = 56.
 
@@ -502,7 +502,7 @@ nonzero width — the fixed point would need s = ~s bitwise, which is impossible
 for any bit position. So all 128 classes exist.
 
 For this pairing to be an *equivalence relation* (so it partitions cleanly, as in
-[Lesson 25](25_relations_and_equivalence_classes.md)), use "equal up to complement":
+[Lesson 25](../part02_discrete_combinatorics/25_relations_and_equivalence_classes.md)), use "equal up to complement":
 two configurations are related when they are equal or complementary. That relation
 is reflexive, symmetric, and transitive.
 
@@ -531,7 +531,7 @@ exactly-one-digit ones:
 
 That second line is inclusion–exclusion in miniature — subtracting a set from
 another, then noticing they overlap and subtracting the overlap. It is exactly
-what [Lesson 23](23_inclusion_exclusion_and_pigeonhole.md) generalises.
+what [Lesson 23](../part02_discrete_combinatorics/23_inclusion_exclusion_and_pigeonhole.md) generalises.
 
 ```python
 total = 62**6
@@ -631,7 +631,7 @@ n − 1 bars and reads off the multiplicities from the gaps.
 
 ## Next
 
-[Lesson 21 — Permutations, Combinations, and Choosing With Limits](21_permutations_and_combinations.md)
+[Lesson 21 — Permutations, Combinations, and Choosing With Limits](../part02_discrete_combinatorics/21_permutations_and_combinations.md)
 assumes you can tell the product rule from the sum rule and trust a bijection;
 it turns that into the nCr and nPr formulas and the decision rule for choosing
 between them.

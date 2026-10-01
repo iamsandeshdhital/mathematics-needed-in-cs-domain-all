@@ -6,7 +6,7 @@
 
 ## In Plain Words
 
-The sum rule from [Lesson 20](20_counting_principles.md) has one condition you
+The sum rule from [Lesson 20](../part02_discrete_combinatorics/20_counting_principles.md) has one condition you
 cannot skip: the cases must not overlap. Count how many integers from 1 to 100
 are even, and how many are multiples of 3, and add. You get 83. But 6 is both, so
 you counted it twice, and the true answer is 74. This lesson is about fixing that
@@ -655,7 +655,7 @@ for k in range(1, 400):
 
 ## Next
 
-[Lesson 24 — Recurrence Relations](24_recurrence_relations.md) assumes you can
+[Lesson 24 — Recurrence Relations](../part02_discrete_combinatorics/24_recurrence_relations.md) assumes you can
 count with confidence and recognise an inclusion–exclusion structure; it turns
 "same subproblem, smaller input" into a formula for runtime, which is what makes
 algorithm analysis possible.

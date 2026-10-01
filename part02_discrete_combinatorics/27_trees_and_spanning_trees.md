@@ -25,7 +25,7 @@ trees** minimise the cost of connecting *every* place to *every other* place, an
 Dijkstra does not solve that at all, because a shortest path can be far more
 expensive in aggregate than a global set of cheap links. Kruskal and Prim solve it,
 and Kruskal needs the union–find from
-[Lesson 25](25_relations_and_equivalence_classes.md).
+[Lesson 25](../part02_discrete_combinatorics/25_relations_and_equivalence_classes.md).
 
 The union of the two lessons is worth stating: a spanning tree is a *global*
 optimum, a shortest path is a *local* one, and confusing them is the most common
@@ -1400,7 +1400,7 @@ for degree in (2, 3, 4):
 
 ## Next
 
-[Lesson 28 — Counting Strategies and When to Use Each](28_counting_strategies.md)
+[Lesson 28 — Counting Strategies and When to Use Each](../part02_discrete_combinatorics/28_counting_strategies.md)
 pulls together everything in this part into a decision procedure: given a counting
 problem, work out which technique applies, and know when to stop counting by
 formula and write a program instead.

@@ -1540,7 +1540,7 @@ adjoint method (Nobel Prize in Chemistry, 2021) evaluates that integral by runni
 than a million solves.
 
 The cost of part 2 is that you must know how to differentiate your accumulated quantity, so
-you inherit every problem from Lesson [51](51_derivatives.md) — the step-size trade-off,
+you inherit every problem from Lesson [51](../part04_calculus/51_derivatives.md) — the step-size trade-off,
 forward versus central differences, the $\varepsilon^{1/3}$ accuracy ceiling. The adjoint
 method and reverse-mode autodiff are the same mathematics implemented carefully, which is
 why they share both the chain rule and the sensitivity analysis.
@@ -2239,7 +2239,7 @@ gracefully, whereas Romberg degrades catastrophically when its expansion is wron
 
 ## Next
 
-[53 — Multivariable Calculus](53_multivariable_calculus.md) lifts the derivative from one
+[53 — Multivariable Calculus](../part04_calculus/53_multivariable_calculus.md) lifts the derivative from one
 variable to many: partial derivatives, the gradient as the direction of steepest ascent,
 the multivariable chain rule, and Jacobians — the machinery behind gradient descent and
 backprop in its matrix form.

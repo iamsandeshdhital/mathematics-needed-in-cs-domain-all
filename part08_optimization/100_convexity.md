@@ -49,7 +49,7 @@ hope.
 
 ## The Formal Version
 
-Notation follows [SYMBOLS.md](../../SYMBOLS.md).
+Notation follows [SYMBOLS.md](../SYMBOLS.md).
 
 **Definition.** A set S ⊆ ℝⁿ is *convex* if for every x, y ∈ S and every
 t ∈ [0, 1], the point (1 − t)x + ty is in S. Such a point is a *convex

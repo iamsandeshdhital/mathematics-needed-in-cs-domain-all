@@ -416,7 +416,7 @@ in every later lesson.
 
 This lesson is about a graph, not about a theorem, so the formulas are the
 prerequisite relation, the transitive closure, and the arithmetic used to price a
-track. Notation follows [SYMBOLS.md](../../SYMBOLS.md).
+track. Notation follows [SYMBOLS.md](../SYMBOLS.md).
 
 | Symbol | Formula | In plain words | When you use it |
 | --- | --- | --- | --- |

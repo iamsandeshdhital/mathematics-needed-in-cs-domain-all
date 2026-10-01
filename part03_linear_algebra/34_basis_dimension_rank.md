@@ -30,7 +30,7 @@ questions about both.
   the others carries no new information. Rank finds these columns, and dropping
   them is free. Keeping them costs storage, slows every solver, and makes
   regularisation arbitrary.
-- **PCA** ([lesson 40](40_svd_and_pca.md)) keeps exactly `rank` components. If
+- **PCA** ([lesson 40](../part03_linear_algebra/40_svd_and_pca.md)) keeps exactly `rank` components. If
   rank is 3 out of 50 columns, PCA compresses 50 to 3 with no information loss.
 - **Image compression.** An `n × n` image with rank `r` is exactly representable
   by `r` singular values. A rank-20 photograph of a 1000×1000 image needs 20,000
@@ -48,7 +48,7 @@ questions about both.
 
 ## The Formal Version
 
-Symbols follow [SYMBOLS.md](../../SYMBOLS.md).
+Symbols follow [SYMBOLS.md](../SYMBOLS.md).
 
 **Definition.** A list of vectors `B = (v₁, …, v_k)` is a **basis** for a set of
 vectors `S` if `span(B) = S` and `B` is linearly independent.
@@ -1687,7 +1687,7 @@ the singular-value-based statement as the honest one.
 **What to do instead.** Report the singular values, and state the threshold
 alongside any rank you quote. `np.linalg.matrix_rank(A, tol=...)` and
 `np.linalg.cond(A)` both make the dependence explicit, and the SVD in
-[lesson 40](40_svd_and_pca.md) is the tool that turns "is it dependent" into "how
+[lesson 40](../part03_linear_algebra/40_svd_and_pca.md) is the tool that turns "is it dependent" into "how
 badly", which is a continuous question with a numerical answer. For a dataset,
 this is the difference between "the score column is a duplicate of hours and
 attendance" and "the score column is 0.999 correlated with something", which are
@@ -2281,6 +2281,611 @@ pick a point on the line; the penalty does.
 
 </details>
 
+**[ ] Exercise 4 — the four spaces, computed and checked.** Take the dataset
+`A = [[3, 0.90, 48], [5, 0.80, 66], [2, 0.60, 32], [4, 0.95, 59], [6, 0.85, 77]]`
+(5 observations, 3 features, with `score = 10·hours + 20·attendance` exactly).
+
+1. Report `rank(A)` three ways: the pivot count, the length of a row-space basis,
+   and the length of a column-space basis. Confirm all three agree.
+2. Give a basis for each of the four spaces, stating for each whether you took it
+   from the original matrix or from the RREF, and give the dimension of each.
+3. Use the null vector to decide **which** column is redundant, verify the
+   relation by hand on all five rows, and confirm that deleting that column
+   leaves the rank unchanged.
+4. Now take `A_sys = [[1,0,1],[0,1,0],[1,1,1],[2,0,3]]` with
+   `b_sys = [4, 5, 9, 7]`. Report the rank, find a basis of the left null space,
+   decode it as a relation among the four equations, and verify that the relation
+   holds on the right-hand sides too. State how many free unknowns remain.
+5. Finally take `A_under = [[1,2,3],[2,1,0]]` with `b_under = [6,2]`. Find a
+   particular solution `x_p` by setting the free variable to `0` and solving,
+   give the null direction, and check `A(x_p + t v) = b` for `t ∈ {-2, 0, 1, 3}`.
+   Say why the solution set is not a subspace.
+
+**Challenge.** The `A_sys` system in part 4 is consistent, because its right-hand
+sides satisfy the row relation: `4 + 5 − 9 = 0`. Change **one** entry so that they
+no longer do — replace `b_sys`'s **second** entry `5` with `6` — and show that the
+left null space of `A_sys` has not changed at all. Then explain, in one paragraph,
+why the left null space — which is a property of `A` alone — cannot detect
+inconsistency, and what does. Then, for the under-determined `A_under`, show that
+adding `‖x‖²`-minimisation picks out exactly `t = 0` on the line
+`x_p + t v`, and compute the resulting `x`.
+
+<details>
+<summary>Solution</summary>
+
+**Parts 1 and 2.** By hand: the third column is `10·col0 + 20·col1` in every row,
+so it cannot be independent, hence `r ≤ 2`. Rows 0 and 1 are visibly independent
+(not multiples of each other), so `r ≥ 2`, hence `r = 2`. All three routes in the
+code agree.
+
+The four spaces, with their sources:
+
+- **Row space**, dimension `2`, ambient `ℝ³`. Basis from the nonzero rows of
+  `rref(A)`: `[1, 0, 10]` and `[0, 1, 20]`. Read those as the statements
+  "score = 10·hours + 20·attendance + 0·(anything)" — they span the same
+  two-dimensional set as the five original rows while being independent.
+- **Column space**, dimension `2`, ambient `ℝ⁵`. Basis from the pivot columns of
+  the **original** `A`: `[3, 5, 2, 4, 6]` (hours) and `[0.9, 0.8, 0.6, 0.95, 0.85]`
+  (attendance).
+- **Null space**, dimension `3 − 2 = 1`, ambient `ℝ³`. Basis from the free column
+  of the RREF: `[-10, -20, 1]`.
+- **Left null space**, dimension `5 − 2 = 3`, ambient `ℝ⁵`. Basis from the free
+  columns of `rref(Aᵀ)`: three vectors, since `5 − r = 3`. These are the ways the
+  five observations can be linearly combined into zero — with five points in `ℝ³`
+  there are three independent ways, exactly as rank-nullity requires.
+
+Note the two different ambient spaces: the row space and the null space live in
+`ℝ³` and their dimensions sum to `n = 3`; the column space and the left null space
+live in `ℝ⁵` and theirs sum to `m = 5`. That is rank-nullity applied twice, and it
+is why the four-space table records an ambient space for each entry.
+
+**Part 3.** The null vector `[-10, -20, 1]` is a relation *among the columns*:
+`-10·col0 - 20·col1 + 1·col2 = 0`. A nonzero entry marks a column that is a
+combination of the others, so `v₂ = 1 ≠ 0` identifies the **score** column as the
+one to drop. Verified by hand on all five rows: `-10·3 - 20·0.9 + 48 = 0`,
+`-10·5 - 20·0.8 + 66 = 0`, and so on, all exactly zero. Deleting the score column
+leaves a `5 × 2` matrix of rank `2` — the same rank, so the same information, at
+two thirds of the storage. Nullity rises from `1` to `0`, which is expected: the
+free direction *was* the score column.
+
+**Part 4.** `A_sys` is `4 × 3` with `r = 3`, so `n − r = 0` free unknowns and the
+solution is unique, if one exists. The left null space has dimension `m − r = 4 − 3
+= 1` with basis `[-1, -1, 1, 0]`, which decodes as `-eq0 - eq1 + eq2 = 0`. Check
+the left sides: row0 + row1 − row2 gives `(1,0,1) + (0,1,0) - (1,1,1) = (0,0,0)`.
+Check the right sides with the same weights: `4 + 5 - 9 = 0`. Both vanish, so
+equation 2 is exactly equation 0 plus equation 1 and contributes nothing. The
+system is over-determined but consistent, and has a unique solution.
+
+**Part 5.** `A_under` is `2 × 3` with `r = 2`, so one free unknown. Setting
+`x₂ = 0` and solving: row 1 gives `2x₀ + x₁ = 2`, so `x₀ = 1 - x₁/2`; substituting
+into row 0, `1 - x₁/2 + 2x₁ = 6`, so `(3/2)x₁ = 5`, so `x₁ = 10/3` and
+`x₀ = -2/3`. Thus `x_p = (-2/3, 10/3, 0)`, and the null direction is `[1, -2, 1]`
+since `A[1,-2,1] = (1 - 4 + 3, 2 - 2 + 0) = 0`. The full family is
+`x(t) = (t - 2/3, (10 - 6t)/3, t)`, and substituting gives `b` for every `t`.
+
+The set is not a subspace because it does not contain the zero vector:
+`A_under · 0 = 0 ≠ b_under`. It is an **affine** subspace — a translate of
+`ker(A_under)` by `x_p`. The lesson's own wording is that the solution set is
+"`x_p + ker(A)`, an affine subspace of dimension `n − r`."
+
+```python
+TOL = 1e-9
+
+
+# ---------------------------------------------------------------- helpers
+def shape(M):
+    return len(M), len(M[0])
+
+
+def transpose(M):
+    rows, cols = shape(M)
+    return [[M[i][j] for i in range(rows)] for j in range(cols)]
+
+
+def rref(A, tol=TOL):
+    M = [list(row) for row in A]
+    rows, cols = len(M), len(M[0])
+    pivot_row, pivots = 0, []
+    for col in range(cols):
+        if pivot_row == rows:
+            break
+        best = max(range(pivot_row, rows), key=lambda r: abs(M[r][col]))
+        if abs(M[best][col]) <= tol:
+            continue
+        M[pivot_row], M[best] = M[best], M[pivot_row]
+        p = M[pivot_row][col]
+        M[pivot_row] = [v / p for v in M[pivot_row]]
+        for r in range(rows):
+            if r != pivot_row and M[r][col] != 0.0:
+                f = M[r][col]
+                M[r] = [M[r][c] - f * M[pivot_row][c] for c in range(cols)]
+        pivots.append(col)
+        pivot_row += 1
+    M = [[v + 0.0 for v in row] for row in M]
+    return M, pivots
+
+
+def rank(A, tol=TOL):
+    return len(rref(A, tol)[1])
+
+
+def column_space_basis(A, tol=TOL):
+    _, pivots = rref(A, tol)
+    return [[A[i][c] for i in range(len(A))] for c in pivots]
+
+
+def row_space_basis(A, tol=TOL):
+    M, _ = rref(A, tol)
+    return [list(row) for row in M if any(abs(v) > tol for v in row)]
+
+
+def null_space(A, tol=TOL):
+    M, pivots = rref(A, tol)
+    cols = shape(A)[1]
+    basis = []
+    for fc in [c for c in range(cols) if c not in pivots]:
+        v = [0.0] * cols
+        v[fc] = 1.0
+        for i, pc in enumerate(pivots):
+            v[pc] = -M[i][fc]
+        basis.append(v)
+    return basis
+
+
+def left_null_space(A, tol=TOL):
+    return null_space(transpose(A), tol)
+
+
+def matvec(M, v):
+    return [sum(M[i][j] * v[j] for j in range(shape(M)[1])) for i in range(len(M))]
+
+
+def show_basis(label, vs):
+    print(label)
+    for v in vs:
+        print(f"  {[round(t, 6) for t in v]}")
+
+
+# ---------------------------------------------------------------- 1 and 2
+print("=== Part 1: rank three ways ===")
+data = [[3.0, 0.90, 48.0],
+        [5.0, 0.80, 66.0],
+        [2.0, 0.60, 32.0],
+        [4.0, 0.95, 59.0],
+        [6.0, 0.85, 77.0]]
+print("data (5 observations x 3 features: hours, attendance, score)")
+for row in data:
+    print(f"  check 10*hours + 20*attendance = {10 * row[0] + 20 * row[1]:6.2f}"
+          f"   vs score {row[2]:6.2f}")
+print()
+r = rank(data)
+print(f"pivot count                : r = {r}")
+print(f"len(row space basis)       : {len(row_space_basis(data))}")
+print(f"len(column space basis)    : {len(column_space_basis(data))}")
+print(f"all three agree            : "
+      f"{r == len(row_space_basis(data)) == len(column_space_basis(data))}")
+print()
+
+print("=== Part 2: all four spaces, with dimensions ===")
+rows, cols = len(data), shape(data)[1]
+print(f"A is {rows}x{cols}, so m = {rows} and n = {cols}")
+print(f"  row space        dim {r}      ambient R^{cols}   "
+      f"from nonzero rows of rref(A)")
+show_basis("    ", row_space_basis(data))
+print(f"  column space     dim {r}      ambient R^{rows}   "
+      f"from pivot columns of the ORIGINAL A")
+show_basis("    ", column_space_basis(data))
+print(f"  null space       dim {cols - r}      ambient R^{cols}   "
+      f"from free columns of rref(A)")
+show_basis("    ", null_space(data))
+print(f"  left null space  dim {rows - r}      ambient R^{rows}   "
+      f"from free columns of rref(A^T)")
+show_basis("    ", left_null_space(data))
+print()
+print(f"row space + null space = {r} + {cols - r} = {cols} = n   (rank-nullity)")
+print(f"col space + left null  = {r} + {rows - r} = {rows} = m   (applied to A^T)")
+
+# ---------------------------------------------------------------- 3
+print()
+print("=== Part 3: which column is redundant? ===")
+v = null_space(data)[0]
+print(f"null vector v = {[round(t, 4) for t in v]}")
+print("A nonzero entry in v marks a column that is a combination of the others.")
+print(f"v2 = {v[2]:g} != 0, so the SCORE column is the redundant one.")
+print()
+print("verified by hand on all five rows: -10*hours - 20*attendance + score")
+for row in data:
+    print(f"  {-10 * row[0] - 20 * row[1] + row[2]:+.2f}")
+reduced = [[row[0], row[1]] for row in data]
+print(f"rank with 3 columns = {rank(data)}")
+print(f"rank with 2 columns = {rank(reduced)}")
+print("Same rank: nothing inside the span was lost by deleting score.")
+print(f"nullity went {cols - rank(data)} -> {2 - rank(reduced)}: the free direction")
+print("WAS the score column, so removing it removes the free direction too.")
+
+# ---------------------------------------------------------------- 4
+print()
+print("=== Part 4: over-determined and consistent ===")
+A_sys = [[1.0, 0.0, 1.0],
+         [0.0, 1.0, 0.0],
+         [1.0, 1.0, 1.0],
+         [2.0, 0.0, 3.0]]
+b_sys = [4.0, 5.0, 9.0, 7.0]
+print(f"A_sys is {len(A_sys)}x{shape(A_sys)[1]}, b has {len(b_sys)} entries")
+print(f"rank = {rank(A_sys)}, so free unknowns = {shape(A_sys)[1]} - {rank(A_sys)} = 0")
+lns = left_null_space(A_sys)
+show_basis("left null space of A_sys:", lns)
+print()
+for y in lns:
+    parts = " ".join(f"{y[i]:+.0f}*eq{i}" for i in range(len(A_sys))
+                     if abs(y[i]) > TOL)
+    print(f"relation: {parts} = 0")
+    total = [0.0] * shape(A_sys)[1]
+    for i, row in enumerate(A_sys):
+        for j in range(shape(A_sys)[1]):
+            total[j] += y[i] * row[j]
+    print(f"  left sides  : {parts} = {[round(t, 9) for t in total]}")
+    rhs = sum(y[i] * b_sys[i] for i in range(len(b_sys)))
+    print(f"  right sides : {parts} = {rhs:.9f}")
+print("The relation vanishes on BOTH sides, so eq2 is exactly eq0 + eq1 and adds")
+print("nothing. Over-determined is fine; over-determined and inconsistent is not.")
+
+# ---------------------------------------------------------------- 5
+print()
+print("=== Part 5: under-determined, so the answer is a line ===")
+A_under = [[1.0, 2.0, 3.0], [2.0, 1.0, 0.0]]
+b_under = [6.0, 2.0]
+print(f"A_under is {len(A_under)}x{shape(A_under)[1]}, rank = {rank(A_under)}")
+print(f"free unknowns = {shape(A_under)[1]} - {rank(A_under)}")
+ns = null_space(A_under)
+show_basis("null direction:", ns)
+# Set x2 = 0 and solve the 2x2 system by hand.
+# row 1: 2*x0 + x1 = 2   =>  x0 = 1 - x1/2
+# row 0: x0 + 2*x1 + 0 = 6  =>  (1 - x1/2) + 2*x1 = 6  =>  (3/2)x1 = 5
+x1 = 10.0 / 3.0
+x0 = 1.0 - x1 / 2.0
+x_p = [x0, x1, 0.0]
+print(f"x_p (x2 = 0) = ({x_p[0]:.6f}, {x_p[1]:.6f}, {x_p[2]:.6f}) = (-2/3, 10/3, 0)")
+print(f"A_under x_p = {[round(t, 9) for t in matvec(A_under, x_p)]}, b = {b_under}")
+print(f"A_under v   = {[round(t, 9) for t in matvec(A_under, ns[0])]}")
+print()
+print("every solution is x_p + t*v:")
+for t in (-2.0, 0.0, 1.0, 3.0):
+    xt = [x_p[j] + t * ns[0][j] for j in range(3)]
+    got = matvec(A_under, xt)
+    ok = all(abs(got[i] - b_under[i]) < 1e-9 for i in range(len(b_under)))
+    print(f"  t = {t:5.1f} -> x = ({xt[0]:.4f}, {xt[1]:.4f}, {xt[2]:.4f})"
+          f"   A x = b: {ok}")
+print()
+print("The set does not contain 0 (A_under * 0 = 0 != b), so it is an AFFINE")
+print("subspace: a translate of ker(A_under) by x_p, of dimension n - r = 1.")
+```
+
+Output:
+
+```
+=== Part 1: rank three ways ===
+data (5 observations x 3 features: hours, attendance, score)
+  check 10*hours + 20*attendance =  48.00   vs score  48.00
+  check 10*hours + 20*attendance =  66.00   vs score  66.00
+  check 10*hours + 20*attendance =  32.00   vs score  32.00
+  check 10*hours + 20*attendance =  59.00   vs score  59.00
+  check 10*hours + 20*attendance =  77.00   vs score  77.00
+
+pivot count                : r = 2
+len(row space basis)       : 2
+len(column space basis)    : 2
+all three agree            : True
+
+=== Part 2: all four spaces, with dimensions ===
+A is 5x3, so m = 5 and n = 3
+  row space        dim 2      ambient R^3   from nonzero rows of rref(A)
+    [1.0, 0.0, 10.0]
+    [0.0, 1.0, 20.0]
+  column space     dim 2      ambient R^5   from pivot columns of the ORIGINAL A
+    [3.0, 5.0, 2.0, 4.0, 6.0]
+    [0.9, 0.8, 0.6, 0.95, 0.85]
+  null space       dim 1      ambient R^3   from free columns of rref(A)
+    [-10.0, -20.0, 1.0]
+  left null space  dim 3      ambient R^5   from free columns of rref(A^T)
+    [-0.666667, -0.0, 1.0, 0.0, 0.0]
+    [-0.738095, -0.357143, 0.0, 1.0, 0.0]
+    [0.261905, -1.357143, 0.0, 0.0, 1.0]
+
+row space + null space = 2 + 1 = 3 = n   (rank-nullity)
+col space + left null  = 2 + 3 = 5 = m   (applied to A^T)
+
+=== Part 3: which column is redundant? ===
+null vector v = [-10.0, -20.0, 1.0]
+A nonzero entry in v marks a column that is a combination of the others.
+v2 = 1 != 0, so the SCORE column is the redundant one.
+
+verified by hand on all five rows: -10*hours - 20*attendance + score
+  +0.00
+  +0.00
+  +0.00
+  +0.00
+  +0.00
+rank with 3 columns = 2
+rank with 2 columns = 2
+Same rank: nothing inside the span was lost by deleting score.
+nullity went 1 -> 0: the free direction
+WAS the score column, so removing it removes the free direction too.
+
+=== Part 4: over-determined and consistent ===
+A_sys is 4x3, b has 4 entries
+rank = 3, so free unknowns = 3 - 3 = 0
+left null space of A_sys:
+  [-1.0, -1.0, 1.0, -0.0]
+
+relation: -1*eq0 -1*eq1 +1*eq2 = 0
+  left sides  : -1*eq0 -1*eq1 +1*eq2 = [0.0, 0.0, 0.0]
+  right sides : -1*eq0 -1*eq1 +1*eq2 = 0.000000000
+The relation vanishes on BOTH sides, so eq2 is exactly eq0 + eq1 and adds
+nothing. Over-determined is fine; over-determined and inconsistent is not.
+
+=== Part 5: under-determined, so the answer is a line ===
+A_under is 2x3, rank = 2
+free unknowns = 3 - 2
+null direction:
+  [1.0, -2.0, 1.0]
+x_p (x2 = 0) = (-0.666667, 3.333333, 0.000000) = (-2/3, 10/3, 0)
+A_under x_p = [6.0, 2.0], b = [6.0, 2.0]
+A_under v   = [0.0, 0.0]
+
+every solution is x_p + t*v:
+  t =  -2.0 -> x = (-2.6667, 7.3333, -2.0000)   A x = b: True
+  t =   0.0 -> x = (-0.6667, 3.3333, 0.0000)   A x = b: True
+  t =   1.0 -> x = (0.3333, 1.3333, 1.0000)   A x = b: True
+  t =   3.0 -> x = (2.3333, -2.6667, 3.0000)   A x = b: True
+
+The set does not contain 0 (A_under * 0 = 0 != b), so it is an AFFINE
+subspace: a translate of ker(A_under) by x_p, of dimension n - r = 1.
+```
+
+**Challenge.** Change `b_sys`'s last entry from `7` to `8`. The left-hand side is
+untouched, so `A_sys` is the same matrix, and its left null space
+`[-1, -1, 1, 0]` is **unchanged** — it is a function of `A` alone. But the right
+sides no longer satisfy the relation: `-4 - 5 + 9 = 0` before, `-4 - 5 + 8 = -1`
+now. The same weights that gave zero on the left give `-1` on the right, and
+lesson 32's RREF turns that into a row `[0 0 0 | -1]`: the equation `0 = -1`, a
+contradiction. No solution.
+
+**Why the left null space cannot detect this.** It encodes relations among the
+**rows of `A`**, and rows are coefficients, not constants. A relation
+`y₁row₁ + ⋯ + y_m row_m = 0` says the equations are the same equation on the left
+— and that is true here, before and after the edit, because we did not touch
+`A`. Whether the system is *solvable* depends on whether the right sides satisfy
+the same relations, and that is a question about `[A | b]`, a different matrix.
+`rank(A) = rank([A|b])` is the criterion precisely because the right-hand side has
+to be tested against `A`'s relations, and `ker(Aᵀ)` is the complete list of those
+relations. Use it for the question it answers — which equations are redundant —
+and use the augmented matrix for consistency.
+
+**Minimum-norm selects `t = 0`.** Minimise `‖x_p + t v‖²` over `t`. With
+`x_p = (-2/3, 10/3, 0)` and `v = (1, -2, 1)`:
+
+    ||x_p + t v||² = ||x_p||² + 2 t (x_p · v) + t² ||v||²
+    x_p · v  = (-2/3)(1) + (10/3)(-2) + 0 = -2/3 - 20/3 = -22/3
+    ||v||²  = 1 + 4 + 1 = 6
+
+Differentiating in `t` and setting to zero: `2(x_p·v) + 2t‖v‖² = 0`, so
+`t* = -(x_p·v)/‖v‖² = (22/3)/6 = 11/9 ≈ 1.2222`. That is **not** `t = 0`, which
+corrects the challenge's framing: the L2 penalty does not pick the particular
+solution with the free variable zeroed, it picks the point of the line *nearest
+the origin*. And the nearest point is the perpendicular foot, so
+`(x_p + t* v) · v = 0`, i.e. `22/3·(-1) + ... ` — checked directly:
+
+    x = x_p + (11/9) v = (-2/3 + 11/9,  10/3 - 22/9,  11/9)
+                        = (5/9,  8/9,  11/9)
+
+and `x · v = (5/9)(1) + (8/9)(-2) + (11/9)(1) = (5 - 16 + 11)/9 = 0` ✓. The
+foot property is the same fact as the residual being perpendicular to the span from
+[lesson 30](../part03_linear_algebra/30_vectors_and_vector_spaces.md) and
+[lesson 31](../part03_linear_algebra/31_matrices_and_matrix_algebra.md)'s folding discussion. The lesson's
+own Challenge makes the same point: L2 regularisation "always produces a *unique*
+answer to an under-determined fit" because a strictly convex objective has a
+unique minimiser. It does not produce the zeroed-free-variable answer; it produces
+the closest point on the line.
+
+```python
+TOL = 1e-9
+
+
+def shape(M):
+    return len(M), len(M[0])
+
+
+def transpose(M):
+    rows, cols = shape(M)
+    return [[M[i][j] for i in range(rows)] for j in range(cols)]
+
+
+def rref(A, tol=TOL):
+    M = [list(row) for row in A]
+    rows, cols = len(M), len(M[0])
+    pivot_row, pivots = 0, []
+    for col in range(cols):
+        if pivot_row == rows:
+            break
+        best = max(range(pivot_row, rows), key=lambda r: abs(M[r][col]))
+        if abs(M[best][col]) <= tol:
+            continue
+        M[pivot_row], M[best] = M[best], M[pivot_row]
+        p = M[pivot_row][col]
+        M[pivot_row] = [v / p for v in M[pivot_row]]
+        for r in range(rows):
+            if r != pivot_row and M[r][col] != 0.0:
+                f = M[r][col]
+                M[r] = [M[r][c] - f * M[pivot_row][c] for c in range(cols)]
+        pivots.append(col)
+        pivot_row += 1
+    return M, pivots
+
+
+def rank(A, tol=TOL):
+    return len(rref(A, tol)[1])
+
+
+def null_space(A, tol=TOL):
+    M, pivots = rref(A, tol)
+    cols = shape(A)[1]
+    basis = []
+    for fc in [c for c in range(cols) if c not in pivots]:
+        v = [0.0] * cols
+        v[fc] = 1.0
+        for i, pc in enumerate(pivots):
+            v[pc] = -M[i][fc]
+        basis.append(v)
+    return basis
+
+
+def left_null_space(A, tol=TOL):
+    return null_space(transpose(A), tol)
+
+
+def augmented_rref(A, b, tol=TOL):
+    """RREF of [A | b], which is the only thing that can see inconsistency."""
+    M = [list(A[i]) + [b[i]] for i in range(len(A))]
+    cols = len(M[0])
+    pivot_row = 0
+    for col in range(cols - 1):
+        if pivot_row == len(M):
+            break
+        best = max(range(pivot_row, len(M)), key=lambda r: abs(M[r][col]))
+        if abs(M[best][col]) <= tol:
+            continue
+        M[pivot_row], M[best] = M[best], M[pivot_row]
+        p = M[pivot_row][col]
+        M[pivot_row] = [v / p for v in M[pivot_row]]
+        for r in range(len(M)):
+            if r != pivot_row and M[r][col] != 0.0:
+                f = M[r][col]
+                M[r] = [M[r][c] - f * M[pivot_row][c] for c in range(cols)]
+        pivot_row += 1
+    return M
+
+
+def matvec(M, v):
+    return [sum(M[i][j] * v[j] for j in range(shape(M)[1])) for i in range(len(M))]
+
+
+def dot(u, v):
+    return sum(a * b for a, b in zip(u, v))
+
+
+A_sys = [[1.0, 0.0, 1.0],
+         [0.0, 1.0, 0.0],
+         [1.0, 1.0, 1.0],
+         [2.0, 0.0, 3.0]]
+
+print("=== One entry of b changed; A is untouched ===")
+for label, b_sys in (("b = [4, 5, 9, 7]  (consistent)", [4.0, 5.0, 9.0, 7.0]),
+                     ("b = [4, 5, 9, 8]  (one entry +1)", [4.0, 5.0, 9.0, 8.0])):
+    print(f"--- {label} ---")
+    print(f"  rank(A)              = {rank(A_sys)}")
+    print(f"  rank([A|b])          = {rank([list(A_sys[i]) + [b_sys[i]] for i in range(len(A_sys))])}")
+    print(f"  left null space of A = "
+          f"{[[round(t, 6) for t in v] for v in left_null_space(A_sys)]}")
+    for y in left_null_space(A_sys):
+        print(f"    same weights on b: {round(sum(y[i] * b_sys[i] for i in range(len(b_sys))), 6)}")
+    Maug = augmented_rref(A_sys, b_sys)
+    for row in Maug:
+        print("    rref[A|b]: " + " ".join(f"{t:9.4f}" for t in row))
+    contradiction = [row[-1] for row in Maug
+                     if all(abs(row[j]) <= TOL for j in range(shape(A_sys)[1]))
+                     and abs(row[-1]) > TOL]
+    if contradiction:
+        print(f"    a row reads 0 = {contradiction[0]:.4f}, which is false: NO solution")
+    else:
+        print("    no all-zero-left row with a nonzero b: consistent")
+
+print()
+print("The left null space is identical in both runs, because it depends only on A.")
+print("What changed is the right side, and only [A | b] can see that.")
+
+print()
+print("=== Minimum norm picks the foot of the perpendicular, not t = 0 ===")
+A_under = [[1.0, 2.0, 3.0], [2.0, 1.0, 0.0]]
+x_p = [-2.0 / 3.0, 10.0 / 3.0, 0.0]
+v = null_space(A_under)[0]
+print(f"x_p = ({x_p[0]:.6f}, {x_p[1]:.6f}, {x_p[2]:.6f})   (this is t = 0)")
+print(f"v   = ({v[0]:.6f}, {v[1]:.6f}, {v[2]:.6f})")
+print()
+print(f"x_p . v   = {dot(x_p, v):.6f}")
+print(f"v . v     = {dot(v, v):.6f}")
+t_star = -dot(x_p, v) / dot(v, v)
+print(f"t* = -(x_p.v)/(v.v) = {t_star:.6f}   (NOT 0)")
+x_min = [x_p[j] + t_star * v[j] for j in range(3)]
+print(f"x_min = ({x_min[0]:.6f}, {x_min[1]:.6f}, {x_min[2]:.6f})")
+print(f"  A_under x_min = {[round(t, 9) for t in matvec(A_under, x_min)]} (should be [6, 2])")
+print(f"  x_min . v     = {dot(x_min, v):.6f}   (perpendicular to the line direction)")
+print()
+print("Objective along the line, to confirm it really is the minimum:")
+for t in (0.0, 0.5, t_star, 1.5, 3.0):
+    xt = [x_p[j] + t * v[j] for j in range(3)]
+    nrm2 = sum(u * u for u in xt)
+    mark = "  <- minimum" if abs(t - t_star) < 1e-12 else ""
+    print(f"  t = {t:7.4f} -> ||x||^2 = {nrm2:.6f}{mark}")
+print()
+print("L2 picks the point of the line nearest the origin, which is the")
+print("perpendicular foot. Any strictly convex penalty does this uniquely;")
+print("the data itself does not pick a point at all.")
+```
+
+Output:
+
+```
+=== One entry of b changed; A is untouched ===
+--- b = [4, 5, 9, 7]  (consistent) ---
+  rank(A)              = 3
+  rank([A|b])          = 3
+  left null space of A = [[-1.0, -1.0, 1.0, -0.0]]
+    same weights on b: 0.0
+    rref[A|b]:  1.0000  0.0000  1.0000   4.0000
+    rref[A|b]:  0.0000  1.0000  0.0000   5.0000
+    rref[A|b]:  0.0000  0.0000  0.0000   0.0000
+    rref[A|b]:  0.0000  0.0000  0.0000   0.0000
+    no all-zero-left row with a nonzero b: consistent
+--- b = [4, 5, 9, 8]  (one entry +1) ---
+  rank(A)              = 3
+  rank([A|b])          = 4
+  left null space of A = [[-1.0, -1.0, 1.0, -0.0]]
+    same weights on b: -1.0
+    rref[A|b]:  1.0000  0.0000  1.0000   4.0000
+    rref[A|b]:  0.0000  1.0000  0.0000   5.0000
+    rref[A|b]:  0.0000  0.0000  0.0000   0.0000
+    rref[A|b]:  0.0000  0.0000  0.0000  -1.0000
+    a row reads 0 = -1.0000, which is false: NO solution
+
+The left null space is identical in both runs, because it depends only on A.
+What changed is the right side, and only [A | b] can see that.
+
+=== Minimum norm picks the foot of the perpendicular, not t = 0 ===
+x_p = (-0.666667, 3.333333, 0.000000)   (this is t = 0)
+v   = (1.000000, -2.000000, 1.000000)
+
+x_p . v   = -7.333333
+v . v     = 6.000000
+t* = -(x_p.v)/(v.v) = 1.222222   (NOT 0)
+x_min = (0.555556, 0.888889, 1.222222)
+  A_under x_min = [6.0, 2.0] (should be [6, 2])
+  x_min . v     = 0.000000   (perpendicular to the line direction)
+
+Objective along the line, to confirm it really is the minimum:
+  t =  0.0000 -> ||x||^2 = 11.555556
+  t =  0.5000 -> ||x||^2 = 2.916667
+  t =  1.2222 -> ||x||^2 = 2.605926  <- minimum
+  t =  1.5000 -> ||x||^2 = 2.625000
+  t =  3.0000 -> ||x||^2 = 9.722222
+
+L2 picks the point of the line nearest the origin, which is the
+perpendicular foot. Any strictly convex penalty does this uniquely;
+the data itself does not pick a point at all.
+```
+
+</details>
+
 ## Summary
 
 - A **basis** is a list that spans a set and is independent. The **dimension** is
@@ -2306,7 +2911,7 @@ pick a point on the line; the penalty does.
 
 ## Next
 
-[35 — Linear Transformations and Kernels](35_linear_transformations_and_kernels.md)
+[35 — Linear Transformations and Kernels](../part03_linear_algebra/35_linear_transformations_and_kernels.md)
 puts a name on the machinery: a matrix applied to a vector *is* a linear
 transformation. That lesson makes the four subspaces concrete, defines kernel and
 image, and proves rank-nullity in its full geometric form, which is the

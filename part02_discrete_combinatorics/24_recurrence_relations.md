@@ -885,7 +885,7 @@ print(f"a[10] = {a[10]} out of {2**10} strings = {a[10]/2**10:.2%}")
 
 ## Next
 
-[Lesson 25 — Relations and Equivalence Classes](25_relations_and_equivalence_classes.md)
+[Lesson 25 — Relations and Equivalence Classes](../part02_discrete_combinatorics/25_relations_and_equivalence_classes.md)
 assumes you can count subsets and follow a recurrence; it covers the structural
 notion that makes union–find, database grouping, and type coercion all the same
 idea.

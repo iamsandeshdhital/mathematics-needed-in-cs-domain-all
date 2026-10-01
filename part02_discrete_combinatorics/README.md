@@ -31,15 +31,15 @@ Basic Python only. Every example runs with no third-party packages.
 
 | # | Lesson | What it gives you |
 | --- | --- | --- |
-| 20 | [Counting Principles](20_counting_principles.md) | The product rule, the sum rule, and bijections. Three ideas that generate every formula in the part. |
-| 21 | [Permutations, Combinations, and Choosing With Limits](21_permutations_and_combinations.md) | nCr, nPr, combinations with repetition, the decision rule for choosing between them, and coefficient extraction for bounded selections. |
-| 22 | [The Binomial Theorem](22_binomial_theorem.md) | Coefficients as counts, weighted sums without loops, popcount distributions, Vandermonde's identity, Lucas' theorem. |
-| 23 | [Inclusion–Exclusion and the Pigeonhole Principle](23_inclusion_exclusion_and_pigeonhole.md) | Correcting overlapping cases, surjections, derangements, and existence proofs that require no computation. |
-| 24 | [Recurrence Relations](24_recurrence_relations.md) | Iterating, characteristic roots, the master theorem, memoisation vs tabulation, fast-doubling Fibonacci, Zeckendorf's theorem. |
-| 25 | [Relations and Equivalence Classes](25_relations_and_equivalence_classes.md) | Reflexive/symmetric/transitive, partitions, congruence mod n, union–find, `GROUP BY`, and the transitive closure. |
-| 26 | [Graph Theory](26_graph_theory.md) | Degrees and the handshake lemma, BFS/DFS, bipartite graphs, Euler's theorem, planar bounds, adjacency matrices. |
-| 27 | [Trees and Spanning Trees](27_trees_and_spanning_trees.md) | Tree invariants, the four traversals, heaps, tries, B-trees, Kruskal, Prim, Dijkstra. |
-| 28 | [Counting Strategies and When to Use Each](28_counting_strategies.md) | A decision procedure for the whole part, worked classifications, and when to stop counting and write a program. |
+| 20 | [Counting Principles](../part02_discrete_combinatorics/20_counting_principles.md) | The product rule, the sum rule, and bijections. Three ideas that generate every formula in the part. |
+| 21 | [Permutations, Combinations, and Choosing With Limits](../part02_discrete_combinatorics/21_permutations_and_combinations.md) | nCr, nPr, combinations with repetition, the decision rule for choosing between them, and coefficient extraction for bounded selections. |
+| 22 | [The Binomial Theorem](../part02_discrete_combinatorics/22_binomial_theorem.md) | Coefficients as counts, weighted sums without loops, popcount distributions, Vandermonde's identity, Lucas' theorem. |
+| 23 | [Inclusion–Exclusion and the Pigeonhole Principle](../part02_discrete_combinatorics/23_inclusion_exclusion_and_pigeonhole.md) | Correcting overlapping cases, surjections, derangements, and existence proofs that require no computation. |
+| 24 | [Recurrence Relations](../part02_discrete_combinatorics/24_recurrence_relations.md) | Iterating, characteristic roots, the master theorem, memoisation vs tabulation, fast-doubling Fibonacci, Zeckendorf's theorem. |
+| 25 | [Relations and Equivalence Classes](../part02_discrete_combinatorics/25_relations_and_equivalence_classes.md) | Reflexive/symmetric/transitive, partitions, congruence mod n, union–find, `GROUP BY`, and the transitive closure. |
+| 26 | [Graph Theory](../part02_discrete_combinatorics/26_graph_theory.md) | Degrees and the handshake lemma, BFS/DFS, bipartite graphs, Euler's theorem, planar bounds, adjacency matrices. |
+| 27 | [Trees and Spanning Trees](../part02_discrete_combinatorics/27_trees_and_spanning_trees.md) | Tree invariants, the four traversals, heaps, tries, B-trees, Kruskal, Prim, Dijkstra. |
+| 28 | [Counting Strategies and When to Use Each](../part02_discrete_combinatorics/28_counting_strategies.md) | A decision procedure for the whole part, worked classifications, and when to stop counting and write a program. |
 
 ## How to read this part
 

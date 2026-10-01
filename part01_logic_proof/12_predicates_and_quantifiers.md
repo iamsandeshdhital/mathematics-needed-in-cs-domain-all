@@ -66,7 +66,7 @@ Automated theorem provers spend their time on exactly this.
 
 ## The Formal Version
 
-Notation follows [SYMBOLS.md](../../SYMBOLS.md). A variable in a formula is
+Notation follows [SYMBOLS.md](../SYMBOLS.md). A variable in a formula is
 written $x$; the domain is written $D$; a predicate is written $P$.
 
 **Definition.** A *domain* $D$ is a set of values. A variable ranging over $D$
@@ -84,8 +84,8 @@ the definition with the quantifier left off.
 **Definition.** A variable is *free* in $P$ if some quantifier does not bind it,
 and *bound* otherwise. A formula with no free variables is a *closed
 sentence*, and a closed sentence is a proposition — which is what
-[Lesson 10](10_propositions_and_connectives.md) demanded and what the truth
-table of [Lesson 11](11_truth_tables_and_equivalence.md) can then be built
+[Lesson 10](../part01_logic_proof/10_propositions_and_connectives.md) demanded and what the truth
+table of [Lesson 11](../part01_logic_proof/11_truth_tables_and_equivalence.md) can then be built
 over.
 
 **Definition.** The *scope* of a quantifier is the formula immediately to its
@@ -116,7 +116,7 @@ $d \in D$ satisfies $P$. This is a third quantifier and not a decoration: it is
 *Proof.* The first is a definition in each direction: "not every element works"
 means "at least one element fails". The second is the same argument applied to
 "not some element works". The third is De Morgan's laws from
-[Lesson 11](11_truth_tables_and_equivalence.md) applied to the body. The fourth
+[Lesson 11](../part01_logic_proof/11_truth_tables_and_equivalence.md) applied to the body. The fourth
 says "the count of solutions is not exactly one", which for a natural number
 means it is 0 or at least 2; a negative count is impossible, so 0 is excluded
 and two distinct solutions exist. ∎
@@ -161,7 +161,7 @@ evaluations.
 ranges over $\lvert D\rvert$ for each of those, and so on to $k$ levels. ∎ This
 is the point at which quantifiers stop being logic and become algorithms. The
 sentence is a program, the nesting depth is a loop count, and
-`$\lvert D\rvert^k$` is a runtime. [Lesson 15](15_sets_and_cardinality.md) shows
+`$\lvert D\rvert^k$` is a runtime. [Lesson 15](../part01_logic_proof/15_sets_and_cardinality.md) shows
 that for countably infinite $D$ this number is infinite for every $k \ge 1$,
 which is why nobody decides quantified sentences by enumeration over $\mathbb{N}$.
 
@@ -199,7 +199,7 @@ renaming cannot turn one into the other, the scopes differ.
 | `$\exists x \in \varnothing\; P(x) \equiv \bot$` | existential over nothing is false | vacuous falsity | "no rows matched" for an existence claim |
 | `$\forall x\, (P(x) \to Q(x)) \equiv \forall x\, (\neg P(x) \vee Q(x))$` | a requirement is a disjunction | "everyone who must, does" | specs stated as implications |
 | `$k$` | the number of quantifiers in the sentence | nesting depth | runtime is `$\lvert D\rvert^k$`; two `$k$` are not comparable |
-| `$\exists! y \in D\,(\forall x \in D\, P(x,y))$` | one value pairs with every value | a bijection when the sizes match | hashing, indexing, [Lesson 15](15_sets_and_cardinality.md) |
+| `$\exists! y \in D\,(\forall x \in D\, P(x,y))$` | one value pairs with every value | a bijection when the sizes match | hashing, indexing, [Lesson 15](../part01_logic_proof/15_sets_and_cardinality.md) |
 | `$\forall \alpha.\, (\alpha \to \beta) \to (\beta \to \alpha)$` | a law about *types*, not values | the swap law, checked for every pair of types at once | Hindley–Milner, System F, trait resolution; the "variable" $\alpha$ is not a value |
 | `$\forall x \in A \subseteq D,\; P(x)$` | restricted quantification | "for all of this subcollection" | filtering before quantifying: `for all admins, …` |
 
@@ -232,7 +232,7 @@ def handle(r):
 
 **Step 5. Translate the code, honestly.** The condition is
 `¬A(r) ∨ ¬P(r)`, and denial happens when that holds. Using the identity from
-[Lesson 10](10_propositions_and_connectives.md), `(¬A ∨ ¬P) → D` is the same
+[Lesson 10](../part01_logic_proof/10_propositions_and_connectives.md), `(¬A ∨ ¬P) → D` is the same
 proposition as `¬(¬A ∨ ¬P) ∨ D`, which is `(A ∧ P) ∨ D`. So the code says:
 
 $$\forall r \in R,\; (A(r) \wedge P(r)) \vee D(r)$$
@@ -257,7 +257,7 @@ absence no breach audit will ever notice.
 | T | T | — | allow | allow | neither |
 
 **Step 7. Diagnose.** The programmer used `or` where the requirement says "and",
-which is the De Morgan error from [Lesson 10](10_propositions_and_connectives.md)
+which is the De Morgan error from [Lesson 10](../part01_logic_proof/10_propositions_and_connectives.md)
 wearing a different hat. `not A or not P` is true for any request that fails
 *either* check, so a logged-in user hitting a private endpoint — `A` true, `P`
 false — is denied 401 with a perfectly valid session, and an unauthenticated
@@ -488,86 +488,55 @@ print("quantifier you wrote.")
 ### Statements as data, so the negation rule is code you can test
 
 ```python
+# The `truth`, `show` and `count_quantifiers` functions are the ones from the
+# Runnable Code section, unchanged. Only `negate` is rebuilt here, with a
+# switch for the bug we want to hunt.
+
 UNARY = {
     "active": {"ada", "bob"},
     "admin": {"ada"},
     "audited": {"bob"},
+    "verified": {"ada", "cy"},
 }
-
 RELATION = {
     "friend": {("ada", "bob"), ("bob", "ada"), ("bob", "cy"), ("cy", "bob")},
 }
-
 DOMAIN = ["ada", "bob", "cy"]
 
-# A statement is DATA, not a string. This is the whole trick: once a sentence is
-# a term built out of a fixed vocabulary, negating it is a function you can run
-# and test, instead of a rule you have to remember correctly under pressure.
-#
-#   ("forall", var, body)      for all <var>: <body>
-#   ("exists", var, body)      exists <var>: <body>
-#   ("not", s)                 not <s>
-#   ("and", a, b) / ("or", a, b) / ("impl", a, b)
-#   ("pred", name, var)        <name>(<var>)
-#   ("rel", name, u, v)        <name>(<u>, <v>)
-#   ("ne", u, v)               u is not v
 
-QUANTIFIERS = {"forall", "exists"}
-
-
-def negate(s):
-    """Push one `not` all the way in, to the atoms. Never called on a
-    quantifier-free statement, so no branch needs to think about scope."""
-    kind = s[0]
-    if kind == "not":
-        return s[1]                      # not not s  ==  s
-    if kind == "forall":                  # not forall u: P  ==  exists u: not P
-        return ("exists", s[1], negate(s[2]))
-    if kind == "exists":                  # not exists u: P  ==  forall u: not P
-        return ("forall", s[1], negate(s[2]))
-    if kind == "and":                     # not (a and b)  ==  (not a) or (not b)
-        return ("or", negate(s[1]), negate(s[2]))
-    if kind == "or":                      # not (a or b)  ==  (not a) and (not b)
-        return ("and", negate(s[1]), negate(s[2]))
-    if kind == "impl":                    # not (a -> b)  ==  a and not b
-        return ("and", s[1], negate(s[2]))
-    if kind in ("pred", "rel", "ne"):
-        return ("not", s)                 # atoms are where negations stop
-    raise ValueError(f"unknown statement kind {kind!r}")
-
-
-def show(s):
-    kind = s[0]
-    if kind == "not":
-        return f"not ({show(s[1])})"
-    if kind == "pred":
-        return f"{s[1]}({s[2]})"
-    if kind == "rel":
-        return f"{s[1]}({s[2]}, {s[3]})"
-    if kind == "ne":
-        return f"{s[1]} != {s[2]}"
-    if kind == "impl":
-        return f"({show(s[1])} -> {show(s[2])})"
-    if kind == "and":
-        return f"({show(s[1])} and {show(s[2])})"
-    if kind == "or":
-        return f"({show(s[1])} or {show(s[2])})"
-    if kind == "forall":
-        return f"for all {s[1]}: {show(s[2])}"
-    if kind == "exists":
-        return f"exists {s[1]}: {show(s[2])}"
-    raise ValueError(kind)
+def make_negate(buggy=False):
+    """Build a negation function. `buggy=True` forgets De Morgan on `and`:
+    it returns `a and ~b` where it should return `~a or ~b`."""
+    def negate(s):
+        kind = s[0]
+        if kind == "not":
+            return s[1]
+        if kind == "forall":
+            return ("exists", s[1], negate(s[2]))
+        if kind == "exists":
+            return ("forall", s[1], negate(s[2]))
+        if kind == "and":
+            if buggy:
+                return ("and", negate(s[1]), negate(s[2]))
+            return ("or", negate(s[1]), negate(s[2]))
+        if kind == "or":
+            return ("and", negate(s[1]), negate(s[2]))
+        if kind == "impl":
+            return ("and", s[1], negate(s[2]))
+        if kind in ("pred", "rel", "ne"):
+            return ("not", s)
+        raise ValueError(kind)
+    return negate
 
 
 def truth(s, env):
-    """The truth value of a CLOSED statement: every variable must be bound."""
     kind = s[0]
     if kind == "not":
         return not truth(s[1], env)
     if kind == "pred":
-        return env[s[2]] in UNARY[s[1]]      # ("pred", name, var)
+        return env[s[2]] in UNARY[s[1]]
     if kind == "rel":
-        return (env[s[2]], env[s[3]]) in RELATION[s[1]]   # ("rel", name, u, v)
+        return (env[s[2]], env[s[3]]) in RELATION[s[1]]
     if kind == "ne":
         return env[s[1]] != env[s[2]]
     if kind == "impl":
@@ -584,8 +553,7 @@ def truth(s, env):
 
 
 def count_quantifiers(s):
-    """How many `for all` / `exists` symbols the statement contains."""
-    if s[0] in QUANTIFIERS:
+    if s[0] in ("forall", "exists"):
         return 1 + count_quantifiers(s[2])
     if s[0] == "not":
         return count_quantifiers(s[1])
@@ -594,506 +562,69 @@ def count_quantifiers(s):
     return 0
 
 
-def find_counterexample(s, env=None):
-    """For a universal statement, the first element that refutes it."""
-    env = env or {}
-    kind = s[0]
-    if kind == "forall":
-        for v in DOMAIN:
-            if not truth(s[2], {**env, s[1]: v}):
-                return v
-        return None
-    if kind == "not":
-        return find_counterexample(s[1], env)
-    if kind == "and":
-        return find_counterexample(s[1], env) or find_counterexample(s[2], env)
-    return None
-
-
-def find_witness(s, env=None):
-    """For an existential statement, the first element that satisfies it."""
-    env = env or {}
-    kind = s[0]
-    if kind == "exists":
-        for v in DOMAIN:
-            if truth(s[2], {**env, s[1]: v}):
-                return v
-        return None
-    if kind == "not":
-        return find_witness(s[1], env)
-    if kind == "or":
-        return find_witness(s[1], env) or find_witness(s[2], env)
-    return None
-
-
-def witness_table(s):
-    """For a statement `for all u: exists v: P`, return the {u: v} table.
-
-    This is the operational form of a nested quantifier: one witness per `u`,
-    each found by a separate search. It is also a greedy matching, and greedy
-    matchings fail on the cases where a global matching would succeed -- the
-    same failure that the quantifier order is silently hiding.
-    """
-    _, u_var, body = s
-    _, v_var, core = body
-    table = {}
-    for u in DOMAIN:
-        for v in DOMAIN:
-            if truth(core, {u_var: u, v_var: v}):
-                table[u] = v
-                break
-    return table
-
-
-S = {
-    "every user is active":
-        ("forall", "u", ("pred", "active", "u")),
-    "some user is an admin":
-        ("exists", "u", ("pred", "admin", "u")),
-    "every user has a friend":
-        ("forall", "u", ("exists", "v", ("rel", "friend", "u", "v"))),
-    "some user is everyone's friend":
-        ("exists", "v", ("forall", "u", ("rel", "friend", "u", "v"))),
-    "at most one user is an admin":
-        ("not", ("exists", "u", ("exists", "v",
-                                ("and", ("pred", "admin", "u"),
-                                       ("pred", "admin", "v"),
-                                       ("ne", "u", "v"))))),
-    "no user is active and unaudited":
-        ("forall", "u", ("impl", ("pred", "active", "u"),
-                         ("not", ("pred", "audited", "u")))),
-}
-
-print("=" * 74)
-print("1. Negation pushed all the way in")
-print("=" * 74)
-print()
-for label, s in S.items():
-    n = negate(s)
-    print(f"  {label}")
-    print(f"      S      : {show(s)}")
-    print(f"      not S  : {show(n)}")
-    print(f"      truth  : {truth(s, {})}   not S is {truth(n, {})}"
-          f"   opposed: {truth(s, {}) != truth(n, {})}")
-    print()
-
-print("=" * 74)
-print("2. The same check, run over every statement as a test suite")
-print("=" * 74)
-print()
-print(f"{'statement':<34} {'|S|':>4} {'truth':>6} {'truth(not S)':>13} {'opposed':>8}")
-ok = True
-for label, s in S.items():
-    a, b = truth(s, {}), truth(negate(s), {})
-    ok = ok and (a != b)
-    print(f"{label:<34} {count_quantifiers(s):>4} {str(a):>6} {str(b):>13} "
-          f"{str(a != b):>8}")
-print()
-print(f"every statement's negation is its opposite: {ok}")
-print()
-print("If `negate` had a bug in it -- say it forgot to flip `and` to `or` -- this")
-print("table would light up red. That is the argument for writing the rule as")
-print("code. A remembered rule fails silently; a tested function fails loudly.")
-print()
-
-print("=" * 74)
-print("3. Order of the quantifiers is part of the meaning")
-print("=" * 74)
-print()
-for_u_then_v = S["every user has a friend"]
-v_then_u = S["some user is everyone's friend"]
-print(f"  for all u: exists v: friend(u, v)   -> {truth(for_u_then_v, {})}")
-print(f"  exists v: for all u: friend(u, v)   -> {truth(v_then_u, {})}")
-print()
-print("Both statements are about the same relation on the same three people,")
-print("and they are not the same claim. The first says each person has SOME")
-print("friend; the second says some person is a friend of EVERYONE. Same words,")
-print("reordered, different proposition. Nothing about the data distinguishes")
-print("them; only the order of the quantifiers does.")
-print()
-print(f"  a witness for each u, found greedily: {witness_table(for_u_then_v)}")
-print(f"  find_witness(exists u: admin(u))    : {find_witness(S['some user is an admin'])}")
-print()
-print("Three separate witnesses, one per user. The existential that way out is")
-print("allowed to depend on the universal variable -- that is what 'for all u,")
-print("exists v' means. No such thing is allowed in the other order.")
-print()
-
-print("=" * 74)
-print("4. A counterexample finder is the operational form of a universal")
-print("=" * 74)
-print()
-for label, s in S.items():
-    if s[0] != "forall":
-        continue
-    ce = find_counterexample(s)
-    print(f"  {label}")
-    print(f"      holds: {truth(s, {})}   counterexample: {ce}")
-print()
-print("One bad element out of three is enough to refute a universal claim, and")
-print("the counterexample is the only piece of information you need to fix the")
-print("code. This is why a failing property-based test is so valuable: it hands")
-print("you the counterexample directly.")
-```
-
-### SQL: `EXISTS`, `NOT EXISTS`, and the `NOT IN` trap
-
-```python
-import sqlite3
-
-# SQLite is in the Python standard library, so this is not a simulated query
-# language: it is a real relational engine, running in memory, and the WHERE
-# clause really does evaluate a predicate over a real finite domain.
-
-con = sqlite3.connect(":memory:")
-cur = con.cursor()
-cur.execute("CREATE TABLE users (id INTEGER, name TEXT, role TEXT)")
-cur.execute("CREATE TABLE logins (user_id INTEGER, day TEXT)")
-cur.executemany("INSERT INTO users VALUES (?, ?, ?)", [
-    (1, "ada", "admin"),
-    (2, "bob", "user"),
-    (3, "cy", None),          # role is genuinely NULL, which is not the same as ''
-    (4, "dee", "user"),
-])
-cur.executemany("INSERT INTO logins VALUES (?, ?)", [
-    (1, "mon"), (1, "tue"),
-    (2, "mon"),
-    (4, "mon"), (4, "tue"), (4, "wed"),
-])                                   # user 3 (cy) has never logged in
-
-
-def rows(sql):
-    cur.execute(sql)
-    return [tuple(r) for r in cur.fetchall()]
-
-
-print("=" * 74)
-print("1. The domain, as SQL sees it")
-print("=" * 74)
-print()
-for r in rows("SELECT id, name, role FROM users ORDER BY id"):
-    print(f"  id={r[0]}  name={r[1]:<5} role={r[2]!r}")
-print()
-print("There are four rows, so the domain has four elements. A WHERE clause is")
-print("a predicate over those four elements, and SELECT is the quantifier: it")
-print("reports the existential, 'there is a row for which the predicate held'.")
-print()
-
-print("=" * 74)
-print("2. EXISTS is the existential quantifier")
-print("=" * 74)
-print()
-q1 = "SELECT name FROM users u WHERE EXISTS (SELECT 1 FROM logins l WHERE l.user_id = u.id)"
-print("  " + q1)
-print()
-print("    reads: exists a login for this user")
-for r in rows(q1):
-    print(f"      {r[0]}")
-print()
-print("  cy is absent, so the query is False for exactly one element of four.")
-print("  That is an existential: one missing element out of four is enough.")
-print()
-
-print("=" * 74)
-print("3. NOT EXISTS is how you write a universal in SQL")
-print("=" * 74)
-print()
-q2 = """
-SELECT u.name FROM users u
-WHERE NOT EXISTS (SELECT 1 FROM logins l WHERE l.user_id = u.id)
-ORDER BY u.id
-"""
-print("  SELECT u.name FROM users u")
-print("  WHERE NOT EXISTS (SELECT 1 FROM logins l WHERE l.user_id = u.id)")
-print()
-print("    reads: there is NO user without a login, i.e. for all users, a login exists")
-for r in rows(q2):
-    print(f"      {r[0]}")
-print()
-print("Read the quantifier structure carefully. The outer SELECT is an")
-print("existential over users, and the NOT EXISTS inside it is a universal in")
-print("disguise: `for all u: exists a login for u`  is  `not exists u: no login")
-print("for u`, and 'no login for u' is itself a universal over logins that the")
-print("engine has already folded into a single boolean for you.")
-print()
-print("In SQL you cannot write `for all`, so you always pay this tax: a universal")
-print("becomes NOT EXISTS wrapped around a WHERE, and a WHERE is itself an")
-print("existential. Nesting hides in a single keyword.")
-print()
-
-print("=" * 74)
-print("4. IN, NOT IN, and the NULL trap")
-print("=" * 74)
-print()
-q3 = "SELECT name FROM users WHERE role IN ('admin', 'user') ORDER BY id"
-q4 = "SELECT name FROM users WHERE role NOT IN ('admin', 'user') ORDER BY id"
-q5 = "SELECT name FROM users WHERE role NOT IN ('admin', 'user') OR role IS NULL ORDER BY id"
-print("  " + q3)
-print("    ->", [r[0] for r in rows(q3)])
-print()
-print("  " + q4)
-print("    ->", [r[0] for r in rows(q4)])
-print()
-print("  " + q5)
-print("    ->", [r[0] for r in rows(q5)])
-print()
-print("`role NOT IN ('admin','user')` should read as 'this user's role is none")
-print("of admin or user', which is a universal over a two-element list. It")
-print("returns an EMPTY SET, and the reason is a quantifier wearing a logical")
-print("costume: NOT IN expands to `role <> 'admin' AND role <> 'user'`, and")
-print("SQL's three-valued logic says `NULL <> 'admin'` is UNKNOWN, not TRUE. An")
-print("AND with an UNKNOWN operand is UNKNOWN, and WHERE keeps only rows that")
-print("are TRUE. So cy is dropped by a rule that is technically correct and")
-print("completely useless.")
-print()
-print("The fix is not to remember a rule. The fix is to write the intent, which")
-print("is a disjunction including the null case explicitly, or to say")
-print("`role IS NULL OR role NOT IN (...)`. Three-valued logic is the price of")
-print("admitting that 'unknown' is a real answer and not a synonym for False.")
-print()
-
-print("=" * 74)
-print("5. A quantified invariant, checked against the same data")
-print("=" * 74)
-print()
-INVARIANT = "SELECT COUNT(*) FROM users u WHERE NOT EXISTS " \
-            "(SELECT 1 FROM logins l WHERE l.user_id = u.id)"
-count = rows(INVARIANT)[0][0]
-print("  invariant: every user has logged in at least once")
-print(f"  violations: {count}")
-print()
-print("  The SQL returns a COUNT, not a list, because the invariant is a")
-print("  universal claim, and a universal claim over a finite domain is exactly")
-print("  a count of counterexamples. Make the count zero and the claim holds.")
-print()
-print("  This is the form every schema check, migration guard and health probe")
-print("  takes: `SELECT COUNT(*) ... WHERE NOT EXISTS ...`, and assert zero.")
-con.close()
-```
-
-### A universal over types, and a coverage number that is not one
-
-```python
-# ---------------------------------------------------------------------------
-# Two universal claims that get made about programs every day, and what it
-# actually takes to check them.
-# ---------------------------------------------------------------------------
-
-print("=" * 74)
-print("1. A universal over TYPES: `for all a. (a -> a) -> a -> a`")
-print("=" * 74)
-print()
-print("Read: a function that takes a function from some type to itself, and a")
-print("value of that type, and returns a value of the type. Nothing in that")
-print("sentence mentions a specific type. The claim runs over all types, so it")
-print("is a universal quantifier over a variable that is not a value at all.")
-print()
-
-
-def apply_twice(f, x):
-    """No type annotation, and none could be written: the type is not named."""
-    return f(f(x))
-
-
-def append_itself(v):
-    return v + v
-
-
-# A sample of "a value of some type", each with a function of that type to
-# itself. `expected` is f(f(value)) written out by hand.
-SAMPLES = [
-    ("int", 3, append_itself, 12),
-    ("int", 9, lambda v: v * 2, 36),
-    ("str", "hi", append_itself, "hihihihi"),
-    ("str", "ab", lambda s: s * 3, "ab" * 9),
-    ("list", [1, 2], append_itself, [1, 2] * 4),
-    ("float", 1.5, lambda v: v * 4.0, 24.0),
-    ("tuple", (1, 2), lambda v: v + v, (1, 2) * 4),
-    ("bytes", b"ab", append_itself, b"abababab"),
+S = [
+    ("every user is active", ("forall", "u", ("pred", "active", "u"))),
+    ("some user is active", ("exists", "u", ("pred", "active", "u"))),
+    ("no user is active", ("forall", "u", ("not", ("pred", "active", "u")))),
+    ("every active user is verified",
+     ("forall", "u", ("impl", ("pred", "active", "u"), ("pred", "verified", "u")))),
+    ("some active user is not verified",
+     ("exists", "u", ("and", ("pred", "active", "u"),
+                      ("not", ("pred", "verified", "u"))))),
+    ("every user has a friend",
+     ("forall", "u", ("exists", "v", ("rel", "friend", "u", "v")))),
+    ("some user has no friend",
+     ("exists", "u", ("forall", "v", ("not", ("rel", "friend", "u", "v"))))),
+    ("every user has an admin friend",
+     ("forall", "u", ("exists", "v", ("and", ("rel", "friend", "u", "v"),
+                                      ("pred", "admin", "v"))))),
+    ("every user is active or an admin",
+     ("forall", "u", ("or", ("pred", "active", "u"), ("pred", "admin", "u")))),
+    ("some user is neither active nor an admin",
+     ("exists", "u", ("and", ("not", ("pred", "active", "u")),
+                      ("not", ("pred", "admin", "u"))))),
+    ("every user has a distinct friend",
+     ("forall", "u", ("exists", "v", ("and", ("rel", "friend", "u", "v"),
+                                      ("ne", "u", "v"))))),
+    ("at most one user is an admin",
+     ("not", ("exists", "u", ("exists", "v",
+                              ("and", ("pred", "admin", "u"),
+                                     ("pred", "admin", "v"),
+                                     ("ne", "u", "v")))))),
 ]
 
-print(f"{'type':>6} {'input':>12} {'apply_twice(f, input)':>22} {'same type':>10} "
-      f"{'value ok':>9}")
-allsame = True
-for type_name, value, f, expected in SAMPLES:
-    got = apply_twice(f, value)
-    same = type(got) is type(value)
-    correct = got == expected
-    allsame = allsame and same and correct
-    print(f"{type_name:>6} {repr(value):>12} {repr(got):>22} {str(same):>10} "
-          f"{str(correct):>9}")
-print()
-print(f"all 8 samples came back with the right type and the right value: {allsame}")
-print()
-print("Now be honest about what that established. Eight samples is an")
-print("EXISTENTIAL claim: 'there exist eight values on which it works'. The")
-print("statement that was wanted is universal, and each of those types has")
-print("infinitely many values. The reason the code is right anyway is not the")
-print("sample -- it is that the body `f(f(x))` mentions nothing but `f` and `x`,")
-print("so it cannot possibly depend on what sort of thing `x` is. That is the")
-print("argument a type checker makes for you, and it is the same argument")
-print("[Lesson 14](14_mathematical_induction.md) makes for values instead of")
-print("for types: a structural reason, not a sample.")
-print()
-
-print("=" * 74)
-print("2. Coverage is a quantified claim, and it is usually the wrong one")
-print("=" * 74)
-print()
-
-ALL_BRANCHES = ["n < 0", "n == 0", "n > 0"]
-
-
-def classify(n, log):
-    if n < 0:
-        log.append("n < 0")
-        return "negative"
-    if n == 0:
-        log.append("n == 0")
-        return "zero"
-    log.append("n > 0")
-    return "positive"
-
-
-TESTS = [-5, -1, 0, 3, 99]
-BIG_DOMAIN = [-9, -4, -1, 0, 1, 4, 9, 10 ** 6, -(10 ** 6)]
-
-
-def reached_branches(inputs):
-    log = []
-    for n in inputs:
-        one = []
-        classify(n, one)
-        log.extend(one)
-    return log
-
-
-covered = set(reached_branches(TESTS))
-print(f"test inputs      : {TESTS}")
-print(f"branches in code : {ALL_BRANCHES}")
-print(f"branches covered : {sorted(covered)}")
-print()
-print(f"{'branch':>8} {'test inputs reaching it':<28} {'other domain values'}")
-for b in ALL_BRANCHES:
-    with_tests = [n for n in TESTS if b in reached_branches([n])]
-    elsewhere = [n for n in BIG_DOMAIN if n not in TESTS and b in reached_branches([n])]
-    print(f"{b:>8} {str(with_tests):<28} {elsewhere}")
-print()
-print("Three different quantifiers are hiding in that report.")
-print()
-print("  'every branch is covered'   is  for all b: exists an input i with reach(i, b)")
-print("  'every input is covered'    is  for all i: exists a branch b with reach(i, b)")
-print("  'no input is a surprise'    is  for all i in the WHOLE domain, which the")
-print("                              five test inputs cannot possibly establish")
-print()
-print("The first is satisfiable and is what a coverage number reports. The")
-print("second is trivially true for a total function. The third is the one that")
-print("matters, and it is the one nobody has. A coverage of 100% is a statement")
-print("about the shape of the code, not about the behaviour of the program.")
-print()
-print("This is the honest reason for property-based testing and for formal")
-print("verification: they attack the third claim, not the first.")
+results = {}
+for label, buggy in (("correct negate", False), ("buggy negate", True)):
+    negate = make_negate(buggy=buggy)
+    print("=" * 74)
+    print(label)
+    print("=" * 74)
+    print(f"{'#':>2} {'statement':<40} {'|S|':>4} {'S':>6} {'~S':>6} {'ok':>5}")
+    missed = []
+    for i, (text, s) in enumerate(S, 1):
+        t, nt = truth(s, {}), truth(negate(s), {})
+        if t == nt:
+            missed.append(i)
+        print(f"{i:>2} {text:<40} {count_quantifiers(s):>4} {str(t):>6} "
+              f"{str(nt):>6} {str(t != nt):>5}")
+    print()
+    print(f"  the negation law fails on: {missed if missed else 'nothing'}")
+    print()
+    results[label] = missed
 ```
 
-## Common Mistakes
+**Read the two `missed` lists together, because that is the whole exercise.**
+The correct `negate` passes all twelve. The buggy one — the one that forgets to
+turn `and` into `or` — still passes 1, 2, 3, 6 and 7, which are exactly the
+statements whose bodies are a single atom under one quantifier. There is no `and`
+inside to mis-flip.
 
-**Wrong: reading `¬(∀x P(x))` as `∀x ¬P(x)`.**
-Right: `¬∀x P(x) ≡ ∃x ¬P(x)`. The universal flips to the existential *and* the
-whole body is negated. The version you wrote says "every element fails", which
-is much stronger, and it is False whenever the domain has two elements with
-opposite outcomes. In the first code block, `forall(active)` is False and
-`forall(not active)` is also False — the two cannot both be the negation of
-anything.
-Why tempting: the quantifier symbol is right there and flipping its *meaning*
-feels like the main event. Flipping its *meaning* and negating the body are two
-separate steps and you only did one.
-
-**Wrong: pushing a `not` past a quantifier without changing the body.**
-Right: both halves change. `¬∀x(P(x) ∨ Q(x))` is `∃x(¬P(x) ∧ ¬Q(x))`, with the
-disjunction becoming a conjunction as well. The Runnable Code block implements
-this as a single function with one branch per connective, and the table it
-prints is the check that the function is right: a bug in the `and`/`or` arm
-turns one row's "opposed" column into `False`.
-Why tempting: on a *unary* predicate the body has no connective, so the rule
-"flip the quantifier" appears to be the whole rule. It is only when the body has
-two parts that you discover you also needed De Morgan.
-
-**Wrong: swapping the order of nested quantifiers because they "commute".**
-Right: `∀x ∃y P(x,y)` and `∃y ∀x P(x,y)` are different propositions. On the
-three-person data in the Runnable Code, `for all u: exists v: friend(u, v)` is
-True while `exists v: for all u: friend(u, v)` is False. Only the outer `∃`/`∀`
-pattern is a genuine free choice; nothing in ordinary algebra licenses
-commuting them.
-Why tempting: quantified expressions look like products, and products commute.
-The reason they do not here is that the range of the inner variable depends on
-the value of the outer one. In the `∀∃` case it does; in the `∃∀` case it must
-not.
-
-**Wrong: translating "no user without a login" as `SELECT ... WHERE NOT
-EXISTS (...)` and calling it an existence check.**
-Right: that query is an *existential over users whose predicate is a negated
-existential over logins*. The outer `SELECT` reports "here is a row", so the
-whole sentence is an `∃`; the universal is buried inside the `NOT EXISTS` and
-invisible. If you want to know whether the universal holds, you must ask
-whether the returned set is *empty*, and you should say so in the variable
-name: `users_without_login`, not `bad_users`.
-Why tempting: `NOT EXISTS` looks like a negation of a fact, which is exactly
-what it is, and the existential `SELECT` around it is so automatic that nobody
-counts it. Two quantifiers in five words, one of which you never wrote.
-
-**Wrong: treating `role NOT IN ('admin','user')` as `role IS NULL OR role NOT IN
-(...)`.**
-Right: `NOT IN` on a `NULL` operand evaluates to UNKNOWN, not TRUE, and `WHERE`
-keeps only TRUE. The query returns an empty set even though a row exists that
-satisfies the intent. The fix is to state the null case explicitly, or to
-replace `NULL` with a sentinel like `'unknown'` and give the column a `NOT
-NULL` constraint.
-Why tempting: in Python, `[x for x in rows if x not in ('admin','user')]` puts
-`None` in the output, because `None in (...)` is just False. The two languages
-disagree here, and the disagreement is silent.
-
-**Wrong: claiming a 100% branch-coverage number means the program is correct.**
-Right: 100% branch coverage is the claim `∀ branch, ∃ test reaching it`. The
-claim you want is `∀ input, program(input) = specification(input)`. The first
-is about five tests; the second is about every input there is or will be, and no
-finite suite establishes it. The coverage number is real information about the
-shape of the code and it is worth almost nothing about its behaviour.
-Why tempting: the percentage is a single number, it is printed in green, and
-it sounds conclusive. The specific claim it discharges is much narrower than
-the one the word "coverage" suggests.
-
----
-
-## Multiple Choice Questions
-
-**Q1.** What is the correct negation of `$\forall x \in D\; P(x)$`?
-
-- A) `$\forall x \in D\; \neg P(x)$`
-- B) `$\exists x \in D\; \neg P(x)$`
-- C) `$\exists x \in D\; P(x)$`
-- D) `$\forall x \notin D\; P(x)$`
-
-<details>
-<summary>Answer and explanation</summary>
-
-**B) `$\exists x \in D\; \neg P(x)$`.**
-
-"Not every element satisfies P" means exactly "some element fails to satisfy
-P". The quantifier flips from universal to existential and the body is negated.
-
-Option A, `∀x ¬P(x)`, says every element fails, which is strictly stronger: on
-the three-user domain in the code, `∀x active(x)` is False and
-`∃x ¬active(x)` is True, but `∀x ¬active(x)` is also False because ada and bob
-*are* active. It is a real proposition, just not this negation.
-
-Option C, `∃x P(x)`, drops the negation entirely. It is the *converse* of the
-original claim in this setting: it says at least one element works, which the
-universal's negation never asserts.
-
-Option D is not a well-formed reading at all. `x ∉ D` cannot be satisfied for a
-variable declared to range over `D`, so the quantifier is over an empty set and
-the statement is vacuously true — true for the wrong reason, and true even when
-the original was true.
+It is caught only by 4, 5, 8, 9, 10, 11 and 12: the statements with a compound
+body. That is the general shape of the bug. The version of the negation rule that
+people remember correctly is the version for sentences with one atom under one
+quantifier, and that is the only version a beginner ever writes. Which is why the
+rule should be code, tested against a table, rather than something reconstructed
+under pressure.
 
 </details>
 
@@ -1156,7 +687,7 @@ Option C is the tempting one, and it is wrong for a specific reason: a domain
 being empty does not make any quantifier meaningless. `∅` is a perfectly good
 set. What is meaningless is a *free* variable with nothing to range over, which
 is a different failure and a real one — see the Common Mistakes entry on
-unbound variables in [Lesson 10](10_propositions_and_connectives.md).
+unbound variables in [Lesson 10](../part01_logic_proof/10_propositions_and_connectives.md).
 
 Option D confuses vacuous truth with tautology. A tautology is true on *every*
 nonempty domain as well; vacuous truth is true on the empty domain and tells you
@@ -1207,7 +738,7 @@ following?
 
 **B) `$\forall x \in D\; (\neg P(x) \vee Q(x))$`.**
 
-This is the theorem from [Lesson 10](10_propositions_and_connectives.md) with
+This is the theorem from [Lesson 10](../part01_logic_proof/10_propositions_and_connectives.md) with
 the quantifier left in place: $P \to Q$ is $\neg P \vee Q$, and the quantifier
 does not care. Read it: "every element either is not a P, or is a Q."
 
@@ -1391,7 +922,7 @@ which is nearly always, so it reads as a plausible test and never fires.
 Option C uses `any` with `or` inside. That is `∃r (¬A ∨ ¬P)`, the negation of
 `∀r (A ∧ P)` — a different original sentence. It will fire on almost every
 request and is the shape you write when you forget that `not A or not P` is not
-`not (A or P)`. This is the [Lesson 10](10_propositions_and_connectives.md)
+`not (A or P)`. This is the [Lesson 10](../part01_logic_proof/10_propositions_and_connectives.md)
 error wearing quantifiers.
 
 Option D is the *logically correct* negation and the operationally useless one.
@@ -1487,7 +1018,7 @@ Over a domain of size $n$ each costs at most $n$ evaluations, and they are
 sequenced, so the total is at most $n^3$ predicate calls. That is the practical
 content of "counting quantifiers": the number is a loop count, and $n^3$ is a
 runtime. The same statement over a countably infinite domain is not decidable
-by enumeration at all — see [Lesson 15](15_sets_and_cardinality.md).
+by enumeration at all — see [Lesson 15](../part01_logic_proof/15_sets_and_cardinality.md).
 
 </details>
 
@@ -1651,7 +1182,7 @@ is about the *data*, so it is only as good as the imagination of whoever chose
 the data, and it rots the first time someone calls the function with a type
 nobody tried.
 
-This is also the reason [Lesson 14](14_mathematical_induction.md) exists: induction
+This is also the reason [Lesson 14](../part01_logic_proof/14_mathematical_induction.md) exists: induction
 is the technique that converts a structural argument about code into a
 universal claim about an infinite domain, without enumeration. The type
 checker's rule for `f(f(x))` and the induction step for a recursive function are
@@ -2477,7 +2008,7 @@ on a different line in a different function, so a reviewer cannot see it and
 neither can a type checker.
 
 The first two are caught by a four-row table. The third is caught only by asking
-for the loop invariant, which is [Lesson 14](14_mathematical_induction.md).
+for the loop invariant, which is [Lesson 14](../part01_logic_proof/14_mathematical_induction.md).
 
 </details>
 
@@ -2851,7 +2382,7 @@ warning sign that a quantifier is missing.
 
 ## Next
 
-[Lesson 13 — Proof Techniques](13_proof_techniques.md) takes the closed sentences
+[Lesson 13 — Proof Techniques](../part01_logic_proof/13_proof_techniques.md) takes the closed sentences
 this lesson produces and shows how to argue that they are true: direct proof,
 contrapositive, contradiction, and exhaustion. It assumes you can write a
 quantified statement and negate it correctly, which is the hard half.

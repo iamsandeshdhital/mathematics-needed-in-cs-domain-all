@@ -48,7 +48,7 @@ biggest performance decision in any collision system.
 
 ## The Formal Version
 
-Notation follows [SYMBOLS.md](../../SYMBOLS.md).
+Notation follows [SYMBOLS.md](../SYMBOLS.md).
 
 **Definition.** For o, a, b ∈ ℝ² the *cross product determinant* (2D analogue of
 the cross product) is `cross(o, a, b) = (a₁ − o₁)(b₂ − o₂) − (a₂ − o₂)(b₁ − o₁)`.
@@ -57,7 +57,7 @@ the cross product) is `cross(o, a, b) = (a₁ − o₁)(b₂ − o₂) − (a₂
 counter-clockwise; `< 0` for clockwise; `= 0` iff o, a, b are collinear.
 
 **Explanation.** This is the 3D cross product's z component with z pinned to 0,
-and it is the workhorse of every 2D convexity test. The [cross product lesson](90_vectors_3d_and_cross_product.md)
+and it is the workhorse of every 2D convexity test. The [cross product lesson](../part07_geometry_graphics/90_vectors_3d_and_cross_product.md)
 already proved orthogonality and sign conventions; here only the sign is used.
 
 **Definition.** A set S ⊆ ℝ² is *convex* iff for any p, q ∈ S the whole segment

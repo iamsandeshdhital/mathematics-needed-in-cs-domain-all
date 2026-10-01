@@ -41,7 +41,7 @@ requirements are much stricter.
 
 ## The Formal Version
 
-Notation follows [SYMBOLS.md](../../SYMBOLS.md). Used here: `O()`, `Θ()`,
+Notation follows [SYMBOLS.md](../SYMBOLS.md). Used here: `O()`, `Θ()`,
 `α`, `√`.
 
 ### Hash functions

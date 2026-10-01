@@ -27,7 +27,7 @@ libraries, real classes, real functions where possible.
 
 ## The Formal Version
 
-Precise definitions. Use the symbols from [SYMBOLS.md](../../SYMBOLS.md).
+Precise definitions. Use the symbols from [SYMBOLS.md](SYMBOLS.md).
 
 **Definition.** A *term* is …
 

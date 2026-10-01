@@ -42,7 +42,7 @@ this operation. Learn the definition and you recognise all of them.
 
 - **Union–find (disjoint set union).** The most-used data structure in
   competitive programming, and the engine behind Kruskal's minimum spanning tree
-  algorithm, which is in Lesson [27](27_trees_and_spanning_trees.md). Path
+  algorithm, which is in Lesson [27](../part02_discrete_combinatorics/27_trees_and_spanning_trees.md). Path
   compression plus union by rank gives O(α(n)) amortised time — effectively
   constant. The classes are the sets, maintained incrementally.
 - **SQL `GROUP BY`.** The engine groups rows by a tuple of column values. That
@@ -54,7 +54,7 @@ this operation. Learn the definition and you recognise all of them.
 - **Connected components.** In a graph, "is reachable from" is reflexive and
   symmetric but *not* transitive — which is why you must take the transitive
   closure before the classes are an equivalence. Lesson
-  [26](26_graph_theory.md) makes this concrete; the naive implementation is
+  [26](../part02_discrete_combinatorics/26_graph_theory.md) makes this concrete; the naive implementation is
   O(n³) and union–find does it in near-linear time.
 - **Type conversion and coercion.** An integer and the string "42" are
   equivalent once a coercion relation is declared. Overloading and implicit
@@ -69,7 +69,7 @@ this operation. Learn the definition and you recognise all of them.
 - **Bell numbers.** The number of partitions of an n-element set — the number of
   distinct equivalence structures on it — grows fast (15 at n = 4, 52 at n = 5, 203
   at n = 6, 877 at n = 7) and is the subject of Lesson
-  [28](28_counting_strategies.md).
+  [28](../part02_discrete_combinatorics/28_counting_strategies.md).
 
 ## The Formal Version
 
@@ -223,7 +223,7 @@ set are there? That is a genuine counting problem with a real answer:
 
 So there are 15 distinct ways to group 4 objects, which is why "group these 4
 things" has more answers than you would guess by hand. For 6 objects it is 203.
-Counting these is the subject of Lesson [28](28_counting_strategies.md).
+Counting these is the subject of Lesson [28](../part02_discrete_combinatorics/28_counting_strategies.md).
 
 ## Runnable Code
 
@@ -1034,13 +1034,13 @@ print(f"classes of R* : {[sorted(c) for c in distinct]}")
   that is the correctness argument for `set()`, `DISTINCT`, and string interning.
 - The transitive closure of a symmetric relation is an equivalence relation, and
   its classes are the connected components — the bridge to
-  [Lesson 26](26_graph_theory.md).
+  [Lesson 26](../part02_discrete_combinatorics/26_graph_theory.md).
 - Union–find maintains the classes incrementally in O(α(n)) amortised time, and
   choosing the *right* key is a modelling decision with visible consequences.
 
 ## Next
 
-[Lesson 26 — Graph Theory](26_graph_theory.md) assumes you know what an
+[Lesson 26 — Graph Theory](../part02_discrete_combinatorics/26_graph_theory.md) assumes you know what an
 equivalence relation and a partition are, and that "connected by a path" is a
 relation you may need to close; it turns that into the language of vertices,
 degrees, connectivity, and planar graphs.

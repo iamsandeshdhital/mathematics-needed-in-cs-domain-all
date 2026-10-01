@@ -49,7 +49,7 @@ built out of exactly the stages it is built out of.
 
 ## The Formal Version
 
-Notation follows [SYMBOLS.md](../../SYMBOLS.md).
+Notation follows [SYMBOLS.md](../SYMBOLS.md).
 
 **Definition.** A *homogeneous coordinate* for ℝ³ is a 4-vector
 (x, y, z, w) ∈ ℝ⁴. The point (x, y, z) is represented by (x, y, z, 1).
@@ -2366,7 +2366,7 @@ plane. Bounding the frustum is what keeps this routine honest.
 
 ## Next
 
-[92 — Geometric Algorithms](92_geometric_algorithms.md) uses these transforms
+[92 — Geometric Algorithms](../part07_geometry_graphics/92_geometric_algorithms.md) uses these transforms
 and vectors as building blocks for the classical geometry algorithms every
 engine needs: convex hull, closest pair of points, point-in-polygon, and the
 spatial partitioning that makes collision detection fast.

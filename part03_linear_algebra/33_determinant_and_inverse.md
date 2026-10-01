@@ -52,7 +52,7 @@ almost never what you should run.
 
 ## The Formal Version
 
-Symbols follow [SYMBOLS.md](../../SYMBOLS.md). Let `A` be an `n × n` matrix over a
+Symbols follow [SYMBOLS.md](../SYMBOLS.md). Let `A` be an `n × n` matrix over a
 field `F`, written `A = (a_ij)`.
 
 **Definition.** The **determinant** of a `1 × 1` matrix is `det([a]) = a`.
@@ -136,7 +136,7 @@ repeatedly: the off-diagonal cofactors of a triangular matrix vanish by inductio
 so `det(A) ≠ 0`. Conversely, if `det(A) ≠ 0`, the adjugate identity below gives
 `A⁻¹` explicitly. In elimination terms, `det(A) ≠ 0` means the elimination never
 runs out of pivots, and then the solution is unique by
-[lesson 32](32_linear_systems_gaussian_elimination.md).
+[lesson 32](../part03_linear_algebra/32_linear_systems_gaussian_elimination.md).
 
 **Definition.** The **cofactor matrix** is `C = (C_ij)`. The **adjugate**
 (classical adjoint) is `adj(A) = Cᵀ`. Note these are *different matrices* — the
@@ -1108,7 +1108,7 @@ shows `A * 1e-110` whose true determinant is `9 × 10⁻³³⁰` — nonzero —
 `np.linalg.det` as exactly `0.0`. A zero determinant computed in floating point is
 a statement about your precision, not about the matrix. And `inv(A) @ b` is
 strictly more work and strictly less accurate than `solve(A, b)`, as
-[lesson 32](32_linear_systems_gaussian_elimination.md) already warned.
+[lesson 32](../part03_linear_algebra/32_linear_systems_gaussian_elimination.md) already warned.
 
 ---
 
@@ -1127,7 +1127,7 @@ strictly more work and strictly less accurate than `solve(A, b)`, as
 **C) The system `Ax = b` has either no solution or infinitely many, depending on
 `b`.**
 
-`det(A) = 0` means the elimination of [lesson 32](32_linear_systems_gaussian_elimination.md)
+`det(A) = 0` means the elimination of [lesson 32](../part03_linear_algebra/32_linear_systems_gaussian_elimination.md)
 runs out of pivots, which means the map `x ↦ Ax` is not one-to-one, which means
 "not exactly one solution". The two remaining possibilities are both real, and
 the code demonstrates both with the same matrix `S = [[1,2],[2,4]]`: with
@@ -1245,7 +1245,7 @@ scale by `det(B)` then by `det(A)`, hence by the product. The code checks
   It fails on the smallest possible example: `A = B = I₂` gives
   `det(2I₂) = 4` on the left and `1 + 1 = 2` on the right.
 - D) mixes two different rules. It looks like `tr(AB) = tr(BA)` from
-  [lesson 31](31_matrices_and_matrix_algebra.md) — where a similar-looking
+  [lesson 31](../part03_linear_algebra/31_matrices_and_matrix_algebra.md) — where a similar-looking
   identity really is true — with the multiplicative determinant rule. Note the
   trap: `tr(AB) = tr(BA)` *is* true even though `AB ≠ BA`, but there is no
   additive analogue of it for the determinant at all.
@@ -1321,7 +1321,7 @@ the order stays counterclockwise.
   determinant of a planar map tells you about reflections and area, not about
   rotation angle; recovering the rotation needs the eigenvalues or the polar
   decomposition from
-  [lesson 39](39_diagonalization_and_spectral.md).
+  [lesson 39](../part03_linear_algebra/39_diagonalization_and_spectral.md).
 
 </details>
 
@@ -1595,7 +1595,7 @@ while `b = (3,7)` gives nothing, because every `Sx` has second entry twice its
 first.
 
 Distinguishing them requires the augmented-matrix reduction of
-[lesson 32](32_linear_systems_gaussian_elimination.md): a row `[0 … 0 | c]` with
+[lesson 32](../part03_linear_algebra/32_linear_systems_gaussian_elimination.md): a row `[0 … 0 | c]` with
 `c ≠ 0` means no solution, a free column means infinitely many.
 
 </details>
@@ -2016,7 +2016,7 @@ So: solutions exist **iff** `b₁ = 2b₀` **and** `b₂ = 0`. The general solut
     x = (b₀ − 2t, t, b₃/5),   t ∈ ℝ
 
 a one-parameter family, i.e. infinitely many. (Compare
-[lesson 32](32_linear_systems_gaussian_elimination.md), where the free variable is
+[lesson 32](../part03_linear_algebra/32_linear_systems_gaussian_elimination.md), where the free variable is
 read off the pivot pattern.)
 
 **(c)** `b = (1, 2, 5)` works, but `b = (1, 0, 5)` does not: `b₁ = 0 ≠ 2·1 = 2b₀`,
@@ -2147,8 +2147,8 @@ This is the honest limit of what the determinant knows. It is a complete invaria
 for the *magnitude* of a transformation's effect on volume, and no information at
 all about the rotation or shear part. To recover that you need eigenvalues,
 singular values, or the polar decomposition —
-[lesson 39](39_diagonalization_and_spectral.md) and
-[lesson 40](40_svd_and_pca.md).
+[lesson 39](../part03_linear_algebra/39_diagonalization_and_spectral.md) and
+[lesson 40](../part03_linear_algebra/40_svd_and_pca.md).
 
 </details>
 
@@ -2233,8 +2233,8 @@ Two free variables means `dim ker(A) = 2`, and since `A` is `4 × 4` the rank is
 dependencies are at work, not one: row 1 being twice row 0 is the obvious
 redundancy, but row 3 is *also* redundant, being `−(r₂ − r₀)` up to sign. That is
 exactly the kind of detail the determinant cannot report and the pivot count can;
-see (d). [Lesson 34](34_basis_dimension_rank.md) makes this bookkeeping
-systematic, and [lesson 35](35_linear_transformations_and_kernels.md) proves
+see (d). [Lesson 34](../part03_linear_algebra/34_basis_dimension_rank.md) makes this bookkeeping
+systematic, and [lesson 35](../part03_linear_algebra/35_linear_transformations_and_kernels.md) proves
 `rank + nullity = n` as a theorem rather than a coincidence.
 
 **(d)** The determinant cannot distinguish `A` from the zero matrix, because both
@@ -2286,7 +2286,7 @@ determinant, while the pivot count recovers it exactly.
 
 ## Next
 
-[34 — Basis, Dimension, and Rank](34_basis_dimension_rank.md) asks the question
+[34 — Basis, Dimension, and Rank](../part03_linear_algebra/34_basis_dimension_rank.md) asks the question
 the determinant cannot answer. `det(A) = 0` says *that* a matrix is deficient, but
 not *how* — and how deficient is the whole content of rank, nullity, and the four
 fundamental subspaces that make linear algebra cohere.

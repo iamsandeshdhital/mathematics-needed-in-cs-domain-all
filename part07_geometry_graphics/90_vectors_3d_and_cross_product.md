@@ -50,7 +50,7 @@ frame.
 
 ## The Formal Version
 
-Notation follows [SYMBOLS.md](../../SYMBOLS.md).
+Notation follows [SYMBOLS.md](../SYMBOLS.md).
 
 **Definition.** A *vector* in ℝ³ is a triple **v** = (v₁, v₂, v₃) ∈ ℝ³. Vector
 addition is componentwise: (**u** + **v**)ᵢ = uᵢ + vᵢ. Scalar multiplication is
@@ -1808,7 +1808,7 @@ turns a subtly wrong solver into three correct ones.
 
 ## Next
 
-[91 — Transformations for Computer Graphics](91_transformations_graphics.md)
+[91 — Transformations for Computer Graphics](../part07_geometry_graphics/91_transformations_graphics.md)
 takes the cross product and turns it into a matrix: 4×4 homogeneous transforms,
 the order of composition, and a complete transform–project–clip pipeline built
 from scratch.

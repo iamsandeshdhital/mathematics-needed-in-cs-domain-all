@@ -1154,4 +1154,4 @@ tells you how good the model could possibly be.
 Part 06 turns to algorithms and complexity. Start with
 [80 — Big-O and Complexity Analysis](../part06_algorithms_math/80_big_o_and_complexity.md),
 which formalises "fast" — and where the √n results from
-[Lesson 68](68_law_of_large_numbers_and_clt.md) turn into complexity classes.
+[Lesson 68](../part05_probability_statistics/68_law_of_large_numbers_and_clt.md) turn into complexity classes.

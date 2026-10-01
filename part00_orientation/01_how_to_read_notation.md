@@ -2257,6 +2257,6 @@ explanation.
 
 ## Next
 
-[Lesson 02 — Study Plan and Prerequisites](02_study_plan.md) uses everything above
+[Lesson 02 — Study Plan and Prerequisites](../part00_orientation/02_study_plan.md) uses everything above
 to give you three concrete week-by-week plans and a self-diagnostic for deciding
 which one to take. It assumes you can read a formula and run Python.

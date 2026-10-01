@@ -32,7 +32,7 @@ have a correctness proof that assumes the function has no holes.
   code you compute `(f(x+h) - f(x)) / h` and try smaller and smaller `h`. Every
   numerical derivative is an attempt at `h → 0`, and it fails in both directions: `h`
   too large gives a bad approximation, `h` too small gives floating-point garbage.
-  Lesson [51](51_derivatives.md) is entirely about this.
+  Lesson [51](../part04_calculus/51_derivatives.md) is entirely about this.
 - **Big-O is a limit at infinity.** Saying `n = O(n log n)` literally means
   `lim_{n→∞} n/(n log n) = 0`. Every statement about asymptotic cost in
   [Part 06](../part06_algorithms_math/80_big_o_and_complexity.md) is a limit claim.
@@ -51,7 +51,7 @@ have a correctness proof that assumes the function has no holes.
 
 ## The Formal Version
 
-Symbols follow [SYMBOLS.md](../../SYMBOLS.md).
+Symbols follow [SYMBOLS.md](../SYMBOLS.md).
 
 **Definition.** A *function* from a set $X$ to a set $Y$ is a relation that assigns to
 every $x \in X$ exactly one element $f(x) \in Y$. We write $f : X \to Y$. The set $X$ is
@@ -603,7 +603,7 @@ wrote lesson50_continuity.png
 The last line is instructive. At `x = 1 + 1e-9` the computed value is *exactly* 2.0 —
 not because the function is defined there, but because `(x**2 - 1)` and `(x - 1)` round
 to the same double and the quotient lands on 2.0. The machine has accidentally produced
-the limit. Do not rely on it; see [54 — Taylor Series](54_taylor_series.md) for the
+the limit. Do not rely on it; see [54 — Taylor Series](../part04_calculus/54_taylor_series.md) for the
 cancellation error hiding behind that line.
 
 ---
@@ -1091,7 +1091,7 @@ Expand: $f(1+h) - f(1) = (1+h)^2 - 1 = 2h + h^2$, and dividing by $h$ gives $2 +
 So the true derivative $f'(1) = 2$ is approached from above, and the error is exactly
 $h$ — first order. Because $x^2$ is convex, its tangent line lies below the curve, so a
 forward secant must lie above the tangent, which is a one-sided bias rather than a
-random error. That bias is what Lesson [51](51_derivatives.md) fixes with the central
+random error. That bias is what Lesson [51](../part04_calculus/51_derivatives.md) fixes with the central
 difference, which throws the $h$ term away and gets error $O(h^2)$.
 
 Option A misreads "even" — parity has nothing to do with what a secant does.
@@ -1295,7 +1295,7 @@ degenerates and the two algebraically equal forms part company, you have hit the
 resolution floor. Practically: cancel in algebra first (`x + 1`), or use a form with no
 subtraction of nearly equal numbers, and if you must difference numerically, use a
 step size near the cube root of machine epsilon rather than pushing $h$ toward zero.
-Lesson [51](51_derivatives.md) develops exactly this trade-off for derivatives.
+Lesson [51](../part04_calculus/51_derivatives.md) develops exactly this trade-off for derivatives.
 
 </details>
 
@@ -1753,6 +1753,6 @@ in practice:
 
 ## Next
 
-[51 — Derivatives](51_derivatives.md) turns the limit idea from "approach a point" into
+[51 — Derivatives](../part04_calculus/51_derivatives.md) turns the limit idea from "approach a point" into
 "measure instantaneous rate of change", and shows that the chain rule is exactly the
 mechanism behind backpropagation.

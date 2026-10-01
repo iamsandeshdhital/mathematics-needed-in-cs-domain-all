@@ -38,7 +38,7 @@ choosing `d` and paying for it.
 
 ## The Formal Version
 
-Notation follows [SYMBOLS.md](../../SYMBOLS.md). Used here: `d(x, y)`, `d_min`,
+Notation follows [SYMBOLS.md](../SYMBOLS.md). Used here: `d(x, y)`, `d_min`,
 `GF(2)`, `t`, `O()`.
 
 ### The noisy channel
@@ -988,7 +988,8 @@ print()
 print("CDs use RS(28,24) inside CIRC; QR codes use RS over GF(256) with 10 to")
 print("30 parity symbols depending on the error-correction level; deep-space")
 print("probes use convolutional codes with interleaving.  All of them add just")
-print("enough redundancy to fix the errors they expect, no more.")```
+print("enough redundancy to fix the errors they expect, no more.")
+```
 
 ## Common Mistakes
 

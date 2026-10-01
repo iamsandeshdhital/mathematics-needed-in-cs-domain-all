@@ -1480,7 +1480,7 @@ bug survived: production exercised four rows and they were the four that work.
 
 ## Next
 
-[Lesson 11 — Truth Tables, Equivalence, and Normal Forms](11_truth_tables_and_equivalence.md)
+[Lesson 11 — Truth Tables, Equivalence, and Normal Forms](../part01_logic_proof/11_truth_tables_and_equivalence.md)
 turns what you learned here into a mechanical procedure: enumerate every
 assignment, compare columns, and simplify conditions by proof rather than by
 intuition. It assumes you can negate a compound statement correctly.

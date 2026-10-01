@@ -56,7 +56,7 @@ k" is your answer. No case analysis required.
   k and use sampling instead. Lesson [82](../part06_algorithms_math/82_tools_for_algorithm_design.md)
   returns to this.
 - **Bitmask indexes.** Storing a subset as an n-bit integer is the *bijection*
-  from Lesson [20](20_counting_principles.md) in disguise, and it is why `1 << n`
+  from Lesson [20](../part02_discrete_combinatorics/20_counting_principles.md) in disguise, and it is why `1 << n`
   appears in database and compiler code constantly.
 - **Anagram solvers and test-data generators.** Counting the distinct
   arrangements of a word with repeated letters is a multiset permutation, and
@@ -116,7 +116,7 @@ C(n, 0) = C(n, n) = 1 and C(n, r) = 0 for r > n.
 fixed element. Those that do: choose the remaining r − 1 from n − 1. Those that
 do not: choose all r from n − 1. The two cases are disjoint and exhaustive, so
 the sum rule applies. This is the dynamic-programming form used in
-[Lesson 24](24_recurrence_relations.md).
+[Lesson 24](../part02_discrete_combinatorics/24_recurrence_relations.md).
 
 **Theorem (Symmetry and special values).** C(n, r) = C(n, n − r), C(n, 1) = n,
 C(n, 0) = 1, and C(n, 2) = n(n − 1)/2.
@@ -622,7 +622,7 @@ Coefficient route. The pile of 13 spades contributes the polynomial (1 + y)¹³,
 whose coefficient of y^k is the number of ways to take k spades; the non-spade pile
 contributes (1 + y)³⁹. So the answer is the coefficient of y⁴ in (1 + y)¹³ times
 the coefficient of y⁹ in (1 + y)³⁹ — the same coefficient-extraction idea as
-Lesson [22](22_binomial_theorem.md), here built by hand:
+Lesson [22](../part02_discrete_combinatorics/22_binomial_theorem.md), here built by hand:
 
 ```python
 from math import comb
@@ -672,7 +672,7 @@ print(f"share of all 13-card hands = {comb(13,4)*comb(39,9)/comb(52,13):.4%}")
 
 ## Next
 
-[Lesson 22 — The Binomial Theorem](22_binomial_theorem.md) assumes you can pick
+[Lesson 22 — The Binomial Theorem](../part02_discrete_combinatorics/22_binomial_theorem.md) assumes you can pick
 between nCr and nPr; it shows that the binomial coefficients are themselves
 counts, which turns expansion into a way of computing large combinatorial sums
 without a loop.

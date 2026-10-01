@@ -86,7 +86,7 @@ base cases C(n, 0) = C(n, n) = 1 and C(n, k) = 0 for k > n.
 
 **Explanation.** Partition the k-element subsets of an n-set by whether they
 contain a specific element. This is the same case split as in Lesson
-[21](21_permutations_and_combinations.md), which is why the two lessons share a
+[21](../part02_discrete_combinatorics/21_permutations_and_combinations.md), which is why the two lessons share a
 recurrence: both describe the same subsets.
 
 **Theorem (Specialisations).** For any n ≥ 0:
@@ -131,7 +131,7 @@ f(x)g(x) is
 **Explanation.** Multiply out and collect: an x term from the first factor times an
 x term from the second gives one contribution to the total degree. This is the
 workhorse for the "choosing with limits" technique from Lesson
-[21](21_permutations_and_combinations.md) and for counting strings that avoid a
+[21](../part02_discrete_combinatorics/21_permutations_and_combinations.md) and for counting strings that avoid a
 local pattern.
 
 ## Worked Example
@@ -675,7 +675,7 @@ print(f"also: 2^12 variants, average weight = {brute / 2**12:.4f}")
 
 ## Next
 
-[Lesson 23 — Inclusion–Exclusion and the Pigeonhole Principle](23_inclusion_exclusion_and_pigeonhole.md)
+[Lesson 23 — Inclusion–Exclusion and the Pigeonhole Principle](../part02_discrete_combinatorics/23_inclusion_exclusion_and_pigeonhole.md)
 assumes you can count subsets with confidence; it handles the case the sum rule
 *cannot* handle — overlapping cases — and the theorem that turns "at least one"
 into arithmetic you can rely on.

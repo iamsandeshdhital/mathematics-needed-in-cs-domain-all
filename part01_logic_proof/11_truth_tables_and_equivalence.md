@@ -2019,7 +2019,7 @@ they share nothing, so they pay nothing when there is nothing to share.
 
 ## Next
 
-[Lesson 12 — Predicates and Quantifiers](12_predicates_and_quantifiers.md)
+[Lesson 12 — Predicates and Quantifiers](../part01_logic_proof/12_predicates_and_quantifiers.md)
 generalises the formula from a fixed set of variables to a predicate over a
 stated domain, and adds "for every" and "for some". It assumes you can compute
 a truth table and simplify by equivalence.
