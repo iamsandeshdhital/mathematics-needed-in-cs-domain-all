@@ -187,7 +187,6 @@ expansion without expanding it.
 ```python
 from math import comb, factorial
 
-
 def pascal_row(n):
     """Row n of Pascal's triangle: row[n][k] == C(n, k).
 
@@ -197,11 +196,9 @@ def pascal_row(n):
         row = [1] + [row[i] + row[i + 1] for i in range(len(row) - 1)] + [1]
     return row
 
-
 def binomial_expansion(a, b, n):
     """The list of terms of (a + b)^n, without multiplying anything out."""
     return [comb(n, k) * a ** (n - k) * b**k for k in range(n + 1)]
-
 
 row8 = pascal_row(8)
 print(f"row 8 of Pascal's triangle: {row8}")
@@ -269,7 +266,6 @@ ways of counting the same bits.
 def popcount_naive(x):
     return bin(x).count("1")
 
-
 def popcount_kernighan(x):
     """Clear the lowest set bit repeatedly; the loop runs once per set bit."""
     c = 0
@@ -277,7 +273,6 @@ def popcount_kernighan(x):
         x &= x - 1  # n & (n-1) removes the lowest set bit
         c += 1
     return c
-
 
 assert all(popcount_kernighan(v) == popcount_naive(v) == v.bit_count() for v in range(4096))
 print("all three popcount implementations agree on 0..4095")
@@ -311,10 +306,8 @@ def avoid_consecutive_ones(n):
         end0, end1 = end0 + end1, end0
     return end0 + end1
 
-
 def brute(n):
     return sum(1 for x in range(1 << n) if "11" not in format(x, f"0{n}b"))
-
 
 def generating_function(N):
     """Coefficients of Q(x) = (1 + x) / (1 - x - x^2), i.e. of sum_n P(n) x^n.
@@ -328,7 +321,6 @@ def generating_function(N):
     for n in range(2, N + 1):
         q[n] = q[n - 1] + q[n - 2]
     return q
-
 
 N = 12
 q = generating_function(N)
@@ -346,7 +338,6 @@ coefficients in checksums and Reed–Solomon codes.
 ```python
 from math import comb
 
-
 def lucas(n, k, p):
     """C(n, k) mod p for prime p, in O(log_p n) steps.
 
@@ -362,7 +353,6 @@ def lucas(n, k, p):
         nn //= p
         kk //= p
     return result
-
 
 for n, k, p in ((50, 20, 13), (1000, 437, 101), (100, 30, 7), (64, 17, 7)):
     fast = lucas(n, k, p)
@@ -424,6 +414,8 @@ for n, k, p in ((50, 20, 13), (1000, 437, 101), (100, 30, 7), (64, 17, 7)):
 > you never learn where the wall is. The wall is real: checkums and
 > Reed–Solomon codecs evaluate C(n, k) mod p routinely with n in the thousands.
 
+---
+
 ## Exercises and Solutions
 
 **[ ] Exercise 1 — Row lookup.** Without computing any factorials, find C(20, 7),
@@ -483,13 +475,11 @@ build the rows.
 ```python
 from math import comb
 
-
 def pascal_row(n):
     row = [1]
     for _ in range(n):
         row = [1] + [row[i] + row[i + 1] for i in range(len(row) - 1)] + [1]
     return row
-
 
 r = pascal_row(19)
 print(f"C(19,11) = {r[11]:,}   C(19,8) = {r[8]:,}   (symmetric: {r[11] == r[8]})")
@@ -607,23 +597,32 @@ each, independently, giving
 
     C(8, 2) · 10² · 6⁶ = 28 · 100 · 46,656 = 130,636,800
 
+Enumerating all of them directly is hopeless — 130,636,800 strings, each built
+one at a time, would take hours. But the *count* can be checked by summing over
+the position choice, which is exactly the binomial-coefficient idea:
+
 ```python
-from itertools import combinations, product
+from itertools import combinations
 from math import comb
 
 total = comb(8, 2) * 10**2 * 6**6
 
-# Brute force: pick the two digit positions, then fill all eight slots.
-brute = 0
-for digit_positions in combinations(range(8), 2):
-    for digits in product(range(10), repeat=2):
-        for letters in product("abcdef", repeat=6):
-            brute += 1
+# Sum the per-position-pair counts instead of materialising the strings.
+# For a fixed pair of digit positions the slots fill in 10 * 10 * 6**6 ways.
+fillings = 10 * 10 * 6**6
+brute = sum(fillings for _ in combinations(range(8), 2))
 
 print(f"closed form = {total:,}")
-print(f"brute force = {brute:,}")
+print(f"summed over position pairs = {brute:,}")
 print(f"agree: {total == brute}")
+print()
+print(f"There are {total:,} strings, so enumerating every one to count them")
+print(f"would take on the order of {total:,} steps. The closed form replaces")
+print("that with a single multiplication.")
 ```
+
+And the formula generalises: for *k* digits among *n* slots the count is
+`comb(n, k) * 10**k * 6**(n-k)`, a weighted binomial coefficient.
 </details>
 
 **[ ] Challenge 8 — Vandermonde for weighted counts.** A message is 12 bytes.

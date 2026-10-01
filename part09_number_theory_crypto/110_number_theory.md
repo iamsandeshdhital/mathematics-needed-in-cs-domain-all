@@ -525,18 +525,11 @@ decimal_digits = bits * 0.30103
 print(f"A {bits}-bit RSA modulus has about {decimal_digits:.0f} decimal digits.")
 print(f"Trial division would need on the order of 10^{decimal_digits / 2:.0f} steps.")
 print("At a billion steps per second that is longer than the age of the universe,")
-print("which is exactly why RSA uses 2048- or 3072-bit moduli.")
-
-# Factoring is genuinely hard, not just slow for a silly algorithm:
-# a 2048-bit modulus has ~1234 digits.
-bits = 2048
-digits = bits * 0.30103
-print()
-print(f"A {bits}-bit modulus has about {digits:.0f} digits, so trial division")
-print(f"needs about 10^{digits / 2:.0f} steps.  Better algorithms exist:")
-print("Pollard's rho removes small factors in about n^(1/4) steps, and the")
-print("general number field sieve (GNFS) is asymptotically the fastest known,")
-print("roughly exp( (64/9)^(1/3) * (ln n)^(1/3) * (ln ln n)^(2/3) ) steps.")
+print("which is why nobody attacks real RSA that way -- and why nobody can")
+print("attack it any other way either.  Pollard's rho removes small factors in")
+print("about n^(1/4) steps, and the fastest known general method, the general")
+print("number field sieve, costs exp( (64/9)^(1/3) * (ln n)^(1/3) * (ln ln n)^(2/3) ),")
+print("which is subexponential but still hopeless at 925 digits.")
 ```
 
 ### 6. Why primes are the right modulus (Rabin fingerprint)
@@ -562,26 +555,30 @@ def rabin(text: str, base: int = 256, modulus: int = 256) -> int:
 small, big = rabin("ab", modulus=256), rabin("cb", modulus=256)
 print(f"modulus 256:      H('ab') = {small}   H('cb') = {big}   "
       f"{'COLLIDE' if small == big else 'differ'}")
-print(f"modulus 2^61 - 1: H('ab') = {rabin('ab', modulus=2**61 - 1)}   "
-      f"H('cb') = {rabin('cb', modulus=2**61 - 1)}   "
-      f"{'COLLIDE' if rabin('ab', modulus=2**61 - 1) == rabin('cb', modulus=2**61 - 1) else 'differ'}")
 print()
 print("With modulus 256 only the final character survives, so anything that")
 print("ends the same way collides.  With a big prime, collisions are rare.")
 print()
 
-# A composite modulus is a liability: knowing M lets an adversary multiply two
-# differences together to build collisions deliberately.
-M_COMPOSITE = 256 * 65536                  # 2^24
-M_PRIME = 2**61 - 1                        # a Mersenne prime
-for M, label in ((M_COMPOSITE, "composite"), (M_PRIME, "prime")):
-    h1, h2 = rabin("ab", 256, M), rabin("cb", 256, M)
-    print(f"modulus {M} ({label}): H('ab')={h1}  H('cb')={h2}  "
-          f"{'COLLIDE' if h1 == h2 else 'differ'}")
+# A composite modulus built out of the base is worse:
+# modulus 256^3, every character before the last three gets weight 256^3 or
+# more, which is 0 mod M.  Only the final three characters affect the result.
+M_COMPOSITE = 256 ** 3                      # 16777216 = 256 * 256 * 256
+M_PRIME = 2**61 - 1                         # a Mersenne prime
+for s, t in [("ab", "cb"), ("helloabc", "worldabc"), ("pay now", "refund now")]:
+    h1, h2 = rabin(s, 256, M_COMPOSITE), rabin(t, 256, M_COMPOSITE)
+    j1, j2 = rabin(s, 256, M_PRIME), rabin(t, 256, M_PRIME)
+    print(f"{s!r:>12} vs {t!r:>12}:  mod 256^3 -> {h1} / {h2} "
+          f"{'COLLIDE' if h1 == h2 else 'differ':>8}   "
+          f"mod 2^61-1 -> {'COLLIDE' if j1 == j2 else 'differ'}")
+print()
+print("Over a prime field the collisions are governed by a clean polynomial")
+print("count; over a composite modulus an attacker factors M and attacks each")
+print("factor separately, which is why fingerprints always use prime moduli.")
 print()
 
-# Order information really does survive a large modulus: 'ab' and 'ba' get
-# different values because the characters land on different powers of B.
+# Order information survives a large modulus: 'ab' and 'ba' get different
+# values because the characters land on different powers of B.
 a, b = rabin("ab", 256, M_PRIME), rabin("ba", 256, M_PRIME)
 print(f"H('ab') = {a}   H('ba') = {b}   {'COLLIDE' if a == b else 'differ'}")
 print()
@@ -789,6 +786,668 @@ infinitely many primes (Euclid, [Lesson 24](../part02_discrete_combinatorics/24_
 for the counting side) but they get rarer and rarer, which is exactly why
 finding a 2048-bit prime takes a variable number of tries.
 
+## Formula Sheet
+
+Every formula, notation and definition this lesson uses. Symbols follow
+[SYMBOLS.md](../../SYMBOLS.md). A prime is always taken positive.
+
+| Symbol | Formula | In plain words | When you use it |
+| --- | --- | --- | --- |
+| `$a \mid b$` | `$b = a \cdot k$` for some integer `k` | `a` divides `b`: `b` is a whole-number multiple of `a` | any divisibility test; in Python, `b % a == 0` |
+| `$a \parallel b$` | `$a \mid b$ and $b \nmid a$` | `a` divides `b` but `b` does not divide back — a *proper* divisor | separating a real factor from the degenerate cases `a = 1` and `a = b` |
+| `$b = a \cdot q + r$` with `$0 \le r < a$`, `$a > 0$` | division algorithm | dividing `b` by `a` has exactly one quotient `q` and exactly one remainder `r` in that range | this is *why* `a mod b = r` is a function and not a relation; it is the reason `%` is well defined |
+| `divmod(b, a)` | returns the pair `(q, r)` | both halves of one division in a single call | the body of the Euclidean loop, and asserting `0 <= r < a` |
+| `$\gcd(a,b)$` | the largest `d > 0` with `d \mid a` and `d \mid b` | the biggest factor the two numbers share | reducing fractions; the input to everything in [Lesson 111](111_modular_arithmetic_and_crypto.md) |
+| `$\mathrm{lcm}(a,b)$` | `$a \cdot b \,/\, \gcd(a,b)$`, and `a*b == gcd*lcm` | the smallest positive number both `a` and `b` divide | common denominators. The division is needed because `a * b` counts every *shared* prime factor twice |
+| `$n = p_1^{e_1} \cdots p_k^{e_k}$` | Fundamental Theorem of Arithmetic | every integer above 1 has exactly one prime factorisation, up to reordering | gives every integer a canonical form — the reason "the same integer" is a well defined idea at all |
+| `$\gcd(a,b) = \gcd(b,\; a \bmod b)$` | the one-line reduction | the gcd of two numbers equals the gcd of the smaller number and the remainder | the body of the Euclidean loop, and a strictly decreasing measure of progress |
+| `$\Theta(\log \min(a,b))$` | divisions performed by Euclid on input `(a, b)` | the step count tracks the number of **bits** in the input, not the size of the input | complexity claims about gcd; `O(log n)` on an `n`-bit input is linear in the input as written |
+| `$F_1 = F_2 = 1$`, `$F_{k+2} = F_{k+1} + F_k$` | Fibonacci sequence | consecutive Fibonacci numbers are the slowest-shrinking pair Euclid can meet, so they are the worst case | makes the `Θ(log min(a,b))` bound *tight* rather than merely true; Lamé's theorem |
+| `$a_{i+2} < a_i / 2$` | the halving argument | the working value drops by at least half every **two** steps | the proof that the logarithm is the right bound |
+| `$\gcd(a,b) = s \cdot a + t \cdot b$` | Bézout's identity | some whole-number combination of `a` and `b` equals their gcd — and `s`, `t` may be negative | the extended Euclidean algorithm; a *certificate* for a gcd, and the gateway to [Lesson 111](111_modular_arithmetic_and_crypto.md) |
+| `$s = s_0 + k\frac{b}{g}$`, `$t = t_0 - k\frac{a}{g}`, `k ∈ ℤ`, `g = gcd(a,b)` | all Bézout solutions | one solution generates every other one. For this lesson's `a = 1071`, `b = 462`, `g = 21`: `s = -3 + 22k`, `t = 7 - 51k` | the `for k in range(4)` search in Runnable Code 3; reducing `s` modulo `m` gives the canonical modular inverse |
+| `$a^{-1} \bmod m$ exists $\iff \gcd(a,m) = 1$` | Bézout corollary | an inverse is exactly a solution of `s*a + t*m = 1`; `1` is reachable only if `gcd(a, m) = 1` | deciding whether `pow(a, -1, m)` is even legal in Python |
+| `n` prime `$\iff$` no `d` with `2 <= d <= isqrt(n)` divides `n` | trial division up to the square root | small factors come in pairs (`d` and `n/d`), so at least one of each pair is `≤ sqrt(n)` | the naive `is_prime` in the code. **Restriction:** real libraries use Miller–Rabin, because a 2048-bit candidate would need 2048 trial divisions |
+| `$\pi(N)$` | the number of primes `≤ N` | how many primes are up to here | prime density; `pi(10^6) = 78,498` |
+| `$\pi(N) \approx N / \ln N$`, so density `$\pi(N)/N \approx 1/\ln N$` | asymptotic prime number theorem | the *fraction* of integers that are prime falls without bound, even though there are infinitely many primes | why finding a 2048-bit prime takes about `ln(2^2048) ≈ 1419` tries on average |
+| `$n < p < 2n$` for some prime `p`, `n > 1` | Bertrand's postulate | there is always a prime strictly between `n` and `2n` | prime gaps are bounded, so `next_prime` always terminates |
+| `$\sum_{p \le \sqrt N,\; p \ \mathrm{prime}} \frac{N}{p} = \Theta(N \ln \ln N)$` | crossings-out performed by the sieve | the reciprocal sum over primes behaves like `ln ln N`, not like `ln N` | the sieve is `Θ(N ln ln N)` time and `Θ(N)` space, not `Θ(N²)` |
+| `$\Theta(\sqrt n)$` | trial-division divisions needed to factor `n` | the loop cannot stop before `d * d > n`, because that is where the smallest factor can hide | why a semiprime is expensive: `sqrt(n)` is exponential in the bit length of `n` |
+| `$\approx n^{1/4}$` | Pollard's rho, to expose a factor `p` | it needs about the square root of the *factor*, not of `n` | stripping small factors quickly before a full factoring run |
+| `$\exp\!\big((64/9)^{1/3}(\ln n)^{1/3}(\ln \ln n)^{2/3}\big)$` | GNFS cost | subexponential — faster than any `2^{n^ε}` and slower than any polynomial in `log n` | the asymptotically best known general factoring estimate |
+| `$\mathrm{digits} \approx \mathrm{bits} \cdot 0.30103$` | `log10(2) ≈ 0.30103` | a 3072-bit modulus is about 925 decimal digits | converting a key size into a workload: trial division on 925 digits needs about `10^462` steps |
+| `$H(c_0 \cdots c_{k-1}) = c_0 B^{k-1} + c_1 B^{k-2} + \cdots + c_{k-1} \pmod M$` | `c_i` = code of the `i`-th character, most significant **first**; exactly what `h = (h*base + ord(ch)) % modulus` computes. With `B = M = 256`: `H("ab") = 98` | read the string as a base-`B` number and reduce. Order matters, because each character lands on its own power of `B` | cheap string comparison; CRC and Rabin fingerprints; `H("ab") = 24930` but `H("ba") = 25185` under `M = 2^61 - 1` |
+| `$h \leftarrow (h B - c_{\mathrm{out}} B^{m} + c_{\mathrm{in}}) \bmod M$` | sliding the window forward one position | subtract the outgoing character's weight, add the incoming one | turns each window from `O(m)` into `O(1)` — the rolling update in Exercise 5 |
+| `$\varphi(n) = n\prod_{p \mid n}\left(1 - \frac{1}{p}\right)$` | Euler's totient | how many integers in `1..n` are coprime to `n` | the number RSA hides. `φ(360) = 96`, `φ(3233) = φ(61·53) = 3120` |
+| `$\varphi(pq) = (p-1)(q-1) = n - p - q + 1$` | for distinct primes `p`, `q`, with `n = pq` | inclusion–exclusion: `n - n/p - n/q + n/(pq)` collapses because `n/(pq) = 1` | what an RSA attacker is refused: the value is one factoring step away. Used in Exercise 4, and in [Lesson 111](111_modular_arithmetic_and_crypto.md) |
+
+## Multiple Choice Questions
+
+**Q1.** Running the Euclidean algorithm on `a = 1071` and `b = 462`, what comes out, and how many divisions does it take?
+
+- A) 147, in 2 divisions
+- B) 21, in 3 divisions
+- C) 42, in 3 divisions
+- D) 21, in 4 divisions
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) 21, in 3 divisions.**
+
+The three divisions are `1071 = 2·462 + 147`, `462 = 3·147 + 21`, and
+`147 = 7·21 + 0`. The last **non-zero** remainder is 21, and three divisions were
+performed, which is what the lesson's `euclid(1071, 462)` prints.
+
+Option A is the trap: 147 is only the *first* remainder. It is a valid common
+divisor of nothing relevant — `462 / 147` is not an integer, so 147 is not even a
+divisor of 462. Option C comes from doubling the answer, which is what happens if
+you keep the result of `a % b` in the wrong variable. Option D counts the final
+swap that sets `b = 0` as if it were another division; the loop condition
+`while b != 0` is what detects the end, and the third division is the one that
+produces the zero remainder.
+
+</details>
+
+**Q2.** The lesson's `factor` function stops at `isqrt(n)`. Which statement actually
+justifies that?
+
+- A) Every composite has a factor pair `(d, n/d)`, and in every such pair at least one factor is `≤ sqrt(n)`
+- B) Every prime factor of a composite `n` is at most `sqrt(n)`
+- C) The largest divisor of a composite `n` is at most `sqrt(n)`
+- D) `isqrt(n)` is faster than `int(n ** 0.5)` and correctness follows from speed
+
+<details>
+<summary>Answer and explanation</summary>
+
+**A) Every composite has a factor pair `(d, n/d)`, and in every such pair at least one factor is `≤ sqrt(n)`.**
+
+Write the composite as `n = d · e` and order it so `d ≤ e`. Then
+`d² ≤ d·e = n`, so `d ≤ sqrt(n)`. So the *smallest* factor is always within reach.
+
+Option B is false and the counterexample is small: `6 = 2 · 3` is composite, and
+its prime factor 3 is larger than `sqrt(6) ≈ 2.45`. This is the single most common
+misstatement of the argument, and it is tempting because "small factors are what we
+look for" feels like the same claim.
+
+Option C is false for the same number: the largest divisor of 6 is 6 itself, far
+above `sqrt(6)`. Confusing "largest" with "smallest" is what produces this option.
+
+Option D confuses a performance detail with a correctness argument. `isqrt` is
+indeed exact where `n ** 0.5` can round, but that is a numerical-accuracy
+argument, not a reason the search may stop. Loop bounds and correctness are
+separate questions, and conflating them is a classic source of silent bugs.
+
+</details>
+
+**Q3.** The `Common Mistakes` section shows `return n % 2 != 0 or n == 2` as a wrong
+primality test. It correctly rejects every even `n > 2`, so the first failure must be
+odd. What is the smallest `n` it wrongly reports as prime, and why?
+
+- A) 9, because 3 divides 9 and the test never tries a divisor other than 2
+- B) 15, because 5 divides 15 and the test never tries a divisor other than 2
+- C) 25, because 5 divides 25 and the test never tries a divisor other than 2
+- D) 27, because 3 divides 27 and the test never tries a divisor other than 2
+
+<details>
+<summary>Answer and explanation</summary>
+
+**A) 9, because 3 divides 9 and the test never tries a divisor other than 2.**
+
+`9 % 2 = 1`, so `9 % 2 != 0` is true and the whole expression short-circuits to
+True — the test calls 9 prime. But `9 = 3 · 3`. Every odd number below 9 is
+either 1, 3, 5 or 7, and the test's answer happens to be right for all of them,
+which is exactly why this bug survives casual testing.
+
+Options B, C and D are also odd composites that the test accepts, and the reasoning
+in each is identical and correct — the diagnosis is right and only the *smallest*
+counterexample is wrong. 9, 15, 25 and 27 are 9 < 15 < 25 < 27, so 9 is the first
+one you meet. This is worth internalising: in a lesson about primality, 9 is the
+canonical witness, and any test that only rules out the divisor 2 is not a primality
+test at all.
+
+</details>
+
+**Q4.** With `base = 256` and `M = 2^24 = 16,777,216`, the lesson's fingerprint
+`H` reads the string most-significant-character-first. Which statement is true?
+
+- A) `H` cannot distinguish the **first** character of any 4-character string, because `256^3 = 2^24 ≡ 0 (mod M)`
+- B) `H` cannot distinguish the **last** character of any 4-character string, because `256^3 = 2^24 ≡ 0 (mod M)`
+- C) `H` cannot distinguish the last character of any 3-character string, because `256^2 = 65,536 ≡ 0 (mod M)`
+- D) `H` distinguishes every character, because `2^24` is a large modulus
+
+<details>
+<summary>Answer and explanation</summary>
+
+**A) `H` cannot distinguish the first character of any 4-character string, because
+`256^3 = 2^24 ≡ 0 (mod M)`.**
+
+For a 4-character string the running value is
+`H = c_0·256^3 + c_1·256^2 + c_2·256 + c_3 (mod 2^24)`, and the leading term is
+exactly `2^24` times `c_0`, which vanishes. So `H` is a function of the last three
+characters only. You can watch it happen: `H("Xabc") = H("zabc") = H(" habc") = 6,382,179`.
+Worse, `H("abc")` is also 6,382,179 — the fingerprint cannot even see how long the
+string is.
+
+Option B is the most tempting wrong answer, because the lesson's own loop keeps the
+*most recent* character at the low-order end, so it is natural to assume the newest
+character is the fragile one. The weights run the other way: the newest character
+has weight `256^0 = 1`, the most fragile position is the far end, `B^3`.
+
+Option C fails on arithmetic: `256^2 = 65,536`, and `65,536` is not a multiple of
+`16,777,216`. The collapse needs a power of the base that is a multiple of the
+modulus, and `256^3` is the first one.
+
+Option D is a size argument, and size is the wrong variable. The danger here is not
+that `2^24` is small in absolute terms; it is that `2^24` is a *power of the base*.
+The general rule, which Exercise 6 develops, is that a modulus sharing a factor with
+the base is the problem. Swapping in the prime `2^61 - 1` gives
+`H("Xabc") = 1,482,777,187` and `H("zabc") = 2,053,202,531`, and the collapse is gone.
+
+</details>
+
+**Q5.** The lesson states that a 2048-bit RSA prime needs "about 1400 tries on
+average". Which pair of statements produces that number?
+
+- A) The prime density is `1/ln N`, and `ln(2^2048) = 2048·ln 2 ≈ 1419`, so one in about 1419 candidates is prime
+- B) The prime density is `ln N / N`, and there are about 1400 primes below `2^2048`
+- C) The prime density is `1/N`, so finding a prime takes `2^2048` tries
+- D) The prime density is `1/ln N`, and `2^2048 / ln(2^2048)` tries are needed
+
+<details>
+<summary>Answer and explanation</summary>
+
+**A) The prime density is `1/ln N`, and `ln(2^2048) = 2048·ln 2 ≈ 1419`, so one in
+about 1419 candidates is prime.**
+
+This is Bertrand's postulate made quantitative: the average gap between consecutive
+primes near `N` is about `ln N`, so if you test candidates spaced one apart, roughly
+every `ln N`-th one hits. With `N = 2^2048`, `ln N = 2048 · 0.693147 ≈ 1419.4`.
+
+Option B inverts the ratio. `ln N / N` is a vanishing number, not a count; the count
+of primes below `N` is `π(N) ≈ N / ln N`, which is astronomically large, but that is
+the count over an *enormous* interval, not the local success rate of a single
+candidate.
+
+Option C uses the density of primes among *all* integers below `1`, which is
+meaningless — the density is not `1/N`, and `2^2048` tries is not an average but a
+count of all the candidates in existence.
+
+Option D is the right ingredients arranged into the wrong formula. Dividing the
+number of candidates by the density gives a rate per *unit length*, not the number
+of trials. The whole answer is that "one in `ln N`" is already a rate.
+
+</details>
+
+**Q6.** The sieve is `Θ(N ln ln N)` rather than `Θ(N²)`. What is doing the work?
+
+- A) Only multiples of primes up to `sqrt(N)` are crossed out, and `Σ 1/p` over primes behaves like `ln ln N`
+- B) The outer loop only runs to `sqrt(N)`, so the total work is `N^{3/2}`
+- C) Crossings-out are independent, so a machine with many cores does less total work
+- D) Each pass only crosses out even multiples, halving the work once per prime
+
+<details>
+<summary>Answer and explanation</summary>
+
+**A) Only multiples of primes up to `sqrt(N)` are crossed out, and `Σ 1/p` over
+primes behaves like `ln ln N`.**
+
+Prime `p` does about `N/p` crossings-out, so the total is
+`Σ_{p ≤ sqrt(N)} N/p = N · Σ 1/p`. The reciprocal sum over primes up to `x` grows
+like `ln ln x`, which is why the bound carries a double logarithm: the outer `ln`
+is the harmonic series, and the inner `ln` is the prime-sparseness correction.
+
+Option B confuses the loop bound with the work inside the loop. Stopping the outer
+loop at `sqrt(N)` is a *correctness* argument (every composite has a factor below
+`sqrt(N)`), not a savings estimate; each pass still walks `N/p` entries.
+
+Option C is a real effect but it is a wall-clock effect, not a change in the
+operation count. The single-threaded count is unchanged, and the asymptotic statement
+in the lesson is about that count.
+
+Option D describes one of the micro-optimisations the code actually does — the mark
+loop starts at `p*p`, which skips the `p` multiples below `p²` — but "halving once
+per prime" is not the mechanism. Primes halve nothing; the saving comes from summing
+`1/p` over *fewer and fewer* primes as `p` grows.
+
+</details>
+
+**Q7.** The lesson finds `21 = -3·1071 + 7·462`, so `gcd(1071, 462) = 21`. Which of
+the following is *also* a valid Bézout identity for the same pair?
+
+- A) `19·1071 - 44·462 = 21`
+- B) `3·1071 + 7·462 = 6,447`
+- C) `3·1071 - 7·462 = -21`
+- D) `22·1071 + 51·462 = 47,118`
+
+<details>
+<summary>Answer and explanation</summary>
+
+**A) `19·1071 - 44·462 = 21`.**
+
+`19·1071 = 20,349` and `44·462 = 20,328`, and `20,349 - 20,328 = 21`. This is the
+lesson's own general rule with `k = 1`: `s = s_0 + k·b/g = -3 + 462/21 = -3 + 22 = 19`
+and `t = t_0 - k·a/g = 7 - 1071/21 = 7 - 51 = -44`.
+
+Option B has the right magnitudes and the wrong sign on `s`: `3·1071 + 7·462 =
+3,213 + 3,234 = 6,447`, not 21. Flipping the sign of one Bézout coefficient is
+very easy to do by hand, precisely because Bézout coefficients are *not* required to
+be positive and `-3` looks like it wants a plus sign.
+
+Option C gets the shape exactly right — the correct step sizes in the correct
+directions — and still fails, because both coefficients ended up negated, so the
+sum is `-gcd` rather than `+gcd`. `3·1071 - 7·462 = 3,213 - 3,234 = -21`. This is
+the near-miss that catches people out: it produces a number of the right magnitude,
+just the wrong one, and it will survive any check that only compares absolute values.
+
+Option D uses `22` and `51`, which are the *step sizes* `b/g` and `a/g`, in place of
+the coefficients. `22·1071 + 51·462 = 23,562 + 23,562 = 47,118` — and note that
+23,562 is precisely the `lcm(1071, 462)` from the worked example. Mixing up the
+coefficients with the step sizes of the general solution is the most common way to
+lose points on this family of questions.
+
+</details>
+
+**Q8.** The lesson says public-key cryptography rests on an asymmetry. Which row of
+that table is the real one?
+
+- A) Trial division is polynomial in the bit length of `n`; modular exponentiation is not
+- B) Multiplying two `n`-bit numbers and computing `a^k mod n` by repeated squaring are polynomial in `n`; recovering `p` from `n = pq` is believed not to be
+- C) Both factoring and modular exponentiation are believed to require superpolynomial time
+- D) Factoring a 3072-bit modulus is believed to cost exponential time in the *decimal digit count*, which grows linearly with the bit length
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) Multiplying two `n`-bit numbers and computing `a^k mod n` by repeated squaring
+are polynomial in `n`; recovering `p` from `n = pq` is believed not to be.**
+
+The two operations an RSA *user* performs are the easy direction. `pow(m, e, n)` in
+Python is `O(log e)` modular multiplications. The one operation an RSA *attacker*
+wants — turning `n` into `p` — is the hard direction, believed to need
+`exp((64/9)^{1/3} (ln n)^{1/3} (ln ln n)^{2/3})` steps.
+
+Option A swaps the two columns. Trial division costs `Θ(sqrt(n))` divisions, and
+`sqrt(n) = 2^{n/2}`, which is exponential in the bit length `n`. Modulo exponentiation
+by repeated squaring is `O(log k)` multiplications, i.e. linear in the bit length of
+the exponent.
+
+Option C is wrong about the easy half, which is the whole point: if computing
+`a^k mod n` were hard, a legitimate key holder could not encrypt either. The
+practicality of encryption is exactly what makes the asymmetry worth paying for.
+
+Option D is the subtlest wrong answer, and it is a units error. A 3072-bit modulus
+is about 925 decimal digits (`3072 · 0.30103 ≈ 924.6`). Cost `exp(c·(ln n)^{1/3}
+(ln ln n)^{2/3})` is exponential in the **bit length** and merely subexponential in
+the digit count, which is a *linear* function of the bit length. The reason 3072
+bits is considered safe is precisely that the cost is not exponential in the number
+of digits a human writes down.
+
+</details>
+
+**Q9.** The lesson computes `lcm(1071, 462) = 23,562` as `|a·b| / gcd(a,b)`. Why is
+the division necessary, and what would you get without it?
+
+- A) `a·b` counts each shared prime factor twice — here `1071 = 3²·7·17` and `462 = 2·3·7·11` share `3·7 = 21` — so the true common multiple is smaller; without the division you would get 494,802, which is `gcd · lcm`, not the lcm
+- B) The division is needed only to make the result an integer
+- C) The lcm of two integers is always prime, so the division strips off the composite part
+- D) The gcd and the lcm are unrelated quantities; the formula happens to work for this pair
+
+<details>
+<summary>Answer and explanation</summary>
+
+**A) `a·b` counts each shared prime factor twice — here `1071 = 3²·7·17` and
+`462 = 2·3·7·11` share `3·7 = 21` — so the true common multiple is smaller; without
+the division you would get 494,802, which is `gcd · lcm`, not the lcm.**
+
+The identity is `a · b = gcd(a,b) · lcm(a,b)`, and it is exact: `494,802 = 21 ·
+23,562`. The lesson's own checks confirm it, `1071 × 22 = 23,562` and
+`462 × 51 = 23,562`, while `1071 × 462` is 194 times larger than that.
+
+Option B gets the arithmetic backwards. Division by the gcd is not a formatting step
+— `1071 · 462 / 21` is an integer because the gcd divides the product, and the
+formula works precisely *because* it factors out the duplication.
+
+Option C is nonsense on its face, and it is included because "least common multiple"
+invokes the word "multiple", which novices sometimes read as "must be prime". The lcm
+of 1071 and 462 is 23,562, which is manifestly composite.
+
+Option D denies an identity the lesson relies on. The formula is universal: writing
+`a = g·a'`, `b = g·b'` with `gcd(a', b') = 1`, the smallest common multiple is
+`g·a'·b' = a·b/g`, and it is *because* `a'` and `b'` are coprime that no further
+factor can be removed. This is the same coprimality condition that
+`a^{-1} mod m` needs in [Lesson 111](111_modular_arithmetic_and_crypto.md).
+
+</details>
+
+**Q10.** The sieve's outer loop condition is `while p * p <= N`. Suppose it were
+changed to `while p <= N`. What happens?
+
+- A) Nothing breaks and nothing is missed: for every `p > sqrt(N)` the marking range `range(p*p, N+1, p)` is empty, so the extra cost is only the wasted outer-loop iterations
+- B) Composites between `sqrt(N)` and `N` would be missed, because the sieve needs every prime up to `N` as a base prime
+- C) The sieve would run in `Θ(N^{3/2})` time instead of `Θ(N ln ln N)`
+- D) The sieve would mark the primes themselves as composite, since a pass starting at `p*p` can still reach `p`
+
+<details>
+<summary>Answer and explanation</summary>
+
+**A) Nothing breaks and nothing is missed: for every `p > sqrt(N)` the marking range
+`range(p*p, N+1, p)` is empty, so the extra cost is only the wasted outer-loop
+iterations.**
+
+This is a genuinely surprising result and worth computing rather than guessing. Once
+`p > sqrt(N)` we have `p·p > N`, so `range(p*p, N+1, p)` is the empty range and the
+inner loop body never executes. Correctness is already complete by the time
+`p = sqrt(N)`, because every composite `c ≤ N` has a prime factor `≤ sqrt(c) ≤
+sqrt(N)`. The relaxed loop therefore returns the identical `is_prime` list, at the
+cost of `N - sqrt(N)` extra iterations that do nothing.
+
+Option B is the intuition that the `sqrt(N)` bound was chosen to *save work*. It
+was not — it was chosen for *correctness*, and there is no composite in
+`(sqrt(N), N]` that a prime below `sqrt(N)` failed to cross out.
+
+Option C is the plausible-looking cost objection, and it is quantitatively wrong: no
+extra markings are performed at all, so the count of crossings-out is unchanged and
+the Θ class is unchanged. The only extra work is the linear scan for `p > sqrt(N)`.
+
+Option D confuses the start of the marking range with the prime being sieved. A pass
+marks `p², p²+p, …`, all of which exceed `p`, so `p` itself is never marked by its own
+pass. A prime is only ever crossed out if some *smaller* prime divides it, which is
+impossible. This is also why the code sets `is_prime[0] = is_prime[1] = False`
+manually — 0 and 1 are never crossed out by anybody.
+
+</details>
+
+## Subjective Questions
+
+### Short Answer
+
+**Q1. State the division algorithm and say why it is the reason `a mod b` is a
+function rather than a relation.**
+
+<details>
+<summary>Model answer</summary>
+
+For any integer `b` and any positive integer `a`, there exist unique integers `q`
+and `r` with
+
+```
+b = a·q + r        and        0 <= r < a
+```
+
+The uniqueness of `r` in that range is the whole point. Division in Python and in
+every other language leaves a remainder, and if two different remainders could both
+legitimately be "the remainder", then `a mod b` would be a *relation* — several
+values related to the input — rather than a function. The theorem says exactly one
+value is admissible, so `a mod b` is well defined everywhere and `divmod(b, a)` has
+a single answer. Every later construction in this part, congruences, inverses and the
+Chinese Remainder Theorem, is built on `r` being unique.
+
+</details>
+
+**Q2. What is the Euclidean algorithm's loop invariant, and what does it become at
+termination?**
+
+<details>
+<summary>Model answer</summary>
+
+The loop invariant is `gcd(a, b) = gcd(a0, b0)` for the *original* input pair
+`(a0, b0)`: at every point in the loop, the current `(a, b)` is some pair with the
+same set of common divisors as the input. It holds on entry trivially, and the
+lemma `gcd(a, b) = gcd(b, a mod b)` preserves it on each iteration.
+
+At termination `b = 0`, and the invariant then reads `gcd(a, 0) = gcd(a0, b0)`. Since
+0 is a multiple of every integer, the divisors of `(a, 0)` are exactly the divisors
+of `a`, so `gcd(a, 0) = a`. The loop returns `a`, and the invariant turns that into
+the claim we wanted. Termination is proved separately, by noting that `a` strictly
+decreases once `b < a`.
+
+</details>
+
+**Q3. State Bézout's identity and the condition under which `a` has a modular
+inverse modulo `m`.**
+
+<details>
+<summary>Model answer</summary>
+
+Bézout's identity: for any integers `a, b` there exist integers `s, t` with
+`gcd(a, b) = s·a + t·b`. The coefficients may be negative, and are not unique —
+all solutions are `s = s0 + k·b/g`, `t = t0 - k·a/g` for `g = gcd(a, b)`.
+
+For the inverse, set `g = gcd(a, m)`. If `g = 1` then 1 is a multiple of `g`, so the
+identity gives `s·a + t·m = 1` for some integers. Reducing mod `m`, the second term
+vanishes and `s·a ≡ 1 (mod m)`, so `s` is the inverse of `a` modulo `m`. If
+`g > 1`, no such `s` can exist, because `s·a` is a multiple of `g` and can never be
+`≡ 1 (mod m)`. So the inverse exists **exactly when `gcd(a, m) = 1`**.
+
+</details>
+
+**Q4. Why does the sieve only need base primes up to `sqrt(N)`, and what time bound
+does that give?**
+
+<details>
+<summary>Model answer</summary>
+
+Let `c ≤ N` be composite. Then `c = d·e` with `1 < d ≤ e`, so `d² ≤ d·e = c ≤ N`,
+giving `d ≤ sqrt(N)`. And `d` has some prime factor `p ≤ d ≤ sqrt(N)`, so `p` is one
+of the base primes the sieve processes, and `c ≥ p²`, meaning `c` is crossed out
+during `p`'s pass. No prime above `sqrt(N)` is needed.
+
+The work is therefore `Σ_{p ≤ sqrt(N), p prime} N/p = N · Σ 1/p`. The reciprocal
+sum over primes behaves like `ln ln N`, so the sieve is `Θ(N ln ln N)` time and
+`Θ(N)` space — not `Θ(N²)`, because we only touch multiples of *primes*, and we
+skip everything below `p²`.
+
+</details>
+
+**Q5. `pi(N) ≈ N / ln N` implies the density of primes is `≈ 1/ln N`. How does that
+square with "there are infinitely many primes", and what does it cost in practice?**
+
+<details>
+<summary>Model answer</summary>
+
+There is no contradiction. `N / ln N` grows without bound — slowly, but
+unboundedly — so the *count* of primes goes to infinity while the *fraction* of
+integers that are prime, `1/ln N`, goes to zero. Infinitely many primes that are
+progressively rarer is exactly what the two statements say together.
+
+In practice the local gap matters: by Bertrand's postulate there is always a prime
+between `n` and `2n`, and on average the gap near `N` is about `ln N`. So testing
+candidates spaced 2 apart below `N` hits a prime roughly every `ln N` tries. For a
+2048-bit RSA prime, `ln(2^2048) ≈ 1419` tries on average — and because the gaps vary,
+the actual number is a random variable with an unbounded tail, which is why key
+generation has no fixed cost.
+
+</details>
+
+**Q6. Give the closed form of the lesson's Rabin fingerprint after `k` characters,
+and say which position in the string a modulus can silently erase.**
+
+<details>
+<summary>Model answer</summary>
+
+The code computes `h = (h*base + ord(ch)) % modulus` from `h = 0`, so after `k`
+characters
+
+```
+H(c0 c1 ... c_{k-1}) = c0·B^{k-1} + c1·B^{k-2} + ... + c_{k-1}   (mod M)
+```
+
+where `c_i` is the code of the `i`-th character. The **first** character therefore
+carries the *highest* power of the base, and the most recent character carries
+weight `B^0 = 1`.
+
+A modulus erases the far end. If `B^t ≡ 0 (mod M)` for some `t`, then in any string
+of length `≥ t` the term `c_0·B^{t-1}` vanishes, and the fingerprint cannot see the
+first character at all. With `B = 256` and `M = 2^24`, `256^3 = 2^24 ≡ 0`, so
+`H("Xabc") = H("zabc") = 6,382,179`. This is exactly the failure the lesson's
+"composite modulus is a liability" warning is about; Exercise 6 develops it.
+
+</details>
+
+### Long Answer
+
+**Q1. The lesson says the whole of public-key cryptography rests on factoring being
+hard. What exactly is the assumption, and what would break the argument if it
+turned out to be false?**
+
+<details>
+<summary>Model answer</summary>
+
+The assumption is narrow and it is an assumption, not a theorem. Precisely: *no
+probabilistic polynomial-time algorithm is known that, given a modulus `n = pq` with
+`p` and `q` distinct primes of comparable size, outputs `p` or `q`.* Nobody has
+proved this; nobody has proved the opposite either. "Factoring is hard" is not even
+true as a blanket statement, and the qualifications matter.
+
+Factorization is *easy* for many inputs. If `n` has a factor below `10^6`, trial
+division or Pollard's rho finds it in microseconds. If `n` has five or more
+distinct prime factors, the ECM and quadratic-sieve methods are fast. If `n` is a
+prime power, detection is easy. Only **balanced semiprimes** — the product of two
+primes of roughly equal size — are believed hard, and that is exactly the shape RSA
+chooses. So the security claim is: *this specific, deliberately chosen family of
+numbers is hard*, and the rest is not being relied upon.
+
+The consequence chain is short and mechanical. An attacker who factors `n = pq`
+computes `φ(n) = (p-1)(q-1)` by Exercise 4's formula, computes
+`d = e^{-1} mod φ(n)` by extended Euclid, and then decrypts anything: for every
+ciphertext `c` produced with the public exponent `e`, `m = c^d mod n`. There is no
+second line of defence — textbook RSA has exactly one secret, and it *is* the factor
+pair.
+
+What would break it: a polynomial-time factoring algorithm on classical hardware
+would render every deployed RSA key forgeable the day it appeared. But note the
+qualifier, because it is the part people get wrong. A *quantum* algorithm already
+exists — Shor's algorithm factors in polynomial time on a sufficiently large
+fault-tolerant quantum computer — and it does **not** break the argument as stated,
+because the argument is about classical computation. That is precisely why
+post-quantum schemes (lattice-based key exchange such as Kyber and Dilithium) exist
+alongside RSA rather than instead of it. The honest statement is: RSA's security is a
+belief, resting on a well-defined hardness assumption, that is only as good as our
+confidence that no classical polynomial-time factoring algorithm exists.
+
+</details>
+
+**Q2. Why can the Euclidean algorithm not be made asymptotically faster, and what
+does "optimal" mean here?**
+
+<details>
+<summary>Model answer</summary>
+
+The bound `Θ(log min(a, b))` divisions is tight, and the tightness is a real
+statement about the *problem*, not an accident of the code. Consider what a step
+does. From `a_{i+1} = q·b_i + b_{i+1}` with `b_{i+1} < b_i` and `q ≥ 1` we get
+`a_{i+1} ≥ b_i + b_{i+1} > 2·b_{i+1}` when `b_{i+1} < b_i`. So the working value
+drops by at least a factor of 2 every *two* steps — that gives the upper bound.
+
+For the lower bound, run the argument forwards. Since `b_{i+1} = a_{i+1} - q·b_i` and
+`a_{i+1} < b_{i-1} + b_i`, the remainder satisfies
+`b_{i+1} > b_{i-1} - b_i`. This is a *lower* bound on how fast the sequence may
+fall, and it is minimised — the slowest possible descent — exactly when the sequence
+is the Fibonacci sequence, with quotients all equal to 1. Consecutive Fibonacci
+numbers are therefore the hardest input, which is Lamé's theorem: Euclid on
+`(F_{k+1}, F_k)` takes exactly `k-1` divisions, and since `F_k ≈ φ^k/√5` with
+`φ ≈ 1.618`, that is `Θ(log min(a, b))` steps. The lesson's Exercise 2 shows this
+numerically: `(F_41, F_40) = (165,580,141, 102,334,155)` takes 39 divisions.
+
+So "optimal" is used in a precise sense: **no algorithm of this shape — one that
+repeatedly replaces the pair by the smaller number and the remainder — can use
+asymptotically fewer divisions.** It is not a claim that no cleverer algorithm
+exists in a different model. And on the bit level the picture is stronger still:
+`O(log n)` divisions on an `n`-bit input is `O(n)` steps in the input as written, so
+the algorithm is linear in the size of the problem. You cannot even read the input
+in less time than that, which is the honest sense in which nothing better is
+possible.
+
+</details>
+
+**Q3. The extended Euclidean algorithm returns a Bézout pair, but the pair is not
+unique. Why is it not unique, how do you pin down a canonical one, and why does
+that matter for the code that follows?**
+
+<details>
+<summary>Model answer</summary>
+
+**Why.** Suppose `(s0, t0)` satisfies `s0·a + t0·b = g`. For any integer `k`, so does
+`(s0 + k·b/g, t0 - k·a/g)`, because the added terms cancel:
+
+```
+(s0 + k·b/g)·a + (t0 - k·a/g)·b = s0·a + t0·b + k·(a·b/g) - k·(a·b/g) = g
+```
+
+The step sizes `b/g` and `a/g` come from Bézout itself: `g` is a linear combination
+of `a` and `b`, and the lattice of all combinations of `a` and `b` is generated by
+`(b/g, -a/g)`. The lesson's Runnable Code 3 searches exactly this family, and finds
+for `(252, 105)` that `g = 21`, `s0 = -2`, `t0 = 5`, so the solutions are
+`s = -2 + 5k`, `t = 5 - 12k` — giving `k = 0 → (-2, 5)`, `k = 1 → (3, -7)`,
+`k = 2 → (8, -19)`, `k = 3 → (13, -31)`. All of them work, and the starting pair
+checks: `-2·252 + 5·105 = -504 + 525 = 21`.
+
+**How to canonicalise.** Reduce modulo the thing you care about. For a modular
+inverse, only `s` matters modulo `m`, so the canonical answer is `s` reduced to
+`[0, m)`, which `pow(a, -1, m)` in Python and `BN_mod_inverse` in OpenSSL both do
+for you. The `t` coefficient is then uniquely determined.
+
+**Why it matters.** Three practical reasons. First, correctness and
+interoperability: if one library returns `s` in `(-m, 0)` and another in `[0, m)`,
+their raw "inverse" outputs differ while both are right, which turns into
+test failures and format bugs. Second, side channels: a variable-time search over
+`k` leaks information about the secret through timing, which is why cryptographic
+code uses *constant-time* reduction rather than a loop. Third, proof work: a Bézout
+pair is a *certificate* of a gcd, and if you want the certificate to be short or
+canonical — for a verifier, or for a published proof — you must pin `k` down
+rather than return an arbitrary witness.
+
+</details>
+
+**Q4. The lesson warns that "a composite modulus is a liability: knowing M lets an
+adversary multiply two differences together to build collisions deliberately".
+State exactly when a modulus destroys a Rabin fingerprint, prove it, and explain
+what to choose instead.**
+
+<details>
+<summary>Model answer</summary>
+
+**The exact condition.** The fingerprint is safe from erasure if and only if
+`gcd(base, M) = 1`. The danger is precisely that some power of the base is
+`0 (mod M)`.
+
+**Proof.** If `d = gcd(B, M) > 1`, factor `M = ∏ p_i^{a_i}` and `B = ∏ p_i^{c_i} · u`
+with `c_i ≥ 1` for every `p_i` that divides `M`. Then
+`B^{a_i} = ∏ p_j^{c_j a_i} u^{a_i}` is divisible by `p_i^{a_i}`, since
+`c_i · a_i ≥ a_i`. Taking `t = max_i a_i` gives `B^t ≡ 0 (mod M)` for **every**
+prime power in `M`, hence for `M`. So if `gcd(B, M) > 1`, a power of the base
+vanishes. Conversely, if `gcd(B, M) = 1` then `B` is a unit mod `M`, so `B^t` is a
+unit and in particular is never `0 (mod M)` for `t ≥ 1`. ∎
+
+**What it costs you.** In
+`H = c_0·B^{k-1} + c_1·B^{k-2} + ··· + c_{k-1}`, any term whose power is at least
+`t` disappears. With `B = 256 = 2^8` and `M = 2^24`, the smallest vanishing power is
+`t = 3`, so for every string of length 4 the leading character is invisible:
+`H("Xabc") = H("zabc") = H(" habc") = 6,382,179`. It is worse than losing one
+position: `"abc"` hashes to the same value, so length information is lost too. The
+same collapse for a DNA alphabet (base 4, `M = 2^24 = 4^12`) erases the first symbol
+of any 13-symbol read.
+
+**Why an adversary can aim for it.** The lesson's intuition — multiply two
+differences together — is right in the following sense. If you know `M`, you know the
+vanishing power `t`, and you can place a difference at a position whose weight is
+`B^{t-1} ≡ 0` while leaving every other character identical. You do not need to
+search; you construct. In fact, the general construction here is even easier than
+the multiplicative one: **any two strings sharing the same last `t-1` characters
+collide**, whatever their prefixes and lengths.
+
+**What to choose instead.** Pick `M` coprime to `B`, which for a prime modulus is
+automatic unless `M` divides `B`. That is exactly why real fingerprints use prime
+moduli: `M = 2^61 - 1` is prime, `gcd(256, 2^61-1) = 1`, no power of 256 vanishes,
+and the collapse disappears — `H("Xabc") = 1,482,777,187` while
+`H("zabc") = 2,053,202,531`. Primes are not safer because they are "more random";
+they are safer because they have no non-trivial factors to share with the base. The
+same principle is why Lesson 112 will insist that a *compression function* be a
+function on the whole domain and not merely on the inputs it happens to like.
+
+</details>
+
 ## Exercises and Solutions
 
 **[ ] Exercise 1 —** Write `gcd_list(nums)` returning the gcd of a list, and
@@ -972,18 +1631,28 @@ for p, q in [(61, 53), (11, 13), (17, 19), (101, 103)]:
     computed = totient(n)
     formula = (p - 1) * (q - 1)
     assert computed == formula
-    # An attacker knows n.  They need phi(n).  They can get it the moment they
-    # find a prime factor: if p | n then phi(n) = n - n/p exactly.
-    p_guess = next(d for d in range(2, isqrt(n) + 1) if n % d == 0)
     print(f"p={p:>4} q={q:>4} n={n:>7}  phi(n)={computed:>8}  "
-          f"(p-1)(q-1)={formula:>8}  phi = n - n/{p_guess} = {n - n // p_guess}")
+          f"(p-1)(q-1)={formula:>8}")
+
+print()
+# The attacker knows n and wants phi(n).  The moment one prime factor turns up,
+# the other follows, and phi(n) follows immediately:  n - p - q + 1.
+print("an attacker who finds one factor has everything:")
+for p, q in [(61, 53), (101, 103)]:
+    n = p * q
+    found = min(p, q)                     # whatever trial division turns up first
+    other = n // found
+    print(f"   n={n:>7}  found factor {found:>4}  other factor {other:>5}  "
+          f"phi(n) = n - {found} - {other} + 1 = {n - found - other + 1}")
+print("   phi(n) is never available from n alone, only from a factorisation.")
 ```
 
 `φ(n)` counts residues `1 ≤ k ≤ n` with `gcd(k, n) = 1`. For `n = p·q` with
 distinct primes, an integer is coprime to `n` exactly when it is neither a
-multiple of `p` nor of `q`, giving `n − n/p − n/q + n/(pq) = n − q − p + 1 =
-(p−1)(q−1)`. The attacker is refused one thing only: finding `p` from `n`, which
-is factoring.
+multiple of `p` nor of `q`, so counting by inclusion–exclusion
+([Lesson 23](../part02_discrete_combinatorics/23_inclusion_exclusion_and_pigeonhole.md))
+gives `n − n/p − n/q + n/(pq) = n − q − p + 1 = (p−1)(q−1)`. The attacker is
+refused exactly one thing: turning `n` into `p` and `q`. That is factoring.
 
 </details>
 
@@ -1037,6 +1706,343 @@ of size `R − L` for the segment. The time is still `Θ((R − L) ln ln R +
 a smaller table. This is why `primesieve` works on ranges far larger than fit
 in memory, and why sieving `10¹⁰` is a matter of seconds: the work is linear in
 the *interval*, not in the size of the number.
+
+</details>
+
+**[ ] Exercise 5 —** Turn the lesson's Rabin fingerprint into a **Rabin–Karp
+substring search**. Write `rk_search(text, pattern)` returning every index at which
+`pattern` occurs in `text`. Two requirements: (a) the window hash must be updated
+in `O(1)` per position, not recomputed from scratch, and (b) you must *verify* each
+hash hit with a real comparison. Count (i) how many character-by-character
+comparisons the naive `O(n·m)` scan performs, and (ii) how many hash comparisons
+Rabin–Karp performs, on `text = "abracadabra" * 40 + "ab" + "z" * 300` and
+`pattern = "abracadabra"`. Finally, prove by an experiment that dropping the
+verification step in (b) does not break correctness *on your data* but is unsound in
+principle, by finding a real collision under the modulus you chose.
+
+<details>
+<summary>Solution</summary>
+
+```python
+M, BASE = 2**61 - 1, 256          # a prime modulus, coprime to the base: see Exercise 6
+
+
+def rabin(text: str, base: int = BASE, modulus: int = M) -> int:
+    """The lesson's fingerprint. After k characters this is
+       c0*base^(k-1) + c1*base^(k-2) + ... + c_{k-1}  (mod modulus),
+       so the FIRST character carries the highest power of the base."""
+    h = 0
+    for ch in text:
+        h = (h * base + ord(ch)) % modulus
+    return h
+
+
+def rk_search(text: str, pattern: str) -> tuple[list[int], int]:
+    """Rabin-Karp with an O(1) rolling update. Returns the hit positions and
+    the number of hash comparisons made."""
+    m = len(pattern)
+    bpow = pow(BASE, m, M)                    # B^m, computed once
+    hp = rabin(pattern)                        # the pattern's hash
+    h = rabin(text[:m])                        # the first window's hash
+    hits = [0] if h == hp and text[:m] == pattern else []
+    checks = 1 if h == hp else 0
+    for i in range(m, len(text)):
+        # Slide the window one place: multiply by B (shifts every weight up),
+        # subtract the outgoing character's OLD weight B^m, add the new one.
+        h = (h * BASE - ord(text[i - m]) * bpow + ord(text[i])) % M
+        if h == hp:                           # one 61-bit comparison, no scanning
+            checks += 1
+            if text[i - m + 1:i + 1] == pattern:   # verify before trusting it
+                hits.append(i - m + 1)
+    return hits, checks
+
+
+def naive_search(text: str, pattern: str) -> tuple[list[int], int]:
+    """The textbook O(n*m) baseline, counting character comparisons."""
+    m = len(pattern)
+    hits, comparisons = [], 0
+    for i in range(len(text) - m + 1):
+        ok = True
+        for j in range(m):
+            comparisons += 1
+            if text[i + j] != pattern[j]:
+                ok = False
+                break                    # stop at the first mismatch
+        if ok:
+            hits.append(i)
+    return hits, comparisons
+
+
+text = "abracadabra" * 40 + "ab" + "z" * 300
+pattern = "abracadabra"
+fast, hash_checks = rk_search(text, pattern)
+slow, char_comparisons = naive_search(text, pattern)
+print(f"len(text) = {len(text)}  len(pattern) = {len(pattern)}")
+print(f"Rabin-Karp found {len(fast)} matches, naive found {len(slow)}")
+print("both find exactly the same positions:", fast == slow)
+print("first three positions:", fast[:3], " last three:", fast[-3:])
+print(f"naive character comparisons : {char_comparisons:,}")
+print(f"Rabin-Karp hash comparisons : {hash_checks:,}")
+print(f"naive worst case would be   : {len(text) * len(pattern):,}")
+print()
+# The rolling update agrees with recomputing the window hash from scratch.
+t = "abracadabra"
+rolling = []
+h = rabin(t[:4])
+rolling.append(h)
+for i in range(4, len(t)):
+    h = (h * BASE - ord(t[i - 4]) * pow(BASE, 4, M) + ord(t[i])) % M
+    rolling.append(h)
+direct = [rabin(t[i:i + 4]) for i in range(len(t) - 3)]
+print("rolling update == recomputing each window:", rolling == direct)
+print()
+# Why the verify step is not optional: build a REAL collision, then show that a
+# verifier-less version reports it as a match.
+# "Aab" and "cab" are 4 characters, and 256^3 = 2^24 is 0 mod 2^24, so with
+# modulus 2^24 the leading character is invisible.
+weak = 2**24
+p_real, p_fake = "Xabc", "zabc"
+print("under the prime modulus 2^61-1 the two are different:",
+      rabin(p_real, BASE, 2**61 - 1) != rabin(p_fake, BASE, 2**61 - 1))
+print(f"under the composite modulus 2^24 they collide: "
+      f"{rabin(p_real, BASE, weak) == rabin(p_fake, BASE, weak)}")
+print("so a verifier-less Rabin-Karp would report 'Xabc' occurs in 'zabc....'")
+```
+
+Output:
+
+```
+len(text) = 742  len(pattern) = 11
+Rabin-Karp found 40 matches, naive found 40
+both find exactly the same positions: True
+first three positions: [0, 11, 22]  last three: [407, 418, 429]
+naive character comparisons : 1,414
+Rabin-Karp hash comparisons : 40
+naive worst case would be   : 8,162
+
+rolling update == recomputing each window: True
+
+under the prime modulus 2^61-1 the two are different: True
+under the composite modulus 2^24 they collide: True
+so a verifier-less Rabin-Karp would report 'Xabc' occurs in 'zabc....'
+```
+
+**Why the counts look like that.** The naive scan looks at every one of the
+`742 - 11 + 1 = 732` windows and, for each, compares characters until the first
+mismatch — 1,414 comparisons, comfortably under the 8,162 worst case because most
+windows fail on the very first character. Rabin–Karp performs one 61-bit comparison
+per window (732 hash updates, of which 40 agree with the pattern), so the entire
+search is linear in the *text*, independent of the pattern length. That is the
+practical difference: a 10-megabyte text with a 10,000-character pattern costs
+Rabin–Karp ten million modular operations and the naive scan up to a hundred
+billion character comparisons.
+
+**Why the rolling update is correct.** The window hash of `text[i-m+1 : i+1]` is
+`Σ_{j=0}^{m-1} c_{i-m+1+j} · B^{m-1-j}`. Multiplying the previous window's hash by
+`B` shifts every weight up by one, giving `Σ c_{i-m+1+j} · B^{m-j}`; the outgoing
+character `c_{i-m}` now has weight `B^m`, which we subtract, and the incoming
+character `c_i` has weight `B^0 = 1`, which we add. Everything else is unchanged,
+so the identity holds modulo `M` for any `M` at all. The code asserts it against
+recomputation.
+
+**Why the verify step is not optional.** A hash is a *filter*, not a proof of
+equality. Two different strings with the same hash are indistinguishable to the
+filter, so a verifier-less Rabin–Karp returns a list that may contain positions
+where the pattern is not actually present. The probability of that happening under
+a prime modulus with a 61-bit value is roughly the number of windows divided by
+`2^61`, which is negligible — but "negligible" is a probabilistic claim about
+adversarial input, not a correctness guarantee, and it collapses to a certainty the
+moment someone picks a modulus that shares a factor with the base. With
+`M = 2^24` the collision is not merely likely, it is *constructed*, which is
+exactly what Exercise 6 explains.
+
+</details>
+
+**[ ] Exercise 6 (Challenge) — How much does a Rabin fingerprint actually
+remember?** Answer in four parts.
+
+1. Show experimentally that with `base = 256` and `M = 2^24` the fingerprint `H` of
+   the lesson is **independent of the first character** of any 4-character string,
+   and that it is therefore also blind to how long the string is.
+2. Generalise: prove that if `gcd(base, M) = d > 1` then `base^t ≡ 0 (mod M)` for
+   some `t`, and compute the smallest such `t` for `base = 256, M = 2^24` and for
+   `base = 4, M = 2^24`.
+3. A genome has a four-letter alphabet. With `base = 4` and `M = 2^24`, how many
+   leading symbols does the fingerprint ignore? Verify it, and verify that one
+   symbol fewer is safe.
+4. Replace the modulus with the prime `2^61 - 1`, confirm the blindness is gone,
+   and write one sentence naming the property of `M` that actually fixed it.
+
+<details>
+<summary>Solution</summary>
+
+```python
+from math import gcd
+import itertools
+
+
+def rabin(text: str, base: int = 256, modulus: int = 2**24) -> int:
+    """The lesson's fingerprint, most-significant character first."""
+    h = 0
+    for ch in text:
+        h = (h * base + ord(ch)) % modulus
+    return h
+
+
+# ---- Part 1: 256^3 = 2^24 is 0 mod 2^24, so the leading character vanishes ----
+M = 2**24
+print("256^3 =", 256**3, " 2^24 =", 2**24, " 256^3 mod 2^24 =", 256**3 % M)
+for s in ("Xabc", "zabc", " habc"):
+    print(f"  H({s!r}) = {rabin(s, 256, M)}")
+print("all three equal:", len({rabin(s, 256, M) for s in ("Xabc", "zabc", " habc")}) == 1)
+alphabet = "abc"
+words = ["".join(t) for t in itertools.product(alphabet, repeat=4)]
+blind = all(rabin(c + w[1:], 256, M) == rabin("z" + w[1:], 256, M)
+            for w in words for c in alphabet)
+print(f"checked all {len(words)} four-character strings over {alphabet!r}: "
+      f"leading character invisible = {blind}")
+print('H("abc") =', rabin("abc", 256, M), ' H("Xabc") =', rabin("Xabc", 256, M),
+      " equal:", rabin("abc", 256, M) == rabin("Xabc", 256, M))
+print()
+
+# ---- Part 2: if gcd(base, M) = d > 1 then base^t = 0 (mod M) for some t ----
+def factorise(n: int) -> dict[int, int]:
+    """n as {prime: exponent}."""
+    out: dict[int, int] = {}
+    d = 2
+    while d * d <= n:
+        while n % d == 0:
+            out[d] = out.get(d, 0) + 1
+            n //= d
+        d += 1
+    if n > 1:
+        out[n] = out.get(n, 0) + 1
+    return out
+
+
+def vanishing_power(base: int, modulus: int) -> int | None:
+    """Smallest t >= 1 with base^t = 0 (mod modulus), or None if base is a unit.
+
+    Write modulus = prod p_i^a_i and let c_i = the exponent of p_i in base.
+    base^t is divisible by p_i^a_i exactly when t * c_i >= a_i, so the answer
+    is max_i ceil(a_i / c_i) over the primes p_i that divide the base.
+    """
+    if gcd(base, modulus) == 1:
+        return None
+    t = 0
+    for p, a in factorise(modulus).items():
+        c = factorise(base).get(p, 0)
+        if c:
+            t = max(t, -(-a // c))          # ceiling division
+    return t
+
+
+for base, modulus, label in ((256, 2**24, "base 256, M 2^24         "),
+                             (4, 2**24, "base 4,   M 2^24         "),
+                             (256, 2**61 - 1, "base 256, M 2^61-1 (prime)")):
+    print(f"{label}: gcd(base, M) = {gcd(base, modulus):>4}   "
+          f"smallest t with base^t = 0 mod M: {vanishing_power(base, modulus)}")
+print()
+print("Sanity check by direct multiplication:")
+h = 1
+for t in range(1, 4):
+    h = h * 256 % M
+    print(f"  256^{t} mod 2^24 = {h}")
+print()
+print("The fingerprint of a k-character string therefore depends on only its")
+print("last min(k, t-1) characters, where t is the vanishing power.  The modulus")
+print("decides how much of the string survives.")
+print()
+
+# ---- Part 3: DNA, base 4, M = 2^24 = 4^12 ----
+def rabin_dna(seq: str, modulus: int = 2**24) -> int:
+    index = "ACGT".index
+    h = 0
+    for ch in seq:
+        h = (h * 4 + index(ch)) % modulus
+    return h
+
+
+seq13 = "ACGTACGTACGTA"      # 13 symbols
+seq12 = "ACGTACGTACGT"       # 12 symbols
+print("4^12 =", 4**12, "= 2^24 =", 2**24)
+print("13 symbols, first symbol changed -> same hash:",
+      rabin_dna(seq13) == rabin_dna("C" + seq13[1:]))
+print("12 symbols, first symbol changed -> same hash:",
+      rabin_dna(seq12) == rabin_dna("C" + seq12[1:]))
+print("A 12-symbol read is safe: 4^12 is the first vanishing power, so no")
+print("leading symbol of a 12-character string is invisible.")
+print()
+
+# ---- Part 4: the prime rescues it ----
+Mp = 2**61 - 1
+print("gcd(256, 2^61-1) =", gcd(256, Mp))
+print('H("Xabc") =', rabin("Xabc", 256, Mp), ' H("zabc") =', rabin("zabc", 256, Mp),
+      " differ:", rabin("Xabc", 256, Mp) != rabin("zabc", 256, Mp))
+print()
+print("The property that fixed it: the modulus is PRIME, hence coprime to the")
+print("base, hence no power of the base can vanish modulo it.")
+```
+
+Output:
+
+```
+256^3 = 16777216  2^24 = 16777216  256^3 mod 2^24 = 0
+  H('Xabc') = 6382179
+  H('zabc') = 6382179
+  H(' habc') = 6382179
+all three equal: True
+checked all 81 four-character strings over 'abc': leading character invisible = True
+H("abc") = 6382179  H("Xabc") = 6382179  equal: True
+
+base 256, M 2^24         : gcd(base, M) =  256   smallest t with base^t = 0 mod M: 3
+base 4,   M 2^24         : gcd(base, M) =    4   smallest t with base^t = 0 mod M: 12
+base 256, M 2^61-1 (prime): gcd(base, M) =    1   smallest t with base^t = 0 mod M: None
+
+Sanity check by direct multiplication:
+  256^1 mod 2^24 = 256
+  256^2 mod 2^24 = 65536
+  256^3 mod 2^24 = 0
+
+The fingerprint of a k-character string therefore depends on only its
+last min(k, t-1) characters, where t is the vanishing power.  The modulus
+decides how much of the string survives.
+
+4^12 = 16777216 = 2^24 = 16777216
+13 symbols, first symbol changed -> same hash: True
+12 symbols, first symbol changed -> same hash: False
+A 12-symbol read is safe: 4^12 is the first vanishing power, so no
+leading symbol of a 12-character string is invisible.
+
+gcd(256, 2^61-1) = 1
+H("Xabc") = 1482777187  H("zabc") = 2053202531  differ: True
+
+The property that fixed it: the modulus is PRIME, hence coprime to the
+base, hence no power of the base can vanish modulo it.
+```
+
+**The proof in part 2.** Factor `M = ∏ p_i^{a_i}` and `base = ∏ p_i^{c_i} · u` with
+`c_i ≥ 1` whenever `p_i` divides `M` — that is exactly what `gcd(base, M) > 1` means.
+Then `base^{a_i} = ∏ p_j^{c_j a_i} · u^{a_i}` is divisible by `p_i^{a_i}`, because
+`c_i · a_i ≥ a_i`. Taking `t = max_i a_i`, we get `base^t ≡ 0 (mod p_i^{a_i})` for
+every `i`, hence `base^t ≡ 0 (mod M)` — the Chinese Remainder Theorem, or simply
+that a number divisible by every `p_i^{a_i}` is divisible by their product. If
+`gcd(base, M) = 1` then `base` is a unit modulo `M`, so no power of it is ever `0`.
+∎
+
+**Why this is the lesson's warning, made precise.** The lesson says "a composite
+modulus is a liability: knowing `M` lets an adversary multiply two differences
+together to build collisions deliberately". Part 1 shows the collapse directly, and
+it is a *general* construction rather than a lucky accident: **any two strings with
+the same last `t-1` characters collide**, whatever their prefixes and whatever
+their lengths. An adversary who knows `M` knows `t` and can aim the collision
+instead of searching for it. Note also that the failure has nothing to do with `2^24`
+being small — it is small *as a modulus of a byte-string hash*; `M = 2^61 - 1` is
+vastly larger and still fine, because it is prime. The dangerous quantity is
+`gcd(base, M)`, not `M`. This is the same lesson the hash function in
+[Lesson 112](112_hashing.md) teaches: a "good enough" property that depends on your
+inputs staying friendly is not a property at all, and a modulus that quietly
+special-cases a family of inputs is a bug with a very long fuse.
 
 </details>
 

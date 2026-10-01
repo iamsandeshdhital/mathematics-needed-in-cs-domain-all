@@ -60,7 +60,7 @@ counted twice.
 
 ## The Formal Version
 
-Notation follows [SYMBOLS.md](../../SYMBOLS.md). Cardinality is written |A|;
+Notation follows [SYMBOLS.md](../SYMBOLS.md). Cardinality is written |A|;
 the power set is 𝒫(A); a Cartesian product is A × B.
 
 **Definition.** A *bijection* from A to B is a function f : A → B that is
@@ -126,35 +126,6 @@ corollary.
 and no two elements of A collided into one element of B. This one line is the
 whole proof, and it powers the pigeonhole principle in Lesson 23.
 
-## Formula Sheet
-
-Notation follows [SYMBOLS.md](../../SYMBOLS.md). `$\lvert A\rvert$` is written with
-`\lvert`/`\rvert` here only so the pipe does not break the markdown table.
-
-| Symbol | Formula | In plain words | When you use it |
-| --- | --- | --- | --- |
-| `$\lvert A\rvert$` | cardinality of a finite set $A$ | how many elements are in $A$ | every count in this lesson |
-| `$\mathcal{P}(A)$` | the power set: every subset of $A$ | all possible on/off patterns over $A$ | bitmasks, feature flags, exhaustive subset search |
-| `$A \times B$` | Cartesian product: all pairs $(a,b)$ with $a \in A$, $b \in B$ | every way of doing one $A$-thing and then one $B$-thing | a process with two or more stages |
-| product rule | `$\lvert A \times B\rvert = \lvert A\rvert \cdot \lvert B\rvert$` | multiply when the second choice comes after the first and does not depend on it | "a shirt **and** trousers"; staged, independent choices |
-| $k$-fold product rule | `$\lvert A_1 \times \cdots \times A_k\rvert = \prod_{i=1}^{k} \lvert A_i\rvert$` | multiply once per stage | a $k$-step pipeline; $A_i$ is the outcome set of stage $i$ |
-| counting compositions | `$n_1 \cdot n_2 \cdots n_k$` | stage $i$ has $n_i$ outcomes, so the total is their product | $n_i$ is a fixed count, not a set size |
-| sum rule | `$\lvert A_1 \cup \cdots \cup A_k\rvert = \sum_{i=1}^{k}\lvert A_i\rvert$` | add when the branches are disjoint cases | **valid only when the $A_i$ are pairwise disjoint**; see [Lesson 23](23_inclusion_exclusion_and_pigeonhole.md) for the overlapping case |
-| injective | `$f : A \to B$` injective iff `$f(a) = f(a') \Rightarrow a = a'$` | no two inputs land on the same output | testing half of "is this a bijection" |
-| surjective | `$f$` surjective iff `$\forall b \in B, \exists a \in A,\ f(a) = b$` | nothing in the codomain is missed | testing the other half |
-| bijection | `$f$` is injective **and** surjective | a perfect one-to-one pairing | counting one set by counting another |
-| bijection principle | `$\lvert A\rvert = \lvert B\rvert \iff$ a bijection $A \to B$ exists | equal size *exactly when* a correspondence exists | the main creative counting tool; sometimes a coincidence, usually not |
-| `$k^{\,n}$` | strings of length $n$ over an alphabet of size $k$ | $n$ slots, $k$ choices in each | passwords, code words, functions. Requires $n \ge 0$; $k^0 = 1$ |
-| `$2^{\,n}$` | binary strings of length $n$; also `$\lvert\mathcal{P}(A)\rvert$` for `$\lvert A\rvert = n$` | every on/off pattern | 128 slots vs $2^{32}$ possible 32-bit keys |
-| `$\lvert B\rvert^{\lvert A\rvert}$` | number of functions $A \to B$ | one independent image per domain element | counting lookup tables and mappings |
-| `$a!$` if `$a = b$`, else `$0$` | number of bijections between an $a$-element and a $b$-element set | a re-labelling exists only when the sizes match | counting arrangements; `$0! = 1$` |
-| `$\binom{n}{k} = \dfrac{n!}{k!\,(n-k)!}$` | choose $k$ of $n$, order irrelevant | also: $n$-bit words with exactly $k$ bits set | requires `$0 \le k \le n$`, and `$k > n$` gives $0$; derived in [Lesson 21](21_permutations_and_combinations.md) |
-| `$\binom{n+r-1}{r}$` | unordered selections of $r$ from $n$ **with** repeats | a multiset | dice, ice-cream flavours, bootstrap resamples |
-| `$A \subseteq B \Rightarrow \lvert A\rvert \le \lvert B\rvert$` | monotonicity of cardinality | a smaller set cannot hold more things | the one-line seed of the pigeonhole principle |
-| `$\lceil \log_2 N\rceil$` bits | `$\lceil \log_2 N / 8\rceil$` bytes | how many bits/bytes it takes to *index* $N$ objects | sizing an identifier field; `$N = 1$` needs 0 bits |
-| `$2^{64} \approx 1.8 \times 10^{19}$` | unsigned 64-bit maximum | the wall a naive count hits | notice overflow *before* the code does |
-| `$\mathrm{ways}[v] = \sum_{u \to v}\mathrm{ways}[u]$`, with `$\mathrm{ways}[s] = 1$` | path counts in a DAG from source $s$ | every path into $v$ arrives through exactly one predecessor, so contributions add | topological DP; the prototype for [Lesson 24](24_recurrence_relations.md) |
-
 ## Worked Example
 
 **The question.** An internal service must mint unique user identifiers. Three
@@ -216,7 +187,6 @@ Three helper functions that encode the two rules, then a brute-force check.
 from itertools import product as iproduct
 from math import log2
 
-
 def product_rule(*sizes):
     """Outcomes when choices are made one after another and the options do not
     depend on earlier answers: multiply."""
@@ -225,11 +195,9 @@ def product_rule(*sizes):
         total *= s
     return total
 
-
 def sum_rule(*sizes):
     """Outcomes when the branches are genuinely disjoint cases: add."""
     return sum(sizes)
-
 
 # Scheme A: two letters then three digits. Independent positions, so multiply.
 a = product_rule(26, 26, 10, 10, 10)
@@ -261,7 +229,6 @@ correspondence in discrete mathematics.
 ```python
 from itertools import combinations
 
-
 def subsets_via_bits(elements):
     """Each subset of `elements` is represented by one integer mask: bit i is set
     exactly when elements[i] is in the subset. This is the bijection."""
@@ -270,7 +237,6 @@ def subsets_via_bits(elements):
         frozenset(elements[i] for i in range(n) if (mask >> i) & 1)
         for mask in range(1 << n)
     ]
-
 
 A = frozenset("abcd")
 by_bits = subsets_via_bits(sorted(A))
@@ -298,16 +264,13 @@ sizes.
 ```python
 from itertools import product as iproduct, permutations
 
-
 def all_functions(domain, codomain):
     """One function per string: the string's i-th entry is f(domain[i])."""
     return list(iproduct(codomain, repeat=len(domain)))
 
-
 def onto(f, codomain):
     """True when the function hits every element of the codomain."""
     return set(f) == set(codomain)
-
 
 A = [1, 2, 3]
 B = ["a", "b", "c", "d"]
@@ -357,7 +320,6 @@ def all_paths(v, target="F"):
         return [[v]]
     return [[v] + tail for w in edges[v] for tail in all_paths(w, target)]
 
-
 found = all_paths("A")
 print(f"paths to F by enumeration: {len(found)} -> {['-'.join(p) for p in found]}")
 ```
@@ -406,6 +368,8 @@ print(f"paths to F by enumeration: {len(found)} -> {['-'.join(p) for p in found]
 > trustworthy. But the sum rule's hypothesis — that the cases are disjoint — is a
 > claim about the *problem*, not about the arithmetic, and only enumeration
 > tests that claim.
+
+---
 
 ## Exercises and Solutions
 
@@ -575,6 +539,77 @@ no_digit = 52**6
 one_digit = 6 * 10 * 52**5
 print(total, no_digit, one_digit, total - no_digit - one_digit)
 ```
+</details>
+
+**[ ] Exercise 8 — Check every rule with `math.comb` and `math.perm`.** Let
+$A = \{a,b,c,d,e\}$ be a 5-element set. Answer: (a) how many subsets does $A$
+have; (b) how many 3-element subsets; (c) how many ordered triples of *distinct*
+elements; (d) how many 2-element subsets; (e) how many unordered selections of 3
+elements *with repetition*. Express (b)–(e) using `math.comb` or `math.perm`, then
+confirm every number against a brute-force enumeration. Note which enumerator is
+needed for (e) and why the naive one is wrong.
+
+<details>
+<summary>Solution</summary>
+
+(a) `$\lvert\mathcal{P}(A)\rvert = 2^5 = 32$`, by the power-set corollary.
+
+(b) Order irrelevant, no repeats: `comb(5, 3) = 10`.
+
+(c) Order matters, no repeats: `perm(5, 3) = 5 · 4 · 3 = 60`. Cross-check:
+`comb(5, 3) · 3! = 10 · 6 = 60`, so the two formulas agree.
+
+(d) `comb(5, 2) = 10`. The fact that (b) and (d) come out equal is not luck: it is
+the symmetry `$\binom{n}{k} = \binom{n}{n-k}$` with $n = 5$, $k = 3$ and $k = 2$.
+Being able to say *why* two unrelated-looking counts coincide is the difference
+between having computed a number and having understood it.
+
+(e) Unordered with repeats: `comb(5 + 3 - 1, 3) = comb(7, 3) = 35`.
+
+The enumeration for (e) is the subtle one. `itertools.combinations(A, 3)` forbids
+repetition, so it gives 10, not 35. `itertools.product(range(5), repeat=3)`
+filtered by a sum condition counts *ordered* triples of multiplicities, which is a
+different object again. The enumerator that matches "unordered, repeats allowed"
+is `itertools.combinations_with_replacement`.
+
+```python
+from itertools import combinations, combinations_with_replacement, permutations
+from math import comb, perm
+
+A = "abcde"
+
+masks = [frozenset(A[i] for i in range(5) if (m >> i) & 1) for m in range(1 << 5)]
+print("subsets         :", len(masks), "== 2^5 =", 2**5)
+
+subs3 = list(combinations(A, 3))
+print("3-subsets       :", len(subs3), "== comb(5,3) =", comb(5, 3))
+
+perms3 = list(permutations(A, 3))
+print("ordered triples :", len(perms3), "== perm(5,3) =", perm(5, 3))
+
+print("2-subsets       :", len(list(combinations(A, 2))), "== comb(5,2) =", comb(5, 2))
+
+multi = list(combinations_with_replacement(A, 3))
+print("with repetition :", len(multi), "== comb(7,3) =", comb(7, 3))
+print("P/C ratio       :", perm(5, 3) // comb(5, 3), "== 3! =", 6)
+```
+
+Output:
+
+```
+subsets         : 32 == 2^5 = 32
+3-subsets       : 10 == comb(5,3) = 10
+ordered triples : 60 == perm(5,3) = 60
+2-subsets       : 10 == comb(5,2) = 10
+with repetition : 35 == comb(7,3) = 35
+P/C ratio       : 6 == 3! = 6
+```
+
+Note `combinations_with_replacement("abcde", 3)` enumerates non-decreasing triples
+such as `('a','a','b')`, and it produces each multiset exactly once — that is the
+programming counterpart of the stars-and-bars bijection, which writes r stars and
+n − 1 bars and reads off the multiplicities from the gaps.
+
 </details>
 
 ## Summary

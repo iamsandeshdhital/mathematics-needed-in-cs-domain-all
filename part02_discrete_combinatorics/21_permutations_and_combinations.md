@@ -66,7 +66,7 @@ k" is your answer. No case analysis required.
 
 ## The Formal Version
 
-Symbols follow [SYMBOLS.md](../../SYMBOLS.md). For finite A we write |A| = n and
+Symbols follow [SYMBOLS.md](../SYMBOLS.md). For finite A we write |A| = n and
 choose r ≤ n items.
 
 **Definition.** An *r-permutation* of A is a sequence (a₁, …, a_r) of **distinct**
@@ -205,7 +205,6 @@ the standard library.
 from collections import Counter
 from math import comb, perm, factorial
 
-
 def nCr(n, r):
     """C(n, r): choose r from n, order irrelevant.
 
@@ -219,14 +218,12 @@ def nCr(n, r):
         total = total * (n - i) // (i + 1)  # exact: total is C(n, i+1) here
     return total
 
-
 def nPr(n, r):
     """P(n, r): order r distinct items from n. A falling product, no division."""
     total = 1
     for i in range(r):
         total *= n - i
     return total
-
 
 def multiset_pr(elements):
     """Orderings of a multiset: n! / (k1! k2! ... ). Each partial division is a
@@ -236,7 +233,6 @@ def multiset_pr(elements):
     for k in counts.values():
         total //= factorial(k)
     return total
-
 
 print(f"C(6,3) by hand {nCr(6,3):4d}  math.comb {comb(6,3):4d}")
 print(f"P(6,3) by hand {nPr(6,3):4d}  math.perm {perm(6,3):4d}")
@@ -252,7 +248,6 @@ against brute-force enumeration of actual subsets.
 ```python
 from itertools import combinations
 
-
 def pascal_row(n):
     """Row n of Pascal's triangle, built by C(n, r) = C(n-1, r-1) + C(n-1, r)."""
     row = [1]
@@ -260,7 +255,6 @@ def pascal_row(n):
         # every interior entry is the sum of the two above it
         row = [1] + [row[i] + row[i + 1] for i in range(len(row) - 1)] + [1]
     return row
-
 
 A = "ABCDEF"
 n = len(A)
@@ -306,7 +300,6 @@ the only input.
 from itertools import product as iproduct
 from math import factorial
 
-
 def bounded_selections(caps, total):
     """Unordered selections of `total` items taking at most caps[i] of each kind.
 
@@ -323,7 +316,6 @@ def bounded_selections(caps, total):
         coeffs = nxt
     return coeffs[total]
 
-
 def brute_vectors(caps, total):
     """Count the same thing by listing every valid multiplicity vector."""
     count = 0
@@ -331,7 +323,6 @@ def brute_vectors(caps, total):
         if sum(vec) == total:
             count += 1
     return count
-
 
 print(f"caps (2,2,2), total 5 -> {bounded_selections([2,2,2], 5)} (brute force {brute_vectors([2,2,2], 5)})")
 print(f"caps (2,2,2), total 4 -> {bounded_selections([2,2,2], 4)} (brute force {brute_vectors([2,2,2], 4)})")
@@ -350,7 +341,6 @@ def bounded_ordered(caps, total):
             perms //= factorial(k)
         ways += perms
     return ways
-
 
 print(f"ordered, caps (2,2,2), total 5 -> {bounded_ordered([2,2,2], 5)}")
 ```
@@ -421,6 +411,8 @@ for label, f in problems:
 > *does* work for n = 20. It breaks at n ≈ 1000 where 1000! has 2568 digits, and
 > it is O(n) instead of O(min(r, n−r)). `math.comb` is C-implemented and does
 > the division more carefully than you will.
+
+---
 
 ## Exercises and Solutions
 
@@ -635,7 +627,6 @@ Lesson [22](22_binomial_theorem.md), here built by hand:
 ```python
 from math import comb
 
-
 def conv(a, b):
     """Multiply two polynomials given as coefficient lists."""
     out = [0] * (len(a) + len(b) - 1)
@@ -643,7 +634,6 @@ def conv(a, b):
         for j, y in enumerate(b):
             out[i + j] += x * y
     return out
-
 
 one_plus_y = [1, 1]          # the polynomial 1 + y
 p13, p39 = [1], one_plus_y
