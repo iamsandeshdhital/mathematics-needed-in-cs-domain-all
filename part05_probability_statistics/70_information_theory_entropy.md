@@ -713,6 +713,464 @@ low-entropy distribution is still uncertain in a way that matters for a specific
 observation. Use entropy for expectations over the distribution, not for
 describing one sample.
 
+## Formula Sheet
+
+| Symbol | Formula | In plain words | When you use it |
+| --- | --- | --- | --- |
+| `$I(x)$` | `$-\log_2 p$` bits | **Self-information** of an event: how many binary questions you need to identify it. Needs $p > 0$. | Ranking outcomes by surprise. $I(1/2) = 1$, $I(1/1024) = 10$, $I(1) = 0$, and $I \to \infty$ as $p \to 0$. |
+| `$0\log 0$` | `$= 0$ by convention | An impossible outcome contributes no surprise — it never happens. | Needed to make $H$ well defined on distributions with zero entries. |
+| additivity | `$I(x,y) = I(x) + I(y)$` when $X \perp Y$ | Surprisal of independent events adds. | **This is why the log is forced.** Only logarithms satisfy it; the base is convention. |
+| bits vs nats | `$1$ bit $= \ln 2 \approx 0.6931$ nats; divide bits by $\ln 2$ | The same information in different units. | Converting a framework's reported loss. `log2 e ≈ 1.4427`. |
+| `$H(P)$` | `$-\sum_x p(x)\log_2 p(x)$` | **Entropy**: average surprisal of one draw from $P$. The uncertainty of the next outcome. | Any "how unpredictable is this" question. |
+| entropy bounds | `$0 \le H(P) \le \log_2 n$` | Maximum exactly at the uniform distribution. | Sanity checks, and the uniform baseline for $n$-class problems. |
+| `$2^{H(P)}$` | effective number of equally likely outcomes | The cleanest summary of a distribution: how many real choices it behaves like. | `Binomial`-ish sketches: the 0.97-heavy distribution has 4 outcomes but $2^H = 1.18$ effective ones. |
+| `$H(P,Q)$` | `$-\sum_x p(x)\log_2 q(x)$` | **Cross-entropy**: average surprisal of data drawn from $P$ under the model's beliefs $Q$. | **Every classification loss.** Binary cross-entropy, `CrossEntropyLoss`, `log_loss`. |
+| `$H(P,Q) = H(P) + D_{KL}(P\|Q)$` | the fundamental identity | Prediction error splits into an irreducible part $H(P)$ and a reducible part KL. | Why the loss never reaches zero, and why you compare against $H(P)$, not zero. |
+| one-hot special case | `$H(\text{one-hot}) = 0 \Rightarrow H(P,Q) = D_{KL}(P\|Q)$` | For hard labels, cross-entropy *is* KL. | Classification: your reported loss is literally the KL to the true label. |
+| `$D_{KL}(P\|Q)$` | `$\sum_x p(x)\log_2\frac{p(x)}{q(x)} = H(P,Q) - H(P) \ge 0$` | **KL divergence**: how far $Q$ is from $P$. Equals 0 iff $P = Q$ (Gibbs' inequality). | The correct loss for probabilistic prediction; squared error is not. |
+| KL is asymmetric | `$D_{KL}(P\|Q) \ne D_{KL}(Q\|P)$` | $D_{KL}(P\|Q)$ punishes $Q$ for **missing** mass $P$ allows (→ ∞). $D_{KL}(Q\|P)$ punishes mass $Q$ puts where $P$ does not. | Mistake 2. Generative models use $D_{KL}(P\|Q)$ with $P$ the data, forcing $Q$ to cover $P$'s support. |
+| `$H(X,Y)$` | `$-\sum_x\sum_y p(x,y)\log_2 p(x,y)$` | Joint entropy: uncertainty in the pair. | Chain-rule applications. |
+| `$H(Y\mid X)$` | `$-\sum_x p(x)\sum_y p(y\mid x)\log_2 p(y\mid x)$` | Conditional entropy: what is left unknown after seeing $X$. | **Must be weighted by $P(X = x)$** — the most common arithmetic slip. |
+| **chain rule** | `$H(X,Y) = H(X) + H(Y\mid X) = H(Y) + H(X\mid Y)$` | Total uncertainty = uncertainty in $X$ plus what $X$ leaves open. | How language models factor sentence probabilities, and why they work in log-space. |
+| `$I(X;Y)$` | `$= H(X) - H(X\mid Y) = H(X) + H(Y) - H(X,Y)$` bits | **Mutual information**: how much learning $Y$ reduces uncertainty about $X$. Non-negative and symmetric. | Detecting dependence correlation misses. For discrete variables it is a *complete* independence test. |
+| `$I(X;Y) = D_{KL}(p(x,y)\,\|\,p(x)p(y))$$` | KL to the independence assumption | How badly independence fails. | Estimating MI without the joint. |
+| perplexity | `$\mathrm{PPL} = 2^{\bar{H(P,Q)}}$` | An effective branching factor. | Language-model reporting. 3.322 bits on 10 classes = PPL 10 = "learned nothing". |
+| log-space | `$\log P = \sum_i \log p_i$` | Multiplying many small probabilities underflows; summing logs does not. | Mistake 4. Every training loop works in log-space for this reason. |
+| **compression bound** | ideal code length for symbol $x$ is `$-\log_2 p(x)$` bits | Huffman, gzip and arithmetic coding all aim at this. | Any "is my representation wasteful" question. |
+| MLE from cross-entropy | minimising `$\sum_i -\log_2 q_\theta(y_i\mid x_i)$` yields `$\hat\theta_{\text{MLE}}$` | The minimiser of cross-entropy is the maximum likelihood model, if $P$ is in the family. | The bridge from Lesson 69's MLE to the training loop. |
+
+## Multiple Choice Questions
+
+**Q1.** An event has probability 1/1024. What is its self-information, and what
+does that number tell you?
+
+- A) 1024, its probability in units of thousandths
+- B) 10 bits — the number of yes/no questions needed to identify it — not a probability
+- C) 0.098%, a percentage
+- D) It cannot be computed without knowing the other outcomes
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) 10 bits — the number of yes/no questions needed to identify it — not a
+probability.**
+
+$-\log_2(1/1024) = 10$. This is Mistake 1: bits measure *surprise*, not
+likelihood. Option A reads the denominator; option C converts to a percentage,
+which is a different quantity again. Option D is false — self-information depends
+on one outcome's probability alone.
+
+</details>
+
+**Q2.** `D_KL(P‖Q)` is infinite. What does that say about $Q$?
+
+- A) $P$ and $Q$ have different entropies
+- B) $Q$ assigns zero probability to something $P$ considers possible
+- C) The alphabets of $P$ and $Q$ have different sizes
+- D) $Q$ is uniform
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) $Q$ assigns zero probability to something $P$ considers possible.**
+
+Some term is $p(x)\log_2(p(x)/q(x))$ with $q(x) = 0$ and $p(x) > 0$, and
+$\log_2(\infty) = \infty$. This is why frameworks never let a model emit a hard
+zero. Option A is unrelated — a mismatch of entropies gives a finite difference.
+Option C is a bookkeeping detail; the definitions already require a common
+alphabet. Option D is the opposite of the problem: a uniform $Q$ gives finite KL.
+
+</details>
+
+**Q3.** Why is KL divergence asymmetric, and why does the direction matter for
+generative models?
+
+- A) It is a numerical rounding artifact
+- B) $D_{KL}(P\|Q)$ punishes $Q$ for failing to cover $P$'s support with an infinite penalty, which forces the model to explain every outcome the data allows
+- C) It is symmetric but reported differently
+- D) KL only applies to continuous distributions
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) $D_{KL}(P\|Q)$ punishes $Q$ for failing to cover $P$'s support with an
+infinite penalty, which forces the model to explain every outcome the data
+allows.**
+
+This is Mistake 2, and the lesson's code prints both orders on the "inverted"
+model to show they differ. Option A is false — the asymmetry is structural. Option
+C is false; a genuinely symmetric quantity is Jensen–Shannon. Option D is false;
+KL is defined for discrete distributions and is used there throughout the lesson.
+
+</details>
+
+**Q4.** A classification model's loss plateaus at 0.63 bits and will not go lower.
+Your labels are 60/40 across two classes. What is happening?
+
+- A) The model is under-trained and needs more epochs
+- B) $H(P) = 0.9709$ bits of irreducible label entropy exists; the loss floor is not zero and you should compare against $H(P)$
+- C) The learning rate is too high
+- D) Cross-entropy is the wrong loss for this task
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) $H(P) = 0.9709$ bits of irreducible label entropy exists; the loss floor is
+not zero and you should compare against $H(P)$.**
+
+This is Mistake 3, and the identity $H(P,Q) = H(P) + D_{KL}(P\|Q)$ is the whole
+explanation: the $H(P)$ term is independent of the parameters, so no amount of
+training touches it. Options A and C are the reflexes of someone who believes the
+floor is zero — they are not diagnosable from the loss value alone. Option D is
+false; cross-entropy is the correct loss, and the plateau is a property of the
+data, not the objective.
+
+</details>
+
+**Q5.** Why must you report probability in log-space when scoring a 1,000-token
+sequence?
+
+- A) Logarithms are more accurate than multiplication in floating point generally
+- B) The product of 1,000 probabilities near 0.1 is about 10⁻¹⁰⁰⁰ and underflows float64 to exactly 0, while the sum of logs stays finite
+- C) Log-space is faster to compute
+- D) Log-space gives a better approximation of the true probability
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) The product of 1,000 probabilities near 0.1 is about 10⁻¹⁰⁰⁰ and underflows
+float64 to exactly 0, while the sum of logs stays finite.**
+
+Mistake 4. Float64's smallest positive normal is about 10⁻³⁰⁸, so anything below
+that is lost — and the code silently returns 0.0, not an error. Option A is
+overstated: the general accuracy claim is false. Option C is false; `log` costs
+more, not less. Option D is exactly backwards — the point is that log-space is
+*less* faithful to the probability itself and far more faithful to the sum.
+
+</details>
+
+**Q6.** A distribution has four possible outcomes but entropy 0.242 bits, so
+$2^H = 1.18$. What does that mean?
+
+- A) The distribution is uniform over a fifth of the outcomes
+- B) It behaves like about 1.18 equally likely outcomes, because one outcome dominates and the rest are nearly negligible
+- C) Entropy is being measured in the wrong units
+- D) $2^H$ counts the outcomes with nonzero probability
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) It behaves like about 1.18 equally likely outcomes, because one outcome
+dominates and the rest are nearly negligible.**
+
+This is the lesson's Example B(iv) with $P = (0.97, 0.01, 0.01, 0.01)$ — and note
+its entropy is *lower* than the 90/10 coin's 0.469 bits, which is the counter-intuitive
+part. Option A misreads the exponentiation. Option C is false; the units are
+correct. Option D is false; all four outcomes have positive probability.
+
+</details>
+
+**Q7.** What is the relationship between cross-entropy and KL divergence?
+
+- A) They are unrelated quantities
+- B) $H(P,Q) = H(P) + D_{KL}(P\|Q)$, so minimising cross-entropy over a model family is exactly minimising KL
+- C) They are the same number
+- D) KL is always larger than cross-entropy
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) $H(P,Q) = H(P) + D_{KL}(P\|Q)$, so minimising cross-entropy over a model
+family is exactly minimising KL.**
+
+This identity is the theorem the lesson builds toward, and Exercise 3 confirms
+it numerically: the fitted model's excess cross-entropy over the floor is
+0.075240 bits, which is *exactly* its KL divergence. Option C is wrong because
+$H(P)$ is generally not zero — it vanishes only for one-hot labels.
+Option D inverts the inequality; KL ≤ cross-entropy always, by Gibbs.
+
+</details>
+
+**Q8.** For discrete random variables, what does $I(X;Y) = 0$ mean?
+
+- A) $X$ and $Y$ have equal entropies
+- B) They are independent, since the joint factorises exactly — which makes MI a complete dependence test
+- C) They are uncorrelated but possibly dependent
+- D) One of them is constant
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) They are independent, since the joint factorises exactly — which makes MI a
+complete dependence test.**
+
+Because $I(X;Y) = D_{KL}(p(x,y)\|p(x)p(y))$, zero KL forces the joint to equal the
+product. Option C is the property of *correlation*, not mutual information — the
+lesson's Exercise 2 makes exactly this distinction, noting that $Y = X^2$ gives
+$\rho = 0$ but *infinite* mutual information. Option A is unrelated.
+Option D would give $H(Y) = 0$, which makes MI zero for a different reason.
+
+</details>
+
+**Q9.** A 10-class model's perplexity is 10. What does that tell you?
+
+- A) The model is 10× better than random
+- B) The model has learned nothing: a cross-entropy of $\log_2 10 = 3.322$ bits corresponds to chance
+- C) The model made 10 errors
+- D) Perplexity must be an integer
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) The model has learned nothing: a cross-entropy of $\log_2 10 = 3.322$ bits
+corresponds to chance.**
+
+Perplexity $2^H$ is an effective branching factor, so 10 means the model is
+effectively choosing among 10 equally likely options — exactly the uniform
+baseline. Option A inverts the metric: 10 is the *worst* value, not a 10×
+improvement. Option C confuses perplexity with a count. Option D is false; 1.43
+and 1.63 are perfectly valid perplexities.
+
+</details>
+
+**Q10.** Why must a logarithm be used to measure information, rather than some
+other function of probability?
+
+- A) Because logarithms are cheaper to compute
+- B) Because information must **add** on independent events, and only the logarithm turns the product of independent probabilities into a sum
+- C) Because the base-2 log gives integers
+- D) Because −p itself fails
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) Because information must **add** on independent events, and only the
+logarithm turns the product of independent probabilities into a sum.**
+
+Example C checks the candidates directly: for $p = 0.01$ the logarithm gives
+6.644 against $2 \times 3.322$, while the square root gives 0.1 against 0.632 and
+$1-p$ gives 0.99 against 1.8. Option C is false — $-\log_2(0.1) = 3.3219$ is not an
+integer. Option A is backwards; `log` is not cheaper. Option D is wrong in
+direction: $p$ *is* additive ($0.01 = 0.1 \times 0.1$), which is precisely why it
+fails — probability is the one thing that multiplies where information must add.
+
+</details>
+
+## Subjective Questions
+
+### Short Answer
+
+**Q1.** Define self-information, state its three properties, and give the
+probability values that produce 0, 1, and 10 bits.
+
+<details>
+<summary>Answer</summary>
+
+$I(x) = -\log_2 p$ bits for $p > 0$. Properties: (1) $I \ge 0$ with equality only
+at $p = 1$; (2) $I$ is decreasing, so rarer events are more surprising; (3) on
+independent events $I(x,y) = I(x) + I(y)$. Values: $p = 1$ gives 0 bits,
+$p = 1/2$ gives 1 bit, and $p = 1/1024$ gives 10 bits. The measure is unbounded
+above: $p = 10^{-100}$ is 332.19 bits.
+
+</details>
+
+**Q2.** State the entropy bounds and say exactly when the upper bound is
+attained.
+
+<details>
+<summary>Answer</summary>
+
+For a distribution on $n$ outcomes, $0 \le H(P) \le \log_2 n$, with the maximum
+attained exactly by the uniform distribution. Each term $-p\log_2 p$ is
+maximised at $p = 1/n$, so the sum is maximised when all outcomes are equally
+likely. A point mass has $H = 0$ — completely predictable — and the uniform
+distribution has the maximum. Entropy measures *uniformity*, not the number of
+available options.
+
+</details>
+
+**Q3.** Write the fundamental identity relating cross-entropy, entropy, and KL
+divergence, and state what each term means for a model.
+
+<details>
+<summary>Answer</summary>
+
+$$H(P,Q) = H(P) + D_{KL}(P\|Q).$$
+
+$H(P)$ is the irreducible entropy of the data — randomness no model can remove.
+$D_{KL}(P\|Q)$ is the model error — the part that training drives to zero. So
+minimising cross-entropy over a model family is exactly minimising KL, since $H(P)$
+does not depend on the parameters. The consequence is that the loss has a floor
+and a perfect model still pays $H(P)$ bits per observation.
+
+</details>
+
+**Q4.** Give the chain rule for entropy, and state the two conditions the
+conditional-entropy sum requires.
+
+<details>
+<summary>Answer</summary>
+
+$H(X,Y) = H(X) + H(Y\mid X)$, and by symmetry $H(Y) + H(X\mid Y)$. The
+conditional-entropy sum requires that the conditionals be weighted by $P(X = x)$:
+$H(Y\mid X) = -\sum_x p(x)\sum_y p(y\mid x)\log_2 p(y\mid x)$. Two things are easy
+to get wrong: forgetting the $p(x)$ weight, and dividing by the conditional
+probability where the joint belongs. Exercise 2 notes the first as "an easy place
+to lose a factor".
+
+</details>
+
+**Q5.** State the mutual information in its three equivalent forms.
+
+<details>
+<summary>Answer</summary>
+
+$$I(X;Y) = H(X) - H(X\mid Y) = H(X) + H(Y) - H(X,Y) = D_{KL}\big(p(x,y)\,\|\,p(x)p(y)\big).$$
+
+The first form is the definition — the reduction in uncertainty about $X$ from
+learning $Y$. The second is symmetry. The third is the independence-distance
+reading. It is non-negative, symmetric, and zero exactly when $X$ and $Y$ are
+independent for discrete variables.
+
+</details>
+
+**Q6.** What is perplexity, and what values mean "learned nothing"?
+
+<details>
+<summary>Answer</summary>
+
+$\mathrm{PPL} = 2^{\bar{H(P,Q)}}$, the exponential of the average
+cross-entropy — an effective branching factor. Cross-entropy of 0 bits gives
+perplexity 1 (certainty); 1 bit gives 2; $\log_2 10 = 3.322$ gives 10, which on
+a 10-class problem is chance and therefore means the model learned nothing. A
+cross-entropy of 0.5146 bits gives 1.43 — narrowing the choice to about 1.4
+candidates.
+
+</details>
+
+### Long Answer
+
+**Q1. Why is cross-entropy, and not squared error, the right loss for
+probabilistic prediction — and why does the loss never reach zero?**
+
+<details>
+<summary>Model answer</summary>
+
+Squared error scores the *number* wrong; cross-entropy scores the *belief* wrong,
+in proportion to how confident the mistake was. That distinction matters
+enormously when a model can be wrong confidently. Assigning probability 0.01 to
+an event that happens costs $-log_2 0.01 = 6.64$ bits; assigning 0.001 costs 9.97,
+which is more than three 0.01-mistakes combined. Squared error on probabilities
+barely notices the difference between 0.01 and 0.001 on a rare outcome, so it
+under-penalises exactly the failures that matter. The deeper reason is
+structural: cross-entropy is $H(P) + D_{KL}(P\|Q)$, and KL is a proper divergence
+that respects the geometry of distributions. Squared error does not.
+
+The floor is the same identity read the other way. $H(P,Q) = H(P) +
+D_{KL}(P\|Q)$, and $H(P)$ is a constant with respect to the model parameters, so
+no optimisation can touch it. With 60/40 labels, $H(P) = 0.9709$ bits; a model
+that knows only the marginals and never the individual label already achieves
+exactly that, so it is the best any model could do on a task with genuinely noisy
+labels.
+
+The practical consequences are three. Compare your loss against $H(P)$, not
+against zero — Mistake 3 in the lesson, and the number to compute before training
+starts. Expect accuracy to saturate below 100%, because an outcome drawn from a
+distribution always carries some surprisal. And separate the two quantities in
+reporting: high cross-entropy with low KL means the task is noisy and the model
+is fine; low cross-entropy with high KL means the model found a shortcut, which
+is the signature of a train/test gap later.
+
+</details>
+
+**Q2. Why does the KL asymmetry force a specific direction for generative
+models, and what breaks in the other direction?**
+
+<details>
+<summary>Model answer</summary>
+
+The two directions penalise different mistakes. $D_{KL}(P\|Q) = \sum_x
+p(x)\log_2(p(x)/q(x))$ weights each term by $p$, so a term with $q(x) = 0$ and
+$p(x) > 0$ is $p(x)\log_2(\infty) = \infty$: a model that assigns zero to
+anything the data allows is punished without bound. $D_{KL}(Q\|P)$ weights by $q$
+instead, so it punishes the model for putting mass where the data does not, and
+is indifferent to data outcomes the model never produces.
+
+For a generative model the first behaviour is exactly right. The model must be
+able to produce every outcome the world produces; failing to represent an
+observed outcome is a modelling error that should be fatal. The second direction
+has the wrong incentive — a model that is merely imprecise but always in range is
+penalised for its imprecision while being free to ignore real data.
+
+The engineering corollaries run through the lesson. Never let a model emit a hard
+zero, because that is an infinite cross-entropy on the first observation of that
+outcome — which is why implementations clamp probabilities before taking the
+log. And knowledge distillation uses $D_{KL}(\text{teacher}\,\|\,\text{student})$
+for this direction specifically: it forces the student to put mass everywhere the
+teacher does, which is what "learning the teacher's full distribution" means.
+
+</details>
+
+**Q3. Why is mutual information a more sensitive dependence test than
+correlation, and what does its being zero actually prove?**
+
+<details>
+<summary>Model answer</summary>
+
+Because correlation measures *linear* association while mutual information
+measures *all* statistical dependence. The identity $I(X;Y) = D_{KL}(p(x,y)\,\|\,
+p(x)p(y))$ makes this precise: MI is the KL distance between the true joint and
+the independence assumption, so it is sensitive to any departure from
+factorisation, curved or not. Correlation is a single normalised moment and misses
+entire classes — Exercise 2 in this lesson notes that $Y = X^2$ with $X$ symmetric
+gives $\rho = 0$ while the mutual information is actually *infinite*, because any
+interval of $Y$ pins down $X$ up to sign.
+
+That also explains why MI at zero is a strong statement for discrete variables.
+KL divergence is nonnegative with equality only when its arguments are identical
+(Gibbs' inequality), so $I(X;Y) = 0$ forces $p(x,y) = p(x)p(y)$ exactly — which
+is the definition of independence. Mutual information is therefore a *complete*
+independence test for discrete distributions, and the code block verifies it by
+factorising a pair exactly and watching MI go to $10^{-17}$.
+
+The caveat is continuity. For continuous variables mutual information is not
+finitely measurable in general, needs density estimates that themselves carry
+bias, and needs a differential-entropy baseline that is not comparable across
+dimensions. For discrete work — tokens, categories, events, flags — it is the
+right tool, and the identity to the independence KL makes it easy to compute from
+counts alone.
+
+</details>
+
+**Q4. Why must sequences be scored in log-space, and what does that imply about
+every training loop?**
+
+<details>
+<summary>Model answer</summary>
+
+Because the probability of a sequence is a *product*, and products of small
+numbers die. For 1,000 tokens at probability 0.1 each, the product is $10^{-1000}$,
+far below float64's smallest normal (about $10^{-308}$), so it returns exactly
+0.0 — silently, with no exception and no warning. The sum of logarithms is
+different: $\log_2 P = \sum_i \log_2 p_i = -1000 \times 3.322 = -3322$, perfectly
+finite. That is Mistake 4 in the lesson.
+
+The consequence runs through the whole stack. Training loops minimise
+`sum(-log q(y|x))`, never `sum(q(y|x))`, because the gradient of the sum is the
+sum of the gradients and the gradient of $-\log$ is bounded — while the gradient
+of a product carries a factor of every other term and vanishes or explodes
+accordingly. Softmax plus cross-entropy is the numerically stable form of a
+geometric mean that would otherwise be a product. Model reporting is in
+log-space or perplexity because the same reason applies.
+
+There is a second, subtler reason beyond float range: the log turns the sum over
+positions into a quantity you can decompose. $-$ the chain rule $H(X,Y) = H(X) +
+H(Y\mid X)$ applied iteratively gives a sum of per-step conditional entropies,
+which is how a language model represents a sentence at all, and how you attribute
+surprisal to individual tokens rather than to an opaque total.
+
+</details>
+
 ## Exercises and Solutions
 
 **[ ] Exercise 1 — the basics, computed three ways.** Let P = (0.4, 0.4, 0.1,
@@ -1124,6 +1582,412 @@ problem* (differ by a constant independent of the parameters) but *different
 measurements*. A trainer minimising cross-entropy is exactly minimising KL, and a
 reporting dashboard that shows only cross-entropy is hiding the one number that
 tells you how good the model could possibly be.
+
+</details>
+
+**[ ] Exercise 4 — compute cross-entropy in nats and in bits, and interpret
+it.** A binary classifier is evaluated on four examples. The true labels and the
+model's confidence in the true class are:
+
+| example | true class | model confidence in true class |
+| --- | --- | --- |
+| 1 | A | 0.9 |
+| 2 | A | 0.6 |
+| 3 | B | 0.55 |
+| 4 | B | 0.8 |
+
+(a) Compute the per-example cross-entropy in **bits** and give the average.
+(b) Compute the same in **nats** and confirm the average is exactly the bit value
+multiplied by $\ln 2$.
+(c) Give the perplexity of the model from the bit value, and interpret it in
+words as an effective branching factor.
+(d) A different model has confidences 0.9, 0.6, 0.55, 0.45 on the same examples.
+Compute its average loss in both units and its perplexity, and decide which model
+you would ship. (e) Explain why the two losses are so close even though example 4
+differs by a factor of nearly two in probability, and connect this to the linear
+versus quadratic weighting question in
+[Lesson 64](64_expectation_variance.md).
+
+<details>
+<summary>Solution</summary>
+
+(a) Per-example loss is $-\log_2 q$, with $q$ the model's probability for the true
+label:
+
+| example | $q$ | $−\log_2 q$ (bits) |
+| --- | --- | --- |
+| 1 | 0.9 | 0.15200 |
+| 2 | 0.6 | 0.73697 |
+| 3 | 0.55 | 0.86250 |
+| 4 | 0.8 | 0.32193 |
+
+Average $= (0.15200 + 0.73697 + 0.86250 + 0.32193)/4 = 2.07340/4 =
+\mathbf{0.51835}$ bits.
+
+(b) In nats, per example $-\ln q$: 0.10536, 0.51083, 0.59784, 0.22314. Average
+$= 1.43717/4 = \mathbf{0.35929}$ nats. Check: $0.51835 \times \ln 2 = 0.51835
+\times 0.693147 = 0.35929$. ✓ The conversion is exact, not approximate — the two
+are the same information in different units, and you divide bits by $\ln 2$ (or
+multiply nats by $\log_2 e \approx 1.4427$).
+
+(c) Perplexity $= 2^{0.51835} = \mathbf{1.4323}$. Read it as: the model is
+effectively narrowing a binary choice down to about **1.4 candidates**. For
+reference, chance on two classes is $2^1 = 2.0$, so the model is doing something,
+though modestly.
+
+(d) The second model's only change is example 4, from 0.8 to 0.45 — the model
+assigns only 0.45 to the true class B. Its loss there is $-\log_2 0.45 =
+1.15200$ bits. The average becomes
+$(0.15200 + 0.73697 + 0.86250 + 1.15200)/4 = 2.90347/4 = \mathbf{0.72587}$ bits,
+or $0.72587 \times 0.693147 = \mathbf{0.50313}$ nats. Perplexity
+$= 2^{0.72587} = \mathbf{1.6539}$.
+
+Ship the **first** model. Its perplexity of 1.43 is below the chance baseline of
+2.0 while the second model's 1.65 is much closer to it, and the one difference
+between them cost 40% more loss.
+
+(e) Because the log is *concave*, so $q \mapsto -\log q$ grows more slowly than
+linearly as $q$ shrinks. Going from $q = 0.8$ to $q = 0.45$ is a 1.78× change in
+probability but only a 3.58× change in loss, and averaged over four examples a
+40% increase. This is the same structure as
+[Lesson 64](64_expectation_variance.md)'s point about squaring over-weighting
+large values — here it is *logarithms* under-weighting large values. The practical
+consequence is that cross-entropy is forgiving of moderate uncertainty and
+punishing only of confident error: to double the loss you must halve the
+probability again and again.
+
+The framework-level corollary matters too. `CrossEntropyLoss` and `log_loss`
+default to natural logs, so their reported numbers are in **nats**; if you compare
+against a bits-based baseline you must convert, or you will be off by a factor of
+$\ln 2 \approx 0.693$ and conclude you have more headroom than you do.
+
+```python
+from math import log, log2, exp
+
+EXAMPLES = [
+    ("A", 0.9),
+    ("A", 0.6),
+    ("B", 0.55),
+    ("B", 0.8),
+]
+ALT_FOURTH = 0.45
+
+
+def losses_bits(qs):
+    return [-log2(q) for q in qs]
+
+
+def losses_nats(qs):
+    return [-log(q) for q in qs]
+
+
+qs = [q for _, q in EXAMPLES]
+bits = losses_bits(qs)
+nats = losses_nats(qs)
+avg_bits = sum(bits) / len(bits)
+avg_nats = sum(nats) / len(nats)
+
+print("model 1")
+print(f"{'example':>8} {'q':>6} {'bits':>10} {'nats':>10}")
+for (label, q), b, n in zip(EXAMPLES, bits, nats):
+    print(f"{label:>8} {q:6.2f} {b:10.5f} {n:10.5f}")
+print(f"{'average':>8} {'':>6} {avg_bits:10.5f} {avg_nats:10.5f}")
+print()
+print(f"(a) average cross-entropy = {avg_bits:.5f} bits")
+print(f"(b) in nats              = {avg_nats:.5f}")
+print(f"    exact conversion: bits * ln 2 = {avg_bits * log(2):.5f}")
+print(f"    matches: {abs(avg_bits * log(2) - avg_nats) < 1e-12}")
+print()
+print(f"(c) perplexity = 2^{avg_bits:.5f} = {2 ** avg_bits:.4f}  "
+      f"(chance on 2 classes is 2.0)")
+print(f"    -> the model narrows the choice to about {2 ** avg_bits:.2f} candidates")
+
+qs2 = qs[:-1] + [ALT_FOURTH]
+bits2 = losses_bits(qs2)
+nats2 = losses_nats(qs2)
+avg2 = sum(bits2) / len(bits2)
+avg2n = sum(nats2) / len(nats2)
+print()
+print(f"(d) model 2 (example 4 confidence {ALT_FOURTH} instead of 0.80)")
+print(f"    that example's loss: {-log2(0.80):.5f} -> {-log2(ALT_FOURTH):.5f} bits")
+print(f"    average: {avg2:.5f} bits = {avg2n:.5f} nats, perplexity {2 ** avg2:.4f}")
+print(f"    model 1 is better: {avg_bits:.4f} vs {avg2:.4f} bits, "
+      f"{avg2 / avg_bits:.2f}x worse")
+
+print()
+print("(e) the log is concave, so -log grows more slowly than linearly:")
+print(f"    probability ratio 0.80/0.45 = {0.80 / ALT_FOURTH:.2f}x")
+print(f"    loss ratio       {bits2[3]:.5f}/{bits[3]:.5f} = {bits2[3] / bits[3]:.2f}x")
+print("    Cross-entropy is forgiving of uncertainty and punishing only of")
+print("    confident error. NOTE: frameworks default to NATS, so a bits-based")
+print(f"    baseline must be multiplied by ln 2 = {log(2):.6f} to compare.")
+```
+
+</details>
+
+**[ ] Exercise 5 — entropy, KL, and the loss floor for a real classifier.** A
+classifier handles 5 classes. The label distribution is
+$P = (0.50, 0.20, 0.15, 0.10, 0.05)$ and a baseline model always predicts those
+same marginals.
+(a) Compute $H(P)$ and confirm $2^{H(P)}$.
+(b) Compute the baseline model's average cross-entropy, show it equals $H(P)$, and
+explain why that is the floor.
+(c) Compute $D_{KL}(P\|P) = 0$ and then $D_{KL}(P\|Q)$ for a slightly-off model
+$Q = (0.45, 0.20, 0.20, 0.10, 0.05)$.
+(d) Show that the cross-entropy of the off model exceeds its floor by exactly its
+KL divergence.
+(e) Give both models' perplexities and say what the difference of 0.2% in the top
+class probability actually costs.
+
+<details>
+<summary>Solution</summary>
+
+(a) $H(P) = -\sum_i p_i\log_2 p_i$. Per-class: 1.00000, 2.32193, 2.73697,
+3.32193, 4.32193 bits.
+
+$$H(P) = 0.50(1) + 0.20(2.32193) + 0.15(2.73697) + 0.10(3.32193) + 0.05(4.32193) = \mathbf{1.92322} \text{ bits}$$
+
+$2^{1.92322} = \mathbf{3.7927}$ effective outcomes out of 5 real ones. The
+distribution is concentrated enough that it behaves like a 3.8-way choice rather
+than a 5-way one — which is exactly what makes classification on skewed label sets
+hard, and why accuracy looks so much better than the loss suggests.
+
+(b) The baseline always predicts $Q = P$, so its per-example loss is $-\log_2
+p_{\text{label}}$, and averaging over the label distribution returns $H(P)$:
+$\sum_i p_i(-\log_2 p_i) = 1.92322$ bits. So the **average cross-entropy is
+1.92322 bits, exactly $H(P)$**.
+
+This is the floor because $H(P,Q) = H(P) + D_{KL}(P\|Q)$ and $D_{KL} \ge 0$. The
+baseline achieves $D_{KL}(P\|P) = 0$, the minimum, so it is the best any model
+could do — a model that knows the label *distribution* but never the individual
+label is already optimal.
+
+(c) $D_{KL}(P\|Q)$ for $Q = (0.45, 0.20, 0.20, 0.10, 0.05)$:
+
+    KL = 0.50*log2(0.50/0.45) + 0.20*log2(0.20/0.20) + 0.15*log2(0.15/0.20)
+       + 0.10*log2(0.10/0.10) + 0.05*log2(0.05/0.05)
+       = 0.50*(0.15200) + 0 + 0.15*(-0.41504) + 0 + 0
+       = 0.07600 - 0.06226 = **0.01375 bits**
+
+Only two classes contribute: the top class, where the model is 0.05 short, and
+the third class, where it over-predicts.
+
+(d) $H(P,Q) = \sum_i p_i(-\log_2 q_i)$, so
+
+$$H(P,Q) = 0.50(1.15200) + 0.20(2.32193) + 0.15(2.32193) + 0.10(3.32193) + 0.05(4.32193) = \mathbf{1.93697}$$
+
+Check: $H(P) + D_{KL}(P\|Q) = 1.92322 + 0.01375 = 1.93697$. ✓ Exactly. The
+excess loss **is** the KL divergence, which is the identity restated. Note the
+cross-entropy is *above* the floor, as Gibbs requires — 1.93697 > 1.92322.
+
+(e) Perplexities: baseline $2^{1.92322} = 3.7927$, off model $2^{1.93697} =
+3.8290$. The 0.05 reduction in the top class's probability costs 0.01375 bits and
+raises perplexity by 0.036 — under 1%. On a large test set that is a measurable
+regression, and it is invisible in plain accuracy, where the argmax is still the
+top class in both models.
+
+```python
+from math import log2
+
+P = {0: 0.50, 1: 0.20, 2: 0.15, 3: 0.10, 4: 0.05}
+Q = {0: 0.45, 1: 0.20, 2: 0.20, 3: 0.10, 4: 0.05}
+
+
+def H(dist):
+    return -sum(p * log2(p) for p in dist.values() if p > 0)
+
+
+def CE(p, q):
+    return -sum(pv * log2(q[k]) for k, pv in p.items() if pv > 0)
+
+
+def KL(p, q):
+    return CE(p, q) - H(p)
+
+
+h_p = H(P)
+print("(a) label entropy")
+for k in sorted(P):
+    print(f"    class {k}: p={P[k]:.2f}, -log2(p)={-log2(P[k]):.5f}")
+print(f"    H(P) = {h_p:.5f} bits, 2^H = {2 ** h_p:.4f} effective outcomes")
+print(f"    (only 5 real classes)")
+
+print()
+ce_baseline = CE(P, P)
+print(f"(b) baseline always predicts the marginals: CE = {ce_baseline:.5f} bits")
+print(f"    equals H(P): {abs(ce_baseline - h_p) < 1e-12}")
+print("    -> the floor, because D_KL(P||P) = 0 is the minimum possible KL")
+
+print()
+kl_pp = KL(P, P)
+kl_pq = KL(P, Q)
+ce_q = CE(P, Q)
+print(f"(c) D_KL(P||P) = {kl_pp:.5f}   D_KL(P||Q) = {kl_pq:.5f}")
+for k in sorted(P):
+    if P[k] > 0 and Q[k] > 0:
+        print(f"    class {k}: {P[k]:.2f}*log2({P[k]:.2f}/{Q[k]:.2f}) "
+              f"= {P[k] * log2(P[k] / Q[k]):+.5f}")
+
+print()
+print(f"(d) H(P,Q) = {ce_q:.5f}")
+print(f"    H(P) + KL = {h_p:.5f} + {kl_pq:.5f} = {h_p + kl_pq:.5f}")
+print(f"    the excess loss IS the KL divergence: {abs(ce_q - (h_p + kl_pq)) < 1e-12}")
+print(f"    excess = {ce_q - h_p:.5f} bits, which is positive as Gibbs requires: "
+      f"{ce_q >= h_p - 1e-12}")
+
+print()
+print("(e) perplexity")
+print(f"    baseline : 2^{h_p:.5f} = {2 ** h_p:.4f}")
+print(f"    off model: 2^{ce_q:.5f} = {2 ** ce_q:.4f}")
+print(f"    cost of the 0.05 top-class shift: {ce_q - h_p:.5f} bits, "
+      f"perplexity +{2 ** ce_q - 2 ** h_p:.4f}")
+print("    Plain accuracy is unchanged: the argmax is still class 0 in both.")
+```
+
+</details>
+
+**[ ] Exercise 6 — Challenge: information content of a real log line, and why a
+rare event is expensive.** A service emits one log line per request. Line types
+and their probabilities are:
+
+| line | probability |
+| --- | --- |
+| `GET /health 200` | 0.9820 |
+| `GET /api/items 200` | 0.0150 |
+| `GET /api/items 500` | 0.0015 |
+| `POST /api/orders 400` | 0.0010 |
+| `GET /api/items 404` | 0.0005 |
+
+(a) Compute the self-information of each line in bits, and the entropy of the
+whole distribution.
+(b) Compute the expected information per request, and confirm it equals $H(P)$
+(using exact fractions rather than the rounded table).
+(c) Compute the fraction of total information contributed by the two rarest
+lines.
+(d) A log pipeline stores 1e9 lines per day. Compute the total uncompressed size
+assuming one byte per character and a naive 60-character line, then compute the
+ideal compressed size from $H(P)$ using exact probabilities, and give the
+compression ratio.
+(e) Explain why a 0.05% event contributes so much information, and what that
+implies for alerting on it versus on `GET /health`.
+
+<details>
+<summary>Solution</summary>
+
+(a) $I = -\log_2 p$:
+
+| line | $p$ | bits |
+| --- | --- | --- |
+| `GET /health 200` | 0.9820 | 0.02621 |
+| `GET /api/items 200` | 0.0150 | 6.05889 |
+| `GET /api/items 500` | 0.0015 | 9.38082 |
+| `POST /api/orders 400` | 0.0010 | 9.96578 |
+| `GET /api/items 404` | 0.0005 | 10.96578 |
+
+(b) $H(P) = \sum_i p_i I_i = 0.9820(0.02621) + 0.0150(6.05889) + 0.0015(9.38082)
++ 0.0010(9.96578) + 0.0005(10.96578) = 0.02578 + 0.09088 + 0.01407 + 0.00997 +
+0.00548 = \mathbf{0.14614}$ bits.
+
+With exact probabilities — the table sums to 0.9820 + 0.0150 + 0.0015 + 0.0010 +
+0.0005 = 1.0000 — this is exact. Note where the information lives: the 98.2% of
+traffic that is health checks contributes only 0.02578 bits of the 0.14614 total,
+or **17.6%** — so the bulk is spread across the rarer lines, not the common one.
+
+(c) The two rarest lines are `POST /api/orders 400` (p = 0.001) and
+`GET /api/items 404` (p = 0.0005), together $p = 0.0015$ — 0.15% of traffic. Their
+information contribution is $0.0010(9.96578) + 0.0005(10.96578) = 0.00997 +
+0.00548 = 0.01545$ bits, which is $0.01545/0.14614 = \mathbf{10.6\%}$ of the
+total. So **0.15% of lines carry 10.6% of the information** — an amplification
+factor of about 71×.
+
+Adding the 500 line (p = 0.0015, 9.38 bits) brings the three "interesting" lines
+to 0.30% of traffic and $0.01407 + 0.00997 + 0.00548 = 0.02952$ bits, or **20.2%**
+of all information from 0.3% of the lines — an amplification of 67×.
+
+(d) Uncompressed: $10^9 \times 60$ bytes $= 60 \times 10^9$ bytes $= 60$ GB per
+day. Ideal compressed: $10^9 \times 0.14614 / 8 = 1.827 \times 10^7$ bytes $= 0.01827$
+GB per day. Compression ratio $= 60/0.018267 = \mathbf{3285\times}$.
+
+That is an upper bound on what any scheme can achieve, and a strong one: no
+coder, however good, beats $H$ bits per symbol on average. Real schemes get
+somewhere near it — arithmetic coding essentially reaches it, Huffman coding
+within a factor of about 1.1 — and the gap between the naive 60-byte line and
+0.018 bytes is exactly the "log lines are mostly the same string" observation
+made rigorous.
+
+(e) Because $I = -\log_2 p$ grows without bound as $p \to 0$. A 0.05% event is
+100× rarer than a 5% one, and costs 2.54× more information: $-\log_2(0.0005) =
+10.97$ bits versus $-\log_2(0.05) = 4.32$ bits. Rarity multiplies, so
+information adds.
+
+The alerting implication runs in the opposite direction from the storage one.
+`GET /health` is 98.2% of traffic and contributes 0.026 bits each — essentially
+zero, so alerting on it will page you constantly. `GET /api/items 404` fires
+0.05% of the time and carries 10.97 bits each: rare enough to be signal. Entropy
+tells you which events deserve attention, and the ranking is the *opposite* of
+the frequency ranking. That is also why sampling works as it does: if you sample
+uniformly, you will capture rare lines in proportion to their rarity, and then
+re-weight by $1/p$ — which is precisely the importance weight in an importance
+sampling or rare-event simulation estimator.
+
+```python
+from math import log2
+
+LINES = [
+    ("GET /health 200", 0.9820),
+    ("GET /api/items 200", 0.0150),
+    ("GET /api/items 500", 0.0015),
+    ("POST /api/orders 400", 0.0010),
+    ("GET /api/items 404", 0.0005),
+]
+
+print(f"total probability = {sum(p for _, p in LINES):.4f}")
+print()
+print("(a) self-information")
+info = {}
+for line, p in LINES:
+    info[line] = -log2(p)
+    print(f"    {line:24} p={p:.4f}  I={info[line]:8.5f} bits")
+
+print()
+h = sum(p * info[line] for line, p in LINES)
+print(f"(b) H(P) = {h:.5f} bits per request")
+print(f"    (the table sums to exactly 1, so this is exact, not rounded)")
+health = sum(p for line, p in LINES if line.startswith("GET /health"))
+rest = 1 - health
+print(f"    health lines are {health:.2%} of traffic but only "
+      f"{health * info['GET /health 200']:.5f} bits "
+      f"({health * info['GET /health 200'] / h:.2%} of the total)")
+
+print()
+rare = [l for l, _ in LINES[2:]]
+rare_mass = sum(p for l, p in LINES if l in rare)
+rare_bits = sum(p * info[l] for l, p in LINES if l in rare)
+print(f"(c) the three rare lines: {rare_mass:.4%} of traffic, "
+      f"{rare_bits:.5f} bits = {rare_bits / h:.2%} of information")
+print(f"    amplification factor: {(rare_bits / h) / rare_mass:.0f}x")
+
+print()
+N = 10 ** 9
+NAIVE_BYTES = 60
+raw = N * NAIVE_BYTES
+ideal = N * h / 8
+print(f"(d) {N:,} lines/day, {NAIVE_BYTES} bytes each naive")
+print(f"    uncompressed : {raw / 1e9:.3f} GB/day")
+print(f"    ideal ({h:.5f} bits/line) : {ideal / 1e9:.6f} GB/day")
+print(f"    compression ratio: {raw / ideal:.0f}x  <- an upper bound on any coder")
+
+print()
+print("(e) rarity multiplies, information adds:")
+for p in (0.05, 0.005, 0.0005):
+    print(f"    p={p:.4f} -> {-log2(p):8.5f} bits")
+print(f"    0.0005 is 100x rarer than 0.05 and costs "
+      f"{-log2(0.0005) / -log2(0.05):.2f}x more information")
+print()
+print("    So alert on the RARE line (10.97 bits), not the common one (0.03).")
+print("    The entropy ranking is the OPPOSITE of the frequency ranking -- and")
+print("    that is why uniform sampling plus importance weights 1/p works.")
+```
 
 </details>
 

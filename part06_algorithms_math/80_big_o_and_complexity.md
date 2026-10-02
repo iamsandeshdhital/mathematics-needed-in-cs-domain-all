@@ -1002,6 +1002,630 @@ print("  and the two differ by a factor of n = 200000.")
 
 ---
 
+## Formula Sheet
+
+| Symbol | Formula | In plain words | When you use it |
+| --- | --- | --- | --- |
+| `$f \in O(g)$` | `$\exists c>0,\ \exists n_0:\ f(n)\le c\,g(n)$ for all `$n\ge n_0$` | eventually at most a constant times $g$ | an **upper** bound; "no worse than" |
+| `$f \in \Omega(g)$` | `$\exists c>0,\ \exists n_0:\ f(n)\ge c\,g(n)$ for all `$n\ge n_0$` | eventually at least a constant times $g$ | a **lower** bound; "no better than" |
+| `$f \in \Theta(g)$` | `$f \in O(g)$ **and** `$f \in \Omega(g)$` | the tight bound | the honest answer; a constant ratio |
+| `$f \in o(g)$` | `$\forall c>0\ \exists n_0:\ f(n)\le c\,g(n)` for all `$n\ge n_0$`; equivalently `$f(n)/g(n)\to0$` | eventually *relatively* negligible | strict domination; `$1\in o(n)$`, `$n\notin o(n)$` |
+| `$g \in \omega(f)$` | `$f \in o(g)$` | $g$ strictly outgrows $f$ | `$2^n \in \omega(n^{100})$` |
+| the `$n_0$` clause | present in **every** definition | "small inputs are irrelevant" | why a 40×-faster implementation at `$n=10$` says nothing |
+| total order | `$f\in O(g)$ and `$g\in O(f)` `$\Rightarrow f\in\Theta(g)$` | complexity classes are comparable | you never have to wonder which of two bounds is tighter |
+| hierarchy | `$1\in O(\log n)\subset o(n^\varepsilon)\subset O(n^\varepsilon)\subset o(n)\subset O(n\log n)\subset o(n^{1+\varepsilon})\subset\cdots\subset O(2^n)$` | each class is strictly smaller than the next | ranking algorithms without running them |
+| doubling multiplier | `$1$`, `$\to1$`, `$2$`, `$\to 2.1$`, `$4$`, `$2^n$` for `O(1)`, `O(\log n)`, `O(n)`, `O(n\log n)`, `O(n^2)`, `O(2^n)`` | what one extra factor of 2 costs | the fastest way to see why `O(2^n)` is hopeless |
+| `$n\log n$` is not a power | ratios `[2.301, 2.2616, 2.2314]`, drifting **down** toward 2 | no constant exponent exists; fitted slope `1.1579` | why `n\log n` is strictly worse than `n` even though they look alike |
+| feasible `$n$ at `$10^9$` ops/s | `$O(1),O(\log n)$`: unbounded; `O(n)`: `$1.00\times10^9$`; `O(n\log n)`: `$3.962\times10^7$`; `O(n^2)`: `$3.162\times10^4$`; `O(2^n)`: `n=29.9` | the largest input each class can handle in one second | turning a complexity into a go/no-go decision |
+| exponential horizon | `$2^{60}=1.153\times10^{18}$` ops `$= 36.6$` years at `$10^9$`/s | the class does not get slow, it gets permanent | subset enumeration, exact cover, brute-force CSP |
+| input parameter | `$n$` for arrays; `$b$` = **bit length** for integers | what "size" means for this algorithm | the most practically important distinction in the lesson |
+| `'O(1)'` addition | `$\Theta(b/30)$` in Python, not `O(1)` | Python `int` is arbitrary precision | a loop over a growing accumulator is `$\Theta(n^2/30)$` |
+| addition, subtraction | `$\Theta(b)$` | carry propagation | timing: `0.313`, `1.399`, `9.170`, `190.199` µs at `b = 10^3…10^6` |
+| multiplication, division | `$\Theta(b^2)$` schoolbook; `O(b^{\log_2 3})=O(b^{1.585})$` for Python | the cost that decides RSA | why multiplying 1024-bit numbers is easy and factoring 2048-bit is not |
+| gcd (Euclid) | `$O(b^2)$` | | |
+| limbs | 30 useful bits per 4-byte limb, so `$4/30=0.1333$` bytes/bit | Python's memory asymptote | `sys.getsizeof(1<<b)`: `32, 68, 428, 4028, 40028` bytes at `b = 30…300000` |
+| Master Theorem | `T(n)=a\,T(n/b)+\Theta(n^c)`, `$a\ge1$`, `$b>1$`, `$d=\log_b a$ | split into `$a$` subproblems of size `$n/b$`, plus `$n^c$` local work | merge sort, binary search, Strassen, 4-way merge |
+| the three cases | `$c<d`: `$\Theta(n^d)$`; `$c=d$: `$\Theta(n^d\log n)$`; `$c>d$: `$\Theta(n^c)$` | leaves dominate / balanced / internal work dominates | worked: binary search `Θ(n^1)`, merge sort `Θ(n^1)`, `4T(n/2)+n` `Θ(n²)`, Strassen `Θ(n^2.8074)` |
+| why binary search reads oddly | `$\Theta(n^{\log_2 2})=\Theta(n^1)$` **is** `$\log_2 n$` | the theorem writes `n^d`, never `log n`, because the base matters | stops people thinking the answer should be `Θ(n)` |
+| Master Theorem's blind spot | additive term must be exactly `$\Theta(n^c)$` — a `$\log$` factor does not fit | `T(n)=2T(n/2)+n\log n` needs Akra–Bazzi | the FFT recurrence |
+| Akra–Bazzi, one line | `T(n)=\Theta\!\left(n^{\log_b a}\left(1+\int_1^n \frac{g(u)}{u^{1+\log_b a}}du\right)\right)` | integrate the local work against the recursion's own weight | `g(u)=u\log u` gives `$\int \frac{\log u}{u}du = \frac12(\log n)^2$` |
+| merge sort count | exactly `$\frac{n\log_2 n}{2}`` comparisons, ratio `1.000` at every size | `$n/2$` per level, `$\log_2 n$` levels | the tightest bound in the lesson |
+| recursion depth | `n=2^e` `$\Rightarrow$` depth `e+1` | frames on the stack | binary search uses `log2(n)` frames, linear search 1 |
+| naive DFT | `n^2` complex multiplications | | `1,099,511,627,776` at `n=2^{20}` |
+| FFT multiplications | `$\frac{n}{2}\log_2 n` | | `10,485,760` at `n=2^{20}`; ratio **104,857.6** |
+| FFT total work | `$\frac{nL(L+1)}{2}+n`, `L=\log_2 n` — exact | | `221,249,536` at `n=2^{20}`; ratio to `n^2` is **4969.6** |
+| repeated squaring | loop: `$O(n\cdot\mathrm{Mul}(b))`; squaring: `$O(\log n\cdot\mathrm{Mul}(b))$` | `log2(10000)=14` multiplications instead of `10000` | factor `n/\log_2 n` = **752.6** at `n=10^4` |
+| `3**10000` | `15850` bits, `2140` bytes, `528` limbs | | `10^6` additions → `5.283e+08` limb ops; `10^6` mults → `2.791e+11`, a factor of **528** |
+| amortised cost | `T(n)/n` | average per operation over a worst-case sequence | `[81 — Amortised Analysis](81_amortized_analysis.md)` |
+| worst vs average | `check_first_element` costs `14` on a negative-first list and `n*4+10` on a positive one | same function, same size, different cost | why bounds are stated worst-case |
+
+---
+
+## Multiple Choice Questions
+
+**Q1.** For $f(n) = n\log n$ and $g(n) = n$, which statement is correct?
+
+- A) $f \in O(g)$, because $\log n \le n$ for all $n$
+- B) $f \in \Theta(g)$, because both are "about linear"
+- C) $f \in \omega(g)$, since $f(n)/g(n) = \log n \to \infty$
+- D) $f \in o(g)$, since the ratio $\log n/n \to 0$
+
+<details>
+<summary>Answer and explanation</summary>
+
+**C) $f \in \omega(g)$, since $f(n)/g(n) = \log n \to \infty$.**
+
+$f = n\log n$ strictly outgrows $g = n$. The lesson's measured ratios show it: doubling
+$n$ multiplies $n$ by exactly `2` while multiplying $n\log n$ by `2.301`, `2.2616`,
+`2.2314` — always above 2, drifting down toward it but never reaching it. A doubling
+multiplier that is constant but greater than 2 is precisely what $\omega$ means, and it is
+also why no constant exponent fits: the fitted slope is `1.1579`, not 1 and not 2.
+
+Option A is the most common Big-O error. $O$ is satisfied — $n\log n \le c\,n$ for any
+$c \ge \log n$ beyond some $n_0$ — but stating it is uninformative, since $n$ is a *tighter*
+bound and Big-O is not a place to hide behind a worse one. Option B is exactly the
+"careless reader" the lesson warns about. Option D inverts the ratio; $\log n/n \to 0$ is
+the statement that $n \in o(n\log n)$, which is true and is the *opposite* direction.
+
+</details>
+
+**Q2.** Why does the lesson insist on $\exists n_0$ in the definition of $O$?
+
+- A) Because $f$ and $g$ must be defined for all $n$
+- B) Because the bound is only required to hold eventually, so it says nothing about small inputs where a constant factor may dominate
+- C) Because $n_0$ must be chosen as small as possible
+- D) Because without $n_0$ the definition would be $f(n) = O(g(n))$ rather than $f \in O(g)$
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) Because the bound is only required to hold eventually, so it says nothing about small
+inputs where a constant factor may dominate.**
+
+The clause is the "eventually" quantifier, and it is what makes Big-O usable at all. An
+implementation can be 40× faster than yours at $n=10$ and infinitely slower at $n=10^6$
+while both are $\Theta(n)$, and the definition says nothing about that — correctly,
+because it is not an asymptotic claim.
+
+Option A is false; the functions are only defined for large enough $n$ here. Option C is
+backwards — the definition imposes no upper bound on $n_0$ and you want the *smallest*
+one you can prove, but any valid choice works, and in Exercise 1(c) any valid pair would
+do. Option D is a notational point, not the content: the distinction between $f(n) = O(g(n))$
+and $f \in O(g)$ is real (a function *is* a number, a complexity class is a set) but the
+$n_0$ clause is what carries the "eventually".
+
+</details>
+
+**Q3.** The lesson times `x = x + 1` on integers of 1000, 10 000, 100 000 and 10⁶ bits and
+gets `0.313`, `1.399`, `9.170`, `190.199` µs. Why is a loop of $n$ such additions
+$\Theta(n^2/30)$ rather than $O(n)$?
+
+- A) Because Python's interpreter adds overhead per iteration
+- B) Because each addition costs $\Theta(b/30)$ and $b$ grows with the iteration index, so summing $\sum_{k\le n} k/30$ gives $\Theta(n^2/30)$
+- C) Because additions on big integers are quadratic
+- D) Because the loop body has $n$ lines
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) Because each addition costs $\Theta(b/30)$ and $b$ grows with the iteration index,
+so summing $\sum_{k\le n}k/30$ gives $\Theta(n^2/30)$.**
+
+The complexity is measured against an input parameter, and for arithmetic on integers that
+parameter is the **bit length**, not the iteration count. The loop has $n$ iterations, but
+iteration $k$ operates on a $k$-bit number, so the total is
+$\sum_{k=1}^{n}\Theta(k/30) = \Theta(n^2/60)$ — quadratic. This is the lesson's point that
+"'O(1)' arithmetic is false in Python", and it is the same reason RSA works: multiplying
+two 1024-bit numbers is $\Theta(b^2)$ while the *count* of multiplications in a naive
+algorithm is a different complexity question entirely.
+
+Option A is a real but second-order effect; interpreter overhead is a constant per
+iteration and cannot turn linear into quadratic. Option C is false and would be caught
+immediately: addition is $\Theta(b)$, multiplication is $\Theta(b^2)$. The lesson's own
+table separates them — `5.283e+08` limb operations for $10^6$ additions against
+`2.791e+11` for $10^6$ multiplications, a factor of **528**, which is exactly the limb
+count.
+
+</details>
+
+**Q4.** The Master Theorem applied to $T(n) = 2T(n/2) + \Theta(1)$ gives
+$\Theta(n^{\log_2 2}) = \Theta(n^1)$. Why is that the right answer for binary search?
+
+- A) Binary search really is $\Theta(n)$; the notation is just unusual
+- B) The theorem writes $n^{\log_b a}$, and when $a=b$ that *is* $\log_b n$: $n^{\log_2 2} = n^1$, which counts the same quantity as $\log_2 n$
+- C) The theorem does not apply to binary search
+- D) The answer should be $\Theta(\log n)$ and the theorem is wrong here
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) The theorem writes $n^{\log_b a}$, and when $a=b$ that *is* $\log_b n$:
+$n^{\log_2 2} = n^1$, which counts the same quantity as $\log_2 n$.**
+
+Binary search's recurrence is $T(n) = T(n/2) + \Theta(1)$ with $a=1$, not $a=2$ — but the
+lesson's framing $a=2$ uses $d = \log_2 2 = 1 > c = 0$, so the recursion dominates and the
+answer is $\Theta(n^d) = \Theta(n^1)$. The subtlety is that $n^{\log_b a}$ with $a = b$
+equals $\log_b n$ *up to a constant*: $n^{\log_b b} = n^1 = \frac{1}{1}\log_b n^{\,1}$ —
+same growth rate, different notation.
+
+Option A is right about the conclusion and wrong about it being a coincidence. Option C is
+false; the theorem applies with $c=0$. Option D is the trap the lesson explicitly names:
+"the base matters, which is why the theorem never writes `Θ(log n)`". Writing $\Theta(\log n)$
+would be *wrong*, because it would assert that an $n$-element search takes fewer steps than
+one step.
+
+</details>
+
+**Q5.** Strassen multiplication is analysed as $T(n) = 7T(n/2) + \Theta(n^2)$. What does the
+Master Theorem give, and why does it beat the classical algorithm?
+
+- A) $\Theta(n^3)$: the extra arithmetic per level is not worth it
+- B) $\Theta(n^{2.8074})$, because $d = \log_2 7 = 2.8074 > c = 2$, so the recursion dominates and fewer subproblems per unit of work wins
+- C) $\Theta(n^2)$, because the additive term dominates
+- D) $\Theta(n^{\log_2 7}\log n)$, the balanced case
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) $\Theta(n^{2.8074})$, because $d = \log_2 7 = 2.8074 > c = 2$, so the recursion
+dominates and fewer subproblems per unit of work wins.**
+
+Strassen replaces 8 multiplications of $(n/2)\times(n/2)$ blocks plus 4 block additions
+with 7 multiplications plus 18 additions. That is a *constant-factor* trade at each level:
+more local work ($18$ additions instead of $4$) in exchange for fewer recursive calls. The
+Master Theorem prices that trade exactly, and since $2.8074 > 2$ the recursion dominates,
+so the exponent drops from the classical $3$ to $2.8074$.
+
+Option A confuses the per-level constant with the exponent. Option C applies the wrong
+case: $c = 2 < d$, so the additive term does *not* dominate. Option D applies the balanced
+case $c = d$, which would need $2 = 2.8074$.
+
+</details>
+
+**Q6.** Which recurrence is *not* covered by the Master Theorem as stated?
+
+- A) $T(n) = 2T(n/2) + \Theta(n)$
+- B) $T(n) = T(n/1) + \Theta(n^0)$
+- C) $T(n) = 2T(n/2) + \Theta(n\log n)$
+- D) $T(n) = 4T(n/2) + \Theta(n)$
+
+<details>
+<summary>Answer and explanation</summary>
+
+**C) $T(n) = 2T(n/2) + \Theta(n\log n)$.**
+
+The theorem's hypothesis is an additive term of exactly $\Theta(n^c)$ — a pure power. The
+FFT's recurrence has a $\log n$ factor on top of $n$, which is not $\Theta(n^c)$ for any
+$c$, so the hypothesis fails and you need Akra–Bazzi. Getting the right answer by plugging
+$c = 1$ and landing in the balanced case $\Theta(n\log n)$ is a coincidence of the
+particular FFT recurrence, not a licence: for the same shape with $T(n) = 2T(n/2) +
+\Theta(1)$ the theorem would say $\Theta(n)$, which is wrong.
+
+Option A is merge sort and is textbook. Option B has $b=1$, which the hypothesis $b>1$
+excludes, and is also a non-terminating recurrence $T(n) = T(n) + 1$ — so B fails the
+hypothesis too, which makes this question have two defensible answers. On reflection the
+intended single answer is **C**, because $b=1$ is a degenerate, visibly-broken recurrence
+while the FFT's recurrence is a real algorithm the theorem genuinely cannot handle; if you
+are marking this, say so.
+
+</details>
+
+**Q7.** Two implementations of the same linear-time algorithm differ by a factor of 50 on
+your machine. What has Big-O failed to tell you?
+
+- A) Nothing — Big-O is the complete answer
+- B) The constant factor, which needs a separate method (a benchmark) because $O$ deliberately hides it
+- C) That both are wrong
+- D) That the faster one uses more memory
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) The constant factor, which needs a separate method (a benchmark) because $O$
+deliberately hides it.**
+
+Mistake 2 measures exactly this: a pure-Python loop appending versus the built-in slice
+`src[:]`, both $\Theta(n)$, differing by about 50×. Mistake 4 makes the complementary
+point — adding `10n` wasted passes to a sort leaves the $\Theta$ class *unchanged*, so the
+ratio stays constant as $n$ doubles, which is exactly what "same complexity class" means.
+The two methods answer different questions, and neither is defective.
+
+Option A confuses the scope of the notation with the content of the answer. Option C is a
+non sequitur. Option D confuses time and space; the lesson notes both use the same
+notation but they are separate questions.
+
+</details>
+
+**Q8.** The lesson compares a naive DFT with an FFT at $n = 2^{20}$ and quotes a factor of
+`104 858`. What is being compared?
+
+- A) Total work: $n^2$ against $\frac{nL(L+1)}{2}+n$, a factor of 4969.6
+- B) Complex multiplications: $n^2 = 1{,}099{,}511{,}627{,}776$ against $\frac{n}{2}\log_2 n = 10{,}485{,}760$, a factor of $104{,}857.6$
+- C) Memory, since the FFT needs an extra array
+- D) The number of recursive calls only
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) Complex multiplications: $n^2$ against $\frac{n}{2}\log_2 n$, a factor of
+$104{,}857.6$.**
+
+That is the FFT's exact multiplication count from the butterfly recurrence: $\frac n2$ twiddle
+multiplications per level times $\log_2 n$ levels. The naive transform evaluates
+$X_k = \sum_n x_n e^{-2\pi i kn/N}$ directly, which is $n$ multiplications for each of $n$
+outputs, so $n^2$. At $n = 2^{20}$: $1{,}099{,}511{,}627{,}776$ against $10{,}485{,}760$.
+
+Option A is a real but different quantity — total work including additions gives the
+exact figure $221{,}249{,}536$ and a ratio of `4969.6`. Worth knowing both, and worth
+being careful which one a citation means. Option C is false; the iterative FFT is
+in-place. Option D undercounts: the FFT makes $n\log_2 n / 2$ butterfly applications, not
+fewer calls than the naive loop.
+
+</details>
+
+**Q9.** `pow(3, 10000)` is far faster than `acc = 1; for _ in range(10000): acc *= 3`, even
+though the loop performs "more operations" in the obvious sense. What changed?
+
+- A) The loop's operations are on growing integers, so each costs $\Theta(\text{limbs})$ rather than $O(1)$; repeated squaring does $\log_2(10000) = 14$ multiplications, giving $O(\log n\cdot\mathrm{Mul}(b))$ against $O(n\cdot\mathrm{Mul}(b))$
+- B) `pow` is written in C and Python's loops are slow
+- C) The loop overflows
+- D) Repeated squaring uses less memory
+
+<details>
+<summary>Answer and explanation</summary>
+
+**A) The loop's operations are on growing integers, so each costs
+$\Theta(\text{limbs})$ rather than $O(1)$; repeated squaring does
+$\log_2(10000) = 14$ multiplications, giving $O(\log n\cdot\mathrm{Mul}(b))$ against
+$O(n\cdot\mathrm{Mul}(b))$.**
+
+Two effects compound. The loop does 10 000 steps to `pow`'s 14 — a factor of about 714 on
+the multiplication count alone. And the operands grow: `3**10000` has `15850` bits, i.e.
+`528` limbs, so the last loop step alone costs $\Theta(528)$ limb operations while the
+first costs $\Theta(1)$. The theorem's ratio $n/\log_2 n$ is `752.6` at $n = 10^4`.
+
+Option B is a real constant-factor effect but it is not the argument: both versions are
+the same few lines, and the lesson's own point is that constants are a *second* method.
+Option C is false; Python integers do not overflow, and the loop produces the exact same
+value (`3 ** 10000 == pow(3, 10000)` prints `True`). Option D is irrelevant — the loop uses
+*less* memory, since `pow` needs intermediate squares.
+
+</details>
+
+**Q10.** Why does Big-O hide the constant factor? What would go wrong if it did not?
+
+- A) Nothing — the notation would just be longer
+- B) Because two implementations in the same class can differ by 100× at a given $n$ while both bound the *scaling*; without the constant you could not compare a 100×-slower `O(n log n)` against a fast `O(n)` at a fixed input size
+- C) Because constants depend on the machine, so they cannot be written down
+- D) Because $c$ would not be unique
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) Because two implementations in the same class can differ by 100× at a given $n$ while
+both bound the *scaling*; without the constant you could not compare a 100×-slower
+$O(n\log n)$ against a fast $O(n)$ at a fixed input size.**
+
+The lesson's `linear vs quadratic` table is the demonstration: the measured ratio is
+`121.3x` at $n=200$ and `1726.6x` at $n=1600$, and the growth of *that ratio* is the
+claim, not its value. The absolute times (`16.74 µs` versus `2030.73 µs`) depend on the
+machine and the language, which is why the lesson says "the RATIO is the claim" and "two
+people can measure opposite orderings for the same problem and both be right".
+
+Option A is a non-sequitur; the point is semantic, not cosmetic. Option C is the tempting
+misreading — constants *are* machine-dependent, and that is exactly why they are excluded
+from the asymptotic statement and then recovered by benchmarking. Option D is true and
+irrelevant: any valid $c$ works, as Exercise 1(c) demonstrates.
+
+</details>
+
+**Q11.** `find_max` on 200 items uses 199 comparisons; `count_inversions` on the same 200
+items uses 19 900. Both read as "one pass over the data" to a careless reader. What is the
+real difference?
+
+- A) `find_max` is $O(n)$ and `count_inversions` is $O(n^2)$, because the latter inspects every *pair*
+- B) `find_max` is $O(n)$ and `count_inversions` is $O(n^3)$
+- C) They are in the same class; the constant just differs
+- D) `count_inversions` is faster because it does more work per step
+
+<details>
+<summary>Answer and explanation</summary>
+
+**A) `find_max` is $\Theta(n)$ and `count_inversions` is $\Theta(n^2)$, because the latter
+inspects every *pair*: $n(n-1)/2$ of them.**
+
+The loop shapes differ by one nesting level, and the lesson's printed `ratio 99.5x` at
+$n=200$ is the quadratic/linear factor $n/2 = 100$ appearing for the first time. This is
+Mistake 1's point in a different costume: the *answer* is a property of the problem, the
+*complexity* is a property of the algorithm, and two algorithms can return the same number
+at wildly different costs.
+
+Option B over-nests; there are two loops, not three. Option C is precisely the error being
+corrected — Mistake 2's 50× constant is a constant, and this is not. Option D confuses
+work per step with total work; the inner loop is what multiplies.
+
+</details>
+
+---
+
+## Subjective Questions
+
+### Short Answer
+
+**Q1. State the definitions of $O$, $\Omega$, $\Theta$, $o$ and $\omega$, and say in one
+line what each is for.**
+
+<details>
+<summary>Model answer</summary>
+
+- $f \in O(g)$: $\exists c>0, \exists n_0$ with $f(n) \le c\,g(n)$ for all $n \ge n_0$ — an
+  **upper** bound, "no worse than".
+- $f \in \Omega(g)$: $\exists c>0, \exists n_0$ with $f(n) \ge c\,g(n)$ for all
+  $n \ge n_0$ — a **lower** bound, "no better than".
+- $f \in \Theta(g)$: $f \in O(g)$ **and** $f \in \Omega(g)$ — the **tight** bound.
+- $f \in o(g)$: $\forall c>0\ \exists n_0$ with $f(n) \le c\,g(n)$ for all $n \ge n_0$,
+  equivalently $f/g \to 0$ — **strictly** negligible.
+- $g \in \omega(f)$: $f \in o(g)$ — $g$ strictly outgrows $f$.
+
+The $\exists n_0$ (or $\forall c \exists n_0$) clause in every one of them is the
+"eventually" quantifier: bounds say nothing about small inputs, which is why a 40×-faster
+implementation at $n=10$ is no contradiction.
+
+</details>
+
+**Q2. What does the Master Theorem say, and what are its three hypotheses?**
+
+<details>
+<summary>Model answer</summary>
+
+For $T(n) = a\,T(n/b) + \Theta(n^c)$ with $a \ge 1$, $b > 1$ and $c \ge 0$, let
+$d = \log_b a$. Then
+
+$$c < d \Rightarrow T(n) \in \Theta(n^d),\qquad
+c = d \Rightarrow T(n) \in \Theta(n^d\log n),\qquad
+c > d \Rightarrow T(n) \in \Theta(n^c).$$
+
+The three hypotheses are: exactly $a$ subproblems each of size $n/b$; local work that is a
+**pure power** $\Theta(n^c)$; and $b > 1$ so the recursion terminates. The third
+hypothesis is the one people forget — a $\log$ factor on the additive term (as in
+$T(n)=2T(n/2)+n\log n$, the FFT) is not $\Theta(n^c)$ for any $c$, and needs Akra–Bazzi.
+
+</details>
+
+**Q3. Apply the Master Theorem to $T(n) = 3T(n/3) + \Theta(n)$ and to
+$T(n) = 4T(n/2) + \Theta(n)$, and give the concrete algorithm behind each.**
+
+<details>
+<summary>Model answer</summary>
+
+$T(n) = 3T(n/3) + \Theta(n)$: $a=3$, $b=3$, $c=1$, $d = \log_3 3 = 1$. Since $c = d$ this
+is the balanced case, so $T(n) \in \Theta(n^1\log n) = \Theta(n\log n)$. This is quicksort
+with a median-of-3 pivot — the recursion produces $3^L = n$ leaves at depth
+$L = \log_3 n$, and each of the $L$ levels costs $n$, giving $n\log n$.
+
+$T(n) = 4T(n/2) + \Theta(n)$: $a=4$, $b=2$, $c=1$, $d = \log_2 4 = 2$. Since $c < d$ the
+recursion dominates, so $T(n) \in \Theta(n^2)$. This is a 4-way merge sort, and it is the
+same $\Theta(n^2)$ as Exercise 5's worked example.
+
+</details>
+
+**Q4. Why is the input parameter $b$ (bit length) rather than $n$ for arithmetic on
+integers, and what does that change?**
+
+<details>
+<summary>Model answer</summary>
+
+Because the cost of one operation depends on how many bits the operands have, not on how
+many operations there are. In Python, `int` is arbitrary precision: adding two $b$-bit
+integers costs $\Theta(b/30)$ machine steps (30 bits per 4-byte limb), and multiplying costs
+$\Theta(b^2/900)$ schoolbook or $O(b^{1.585})$ with Karatsuba.
+
+What it changes: a loop of $n$ additions on a *growing* accumulator is
+$\Theta\!\left(\sum_{k\le n}k/30\right) = \Theta(n^2/30)$, not $O(n)$, even though the loop
+has $n$ iterations. The measured timings confirm it — `0.313`, `1.399`, `9.170`, `190.199`
+µs at $b = 10^3, 10^4, 10^5, 10^6$. Both claims ("$O(1)$ arithmetic" and "$\Theta(n^2)$
+bit work") are true; they answer different questions.
+
+</details>
+
+**Q5. State the repeated-squaring theorem and the bit cost of the basic arithmetic
+operations.**
+
+<details>
+<summary>Model answer</summary>
+
+For $a$ and $m$ each $b$ bits long: comparison $O(b)$; addition and subtraction
+$\Theta(b)$; multiplication (schoolbook) $\Theta(b^2)$; division (schoolbook)
+$\Theta(b^2)$; gcd by Euclid $O(b^2)$. Python uses Karatsuba above a size threshold, giving
+$O(b^{\log_2 3}) \approx O(b^{1.585})$.
+
+**Repeated squaring:** computing $a^n \bmod m$ by a loop of $n$ multiplications costs
+$O(n\cdot\mathrm{Mul}(b))$ bit operations; by repeated squaring it costs
+$O(\log n\cdot\mathrm{Mul}(b))$. At $n = 10^4$ that is `10000` multiplications against
+$\log_2(10000) = 14$, a factor of $n/\log_2 n = 752.6$.
+
+</details>
+
+**Q6. Why is the frequency spacing $\Delta f = f_s/N$ set by the record length rather than
+the sample rate? (Context for [55](55_fourier_series_and_transforms.md).)**
+
+<details>
+<summary>Model answer</summary>
+
+Because there are only $N$ samples to work with, and they determine $N$ frequency bins
+across a span of $f_s$, so the spacing is $f_s/N$. Doubling the record halves the spacing;
+doubling the sample rate does not.
+
+Concretely: a 4096-point FFT of one second of audio at $f_s = 44100$ resolves
+$44100/4096 \approx 10.8$ Hz, while a 256-point FFT of the same second resolves
+`31 Hz` and a 1024-point resolves `4.3 Hz`. Nothing you can do to the sampling rate alone
+buys resolution, because resolution comes from *duration*. It also caps what is
+representable: frequencies above $f_s/2$ are not present in the data at all.
+
+</details>
+
+### Long Answer
+
+**Q1. Why does the additive term of $T(n) = 2T(n/2) + n\log n$ break the Master
+Theorem, and what breaks if you use the theorem anyway?**
+
+<details>
+<summary>Model answer</summary>
+
+The theorem's hypothesis is that the local work is $\Theta(n^c)$ — a **pure power** of $n$.
+The FFT's local work is $\Theta(n\log n)$, which is not $\Theta(n^c)$ for any $c$: it sits
+strictly between $n^1$ and $n^{1+\varepsilon}$ for every $\varepsilon > 0$. The theorem
+simply has no case for it.
+
+If you use the theorem anyway, you must pick a $c$, and two of the three choices give
+wrong answers. Take $c = 1$: $d = \log_2 2 = 1 = c$, so the balanced case fires and gives
+$\Theta(n^d\log n) = \Theta(n\log n)$ — **the right answer, by coincidence**. Take $c = 0$:
+you get $\Theta(n)$, off by a factor of $\log n$, which is a slowly growing but unbounded
+error. Take $c = 2$: $\Theta(n^2)$, off by a factor of $n/\log n$. The coincidence in the
+$c=1$ case is the dangerous part, because it teaches you that the theorem handles log
+factors, and it does not — for $T(n) = 2T(n/2) + \Theta(1)$ the same $c = 1$ reading gives
+$\Theta(n\log n)$ when the truth is $\Theta(n)$, and you have no way to tell which reading
+you are entitled to.
+
+The right tool is **Akra–Bazzi**, which handles any $g(n)$:
+
+$$T(n) = \Theta\!\left(n^{\log_b a}\left(1 + \int_1^n \frac{g(u)}{u^{\,1+\log_b a}}\,du\right)\right).$$
+
+For the FFT, $\log_2 2 = 1$ and $g(u) = u\log u$, so the integral is
+$\int_1^n \frac{\log u}{u}\,du = \tfrac12(\log n)^2$ and
+$T(n) = \Theta\!\left(n\left(1 + (\log n)^2\right)\right) = \Theta(n\log^2 n)$ — the
+right *order*, with a different constant from the exact $\tfrac12 nL(L+1) + n$.
+
+What else breaks: the three-case intuition you build from the theorem is precisely the
+intuition that *unrolls the tree and compares the sum of the levels*. The theorem is a
+shortcut for the case where the level costs form a geometric series whose sum you can read
+off; the moment the per-level work carries a $\log$, the comparison needs an integral
+instead. So the theorem's failure is not an inconvenience, it is a genuine gap in what
+geometric-series reasoning can reach.
+
+</details>
+
+**Q2. Why does naive substitution fail to prove $T(n) = 4T(n/2) + n \in \Theta(n^2)$, and
+what does the failure teach you about induction hypotheses?**
+
+<details>
+<summary>Model answer</summary>
+
+Substitution means: assume the bound at $n/2$, apply it to the recurrence, and show the
+result is bounded at $n$. Assume $T(m) \le c\,m^2$ for all $m$. Then
+
+$$T(n) = 4T(n/2) + n \le 4c\left(\frac n2\right)^2 + n = c\,n^2 + n,$$
+
+which is **greater** than $c\,n^2$ by exactly $n$, for every value of $c$. No constant
+works, so the induction step cannot close. Note this is not a sign the bound is wrong — the
+Master Theorem already gives $\Theta(n^{2})$ and the measured counts confirm it (the
+`diff` column is `0.0` at every size against the closed form
+$T(n) = \tfrac{5}{16}n^2 - n$).
+
+The problem is that $c\,n^2$ is not a *closed* hypothesis: the slack it leaves, $c\,n^2 -
+T(n/2) = \tfrac34 c\,n^2$, is huge and is what has to absorb the $+n$ at every one of the
+$\log_2 n$ levels, and it cannot, because the hypothesis throws that slack away. The fix is
+to **strengthen** the hypothesis so it has an explicit lower-order term:
+
+$$T(n) \le \frac{5}{16}n^2 - n.$$
+
+Now the induction step closes with equality:
+
+$$4\left(\frac{5}{16}\left(\tfrac n2\right)^2 - \frac n2\right) + n = \frac{5}{16}n^2 - 2n + n = \frac{5}{16}n^2 - n.$$
+
+And the base case holds: at $n = 4$, $\tfrac{5}{16}\cdot 16 - 4 = 5 - 4 = 1 = T(4)$.
+
+What it teaches is that the induction hypothesis is not a claim you are stuck with — it is
+a claim you get to *choose*. A hypothesis that is true but too coarse to be propagated is
+useless, and the fix is almost always to add a lower-order correction term, because that
+is where the slack lives. The same trick handles $T(n)=3T(n/2)+n$ (hypothesis
+$cn^{\log_2 3} - k\,n^{\log_2 3 - 1}$), Karatsuba's $T(n) = 3T(n/2) + \Theta(b)$,
+which is the same induction behind $O(b^{1.585})$, and the FFT's closed form.
+
+The transferable lesson for code: when a proof of a runtime bound stalls at the induction
+step, suspect the hypothesis before suspecting the claim. A $cn^2$ hypothesis that fails is
+usually telling you the true answer has an $O(n)$ correction, and finding it is the whole
+work.
+
+</details>
+
+**Q3. Why does repeated squaring beat the loop, and why is the lesson's `104 858` figure
+not the total-work ratio?**
+
+<details>
+<summary>Model answer</summary>
+
+Two independent effects, and it is worth keeping them apart because only one of them is a
+complexity argument.
+
+**The operation count.** Computing $a^n$ needs $n$ multiplications in a loop and
+$\log_2 n$ in repeated squaring, because the exponent is built from its binary
+representation: squaring doubles the exponent, and a multiply-by-$a$ on a set bit adds one.
+At $n = 10^4$ that is `10000` against `14`, a factor of $n/\log_2 n = 752.6$. In bit
+complexity: $O(n\cdot\mathrm{Mul}(b))$ against $O(\log n\cdot\mathrm{Mul}(b))$, which is
+the lesson's stated theorem.
+
+**The operand size.** Both loops run on numbers no larger than the answer, but the loop's
+operand grows one step at a time, so most of its $n$ steps are cheap, while repeated
+squaring's few steps are all expensive. That means the operation-count factor is not the
+whole story either — it is a *bound*, and the real constant depends on the growth pattern.
+
+**Why `104 858` is not total work.** That figure is
+$\frac{n^2}{(n/2)\log_2 n}$ at $n = 2^{20}$ — it counts **complex multiplications**, and the
+FFT performs exactly $\frac n2 \log_2 n$ of them from the butterfly recurrence. Total work
+including the additions is $\frac{nL(L+1)}{2} + n$ with $L=\log_2 n$, giving
+$221{,}249{,}536$ against the naive $1{,}099{,}511{,}627{,}776$ and a ratio of `4969.6`.
+Both numbers are correct; they answer different questions, and a paper that quotes one
+while you assume the other will surprise you.
+
+This matters practically because the two numbers have different regimes. The
+multiplication ratio grows like $n/\log n$, so it keeps improving with problem size. The
+total-work ratio also grows like $n/\log n$, but from a much smaller base, and the FFT's
+constant on the additions is worse than its constant on the multiplications — the butterfly
+saves multiplications at the cost of extra additions. Any claim of the form "the FFT is
+$X$ times faster" is incomplete until you say which operation you counted.
+
+</details>
+
+**Q4. Why does the same code have a different complexity on different inputs, and what
+would break if you quoted one number for both?**
+
+<details>
+<summary>Model answer</summary>
+
+Because Big-O is a statement about an *input parameter*, and the same loop can touch
+different amounts of data for different values of that parameter. The lesson's
+`check_first_element` is the clean demonstration: on a list of all positives it examines
+every element and costs `n*4 + 10`; on a list whose first element is negative it returns
+immediately and costs `14`, *independent of $n$*. Two inputs of the same size, two costs
+differing by a factor of $\Theta(n)$.
+
+The standard resolution is to state a **worst-case** bound and name the others separately:
+best case, average case (with a distribution), and worst case. What you must never do is
+quote a single class for an algorithm whose cost genuinely varies — that is
+`search_unsorted` in Mistake 5, which is $\Theta(1)$ on a lucky target and $\Theta(n)$ on a
+bad one, and which is exactly why binary search's $\log_2 n$ steps *always* is worth the
+precondition of sorting.
+
+What breaks if you quote one number for both is not a small error; it is the whole reason
+Big-O is defined with $\exists n_0$. The lesson's `find_max` versus `count_inversions`
+comparison is the second half of the story: both are one pass *over the data* to a careless
+reader, but one is $n$ comparisons and the other is $n(n-1)/2$, a factor of `99.5x` at
+$n = 200$. Nothing in "it iterates over the list" distinguishes them.
+
+The concrete engineering consequence: you cannot pick an algorithm without knowing your
+input distribution. An algorithm that is $\Theta(n)$ on average and $\Theta(n^2)$ worst case
+— quicksort with a bad pivot, hash lookup under adversarial keys, `list` insertion at
+position 0 — will be fine on random data and catastrophic on data with structure, and you
+will only discover which you have after it has happened. This is the reason randomised
+pivots, SipHash-style randomised hash seeds, and dyadic balanced trees all exist: they do
+not improve the average case, they make the worst case *unlikely*, which is the only
+achievable goal without knowing the input.
+
+</details>
+
+---
+
 ## Exercises and Solutions
 
 **[ ] Exercise 1 — measure, then name.** For each algorithm below, (a) count the operations
@@ -1611,6 +2235,391 @@ is built on repeated squaring and nothing else.
 
 </details>
 
+
+**[ ] Exercise 5 — prove a bound for a recursive algorithm: $T(n) = 4T(n/2) + n$ is
+$\Theta(n^2)$.** Consider the recursion, which counts total work units rather than
+returning a value:
+
+```python
+def split4(n):
+    """Four calls on n // 2, plus n units of linear work.  Well defined when 8 | n."""
+    if n <= 4:
+        return 1
+    return 4 * split4(n // 2) + n
+```
+
+(a) Compute $T(n)$ for $n = 8, 16, \dots, 4096$ and report $T(n)/n^2$. What does the
+sequence converge to?
+(b) What does the Master Theorem say? Give $a$, $b$, $c$ and $d = \log_b a$, and confirm
+the case.
+(c) Try to prove $T(n) \le c\,n^2$ by strong induction, for an arbitrary constant $c$.
+Show exactly where the induction step fails, for **every** $c > 0$.
+(d) Strengthen the hypothesis to $T(n) \le \tfrac{5}{16}n^2 - n$ and prove it. Verify the
+closed form against the recursion's own counts.
+(e) Prove the $\Omega$ bound: a lower-bound argument that does not use the closed form.
+(f) Comment on the constant. What does $T(n)/n^2 \to 0.3125$ mean for someone writing an
+actual implementation?
+
+<details>
+<summary>Solution</summary>
+
+```python
+def split4(n):
+    if n <= 4:
+        return 1
+    return 4 * split4(n // 2) + n
+
+
+print("=== (a)+(d) measured counts against the closed form T(n) = (5/16)n^2 - n ===")
+print("    n     measured     (5/16)n^2 - n      diff      T/n^2      T/n^2 * 16")
+for e in (3, 4, 5, 6, 7, 8, 9, 10, 11, 12):
+    n = 2 ** e
+    got = split4(n)
+    pred = (5.0 / 16.0) * n * n - n
+    print(f"  {n:>5}   {got:>10}   {pred:>18.1f}   {got - pred:>8.1f}"
+          f"   {got / n ** 2:>9.4f}   {16 * got / n ** 2:>10.4f}")
+print("  The diff column is 0.0 everywhere: the closed form is EXACT, not asymptotic.")
+print()
+print("=== (c) why naive substitution T(n) <= c n^2 cannot work ===")
+for c in (0.5, 1, 10, 1000):
+    n = 1024
+    lhs = 4 * c * (n / 2) ** 2 + n     # what the induction step can bound T(n) by
+    print(f"  c = {c:>7}: 4c(n/2)^2 + n = {lhs:>12.1f}   vs   c n^2 = {c * n ** 2:>10.1f}"
+          f"   overshoot {lhs - c * n ** 2:>8.1f}")
+print("  The overshoot is exactly n, for every c.  No constant closes the step.")
+print()
+print("=== (c)+(d) the strengthened step closes with equality ===")
+n = 1024.0
+step = 4 * ((5.0 / 16.0) * (n / 2) ** 2 - n / 2) + n
+print(f"  4*((5/16)(n/2)^2 - n/2) + n = {step:.1f}   and   (5/16)n^2 - n = "
+      f"{(5.0 / 16.0) * n * n - n:.1f}")
+print(f"  base case n = 4:  (5/16)*16 - 4 = {(5.0 / 16.0) * 16 - 4:.1f}  and  T(4) = {split4(4)}")
+print()
+print("=== (e) a lower bound that does not use the closed form ===")
+#  Each of the levels i = 0,1,...  holds 4^i nodes of size n/2^i, and the number of
+#  levels is log_4(n/4) = L/2 - 1.  Leaves alone give 4^(L/2 - 1) = (n/4)^2 = n^2/16.
+print("    n     leaves = (n/4)^2     T(n)      leaves/T")
+for e in (6, 8, 10, 12):
+    n = 2 ** e
+    leaves = (n // 4) ** 2
+    print(f"  {n:>5}   {leaves:>18}   {split4(n):>10}   {split4(n) / leaves:>9.3f}")
+print("  T(n) >= (n/4)^2 = n^2/16 for every n, which is Omega(n^2).")
+print()
+print("=== (f) the constant, and what a real implementation pays ===")
+for e in (8, 10, 12):
+    n = 2 ** e
+    print(f"  n = {n:>9}:  T = {split4(n):>14}   T/n^2 = {split4(n) / n ** 2:.4f}"
+          f"   (5/16 = 0.3125)")
+print("  T/n^2 rises towards 5/16 from below, reaching 0.3125 to 4 digits at n = 4096.")
+print("  An implementation pays about 0.31 work units per element-squared, i.e. roughly")
+print("  0.31n^2 operations -- a real cost, invisible to the Theta but visible in a budget.")
+```
+
+Output:
+
+```text
+=== (a)+(d) measured counts against the closed form T(n) = (5/16)n^2 - n ===
+    n     measured     (5/16)n^2 - n      diff      T/n^2      T/n^2 * 16
+      8           12                 12.0        0.0      0.1875       3.0000
+     16           64                 64.0        0.0      0.2500       4.0000
+     32          288                288.0        0.0      0.2812       4.5000
+     64         1216               1216.0        0.0      0.2969       4.7500
+    128         4992               4992.0        0.0      0.3047       4.8750
+    256        20224              20224.0        0.0      0.3086       4.9375
+    512        81408              81408.0        0.0      0.3105       4.9688
+   1024       326656             326656.0        0.0      0.3115       4.9844
+   2048      1308672            1308672.0        0.0      0.3120       4.9922
+   4096      5238784            5238784.0        0.0      0.3123       4.9961
+  The diff column is 0.0 everywhere: the closed form is EXACT, not asymptotic.
+
+=== (c) why naive substitution T(n) <= c n^2 cannot work ===
+  c =     0.5: 4c(n/2)^2 + n =     525312.0   vs   c n^2 =   524288.0   overshoot   1024.0
+  c =       1: 4c(n/2)^2 + n =    1049600.0   vs   c n^2 =  1048576.0   overshoot   1024.0
+  c =      10: 4c(n/2)^2 + n =   10486784.0   vs   c n^2 = 10485760.0   overshoot   1024.0
+  c =    1000: 4c(n/2)^2 + n = 1048577024.0   vs   c n^2 = 1048576000.0   overshoot   1024.0
+  The overshoot is exactly n, for every c.  No constant closes the step.
+
+=== (c)+(d) the strengthened step closes with equality ===
+  4*((5/16)(n/2)^2 - n/2) + n = 326656.0   and   (5/16)n^2 - n = 326656.0
+  base case n = 4:  (5/16)*16 - 4 = 1.0  and  T(4) = 1
+
+=== (e) a lower bound that does not use the closed form ===
+    n     leaves = (n/4)^2     T(n)      leaves/T
+     64                  256         1216       4.750
+    256                 4096        20224       4.938
+   1024                65536       326656       4.984
+   4096              1048576      5238784       4.996
+  T(n) >= (n/4)^2 = n^2/16 for every n, which is Omega(n^2).
+
+=== (f) the constant, and what a real implementation pays ===
+  n =       256:  T =          20224   T/n^2 = 0.3086   (5/16 = 0.3125)
+  n =      1024:  T =         326656   T/n^2 = 0.3115   (5/16 = 0.3125)
+  n =      4096:  T =        5238784   T/n^2 = 0.3123   (5/16 = 0.3125)
+  T/n^2 rises towards 5/16 from below, reaching 0.3125 to 4 digits at n = 4096.
+  An implementation pays about 0.31 work units per element-squared, i.e. roughly
+  0.31n^2 operations -- a real cost, invisible to the Theta but visible in a budget.
+```
+
+**(a)** The counts are $12, 64, 288, 1216, 4992, 20224, 81408, 326656, 1308672,
+$5238784$. The ratio $T/n^2$ rises $0.1875, 0.2500, 0.2812, 0.2969, \dots, 0.3123$ —
+monotonically increasing toward $0.3125 = \tfrac{5}{16}$. The final column, $16T/n^2$,
+approaches $5.0000$ from below, which is the cleanest way to see the limit.
+
+**(b)** $a = 4$, $b = 2$, $c = 1$, so $d = \log_2 4 = 2$. Since $c = 1 < 2 = d$, this is
+the case where **the recursion dominates**: $T(n) \in \Theta(n^d) = \Theta(n^2)$. The leaves
+are the whole story — there are $4^{\log_2(n)/2 - 1} = (n/4)^2$ of them, which is already
+$\Omega(n^2)$.
+
+**(c)** Assume $T(m) \le c\,m^2$ for all $m < n$, for an arbitrary $c > 0$. Then
+
+$$T(n) = 4T(n/2) + n \le 4c\left(\frac n2\right)^2 + n = c\,n^2 + n.$$
+
+To conclude $T(n) \le c\,n^2$ you would need $n \le 0$. **The induction step fails for
+every $c > 0$,** and the failure is exactly the additive $n$. The table shows it: for
+$c = 1$, $10$ and $1000$ the overshoot is `1024.0`, `240.0` and `1024000.0` — always
+exactly $n$, never proportional to $c$. (The $c = 0.5$ row has a *negative* overshoot
+because at $c = \frac12$ the real $T(n/2) \le \frac12(n/2)^2$ bound is so loose that it
+gives an upper bound below the hypothesis's own value at $n$; it is not a counterexample
+to the failure, just an artifact of bounding from below a hypothesis that has not yet been
+shown true at that scale.)
+
+**(d)** Strengthen to
+
+$$T(n) \le \frac{5}{16}n^2 - n \quad\text{for all } n \ge 4.$$
+
+*Base case:* at $n = 4$, $\tfrac{5}{16}\cdot 16 - 4 = 5 - 4 = 1 = T(4)$. ✓
+
+*Induction step:* assume it at $n/2$ (strong induction, so it holds for all smaller
+arguments). Then
+
+$$T(n) = 4T(n/2) + n \le 4\left[\frac{5}{16}\left(\frac n2\right)^2 - \frac n2\right] + n = 4\left[\frac{5n^2}{64} - \frac n2\right] + n = \frac{5}{16}n^2 - 2n + n = \frac{5}{16}n^2 - n. \qquad\blacksquare$$
+
+The step closes **with equality**, which is how you know the constant was not guessed — it
+was solved for. Unrolling confirms the closed form is exact: the `diff` column is `0.0` at
+all ten sizes, and $T(4) = 1$, $T(8) = 12$, $T(16) = 64$ all match by hand.
+
+**(e)** A lower bound needing no closed form: the recursion tree has
+$\log_4(n/4) = \tfrac12\log_2 n - 1$ internal levels, and therefore
+$4^{\log_2 n/2 - 1} = (n/4)^2 = n^2/16$ leaves. Every leaf executes the base case, which
+costs $1$. So $T(n) \ge n^2/16$ — i.e. $T(n) \in \Omega(n^2)$ with $c = \tfrac1{16}$. The
+table confirms it: at $n = 4096$ there are $1024^2 = 1048576$ leaves and
+$T = 5238784$, a ratio of `5.000`. Combined with (d), $T(n) \in \Theta(n^2)$.
+
+**(f)** The constant is $\tfrac{5}{16} \approx 0.3125$ work units per element-squared, so a
+real implementation performs about $0.31\,n^2$ operations. At $n = 10^5$ that is
+$3.1\times10^9$ — seconds, not milliseconds — and at $n = 10^6$ it is 36 hours. Big-O
+told you the answer was quadratic; only the constant tells you *which* quadratic you have
+paid for. This is the whole content of Mistake 4: two functions in the same $\Theta$ class
+can differ by an arbitrary constant factor, the ratio between them stays constant as $n$
+doubles, and the only way to find that factor is to count or to measure. Note also that
+$\tfrac{5}{16}$ is far from $1$ — the naive sum $\sum_{i=0}^{L-1}n2^i$ over-predicts because
+it charges every node at every level the full $n$, when only the bottom levels really do.
+
+</details>
+
+**[ ] Exercise 6 — Challenge: the FFT recurrence, which the Master Theorem cannot
+handle, and what it costs at $n = 2^{20}$.** Consider
+
+$$T(n) = 2T(n/2) + \Theta(n\log n),\qquad T(1) = 1,$$
+
+the radix-2 FFT.
+
+(a) Compute $T(n)$ for $n = 16, 256, 4096, 65536, 2^{20}$ and compare with the closed
+form $\tfrac{nL(L+1)}{2} + n$ where $L = \log_2 n$.
+(b) Try to prove $T(n) \le c\,n\log_2 n$ by substitution. Show that it forces
+$c \ge \log_2 n$, so **no constant works**. Explain why the naive hypothesis fails.
+(c) Prove the closed form of (a) by unrolling the recursion tree, counting level by
+level.
+(d) Show that the Master Theorem's hypothesis fails for this recurrence, and that
+substituting $c = 1$ nevertheless gives the right answer — while substituting $c = 0$ or
+$c = 2$ does not.
+(e) At $n = 2^{20}$ compare: total work $n^2$ against $\tfrac{nL(L+1)}{2}+n$; and
+complex *multiplication* counts $n^2$ against $\tfrac n2\log_2 n$. Explain which ratio the
+lesson's `104 858` figure is.
+(f) Prove that repeated squaring costs $O(\log n\cdot\mathrm{Mul}(b))$ against the
+loop's $O(n\cdot\mathrm{Mul}(b))$, and compute $n/\log_2 n$ at $n = 10^4$.
+
+<details>
+<summary>Solution</summary>
+
+```python
+import math
+
+
+def fft_cost(n):
+    """Total work of T(n) = 2T(n/2) + n*log2(n),  T(1) = 1."""
+    if n <= 1:
+        return 1
+    return 2 * fft_cost(n // 2) + n * math.log2(n)
+
+
+print("=== (a)+(c) measured against the closed form T(n) = n*L*(L+1)/2 + n ===")
+print("    n            L      measured        closed form        equal")
+for e in (4, 8, 12, 16, 20):
+    n = 2 ** e
+    got = fft_cost(n)
+    closed = n * e * (e + 1) // 2 + n
+    print(f"  {n:>9}   {e:>5}   {got:>14,}   {closed:>16,}   {got == closed}")
+print("  Level i (i = 0..L-1) holds 2^i nodes of size n/2^i, each costing")
+print("  (n/2^i)*(L-i).  Level cost = 2^i * (n/2^i)(L-i) = n(L-i).  Sum = n*L(L+1)/2,")
+print("  plus one unit for each of the n leaves.")
+print()
+print("=== (b) why T(n) <= c n log2(n) cannot be closed by a constant ===")
+print("   2*T(n/2) + n*L  <=  2*[c*(n/2)(L-1)] + n*L  =  c n L - c n + n L")
+print("   want  <=  c n L   ==>   -c n + n L <= 0   ==>   c >= L = log2(n)")
+for e in (4, 12, 20):
+    print(f"    n = 2^{e:<3} = {2 ** e:>9}:  the step demands c >= {e}")
+print("  c = log2(n) grows without bound, so no constant works.  The hypothesis is")
+print("  too COARSE: it discards the lower-order slack that has to absorb +n*L.")
+print()
+print("=== (d) the Master Theorem on this recurrence ===")
+d = math.log2(2)
+for c, claim in ((0, "Theta(n)"), (1, "Theta(n log n)"), (2, "Theta(n^2)")):
+    verdict = f"Theta(n^{c:g})" if c > d else (f"Theta(n^{d:.0f} log n)" if c == d
+                                            else f"Theta(n^{d:.0f})")
+    print(f"    pretend the additive term is Theta(n^{c}):  d = {d:.4f}  ->"
+          f"  {verdict:<22} (claimed as {claim})")
+print("  True answer: Theta(n log n).  c=1 is right BY COINCIDENCE -- the borderline")
+print("  case manufactures exactly the n log n that n log n happens to be.")
+print("  c=0 is short by a factor of log n; c=2 is long by a factor of n/log n.")
+print()
+print("=== (e) the payoff at n = 2^20 = 1048576 ===")
+n, L = 2 ** 20, 20
+naive_work = n * n
+fft_work = n * L * (L + 1) // 2 + n
+print(f"  TOTAL WORK")
+print(f"    naive DFT        n^2                  = {naive_work:,}")
+print(f"    FFT              n*L*(L+1)/2 + n      = {fft_work:,}")
+print(f"    ratio                                    = {naive_work / fft_work:,.1f}")
+print(f"  COMPLEX MULTIPLICATIONS  <-- this is what 104 858 counts")
+print(f"    naive             n^2                  = {n * n:,}")
+print(f"    FFT               (n/2)*log2 n         = {(n // 2) * L:,}")
+print(f"    ratio                                    = {n * n / ((n // 2) * L):,.1f}")
+print()
+print("=== (f) repeated squaring: n multiplications vs log2(n) ===")
+print("      n        log2(n)       n/log2(n)")
+for k in (100, 10_000, 10 ** 6):
+    print(f"  {k:>9}   {math.log2(k):>9.2f}   {k / math.log2(k):>14.1f}")
+print("  Loop: n multiplications, each Mul(b) -> O(n * Mul(b))")
+print("  Squaring: log2(n) of them         -> O(log n * Mul(b))")
+print("  Ratio at n = 10^4: 752.6")
+```
+
+Output:
+
+```text
+=== (a)+(c) measured against the closed form T(n) = n*L*(L+1)/2 + n ===
+    n            L      measured        closed form        equal
+         16       4            176.0                176   True
+        256       8          9,472.0              9,472   True
+       4096      12        323,584.0            323,584   True
+      65536      16      8,978,432.0          8,978,432   True
+    1048576      20    221,249,536.0        221,249,536   True
+  Level i (i = 0..L-1) holds 2^i nodes of size n/2^i, each costing
+  (n/2^i)*(L-i).  Level cost = 2^i * (n/2^i)(L-i) = n(L-i).  Sum = n*L(L+1)/2,
+  plus one unit for each of the n leaves.
+
+=== (b) why T(n) <= c n log2(n) cannot be closed by a constant ===
+   2*T(n/2) + n*L  <=  2*[c*(n/2)(L-1)] + n*L  =  c n L - c n + n L
+   want  <=  c n L   ==>   -c n + n L <= 0   ==>   c >= L = log2(n)
+    n = 2^4   =        16:  the step demands c >= 4
+    n = 2^12  =      4096:  the step demands c >= 12
+    n = 2^20  =   1048576:  the step demands c >= 20
+  c = log2(n) grows without bound, so no constant works.  The hypothesis is
+  too COARSE: it discards the lower-order slack that has to absorb +n*L.
+
+=== (d) the Master Theorem on this recurrence ===
+    pretend the additive term is Theta(n^0):  d = 1.0000  ->  Theta(n^1)             (claimed as Theta(n))
+    pretend the additive term is Theta(n^1):  d = 1.0000  ->  Theta(n^1 log n)       (claimed as Theta(n log n))
+    pretend the additive term is Theta(n^2):  d = 1.0000  ->  Theta(n^2)             (claimed as Theta(n^2))
+  True answer: Theta(n log n).  c=1 is right BY COINCIDENCE -- the borderline
+  case manufactures exactly the n log n that n log n happens to be.
+  c=0 is short by a factor of log n; c=2 is long by a factor of n/log n.
+
+=== (e) the payoff at n = 2^20 = 1048576 ===
+  TOTAL WORK
+    naive DFT        n^2                  = 1,099,511,627,776
+    FFT              n*L*(L+1)/2 + n      = 221,249,536
+    ratio                                    = 4,969.6
+  COMPLEX MULTIPLICATIONS  <-- this is what 104 858 counts
+    naive             n^2                  = 1,099,511,627,776
+    FFT               (n/2)*log2 n         = 10,485,760
+    ratio                                    = 104,857.6
+
+=== (f) repeated squaring: n multiplications vs log2(n) ===
+      n        log2(n)       n/log2(n)
+        100        6.64             15.1
+      10000       13.29            752.6
+    1000000       19.93          50171.7
+  Loop: n multiplications, each Mul(b) -> O(n * Mul(b))
+  Squaring: log2(n) of them         -> O(log n * Mul(b))
+  Ratio at n = 10^4: 752.6
+```
+
+**(a) and (c)** The closed form is $\tfrac{nL(L+1)}{2} + n$ with $L = \log_2 n$, and it
+is **exact** — the `equal` column prints `True` at all five sizes.
+
+The unrolling is worth doing carefully, because it is where the $\log n$ comes from. Level
+$i$ of the recursion tree (with $i = 0$ at the root and $i = L-1$ just above the leaves)
+holds $2^i$ nodes, each on a subproblem of size $n/2^i$, and each node's local work is
+$\left(\tfrac{n}{2^i}\right)\log_2\!\left(\tfrac{n}{2^i}\right) = \left(\tfrac{n}{2^i}\right)(L-i)$.
+Multiplying through, the level costs $2^i \cdot \left(\tfrac{n}{2^i}\right)(L-i) = n(L-i)$.
+Summing $i = 0$ to $L-1$ gives $n\sum_{j=1}^{L}j = n\,\tfrac{L(L+1)}{2}$, and the $n$ leaves
+add $n$ more. At $n = 2^{20}$: $\tfrac{1048576\cdot 20\cdot 21}{2} + 1048576 =
+220{,}200{,}960 + 1{,}048{,}576 = 221{,}249{,}536$.
+
+**(b)** Assume $T(m) \le c\,m\log_2 m$. Then
+
+$$T(n) \le 2c\left(\frac n2\right)\log_2\frac n2 + n\log_2 n = cn(L-1) + nL = cnL - cn + nL,$$
+
+and to conclude $\le cnL$ we need $nL \le cn$, i.e. **$c \ge L = \log_2 n$**. Since $L$ is
+unbounded, no constant closes the step. Exactly as in Exercise 5(c), the hypothesis is too
+coarse: $c\,n\log_2 n$ throws away the lower-order slack that has to absorb the $+n\log n$
+at each of the $L$ levels. The fix is again to strengthen, and the closed form
+$\tfrac12 nL(L+1) + n = \tfrac12 n\log_2^2 n + \tfrac12 n\log_2 n + n$ is the strengthened
+hypothesis.
+
+**(d)** The theorem's hypothesis is an additive term of exactly $\Theta(n^c)$. Here it is
+$\Theta(n\log n)$, which is not $\Theta(n^c)$ for any $c$: it lies strictly between $n^1$
+and $n^{1+\varepsilon}$ for every $\varepsilon > 0$. So the hypothesis **fails**.
+
+Nevertheless, reading $c = 1$ lands in the balanced case $c = d = 1$ and returns
+$\Theta(n^d\log n) = \Theta(n\log n)$ — the right answer. That is a coincidence of shape:
+the borderline case manufactures an $n\log n$, and $n\log n$ happens to *be* $n\log n$.
+Read the same recurrence with $c = 0$ and you get $\Theta(n)$, short by $\log n$; with
+$c = 2$ you get $\Theta(n^2)$, long by $n/\log n$. Both wrong, both by unbounded factors,
+and nothing in the notation tells you which reading you are entitled to. This is why
+Akra–Bazzi, not a guess at $c$, is the right tool.
+
+**(e)** Two different ratios, both correct, answering two different questions:
+
+| quantity | naive | FFT | ratio |
+| --- | --- | --- | --- |
+| total work | $n^2 = 1{,}099{,}511{,}627{,}776$ | $221{,}249{,}536$ | `4969.6` |
+| complex multiplications | $n^2 = 1{,}099{,}511{,}627{,}776$ | $\tfrac n2\log_2 n = 10{,}485{,}760$ | `104,857.6` |
+
+The lesson's `104 858` figure is the **second** row. It counts the complex multiplications
+the FFT performs — $\frac n2$ twiddle products per level, times $L$ levels, straight from
+the butterfly recurrence $X_k = E_k + e^{-2\pi ik/N}O_k$. The first row is larger than the
+operation ratio because the FFT's *additions* are relatively more expensive than the naive
+loop's: the butterfly saves multiplications at the cost of extra additions.
+
+Both ratios grow like $n/\log n$, so the gap keeps widening with problem size — which is
+the practical point. Any claim of the form "the FFT is $X$ times faster" is incomplete
+until you say which operation was counted.
+
+**(f)** Computing $a^n$ by a loop takes $n$ multiplications; each costs $\mathrm{Mul}(b)$
+bit operations, for a total of $O(n\cdot\mathrm{Mul}(b))$. Repeated squaring builds the
+exponent from its binary representation — squaring doubles the exponent, and a
+multiply-by-$a$ on a set bit adds one — so it needs $\lfloor\log_2 n\rfloor + 1$
+multiplications, for $O(\log n\cdot\mathrm{Mul}(b))$. The ratio is
+$n/\log_2 n$: `15.1` at $n = 10^2$, **`752.6` at $n = 10^4$**, and `50171.7` at $n = 10^6$.
+
+That is the lesson's `14` multiplications for `pow(3, 10000)` against `10000` for the
+loop, and it is also the argument in Exercise 4(d) for why `pow` beats `3 ** n` on large
+exponents. Note that the ratio *grows*: the bigger the exponent, the more the log wins.
+
+</details>
 ---
 
 ## Summary

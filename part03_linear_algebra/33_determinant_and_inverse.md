@@ -1,6 +1,6 @@
-# 33 â€” Determinant and Inverse
+# 33 — Determinant and Inverse
 
-**Part**: part03_linear_algebra Â· **Prerequisites**: 32 Â· **Time**: 35 min
+**Part**: part03_linear_algebra · **Prerequisites**: 32 · **Time**: 35 min
 
 ---
 
@@ -9,7 +9,7 @@
 Every square grid of numbers has one extra number attached to it, computed from
 all its entries, and that single number decides whether the grid can be undone.
 If the number is not zero, there is exactly one grid that undoes it. If the
-number is zero, no grid undoes it â€” the information has been lost, and it is
+number is zero, no grid undoes it — the information has been lost, and it is
 lost in a structural, identifiable way rather than a numerical accident.
 
 The number also means something geometric, and that meaning is why it is worth
@@ -20,7 +20,7 @@ whether the shape ended up the same way round or reversed.
 
 The reason programmers meet this constant is efficiency and honesty. One number
 tells you whether a system has an answer, and computing it by row reduction costs
-the same cubic time as solving the system itself â€” so it is a diagnostic, not a
+the same cubic time as solving the system itself — so it is a diagnostic, not a
 speedup. The famous closed-form formulas for the inverse are beautiful and
 almost never what you should run.
 
@@ -29,49 +29,49 @@ almost never what you should run.
 - **Singularity detection, everywhere.** `numpy.linalg.solve` raises
   `LinAlgError: Singular matrix` when LU elimination cannot find a pivot. That
   is `det(A) = 0` discovered computationally rather than symbolically. Every
-  time a regression design matrix turns out to be rank-deficient â€” collinear
-  features, a duplicated column, more features than rows â€” this is the fact that
+  time a regression design matrix turns out to be rank-deficient — collinear
+  features, a duplicated column, more features than rows — this is the fact that
   fires.
 - **`numpy.linalg.slogdet`.** Underflow in `det` gives false zeros on large
   sparse matrices, which is common in graph and probabilistic work. `slogdet`
   returns `(sign, log|det|)` and is the correct routine whenever the determinant
   enters multiplicatively.
 - **Collinearity checks in regression.** If two features are exact linear
-  combinations of the others, `Xáµ€X` is singular and the normal equations in
+  combinations of the others, `XᵀX` is singular and the normal equations in
   [lesson 38](38_orthogonality_and_least_squares.md)
   cannot be inverted. The residual sum of squares has a flat direction.
 - **Graphics.** An affine transform matrix with determinant 0 collapses
-  geometry onto a lower-dimensional subspace â€” a projection matrix has
+  geometry onto a lower-dimensional subspace — a projection matrix has
   `det = 0` by design, and no inverse transform exists, which is exactly why
   you cannot un-project. See
   [lesson 91](../part07_geometry_graphics/91_transformations_graphics.md).
 - **Interview questions.** "How do you check if a matrix is invertible?",
-  "compute the inverse of a 3Ã—3 without a library", "what does a negative
+  "compute the inverse of a 3×3 without a library", "what does a negative
   determinant mean?", and "why is Cramer's rule not used in practice?" are all
   standard, and this lesson answers every one.
 
 ## The Formal Version
 
-Symbols follow [SYMBOLS.md](../SYMBOLS.md). Let `A` be an `n Ã— n` matrix over a
+Symbols follow [SYMBOLS.md](../SYMBOLS.md). Let `A` be an `n × n` matrix over a
 field `F`, written `A = (a_ij)`.
 
-**Definition.** The **determinant** of a `1 Ã— 1` matrix is `det([a]) = a`.
+**Definition.** The **determinant** of a `1 × 1` matrix is `det([a]) = a`.
 
-**Definition.** For `n â‰¥ 2`, `M_ij` is the **minor** of entry `(i, j)`: the
-`(nâˆ’1) Ã— (nâˆ’1)` matrix obtained by deleting row `i` and column `j`. The
+**Definition.** For `n ≥ 2`, `M_ij` is the **minor** of entry `(i, j)`: the
+`(n−1) × (n−1)` matrix obtained by deleting row `i` and column `j`. The
 **cofactor** is
 
-    C_ij = (-1)^(i+j) Â· det(M_ij)
+    C_ij = (-1)^(i+j) · det(M_ij)
 
 The sign pattern `(-1)^(i+j)` is the checkerboard
 
-    + - + - ...        (i+j even  â†’  +)
+    + - + - ...        (i+j even  →  +)
     - + - + ...
     + - + - ...
 
-**Theorem (Cofactor expansion).** `det(A) = Î£_{j=1..n} a_1j Â· C_1j` â€” expansion
+**Theorem (Cofactor expansion).** `det(A) = Σ_{j=1..n} a_1j · C_1j` — expansion
 along **any** row, and equally along any column. `C_1j = det(M_1j)` for
-`n = 2`, giving the familiar `ad âˆ’ bc`.
+`n = 2`, giving the familiar `ad − bc`.
 
 **Explanation.** Expanding along row `1` and along row `k` are two routes to the
 same number. This is the one place where the definition is agreed by everyone and
@@ -79,25 +79,25 @@ each recursive call shrinks the problem, so it is safe to write down and
 unpleasant to compute.
 
 **Definition (Leibniz formula).** The equivalent non-recursive definition, with divisible
-`det(A) = Î£_{Ïƒ âˆˆ S_n} sgn(Ïƒ) Â· Î _{i=1..n} a_{i,Ïƒ(i)}`, where `S_n` is the set of all
-permutations of `{1, â€¦, n}` and `sgn(Ïƒ) = (-1)^{#inversions}` counts how many
-pairs `i < j` have `Ïƒ(i) > Ïƒ(j)`.
+`det(A) = Σ_{σ ∈ S_n} sgn(σ) · Π_{i=1..n} a_{i,σ(i)}`, where `S_n` is the set of all
+permutations of `{1, …, n}` and `sgn(σ) = (-1)^{#inversions}` counts how many
+pairs `i < j` have `σ(i) > σ(j)`.
 
 **Explanation.** This is the definition that makes the *meaning* obvious. Take
-the unit square in `â„Â²` with corners `(0,0), (1,0), (1,1), (0,1)`. `A` sends each
+the unit square in `ℝ²` with corners `(0,0), (1,0), (1,1), (0,1)`. `A` sends each
 corner `v` to `Av`. The signed area of the resulting parallelogram is exactly the
 sum above: the two positive permutations are the counterclockwise orders and the
-two negative ones the clockwise orders. Each product `a_1Ïƒ(1) Â· a_2Ïƒ(2)` is twice
+two negative ones the clockwise orders. Each product `a_1σ(1) · a_2σ(2)` is twice
 the signed area of one of the two triangles the origin and the images cut out, and
 `n!` of them tile the whole solid. For `n = 3`, the volume of the parallelepiped
 spanned by the columns of `A` is `|det(A)|`.
 
-**Theorem (Geometric meaning).** For `A âˆˆ â„^{nÃ—n}` and any measurable `S âŠ† â„â¿`:
+**Theorem (Geometric meaning).** For `A ∈ ℝ^{n×n}` and any measurable `S ⊆ ℝⁿ`:
 
-    volume(A S) = |det(A)| Â· volume(S)
+    volume(A S) = |det(A)| · volume(S)
 
 `det(A) > 0` means `A` preserves orientation; `det(A) < 0` means it reverses it;
-`det(A) = 0` means `AS` has volume zero â€” `A` collapses space onto a proper
+`det(A) = 0` means `AS` has volume zero — `A` collapses space onto a proper
 subspace.
 
 **Explanation.** `det(A) > 0` means the images of the standard basis vectors,
@@ -107,16 +107,16 @@ itself; `det(A) < 0` means one transposition is needed to restore the winding.
 is flat.
 
 **Theorem (Row and column properties).** For `A`, `B` square of the same size and
-`c âˆˆ F`:
+`c ∈ F`:
 
-1. `det(cA) = câ¿ det(A)`
-2. `det(A + B)` is **not** `det(A) + det(B)` â€” the determinant is not linear
+1. `det(cA) = cⁿ det(A)`
+2. `det(A + B)` is **not** `det(A) + det(B)` — the determinant is not linear
 3. `det(AB) = det(A) det(B)`
-4. `det(Aáµ€) = det(A)`
-5. `det(Aâ»Â¹) = 1/det(A)` (when `A` is invertible)
+4. `det(Aᵀ) = det(A)`
+5. `det(A⁻¹) = 1/det(A)` (when `A` is invertible)
 6. swapping two rows of `A` negates `det(A)`; adding a multiple of one row to
-   another leaves it unchanged; multiplying one row by `c â‰  0` multiplies it by `c`
-7. `det(U) = Î _i u_ii` for upper-triangular `U`, and likewise for lower-triangular
+   another leaves it unchanged; multiplying one row by `c ≠ 0` multiplies it by `c`
+7. `det(U) = Π_i u_ii` for upper-triangular `U`, and likewise for lower-triangular
 
 **Explanation.** (1) holds because scaling a row scales the volume, and `n` rows
 get scaled. (2) fails because cross terms appear; `det(A + B) = det(A) + det(B)`
@@ -125,108 +125,71 @@ never happens. (3) is composition of volume scalings: the scale factor of `AB` i
 the product. (4) comes from the Leibniz formula, since transposing swaps `a_i_j`
 for `a_j_i`, which maps even permutations to even and odd to odd, preserving
 every sign. (6) is the definition: a transposition is exactly one sign flip in
-the Leibniz sum, and a row addition is `A â†’ A + c Â· (stuff)` whose extra
+the Leibniz sum, and a row addition is `A → A + c · (stuff)` whose extra
 contribution is a determinant with two equal rows, hence zero. (7) is (6) applied
 repeatedly: the off-diagonal cofactors of a triangular matrix vanish by induction.
 
 **Theorem (Invertibility criterion).** `A` is invertible if and only if
-`det(A) â‰  0`.
+`det(A) ≠ 0`.
 
-**Explanation.** If `A` is invertible, `Aâ»Â¹A = I` and `det(Aâ»Â¹)det(A) = det(I) = 1`,
-so `det(A) â‰  0`. Conversely, if `det(A) â‰  0`, the adjugate identity below gives
-`Aâ»Â¹` explicitly. In elimination terms, `det(A) â‰  0` means the elimination never
+**Explanation.** If `A` is invertible, `A⁻¹A = I` and `det(A⁻¹)det(A) = det(I) = 1`,
+so `det(A) ≠ 0`. Conversely, if `det(A) ≠ 0`, the adjugate identity below gives
+`A⁻¹` explicitly. In elimination terms, `det(A) ≠ 0` means the elimination never
 runs out of pivots, and then the solution is unique by
 [lesson 32](32_linear_systems_gaussian_elimination.md).
 
 **Definition.** The **cofactor matrix** is `C = (C_ij)`. The **adjugate**
-(classical adjoint) is `adj(A) = Cáµ€`. Note these are *different matrices* â€” the
+(classical adjoint) is `adj(A) = Cᵀ`. Note these are *different matrices* — the
 transpose is not optional.
 
-**Theorem (Adjugate identity).** `A Â· adj(A) = adj(A) Â· A = det(A) Â· I_n`, for
+**Theorem (Adjugate identity).** `A · adj(A) = adj(A) · A = det(A) · I_n`, for
 **every** square `A`, including singular ones.
 
-**Explanation.** Expand `(A adj(A))_ij = Î£_k a_ik adj(A)_kj = Î£_k a_ik C_jk`
+**Explanation.** Expand `(A adj(A))_ij = Σ_k a_ik adj(A)_kj = Σ_k a_ik C_jk`
 along row `j` of the "matrix" whose `jk` entry is `a_ik`. For `i = j` this is
-cofactor expansion of row `i` of `A`, giving `det(A)`. For `i â‰  j` it is
+cofactor expansion of row `i` of `A`, giving `det(A)`. For `i ≠ j` it is
 cofactor expansion of row `j` of `A` with row `i` moved to the top, which costs
 `(-1)^{i+j}`, cancelling the `(-1)^{i+j}` in the cofactor, and the matrix has
 two equal rows so the determinant is zero.
 
-**Theorem (Inverse formula).** If `det(A) â‰  0` then
+**Theorem (Inverse formula).** If `det(A) ≠ 0` then
 
-    Aâ»Â¹ = adj(A) / det(A)
+    A⁻¹ = adj(A) / det(A)
 
-and conversely. **The precondition `det(A) â‰  0` is not decorative** â€” it is
+and conversely. **The precondition `det(A) ≠ 0` is not decorative** — it is
 division by `det(A)`, and `adj(A)` is still perfectly well defined when
 `det(A) = 0`.
 
 **Explanation.** Divide the adjugate identity by `det(A)`. The identity itself
-does not need `det(A) â‰  0`, but the *conclusion* does: when `det(A) = 0` it reads
-`A adj(A) = 0`, which is a true statement about nothing. In fact for `n â‰¥ 2`,
+does not need `det(A) ≠ 0`, but the *conclusion* does: when `det(A) = 0` it reads
+`A adj(A) = 0`, which is a true statement about nothing. In fact for `n ≥ 2`,
 `det(A) = 0` forces every row of `adj(A)` to be zero, so `adj(A)` is singular too.
 
-**Theorem (Cramer's rule).** If `det(A) â‰  0` and `Ax = b`, then `x_i = det(A_i)/det(A)`,
+**Theorem (Cramer's rule).** If `det(A) ≠ 0` and `Ax = b`, then `x_i = det(A_i)/det(A)`,
 where `A_i` is `A` with column `i` replaced by `b`.
 
 **Explanation.** `A_i` is the matrix you'd get from the adjugate identity with `A`
 replaced by the augmented matrix, and it is what makes the formula work. It needs
-`n + 1` determinants, so it is a device for pencil-and-paper work on 2Ã—2 and 3Ã—3
+`n + 1` determinants, so it is a device for pencil-and-paper work on 2×2 and 3×3
 systems and nothing else.
 
-**Theorem (Cost).** Cofactor expansion is `Î˜(n!)` â€” it forks into `n` problems of
-size `nâˆ’1`, so `T(n) = nÂ·T(nâˆ’1) + Î˜(nÂ²)`. Computing the determinant by LU
-elimination is `Î˜(nÂ³)`. Forming `adj(A)` directly is `Î˜(nâ´)` (one `O(nÂ³)`
+**Theorem (Cost).** Cofactor expansion is `Θ(n!)` — it forks into `n` problems of
+size `n−1`, so `T(n) = n·T(n−1) + Θ(n²)`. Computing the determinant by LU
+elimination is `Θ(n³)`. Forming `adj(A)` directly is `Θ(n⁴)` (one `O(n³)`
 cofactor per entry), so even the closed form is not the fast route.
 
-**Explanation.** `n!` vs `nÂ³` at `n = 10` is `3,628,800` vs `1,000`. And an LU
+**Explanation.** `n!` vs `n³` at `n = 10` is `3,628,800` vs `1,000`. And an LU
 factorisation already gives you the determinant for free as the pivot product, so
 a library hands you the factors and never a determinant.
 
 **Corollary (What `det(A) = 0` does *not* say).** `det(A) = 0` means "not
 exactly one solution". It does **not** mean "no solution", and it does not mean
-"infinitely many" â€” both occur, and telling them apart requires looking at `b`,
+"infinitely many" — both occur, and telling them apart requires looking at `b`,
 which the determinant knows nothing about.
 
 **Explanation.** For a singular `A` the system `Ax = b` is consistent exactly when
-`b âˆˆ col(A)`, and then has infinitely many solutions (since `ker(A) â‰  {0}`);
+`b ∈ col(A)`, and then has infinitely many solutions (since `ker(A) ≠ {0}`);
 otherwise it has none. `b` appears in no determinant formula.
-
-## Formula Sheet
-
-`A` is `n Ã— n` over a field `F`; `a_ij` is row `i`, column `j`; `M_ij` is the minor
-of `(i, j)`; `C_ij` is the cofactor; `Ïƒ âˆˆ S_n` is a permutation of `{1, â€¦, n}`;
-`sgn(Ïƒ)` is its sign; `|S_n| = n!`; `b âˆˆ Fâ¿`; `I_n` is the identity; `c âˆˆ F`.
-
-| Symbol | Formula | In plain words | When you use it |
-| --- | --- | --- | --- |
-| `$\det(A)$`, `1Ã—1` | `$\det([a]) = a$` | The lone entry. | Base case of every recursive scheme |
-| minor `$M_{ij}$` | `A` with row `i` and column `j` deleted | The square matrix left over once you commit to entry `(i,j)`. | One cofactor computation |
-| cofactor `$C_{ij}$` | `$C_{ij} = (-1)^{i+j}\det(M_{ij})$` | Minor's determinant with a checkerboard sign: `+` when `i+j` is even, `âˆ’` when odd. | Cofactor expansion |
-| cofactor expansion | `$\det(A) = \sum_{j=1}^{n} a_{1j}C_{1j}$` | Expand along any row `i` or column `j`: one term per entry, each entry times its cofactor. | By hand, `n â‰¤ 3` |
-| `2 Ã— 2` rule | `$\det\begin{pmatrix} a & b\\ c & d\end{pmatrix} = ad - bc$` | Diagonal products, minus off-diagonal. The recursion's base case. | Every hand calculation |
-| Leibniz formula | `$\det(A) = \sum_{\sigma \in S_n}\operatorname{sgn}(\sigma)\prod_{i=1}^{n} a_{i,\sigma(i)}$` | One signed term per way of picking one entry from each row and each column. `n!` terms. | Proving the properties; never computing |
-| `$\operatorname{sgn}(\sigma)$` | `$(-1)^{\#\{i<j : \sigma(i)>\sigma(j)\}}$` | `+1` for an even permutation, `âˆ’1` for an odd one. | Sign in the Leibniz sum |
-| geometric meaning | `$\operatorname{vol}(AS) = \lvert\det(A)\rvert\operatorname{vol}(S)$` | `A` multiplies every `n`-dimensional volume by `\|det(A)\|`. Requires `A âˆˆ â„^{nÃ—n}`. | Interpreting a determinant |
-| sign of the determinant | `$\det(A) > 0$` preserves orientation, `$\det(A) < 0$` reverses it, `$\det(A) = 0$` collapses space | The sign says whether the map turned space inside out. | Interpreting a determinant; picking a winding convention |
-| `$\det(cA)$ | `$\det(cA) = c^{n}\det(A)$` | Scaling every row by `c` scales the determinant by `c` **to the power `n`** â€” the trap in Mistake 2. | Sanity-checking a scaling argument |
-| `$\det(AB)$ | `$\det(AB) = \det(A)\det(B)$` | Applying `B` then `A` scales volumes by the product of the two scale factors. `A, B` both `n Ã— n`. | Checking; **never** how you should compute a big determinant â€” use `slogdet` |
-| `$\det(A^{\mathsf T})$ | `$\det(A^{\mathsf T}) = \det(A)$` | Flipping rows and columns changes nothing. | Debugging a transpose bug |
-| `$\det(A^{-1})$ | `$\det(A^{-1}) = 1/\det(A)$` | Undoing multiplies by the reciprocal. Needs `$\det(A) \ne 0$`. | Volume factor of an inverse map |
-| row swap | `$\det(\text{A with } R_i,R_j \text{ exchanged}) = -\det(A)$` | One transposition, one sign flip. | Explaining the pivot sign in `determinant_lu` |
-| row add | `$\det(R_i + cR_j) = \det(A)$` | Adding a multiple of one row to another changes nothing. | **Why elimination computes determinants** |
-| row scale | `$\det(cR_i) = c\det(A)$` | Scaling one row by `c` scales the determinant by `c`. | The `câ¿` rule, applied row by row |
-| triangular | `$\det(U) = \prod_{i=1}^{n} u_{ii}` | For triangular `U`, multiply the diagonal. No expansion needed. | Reading a determinant off an LU factorisation |
-| cofactor matrix `C` | `$C_{ij} = (-1)^{i+j}\det(M_{ij})$` | Entry-by-entry. **Not** the adjugate. | Building the adjugate |
-| adjugate | `$\operatorname{adj}(A) = C^{\mathsf T}$` | The cofactor matrix with rows and columns exchanged. | The inverse formula |
-| adjugate identity | `$A\operatorname{adj}(A) = \operatorname{adj}(A)A = \det(A)I_n$` | Holds for **every** square `A`, singular or not. | Proving the inverse exists |
-| inverse formula | `$A^{-1} = \operatorname{adj}(A)/\det(A)$` | Cofactors, transposed, divided by the determinant. **Requires `det(A) â‰  0`** â€” it divides. | Hand computation for `n â‰¤ 3`; proofs |
-| adjugate of a singular matrix | `$\det(A)=0,\ n\ge 2 \Rightarrow \operatorname{adj}(A) = 0$` | Every row of the adjugate is zero, so it is singular too. | Why the adjugate is not a back door to an inverse |
-| Cramer's rule | `$x_i = \det(A_i)/\det(A)$` | `A_i` is `A` with column `i` replaced by `b`. Requires `$\det(A) \ne 0$`. | Pencil-and-paper on tiny systems |
-| `$\det(A) = 0` means | "not exactly one solution" â€” could be none, could be infinitely many | The determinant never sees `b`, so it cannot say which. | Explaining a `LinAlgError` without claiming "no solution" |
-| `cond(A)` | `$\lVert A\rVert\lVert A^{-1}\rVert$; digits lost `â‰ˆ logâ‚â‚€ cond` | `det(A) â‰  0` is exact arithmetic; conditioning is floating point. | Before trusting `inv` or `solve` |
-| cofactor cost | `$\Theta(n!)` | Forking recursion: `T(n) = n T(n-1)`. | Explains why nobody uses it |
-| elimination cost | `$\Theta(n^{3})$`, and `det(A) = (-1)^{\text{swaps}}\prod_i u_{ii}$` | Row reduction gives the determinant for free. | The practical route, and all of `numpy.linalg.det` |
-| adjugate cost | `$\Theta(n^{4})$ | `nÂ²` cofactors, each an `O(nÂ³)` determinant. | Even the closed form loses to LU |
 
 ## Worked Example
 
@@ -237,18 +200,18 @@ One matrix, carried all the way:
         | 0  2  1 |
 
 **Step 1: determinant by cofactor expansion along row 0.** The signs down the first
-row are `+ âˆ’ +`, from `(-1)^{0+j}`:
+row are `+ − +`, from `(-1)^{0+j}`:
 
-    det(A) = +2Â·det|4 1| + (-1)Â·1Â·det|1 1| + (+1)Â·3Â·det|1 4|
+    det(A) = +2·det|4 1| + (-1)·1·det|1 1| + (+1)·3·det|1 4|
                   |2 1|            |0 1|            |0 2|
 
-Compute each `2 Ã— 2` by the `ad âˆ’ bc` rule:
+Compute each `2 × 2` by the `ad − bc` rule:
 
-- first minor: `4Â·1 âˆ’ 1Â·2 = 4 âˆ’ 2 = 2`, so the term is `(+1)Â·2Â·2 = +4`
-- second minor: `1Â·1 âˆ’ 1Â·0 = 1 âˆ’ 0 = 1`, so the term is `(âˆ’1)Â·1Â·1 = âˆ’1`
-- third minor: `1Â·2 âˆ’ 4Â·0 = 2 âˆ’ 0 = 2`, so the term is `(+1)Â·3Â·2 = +6`
+- first minor: `4·1 − 1·2 = 4 − 2 = 2`, so the term is `(+1)·2·2 = +4`
+- second minor: `1·1 − 1·0 = 1 − 0 = 1`, so the term is `(−1)·1·1 = −1`
+- third minor: `1·2 − 4·0 = 2 − 0 = 2`, so the term is `(+1)·3·2 = +6`
 
-Total: `+4 âˆ’ 1 + 6 = 9`. So `det(A) = 9`, and by the theorem `A` is invertible.
+Total: `+4 − 1 + 6 = 9`. So `det(A) = 9`, and by the theorem `A` is invertible.
 
 **Step 2: confirm with elimination**, since that is the route you would actually
 take. Column 0 holds `[2, 1, 0]`; the largest magnitude is `2`, already at the
@@ -265,11 +228,11 @@ Clear column 1 using row 1: factor `2/3.5 = 0.5714`:
 
     R_2 <- R_2 - 0.5714 R_1   gives  [0, 2, 1] - [0, 2, -0.2857] = [0, 0, 1.2857]
 
-Now `U` is upper triangular, so `det(A) = 2 Â· 3.5 Â· 1.2857 = 9`, and the sign
+Now `U` is upper triangular, so `det(A) = 2 · 3.5 · 1.2857 = 9`, and the sign
 factor is `(-1)^0 = +1` because no row was swapped. Same answer. The exact value
-of the last pivot is `9/7 â‰ˆ 1.2857`, so the product is exactly `2 Â· 7/2 Â· 9/7 = 9`.
+of the last pivot is `9/7 ≈ 1.2857`, so the product is exactly `2 · 7/2 · 9/7 = 9`.
 
-**Step 3: the cofactor matrix.** Nine `2 Ã— 2` determinants, one per entry:
+**Step 3: the cofactor matrix.** Nine `2 × 2` determinants, one per entry:
 
     C[0][0] = +det[[4,1],[2,1]] = 4 - 2 = 2
     C[0][1] = -det[[1,1],[0,1]] = -(1) = -1
@@ -283,44 +246,44 @@ of the last pivot is `9/7 â‰ˆ 1.2857`, so the product is exactly `2 Â· 7/2
 
 So
 
-    C = |  2  -1   2 |      and      adj(A) = Cáµ€ = |  2   5  -11 |
+    C = |  2  -1   2 |      and      adj(A) = Cᵀ = |  2   5  -11 |
         |  5   2  -4 |                        | -1   2    1 |
         | -11  1   7 |                        |  2  -4    7 |
 
 Sanity check against Step 1: the first row of `C` times `A`'s first row gives
-`2Â·2 + (âˆ’1)Â·1 + 2Â·3 = 4 âˆ’ 1 + 6 = 9` âœ“ â€” that is `det(A)` again, which is what
+`2·2 + (−1)·1 + 2·3 = 4 − 1 + 6 = 9` ✓ — that is `det(A)` again, which is what
 cofactor expansion means.
 
 **Step 4: the inverse.** Divide every entry of `adj(A)` by `9`:
 
-    Aâ»Â¹ = |  2/9    5/9  -11/9 |  =  |  0.222222  0.555556 -1.222222 |
+    A⁻¹ = |  2/9    5/9  -11/9 |  =  |  0.222222  0.555556 -1.222222 |
           | -1/9    2/9    1/9 |     | -0.111111  0.222222  0.111111 |
           |  2/9   -4/9    7/9 |     |  0.222222 -0.444444  0.777778 |
 
-**Step 5: verify.** `A Â· Aâ»Â¹` should be `I`. Row 0 of the product:
+**Step 5: verify.** `A · A⁻¹` should be `I`. Row 0 of the product:
 
-    2Â·(2/9) + 1Â·(-1/9) + 3Â·(2/9)  = (4 - 1 + 6)/9  = 9/9  = 1     âœ“
-    2Â·(5/9) + 1Â·(2/9)  + 3Â·(-4/9) = (10 + 2 - 12)/9 = 0/9  = 0     âœ“
-    2Â·(-11/9) + 1Â·(1/9) + 3Â·(7/9) = (-22 + 1 + 21)/9 = 0/9 = 0     âœ“
+    2·(2/9) + 1·(-1/9) + 3·(2/9)  = (4 - 1 + 6)/9  = 9/9  = 1     ✓
+    2·(5/9) + 1·(2/9)  + 3·(-4/9) = (10 + 2 - 12)/9 = 0/9  = 0     ✓
+    2·(-11/9) + 1·(1/9) + 3·(7/9) = (-22 + 1 + 21)/9 = 0/9 = 0     ✓
 
 The remaining six entries work out the same way. The code below prints all nine.
 
 **Step 6: use it.** Solve `Ax = b` with `b = (5, 7, 4)`:
 
-    x = Aâ»Â¹ b = (2/9Â·5 + 5/9Â·7 - 11/9Â·4,
-                 -1/9Â·5 + 2/9Â·7 + 1/9Â·4,
-                  2/9Â·5 - 4/9Â·7 + 7/9Â·4)
+    x = A⁻¹ b = (2/9·5 + 5/9·7 - 11/9·4,
+                 -1/9·5 + 2/9·7 + 1/9·4,
+                  2/9·5 - 4/9·7 + 7/9·4)
       = ((10 + 35 - 44)/9, (-5 + 14 + 4)/9, (10 - 28 + 28)/9)
       = (1/9, 13/9, 10/9)
-      â‰ˆ (0.111111, 1.444444, 1.111111)
+      ≈ (0.111111, 1.444444, 1.111111)
 
 Cramer's rule gives the same three numbers from three separate determinants, and
 substituting back gives a residual of exactly `(0, 0, 0)`.
 
 **Step 7: the negative case, so the sign is not mysterious.** Take
-`G = [[1, 2], [2, 1]]`. Then `det(G) = 1Â·1 âˆ’ 2Â·2 = âˆ’3`. The unit square has area
+`G = [[1, 2], [2, 1]]`. Then `det(G) = 1·1 − 2·2 = −3`. The unit square has area
 `1`; the images of its corners are `(0,0), (1,2), (3,3), (2,1)`, and the shoelace
-formula gives signed area `âˆ’3`. Absolute value `3` â€” the area tripled. Sign `âˆ’` â€”
+formula gives signed area `−3`. Absolute value `3` — the area tripled. Sign `−` —
 the corners came out clockwise where they started counterclockwise, so the map
 turned the square over. That is the entire content of the sign.
 
@@ -920,7 +883,7 @@ print("the adjugate formula, and Gaussian elimination all share.")
 
 Everything above was plain Python nested lists. numpy runs the same arithmetic in
 compiled code and hands you the determinant, the inverse, and the solve in one
-line each. None of it is magic â€” but the fourth block shows where the shortcut
+line each. None of it is magic — but the fourth block shows where the shortcut
 stops being safe.
 
 ```python
@@ -1068,26 +1031,26 @@ print("same two routes differ in the sixth digit of the answer.")
 
 **Mistake 1: forgetting the transpose in `adj(A)`.**
 The wrong version: `C[i][j] = cofactor of entry (j, i)` and calling the result
-`Aâ»Â¹`. The right version: the *cofactor matrix* is `C_ij = (-1)^{i+j}det(M_ij)`,
-the *adjugate* is `Cáµ€`, and the inverse is `adj(A)/det(A)`. In the worked
+`A⁻¹`. The right version: the *cofactor matrix* is `C_ij = (-1)^{i+j}det(M_ij)`,
+the *adjugate* is `Cᵀ`, and the inverse is `adj(A)/det(A)`. In the worked
 example `C[0][1] = -1` but `adj[0][1] = 5`, so mixing them up gives a matrix whose
 entries are all plausible and none of them right. It is tempting because for a
 **symmetric** matrix `C` is symmetric, so the transpose is a no-op and the bug
 never fires on your first test case. Test on a nonsymmetric matrix.
 
-**Mistake 2: `det(cA) = cÂ·det(A)`.**
+**Mistake 2: `det(cA) = c·det(A)`.**
 The wrong version: thinking that scaling a matrix scales its determinant by the
-same factor. The right version: `det(cA) = câ¿ det(A)`. Scaling **one** row by `c`
-gives `cÂ·det(A)`; scaling all `n` rows gives `câ¿`. The code prints both: a `3Ã—3`
-scaled by 3 has determinant `27 Ã— 9 = 243`, not `3 Ã— 9 = 27`. It is tempting
-because determinants behave additively on sums, so linearity feels natural â€” but
+same factor. The right version: `det(cA) = cⁿ det(A)`. Scaling **one** row by `c`
+gives `c·det(A)`; scaling all `n` rows gives `cⁿ`. The code prints both: a `3×3`
+scaled by 3 has determinant `27 × 9 = 243`, not `3 × 9 = 27`. It is tempting
+because determinants behave additively on sums, so linearity feels natural — but
 the determinant is emphatically *not* linear, see Mistake 3.
 
 **Mistake 3: assuming `det(A + B) = det(A) + det(B)`.**
 The wrong version: using the determinant as though it were linear, the way the
 trace is. The right version: the determinant is a polynomial in the entries of
 degree `n`, so `A + B` brings cross terms. Only `tr(A + B) = tr(A) + tr(B)` and
-`det(cA) = câ¿det(A)` are clean, and they are clean for different reasons. It is
+`det(cA) = cⁿdet(A)` are clean, and they are clean for different reasons. It is
 tempting because `tr` really is linear and the two functions get used side by side
 in the same diagonalisation code.
 
@@ -1101,10 +1064,47 @@ solutions, `b = (3, 7)` gives none. Only row reduction on the augmented matrix
 distinguishes them.
 
 **Mistake 5: testing `det(A) == 0` to decide whether to invert.**
+## Formula Sheet
+
+`A` is `n × n` over a field `F`; `a_ij` is row `i`, column `j`; `M_ij` is the minor
+of `(i, j)`; `C_ij` is the cofactor; `σ ∈ S_n` is a permutation of `{1, …, n}`;
+`sgn(σ)` is its sign; `|S_n| = n!`; `b ∈ Fⁿ`; `I_n` is the identity; `c ∈ F`.
+
+| Symbol | Formula | In plain words | When you use it |
+| --- | --- | --- | --- |
+| `$\det(A)$`, `1×1` | `$\det([a]) = a$` | The lone entry. | Base case of every recursive scheme |
+| minor `$M_{ij}$` | `A` with row `i` and column `j` deleted | The square matrix left over once you commit to entry `(i,j)`. | One cofactor computation |
+| cofactor `$C_{ij}$` | `$C_{ij} = (-1)^{i+j}\det(M_{ij})$` | Minor's determinant with a checkerboard sign: `+` when `i+j` is even, `−` when odd. | Cofactor expansion |
+| cofactor expansion | `$\det(A) = \sum_{j=1}^{n} a_{1j}C_{1j}$` | Expand along any row `i` or column `j`: one term per entry, each entry times its cofactor. | By hand, `n ≤ 3` |
+| `2 × 2` rule | `$\det\begin{pmatrix} a & b\\ c & d\end{pmatrix} = ad - bc$` | Diagonal products, minus off-diagonal. The recursion's base case. | Every hand calculation |
+| Leibniz formula | `$\det(A) = \sum_{\sigma \in S_n}\operatorname{sgn}(\sigma)\prod_{i=1}^{n} a_{i,\sigma(i)}$` | One signed term per way of picking one entry from each row and each column. `n!` terms. | Proving the properties; never computing |
+| `$\operatorname{sgn}(\sigma)$` | `$(-1)^{\#\{i<j : \sigma(i)>\sigma(j)\}}$` | `+1` for an even permutation, `−1` for an odd one. | Sign in the Leibniz sum |
+| geometric meaning | `$\operatorname{vol}(AS) = \lvert\det(A)\rvert\operatorname{vol}(S)$` | `A` multiplies every `n`-dimensional volume by `\|det(A)\|`. Requires `A ∈ ℝ^{n×n}`. | Interpreting a determinant |
+| sign of the determinant | `$\det(A) > 0$` preserves orientation, `$\det(A) < 0$` reverses it, `$\det(A) = 0$` collapses space | The sign says whether the map turned space inside out. | Interpreting a determinant; picking a winding convention |
+| `$\det(cA)$ | `$\det(cA) = c^{n}\det(A)$` | Scaling every row by `c` scales the determinant by `c` **to the power `n`** — the trap in Mistake 2. | Sanity-checking a scaling argument |
+| `$\det(AB)$ | `$\det(AB) = \det(A)\det(B)$` | Applying `B` then `A` scales volumes by the product of the two scale factors. `A, B` both `n × n`. | Checking; **never** how you should compute a big determinant — use `slogdet` |
+| `$\det(A^{\mathsf T})$ | `$\det(A^{\mathsf T}) = \det(A)$` | Flipping rows and columns changes nothing. | Debugging a transpose bug |
+| `$\det(A^{-1})$ | `$\det(A^{-1}) = 1/\det(A)$` | Undoing multiplies by the reciprocal. Needs `$\det(A) \ne 0$`. | Volume factor of an inverse map |
+| row swap | `$\det(\text{A with } R_i,R_j \text{ exchanged}) = -\det(A)$` | One transposition, one sign flip. | Explaining the pivot sign in `determinant_lu` |
+| row add | `$\det(R_i + cR_j) = \det(A)$` | Adding a multiple of one row to another changes nothing. | **Why elimination computes determinants** |
+| row scale | `$\det(cR_i) = c\det(A)$` | Scaling one row by `c` scales the determinant by `c`. | The `cⁿ` rule, applied row by row |
+| triangular | `$\det(U) = \prod_{i=1}^{n} u_{ii}` | For triangular `U`, multiply the diagonal. No expansion needed. | Reading a determinant off an LU factorisation |
+| cofactor matrix `C` | `$C_{ij} = (-1)^{i+j}\det(M_{ij})$` | Entry-by-entry. **Not** the adjugate. | Building the adjugate |
+| adjugate | `$\operatorname{adj}(A) = C^{\mathsf T}$` | The cofactor matrix with rows and columns exchanged. | The inverse formula |
+| adjugate identity | `$A\operatorname{adj}(A) = \operatorname{adj}(A)A = \det(A)I_n$` | Holds for **every** square `A`, singular or not. | Proving the inverse exists |
+| inverse formula | `$A^{-1} = \operatorname{adj}(A)/\det(A)$` | Cofactors, transposed, divided by the determinant. **Requires `det(A) ≠ 0`** — it divides. | Hand computation for `n ≤ 3`; proofs |
+| adjugate of a singular matrix | `$\det(A)=0,\ n\ge 2 \Rightarrow \operatorname{adj}(A) = 0$` | Every row of the adjugate is zero, so it is singular too. | Why the adjugate is not a back door to an inverse |
+| Cramer's rule | `$x_i = \det(A_i)/\det(A)$` | `A_i` is `A` with column `i` replaced by `b`. Requires `$\det(A) \ne 0$`. | Pencil-and-paper on tiny systems |
+| `$\det(A) = 0` means | "not exactly one solution" — could be none, could be infinitely many | The determinant never sees `b`, so it cannot say which. | Explaining a `LinAlgError` without claiming "no solution" |
+| `cond(A)` | `$\lVert A\rVert\lVert A^{-1}\rVert$; digits lost `≈ log₁₀ cond` | `det(A) ≠ 0` is exact arithmetic; conditioning is floating point. | Before trusting `inv` or `solve` |
+| cofactor cost | `$\Theta(n!)` | Forking recursion: `T(n) = n T(n-1)`. | Explains why nobody uses it |
+| elimination cost | `$\Theta(n^{3})$`, and `det(A) = (-1)^{\text{swaps}}\prod_i u_{ii}$` | Row reduction gives the determinant for free. | The practical route, and all of `numpy.linalg.det` |
+| adjugate cost | `$\Theta(n^{4})$ | `n²` cofactors, each an `O(n³)` determinant. | Even the closed form loses to LU |
+
 The wrong version: `if np.linalg.det(A) != 0: x = np.linalg.inv(A) @ b`. The right
 version: call `np.linalg.solve(A, b)` and let it raise if it must; if you must
 test, test the LU pivot against a tolerance or test `slogdet`'s sign. The code
-shows `A * 1e-110` whose true determinant is `9 Ã— 10â»Â³Â³â°` â€” nonzero â€” reported by
+shows `A * 1e-110` whose true determinant is `9 × 10⁻³³⁰` — nonzero — reported by
 `np.linalg.det` as exactly `0.0`. A zero determinant computed in floating point is
 a statement about your precision, not about the matrix. And `inv(A) @ b` is
 strictly more work and strictly less accurate than `solve(A, b)`, as
@@ -1114,7 +1114,7 @@ strictly more work and strictly less accurate than `solve(A, b)`, as
 
 ## Multiple Choice Questions
 
-**Q1.** `A` is a 3Ã—3 matrix and `det(A) = 0`. What must be true?
+**Q1.** `A` is a 3×3 matrix and `det(A) = 0`. What must be true?
 
 - A) The system `Ax = b` has no solution, for every `b`
 - B) The system `Ax = b` has infinitely many solutions, for every `b`
@@ -1128,18 +1128,18 @@ strictly more work and strictly less accurate than `solve(A, b)`, as
 `b`.**
 
 `det(A) = 0` means the elimination of [lesson 32](32_linear_systems_gaussian_elimination.md)
-runs out of pivots, which means the map `x â†¦ Ax` is not one-to-one, which means
+runs out of pivots, which means the map `x ↦ Ax` is not one-to-one, which means
 "not exactly one solution". The two remaining possibilities are both real, and
 the code demonstrates both with the same matrix `S = [[1,2],[2,4]]`: with
-`b = (3,6)` the solution set is the whole line `x = (3âˆ’2t, t)`, and with `b = (3,7)`
-there is no solution at all because `7 â‰  2Â·3`.
+`b = (3,6)` the solution set is the whole line `x = (3−2t, t)`, and with `b = (3,7)`
+there is no solution at all because `7 ≠ 2·3`.
 
 - A) confuses "not unique" with "none". The determinant is a property of `A`
   alone; it contains no information about `b`. Claiming "no solution for every
   `b`" would require `col(A) = {0}`, i.e. `A = 0`, which is a far stronger
   statement than `det(A) = 0`.
 - B) is the other half of the same confusion. Infinite solutions need
-  `b âˆˆ col(A)`, which is a condition on `b` and on the specific `A`. Here
+  `b ∈ col(A)`, which is a condition on `b` and on the specific `A`. Here
   `col(A)` is the line of vectors `(t, 2t)`, so `b = (3,6)` is in it and `b = (3,7)`
   is not.
 - D) confuses singularity with a specific cause. Singular means *some* linear
@@ -1152,55 +1152,55 @@ there is no solution at all because `7 â‰  2Â·3`.
 
 **Q2.** Which statement about `adj(A)` is correct?
 
-- A) `adj(A) A = det(A) I` holds only when `det(A) â‰  0`
-- B) `adj(A) A = det(A) I` holds for every square `A`, and `Aâ»Â¹ = adj(A)/det(A)` needs `det(A) â‰  0`
+- A) `adj(A) A = det(A) I` holds only when `det(A) ≠ 0`
+- B) `adj(A) A = det(A) I` holds for every square `A`, and `A⁻¹ = adj(A)/det(A)` needs `det(A) ≠ 0`
 - C) `adj(A)` is the cofactor matrix `C` itself, with no transpose involved
-- D) `adj(A) = det(A) Â· Aâ»Â¹` is a definition that also works when `det(A) = 0`
+- D) `adj(A) = det(A) · A⁻¹` is a definition that also works when `det(A) = 0`
 
 <details>
 <summary>Answer and explanation</summary>
 
-**B) `adj(A) A = det(A) I` holds for every square `A`, and `Aâ»Â¹ = adj(A)/det(A)`
-needs `det(A) â‰  0`.**
+**B) `adj(A) A = det(A) I` holds for every square `A`, and `A⁻¹ = adj(A)/det(A)`
+needs `det(A) ≠ 0`.**
 
 The adjugate identity is a polynomial identity in the entries of `A`, established
 by cofactor expansion, and it makes no assumption about the determinant. What
-requires `det(A) â‰  0` is the *next step*: dividing both sides by `det(A)`. The
-code separates the two statements explicitly â€” `adjugate(S3)` and
+requires `det(A) ≠ 0` is the *next step*: dividing both sides by `det(A)`. The
+code separates the two statements explicitly — `adjugate(S3)` and
 `matmul(S3, adjugate(S3))` both work fine on the singular matrix `S3`, and the
 product is the zero matrix because `det(S3) I = 0 I = 0`.
 
-- A) is the classic over-restriction. If you need `det(A) â‰  0` to state the
-  identity, you cannot use the identity to *prove* `det(A) â‰  0` implies
+- A) is the classic over-restriction. If you need `det(A) ≠ 0` to state the
+  identity, you cannot use the identity to *prove* `det(A) ≠ 0` implies
   invertibility, since the theorem would then be circular.
 - C) is Mistake 1. In the worked example, `C[0][1] = -1` while `adj[0][1] = 5`.
   The transpose is not a formality; on a symmetric matrix the two agree, which is
   why the bug survives casual testing.
-- D) is circular in the wrong direction â€” it uses `Aâ»Â¹` to define `adj(A)` and then
-  claims to recover `Aâ»Â¹`. It also fails where it matters: when `det(A) = 0` the
-  expression `det(A) Â· Aâ»Â¹` has nothing to multiply, and the code confirms the
-  adjugate of a singular `n Ã— n` matrix (for `n â‰¥ 2`) is the **zero** matrix, so
+- D) is circular in the wrong direction — it uses `A⁻¹` to define `adj(A)` and then
+  claims to recover `A⁻¹`. It also fails where it matters: when `det(A) = 0` the
+  expression `det(A) · A⁻¹` has nothing to multiply, and the code confirms the
+  adjugate of a singular `n × n` matrix (for `n ≥ 2`) is the **zero** matrix, so
   it certainly is not hiding an inverse.
 
 </details>
 
-**Q3.** `det(cA)` for a 3Ã—3 matrix `A` and scalar `c` is:
+**Q3.** `det(cA)` for a 3×3 matrix `A` and scalar `c` is:
 
-- A) `c Â· det(A)`, because the determinant is linear
-- B) `cÂ² Â· det(A)`, because the determinant is quadratic in the entries
-- C) `cÂ³ Â· det(A)`, because scaling all three rows multiplies the determinant by `c` three times
-- D) `c^det(A) Â· det(A)`
+- A) `c · det(A)`, because the determinant is linear
+- B) `c² · det(A)`, because the determinant is quadratic in the entries
+- C) `c³ · det(A)`, because scaling all three rows multiplies the determinant by `c` three times
+- D) `c^det(A) · det(A)`
 
 <details>
 <summary>Answer and explanation</summary>
 
-**C) `cÂ³ Â· det(A)`, because scaling all three rows multiplies the determinant by
+**C) `c³ · det(A)`, because scaling all three rows multiplies the determinant by
 `c` three times.**
 
 Scaling **one** row by `c` multiplies the determinant by `c`. `cA` scales all
-three, so the factor is `cÂ³`. The code checks it numerically: `A` has
-`det(A) = 9`, `3A` has `det = 243`, and `3Â³ Â· 9 = 243`. In general `det(cA) =
-câ¿ det(A)` for an `n Ã— n` matrix, so a `20 Ã— 20` matrix scaled by 2 has its
+three, so the factor is `c³`. The code checks it numerically: `A` has
+`det(A) = 9`, `3A` has `det = 243`, and `3³ · 9 = 243`. In general `det(cA) =
+cⁿ det(A)` for an `n × n` matrix, so a `20 × 20` matrix scaled by 2 has its
 determinant multiplied by about a million.
 
 - A) is Mistake 2. It is the answer you get if you remember the single-row rule
@@ -1208,13 +1208,13 @@ determinant multiplied by about a million.
   linear, so `tr(cA) = c tr(A)`, and the two functions appear together in
   diagonalisation code.
 - B) is a real confusion but the wrong degree. The determinant is degree `n` in
-  the entries â€” every term in the Leibniz formula is a product of exactly `n`
-  entries. For a 3Ã—3 that happens to be degree 3, not 2; someone reasoning
-  "it's the volume, and volume is quadratic" is thinking of a 2Ã—2 case, where
-  `det(cA) = cÂ² det(A)` is indeed correct.
+  the entries — every term in the Leibniz formula is a product of exactly `n`
+  entries. For a 3×3 that happens to be degree 3, not 2; someone reasoning
+  "it's the volume, and volume is quadratic" is thinking of a 2×2 case, where
+  `det(cA) = c² det(A)` is indeed correct.
 - D) has no mathematical content. `c^det(A)` is not a determinant rule under any
-  hypothesis, and it gives nonsense immediately: `det(2Iâ‚ƒ) = 8`, while
-  `2^det(Iâ‚ƒ) Â· det(Iâ‚ƒ) = 2 Â· 1 = 2`.
+  hypothesis, and it gives nonsense immediately: `det(2I₃) = 8`, while
+  `2^det(I₃) · det(I₃) = 2 · 1 = 2`.
 
 </details>
 
@@ -1222,18 +1222,18 @@ determinant multiplied by about a million.
 
 - A) `det(A) = 0` implies the columns of `A` are all zero
 - B) `det(A + B) = det(A) + det(B)`
-- C) `det(A) = det(Aáµ€)`, and `det(A) det(B) = det(AB)`
+- C) `det(A) = det(Aᵀ)`, and `det(A) det(B) = det(AB)`
 - D) `det(AB) = det(A) + det(B)`
 
 <details>
 <summary>Answer and explanation</summary>
 
-**C) `det(A) = det(Aáµ€)`, and `det(A) det(B) = det(AB)`.**
+**C) `det(A) = det(Aᵀ)`, and `det(A) det(B) = det(AB)`.**
 
 Both are on the properties list and both hold for square matrices of a common
 size. The transposed-determinant identity holds because transposing swaps `a_ij`
 for `a_ji`, which maps even permutations to even and odd to odd, so every sign in
-the Leibniz sum survives â€” the code prints `det(P) = det(Páµ€) = -2`.
+the Leibniz sum survives — the code prints `det(P) = det(Pᵀ) = -2`.
 Multiplicativity is the volume-scaling property: apply `B` then `A`, and volumes
 scale by `det(B)` then by `det(A)`, hence by the product. The code checks
 `det(PQ) = 4 = (-2)(-2)` for `P = [[1,2],[3,4]]` and `Q = [[5,6],[7,8]]`.
@@ -1242,12 +1242,12 @@ scale by `det(B)` then by `det(A)`, hence by the product. The code checks
   determinant is zero exactly when the columns are *linearly dependent*, which
   means one is a combination of the others, not that any of them vanish.
 - B) is Mistake 3, and the single most quoted false statement in linear algebra.
-  It fails on the smallest possible example: `A = B = Iâ‚‚` gives
-  `det(2Iâ‚‚) = 4` on the left and `1 + 1 = 2` on the right.
+  It fails on the smallest possible example: `A = B = I₂` gives
+  `det(2I₂) = 4` on the left and `1 + 1 = 2` on the right.
 - D) mixes two different rules. It looks like `tr(AB) = tr(BA)` from
-  [lesson 31](31_matrices_and_matrix_algebra.md) â€” where a similar-looking
-  identity really is true â€” with the multiplicative determinant rule. Note the
-  trap: `tr(AB) = tr(BA)` *is* true even though `AB â‰  BA`, but there is no
+  [lesson 31](31_matrices_and_matrix_algebra.md) — where a similar-looking
+  identity really is true — with the multiplicative determinant rule. Note the
+  trap: `tr(AB) = tr(BA)` *is* true even though `AB ≠ BA`, but there is no
   additive analogue of it for the determinant at all.
 
 </details>
@@ -1256,29 +1256,29 @@ scale by `det(B)` then by `det(A)`, hence by the product. The code checks
 is it never used to compute one?
 
 - A) It is only defined for matrices with integer entries
-- B) It requires `n!` terms, which is `3,628,800` for `n = 10` and `Î˜(n!)` overall, against `Î˜(nÂ³)` for row reduction
+- B) It requires `n!` terms, which is `3,628,800` for `n = 10` and `Θ(n!)` overall, against `Θ(n³)` for row reduction
 - C) It gives the determinant only up to sign, and recovering the sign needs a separate computation
 - D) It requires a choice of pivot order, which makes it numerically unstable
 
 <details>
 <summary>Answer and explanation</summary>
 
-**B) It requires `n!` terms, which is `3,628,800` for `n = 10` and `Î˜(n!)`
-overall, against `Î˜(nÂ³)` for row reduction.**
+**B) It requires `n!` terms, which is `3,628,800` for `n = 10` and `Θ(n!)`
+overall, against `Θ(n³)` for row reduction.**
 
 The code prints the comparison table: at `n = 8` the Leibniz sum has `40,320`
 terms against `512` multiply-adds for elimination, and at `n = 20` it has about
-`2.4 Ã— 10Â¹â¸` terms against `8,000`. Leibniz is not just slower â€” it is in a
-different complexity class, `Î˜(n!)` rather than `Î˜(nÂ³)`, so no engineering
+`2.4 × 10¹⁸` terms against `8,000`. Leibniz is not just slower — it is in a
+different complexity class, `Θ(n!)` rather than `Θ(n³)`, so no engineering
 improvement closes the gap.
 
 - A) is false: the Leibniz formula is perfectly well defined over any field,
-  including `â„`, and the code computes `det(A) = 9` for a matrix of floats.
+  including `ℝ`, and the code computes `det(A) = 9` for a matrix of floats.
   Sums of products of real numbers are real numbers.
-- C) is false and the sign is fully determined by the formula â€” `sgn(Ïƒ)` is
-  right there in the summand. The code prints all six signed terms for the 3Ã—3
+- C) is false and the sign is fully determined by the formula — `sgn(σ)` is
+  right there in the summand. The code prints all six signed terms for the 3×3
   case and the running total is exactly `9`.
-- D) is false for two reasons. Leibniz has no pivots at all â€” it is a direct
+- D) is false for two reasons. Leibniz has no pivots at all — it is a direct
   combinatorial sum. And the numerical-instability argument, while true of
   everything, is not the reason: this formula is *exact*, not unstable, it is
   merely combinatorially absurd. The instability lives in the row-reduction
@@ -1286,12 +1286,12 @@ improvement closes the gap.
 
 </details>
 
-**Q6.** A 2Ã—2 matrix `A` has `det(A) = -5`. Which geometric statement follows?
+**Q6.** A 2×2 matrix `A` has `det(A) = -5`. Which geometric statement follows?
 
 - A) `A` maps area-1 shapes to area-5 shapes
 - B) `A` maps area-1 shapes to area-5 shapes and reverses orientation
 - C) `A` is not invertible, because a negative determinant is not positive
-- D) `A` rotates by 180Â° and scales by 5
+- D) `A` rotates by 180° and scales by 5
 
 <details>
 <summary>Answer and explanation</summary>
@@ -1309,14 +1309,14 @@ the order stays counterclockwise.
   the answer you get if you treat `det` as `|det|` throughout, which is
   tempting because volume is unsigned. But the sign is not noise: it is the
   orientation data, and it is the reason `det` rather than `|det|` is the
-  multiplicative function â€” `|det(AB)| = |det A||det B|` is true but throws away
+  multiplicative function — `|det(AB)| = |det A||det B|` is true but throws away
   the information that `A` and `B` compose to two orientation-reversing maps.
 - C) is the misunderstanding that a determinant is a volume. A negative volume is
-  not a contradiction; it is a signed volume. Invertibility is about `â‰  0`, and
-  `-5 â‰  0` as surely as `5 â‰  0`. The lesson's own test table shows a matrix with
+  not a contradiction; it is a signed volume. Invertibility is about `≠ 0`, and
+  `-5 ≠ 0` as surely as `5 ≠ 0`. The lesson's own test table shows a matrix with
   `det = -2` and an inverse, `P = [[1,2],[3,4]]`.
-- D) confuses a determinant with an eigenvalue. A 180Â° rotation by scale 5 is
-  `-5Iâ‚‚`, whose determinant is `(-5)Â² = 25`, positive â€” because a 180Â° rotation
+- D) confuses a determinant with an eigenvalue. A 180° rotation by scale 5 is
+  `-5I₂`, whose determinant is `(-5)² = 25`, positive — because a 180° rotation
   in the plane preserves orientation, being a product of two reflections. The
   determinant of a planar map tells you about reflections and area, not about
   rotation angle; recovering the rotation needs the eigenvalues or the polar
@@ -1325,7 +1325,7 @@ the order stays counterclockwise.
 
 </details>
 
-**Q7.** You need `x` for ten different right-hand sides `b_1, â€¦, b_10` with the
+**Q7.** You need `x` for ten different right-hand sides `b_1, …, b_10` with the
 same matrix `A`. Which is the right call?
 
 - A) `det(A)`, then `inv(A) @ b_i` for each `i`, so you can check invertibility once
@@ -1339,22 +1339,22 @@ same matrix `A`. Which is the right call?
 **D) `np.linalg.solve(A, B)` once with `B` the 10-column matrix of right-hand
 sides.**
 
-`solve` factorises `A` once and then does ten triangular solves, each `O(nÂ²)`,
-for `O(nÂ³ + 10nÂ²)`. The code shows the mechanism with three columns: `B` has
+`solve` factorises `A` once and then does ten triangular solves, each `O(n²)`,
+for `O(n³ + 10n²)`. The code shows the mechanism with three columns: `B` has
 three columns, `np.linalg.solve(A, B)` returns a 3-column `X`, and `A @ X = B` up
-to rounding at `10â»Â¹â¶`.
+to rounding at `10⁻¹⁶`.
 
-- A) pays for an `O(nÂ³)` determinant *and* an `O(nÂ³)` inverse formation, then
-  discards all `nÂ²` entries except the row you needed, ten times. And
-  `det(A) != 0` is the wrong test anyway â€” the code shows `A * 1e-110`, whose true
-  determinant is `9 Ã— 10â»Â³Â³â°`, reported by `np.linalg.det` as exactly `0.0`.
-- B) gets the right answer with the right routine and pays for the `O(nÂ³)`
+- A) pays for an `O(n³)` determinant *and* an `O(n³)` inverse formation, then
+  discards all `n²` entries except the row you needed, ten times. And
+  `det(A) != 0` is the wrong test anyway — the code shows `A * 1e-110`, whose true
+  determinant is `9 × 10⁻³³⁰`, reported by `np.linalg.det` as exactly `0.0`.
+- B) gets the right answer with the right routine and pays for the `O(n³)`
   factorisation ten times over. It is the correct code, just wasteful; if you
   genuinely need one-off solves with the same `A`, this is what you write.
-- C) is the standard textbook error. It forms `nÂ²` numbers to use `n` of them per
-  solve, does a full `O(nÂ³)` matrix multiply instead of a triangular solve, and
+- C) is the standard textbook error. It forms `n²` numbers to use `n` of them per
+  solve, does a full `O(n³)` matrix multiply instead of a triangular solve, and
   loses accuracy at every step. The code shows `inv(A) @ B` agreeing with `solve`
-  to `4.441e-16` here â€” but that is only because this `A` is well conditioned.
+  to `4.441e-16` here — but that is only because this `A` is well conditioned.
   On `diag(1, 1e-14)` the same two routes disagree in the sixth digit.
 
 </details>
@@ -1364,23 +1364,23 @@ invertible in floating-point arithmetic?
 
 - A) `[[1, 0], [0, 0]]`, whose determinant computes to exactly 0
 - B) `[[1, 2], [2, 4]]`, whose determinant computes to exactly 0
-- C) `A Â· 10â»Â¹Â¹â°` for an invertible `A`, whose determinant computes to 0 by underflow
+- C) `A · 10⁻¹¹⁰` for an invertible `A`, whose determinant computes to 0 by underflow
 - D) `[[0, 0], [0, 0]]`, whose determinant computes to exactly 0
 
 <details>
 <summary>Answer and explanation</summary>
 
-**C) `A Â· 10â»Â¹Â¹â°` for an invertible `A`, whose determinant computes to 0 by
+**C) `A · 10⁻¹¹⁰` for an invertible `A`, whose determinant computes to 0 by
 underflow.**
 
 The code's `slogdet` table shows `A * 1e-110` with `det = 0` from
 `np.linalg.det` but `sign = +1` and `log|det| = -757.6559` from
-`np.linalg.slogdet`. The true determinant is `9 Ã— 10â»Â³Â³â°`, comfortably nonzero in
+`np.linalg.slogdet`. The true determinant is `9 × 10⁻³³⁰`, comfortably nonzero in
 real arithmetic; it has simply fallen below the smallest positive normal float64
-of about `2.2 Ã— 10â»Â³â°â¸`. Every entry of the matrix itself is an ordinary double.
+of about `2.2 × 10⁻³⁰⁸`. Every entry of the matrix itself is an ordinary double.
 
 - A), B) and D) all give a determinant of exactly zero for the right reason: the
-  matrix really is singular. In each case the rows genuinely depend â€” `[[1,0],[0,0]]`
+  matrix really is singular. In each case the rows genuinely depend — `[[1,0],[0,0]]`
   has a zero row, `[[1,2],[2,4]]` has row 1 twice row 0, `[[0,0],[0,0]]` has all
   zeros. The computed zero agrees with the mathematics, so it carries information.
 - The distinction matters because the two situations look identical to the code
@@ -1398,7 +1398,7 @@ invariant rather than an arbitrary one?
 - A) Because it lets you compute `det(A)` from `A` without factoring it
 - B) Because it says that a determinant can be factorised into primes, so it detects integer matrices
 - C) Because it says the volume change of "apply `B`, then apply `A`" is the product of the two individual volume changes
-- D) Because it means `det(A)` is determined by `tr(A)` and `AB â‰  BA`
+- D) Because it means `det(A)` is determined by `tr(A)` and `AB ≠ BA`
 
 <details>
 <summary>Answer and explanation</summary>
@@ -1406,10 +1406,10 @@ invariant rather than an arbitrary one?
 **C) Because it says the volume change of "apply `B`, then apply `A`" is the
 product of the two individual volume changes.**
 
-That is exactly `vol(A(BS)) = |det A| Â· |det B| Â· vol(S)`, which is what any scale
+That is exactly `vol(A(BS)) = |det A| · |det B| · vol(S)`, which is what any scale
 factor must do: the composition of two scalings scales by the product. The code
 checks `det(PQ) = 4` with `det(P) = det(Q) = -2`, and both factors are negative,
-so the composition of two orientation-reversing maps preserves orientation â€” a
+so the composition of two orientation-reversing maps preserves orientation — a
 fact you could not read off either determinant alone.
 
 - A) inverts the direction of usefulness. `det(AB)` does not help you compute
@@ -1420,47 +1420,47 @@ fact you could not read off either determinant alone.
   different notion (`det(A)` for integer `A` *is* an integer, but multiplicativity
   here is about composition of linear maps, and `det` on matrices is not the
   number-theoretic determinant used for factoring). It also gives the wrong
-  answer to the question asked: `det(A) â‰  0` says nothing about whether `A` has
+  answer to the question asked: `det(A) ≠ 0` says nothing about whether `A` has
   prime factors in any useful sense.
-- D) is confused on three counts. `det` and `tr` are different invariants â€”
-  the code's `P` has `tr(P) = 5` and `det(P) = -2` â€” and neither determines the
-  other. And `AB â‰  BA` is precisely why `det(AB) = det(BA)` is *interesting*: two
+- D) is confused on three counts. `det` and `tr` are different invariants —
+  the code's `P` has `tr(P) = 5` and `det(P) = -2` — and neither determines the
+  other. And `AB ≠ BA` is precisely why `det(AB) = det(BA)` is *interesting*: two
   different matrices with the same determinant. Multiplicativity is not a
   commutativity claim.
 
 </details>
 
-**Q10.** You compute `A Â· adj(A)` for a singular 3Ã—3 matrix `A` and get the zero
+**Q10.** You compute `A · adj(A)` for a singular 3×3 matrix `A` and get the zero
 matrix. What have you learned?
 
-- A) That `adj(A)` contains `Aâ»Â¹` and you can divide by `det(A) = 0` to get it
+- A) That `adj(A)` contains `A⁻¹` and you can divide by `det(A) = 0` to get it
 - B) That the adjugate identity is false for singular matrices and was never proved
-- C) That `adj(A) = 0`, so the adjugate is singular too and gives no inverse â€” the identity `A adj(A) = det(A) I` now reads `0 = 0`
+- C) That `adj(A) = 0`, so the adjugate is singular too and gives no inverse — the identity `A adj(A) = det(A) I` now reads `0 = 0`
 - D) That `A` has three zero rows
 
 <details>
 <summary>Answer and explanation</summary>
 
-**C) That `adj(A) = 0`, so the adjugate is singular too and gives no inverse â€”
+**C) That `adj(A) = 0`, so the adjugate is singular too and gives no inverse —
 the identity `A adj(A) = det(A) I` now reads `0 = 0`.**
 
 The code computes exactly this for `S3 = [[1,2,3],[2,4,6],[1,1,1]]`: `det(S3) = 0`,
 `adj(S3)` prints as the zero matrix, and `S3 adj(S3)` is the zero matrix. The
-identity is not false â€” it is *uninformative*. `A adj(A) = det(A) I` with
+identity is not false — it is *uninformative*. `A adj(A) = det(A) I` with
 `det(A) = 0` is the statement `A adj(A) = 0`, which is true of many pairs and
 tells you nothing about how to invert `A`.
 
 - A) inverts the direction of the identity. `A adj(A) = det(A) I` means
-  `Aâ»Â¹ = adj(A)/det(A)` **when you can divide**; it never says `adj(A)` is an
+  `A⁻¹ = adj(A)/det(A)` **when you can divide**; it never says `adj(A)` is an
   inverse on its own. Dividing by `det(A) = 0` is `0/0`, and the code's
   `inverse_by_adjugate` raises `ValueError` there by design.
 - B) misreads a true identity as a false one. The adjugate identity holds for
-  every square matrix â€” it is proved by cofactor expansion with no hypothesis
+  every square matrix — it is proved by cofactor expansion with no hypothesis
   about the determinant. The lesson separates the identity from the inverse
   formula for exactly this reason.
 - D) is a non-sequitur. `S3`'s rows are `[1,2,3]`, `[2,4,6]` and `[1,1,1]`; none
   is zero. What makes it singular is that row 1 is twice row 0. The determinant
-  detects a *dependence*, and a dependent row need not be a zero row â€” this is
+  detects a *dependence*, and a dependent row need not be a zero row — this is
   the same trap as MCQ Q1 option D.
 
 </details>
@@ -1475,18 +1475,18 @@ tells you nothing about how to invert `A`.
 <details>
 <summary>Model answer</summary>
 
-For an `n Ã— n` matrix `A`, let `M_ij` be the `(nâˆ’1) Ã— (nâˆ’1)` matrix obtained by
+For an `n × n` matrix `A`, let `M_ij` be the `(n−1) × (n−1)` matrix obtained by
 deleting row `i` and column `j`. The cofactor of entry `(i,j)` is
-`C_ij = (âˆ’1)^{i+j} Â· det(M_ij)`, and cofactor expansion says
-`det(A) = Î£_{j=1..n} a_1j Â· C_1j`, valid along **any** row or column.
+`C_ij = (−1)^{i+j} · det(M_ij)`, and cofactor expansion says
+`det(A) = Σ_{j=1..n} a_1j · C_1j`, valid along **any** row or column.
 
 The exponent `i+j` produces the checkerboard of signs: `+` where `i+j` is even,
-`âˆ’` where it is odd. It is the sign acquired by moving row `i` to the top of the
-matrix by `iâˆ’1` adjacent transpositions and column `j` to the left by `jâˆ’1`
-adjacent transpositions, a total of `(iâˆ’1)+(jâˆ’1) = i+jâˆ’2` swaps, each contributing
-a factor of `âˆ’1`. Since `âˆ’1` raised to `i+jâˆ’2` equals `âˆ’1` raised to `i+j`, the
-sign is `(âˆ’1)^{i+j}`. That is why expanding along row 2 of a 3Ã—3 gives signs
-`âˆ’, +, âˆ’` while row 1 gives `+, âˆ’, +`.
+`−` where it is odd. It is the sign acquired by moving row `i` to the top of the
+matrix by `i−1` adjacent transpositions and column `j` to the left by `j−1`
+adjacent transpositions, a total of `(i−1)+(j−1) = i+j−2` swaps, each contributing
+a factor of `−1`. Since `−1` raised to `i+j−2` equals `−1` raised to `i+j`, the
+sign is `(−1)^{i+j}`. That is why expanding along row 2 of a 3×3 gives signs
+`−, +, −` while row 1 gives `+, −, +`.
 
 </details>
 
@@ -1496,23 +1496,23 @@ determinant visible.**
 <details>
 <summary>Model answer</summary>
 
-`det(A) = Î£_{Ïƒ âˆˆ S_n} sgn(Ïƒ) Â· Î _{i=1..n} a_{i,Ïƒ(i)}`, where `S_n` is the set of
-all `n!` permutations of `{1,â€¦,n}` and `sgn(Ïƒ) = (âˆ’1)^{#inversions}` counts pairs
-`i < j` with `Ïƒ(i) > Ïƒ(j)`.
+`det(A) = Σ_{σ ∈ S_n} sgn(σ) · Π_{i=1..n} a_{i,σ(i)}`, where `S_n` is the set of
+all `n!` permutations of `{1,…,n}` and `sgn(σ) = (−1)^{#inversions}` counts pairs
+`i < j` with `σ(i) > σ(j)`.
 
-Each product `a_{1Ïƒ(1)} Â· a_{2Ïƒ(2)} Â· â€¦ Â· a_{nÏƒ(n)}` is the determinant of the
+Each product `a_{1σ(1)} · a_{2σ(2)} · … · a_{nσ(n)}` is the determinant of the
 matrix whose `i`-th row is the original row `i` with its entries permuted, and
 hence is twice the signed volume of the simplex spanned by the origin and those
-permuted rows â€” this is the rule of false position. The `n!` simplices indexed by
+permuted rows — this is the rule of false position. The `n!` simplices indexed by
 the permutations tile the parallelepiped spanned by the columns of `A` exactly
 once, the even permutations filling the positive-orientation half and the odd ones
 the negative half. Summing signed gives `|det(A)|` times the orientation sign,
-i.e. the determinant. For `n = 2` the formula is `aâ‚â‚aâ‚‚â‚‚ âˆ’ aâ‚â‚‚aâ‚‚â‚`: the two
+i.e. the determinant. For `n = 2` the formula is `a₁₁a₂₂ − a₁₂a₂₁`: the two
 triangles of the parallelogram.
 
 </details>
 
-**Q3. Why is `det(cA) = câ¿ det(A)` rather than `c Â· det(A)`? State the
+**Q3. Why is `det(cA) = cⁿ det(A)` rather than `c · det(A)`? State the
 one-row version too.**
 
 <details>
@@ -1520,16 +1520,16 @@ one-row version too.**
 
 The one-row version: if only row `i` of `A` is multiplied by `c`, the determinant
 is multiplied by `c`. This follows from cofactor expansion along row `i`: the
-entry `a_ij` appears in the single term `a_ij Â· C_ij`, and the cofactor `C_ij`
+entry `a_ij` appears in the single term `a_ij · C_ij`, and the cofactor `C_ij`
 depends only on the *other* rows, so scaling the entry scales the term and hence
 the whole sum by `c`.
 
 `cA` scales **all** `n` rows. Applying the one-row rule `n` times gives
-`det(cA) = c Â· c Â· â€¦ Â· c Â· det(A) = câ¿ det(A)`.
+`det(cA) = c · c · … · c · det(A) = cⁿ det(A)`.
 
 Equivalently, from the Leibniz formula each term is a product of exactly `n`
 entries, and each entry picks up a factor of `c`, so every one of the `n!` terms
-picks up `câ¿`. The code checks it: `det(A) = 9`, `det(3A) = 243 = 27 Â· 9`.
+picks up `cⁿ`. The code checks it: `det(A) = 9`, `det(3A) = 243 = 27 · 9`.
 
 </details>
 
@@ -1542,10 +1542,10 @@ the smallest counterexample.**
 Linearity would require `det(A + B) = det(A) + det(B)` and
 `det(cA) = c det(A)`. Neither holds in general.
 
-`det(cA) = câ¿ det(A)`, which equals `c det(A)` only when `c^{nâˆ’1} = 1` â€” for real
+`det(cA) = cⁿ det(A)`, which equals `c det(A)` only when `c^{n−1} = 1` — for real
 scalars, only when `c = 0`, `c = 1`, or `n = 1`.
 
-The additive failure: take `A = B = Iâ‚‚`. Then `det(A + B) = det(2Iâ‚‚) = 4` while
+The additive failure: take `A = B = I₂`. Then `det(A + B) = det(2I₂) = 4` while
 `det(A) + det(B) = 1 + 1 = 2`. Cross terms appear because the determinant is a
 polynomial of degree `n` in the entries; the Leibniz formula has `n!` monomials,
 and expanding the products in `det(A+B)` produces mixed terms that neither
@@ -1561,18 +1561,18 @@ is true, and the two functions are used side by side.
 <details>
 <summary>Model answer</summary>
 
-If `A` is `n Ã— n` with `det(A) â‰  0` and `Ax = b`, then `x_i = det(A_i) / det(A)`,
+If `A` is `n × n` with `det(A) ≠ 0` and `Ax = b`, then `x_i = det(A_i) / det(A)`,
 where `A_i` is `A` with column `i` replaced by `b`.
 
 It is not used numerically for two compounding reasons. First, cost: it needs
-`n + 1` determinant evaluations, and by cofactor expansion each is `Î˜(n!)`. Second
+`n + 1` determinant evaluations, and by cofactor expansion each is `Θ(n!)`. Second
 and worse, conditioning: computing a solution as a ratio of two numbers that are
-both nearly zero loses digits catastrophically. If `det(A)` is small â€” which is
-exactly the near-singular case where a careful numerical answer matters most â€” the
+both nearly zero loses digits catastrophically. If `det(A)` is small — which is
+exactly the near-singular case where a careful numerical answer matters most — the
 numerator `det(A_i)` is small too, and the quotient amplifies the relative error of
 both by `1/|det(A)|`.
 
-Gaussian elimination computes all `n` components in one `Î˜(nÂ³)` pass with no such
+Gaussian elimination computes all `n` components in one `Θ(n³)` pass with no such
 division, which is why `np.linalg.solve` is the routine you call.
 
 </details>
@@ -1583,32 +1583,32 @@ division, which is why `np.linalg.solve` is the routine you call.
 <summary>Model answer</summary>
 
 It tells you the system `Ax = b` does **not** have exactly one solution, for any
-`b`; equivalently, `A` is singular and has no inverse, and the map `x â†¦ Ax` is not
+`b`; equivalently, `A` is singular and has no inverse, and the map `x ↦ Ax` is not
 injective.
 
 It fails to tell you which of the two remaining cases you are in. If
-`b âˆˆ col(A)` there are infinitely many solutions (all `xâ‚€ + ker(A)`); if
-`b âˆ‰ col(A)` there are no solutions. The determinant contains no information about
-`b` at all â€” `det` is a function of `A` alone. The code shows both cases for the
-same singular `S = [[1,2],[2,4]]`: `b = (3,6)` gives the line `x = (3âˆ’2t, t)`,
+`b ∈ col(A)` there are infinitely many solutions (all `x₀ + ker(A)`); if
+`b ∉ col(A)` there are no solutions. The determinant contains no information about
+`b` at all — `det` is a function of `A` alone. The code shows both cases for the
+same singular `S = [[1,2],[2,4]]`: `b = (3,6)` gives the line `x = (3−2t, t)`,
 while `b = (3,7)` gives nothing, because every `Sx` has second entry twice its
 first.
 
 Distinguishing them requires the augmented-matrix reduction of
-[lesson 32](32_linear_systems_gaussian_elimination.md): a row `[0 â€¦ 0 | c]` with
-`c â‰  0` means no solution, a free column means infinitely many.
+[lesson 32](32_linear_systems_gaussian_elimination.md): a row `[0 … 0 | c]` with
+`c ≠ 0` means no solution, a free column means infinitely many.
 
 </details>
 
 ### Long Answer
 
-**Q1. Why does `det(A) â‰  0` fail to be a usable test for invertibility in
+**Q1. Why does `det(A) ≠ 0` fail to be a usable test for invertibility in
 floating-point arithmetic, and what should you test instead?**
 
 <details>
 <summary>Model answer</summary>
 
-`det(A) â‰  0` is a theorem about exact arithmetic over a field. It is a statement
+`det(A) ≠ 0` is a theorem about exact arithmetic over a field. It is a statement
 about whether there *exists* a matrix `B` with `BA = AB = I`, and it is perfectly
 sharp: either exactly one such `B` exists, or none does. There is no in-between,
 and that sharpness is what makes it such a clean criterion on paper.
@@ -1616,27 +1616,27 @@ and that sharpness is what makes it such a clean criterion on paper.
 In floating point the arithmetic is finite, and the criterion stops being sharp in
 three separate ways.
 
-**Underflow.** The determinant is a polynomial in the `nÂ²` entries involving
+**Underflow.** The determinant is a polynomial in the `n²` entries involving
 products of `n` of them and a sum of `n!` terms, so it is very easy for its true
 value to fall outside the representable range even when every entry is
 comfortably ordinary. The code's `slogdet` table makes this concrete: `A` has
-`det = 9`, and `A Â· 10â»Â¹Â¹â°` â€” a matrix with perfectly ordinary entries â€” has true
-determinant `9 Ã— 10â»Â³Â³â°`. `np.linalg.det` reports `0.0`. It is not singular; the
-number is below the smallest positive normal float64, about `2.2 Ã— 10â»Â³â°â¸`. A
+`det = 9`, and `A · 10⁻¹¹⁰` — a matrix with perfectly ordinary entries — has true
+determinant `9 × 10⁻³³⁰`. `np.linalg.det` reports `0.0`. It is not singular; the
+number is below the smallest positive normal float64, about `2.2 × 10⁻³⁰⁸`. A
 branch on `det == 0` therefore rejects a matrix that has an exact inverse. The
-`6 Ã— 6` Hilbert matrix is the standard next example: `det â‰ˆ 5.367 Ã— 10â»Â¹â¸`,
-`cond â‰ˆ 1.5 Ã— 10â·`, so seven of your sixteen digits are already gone and the
-`12 Ã— 12` version is past saving.
+`6 × 6` Hilbert matrix is the standard next example: `det ≈ 5.367 × 10⁻¹⁸`,
+`cond ≈ 1.5 × 10⁷`, so seven of your sixteen digits are already gone and the
+`12 × 12` version is past saving.
 
 **Overflow.** The mirror-image failure: entries around `10^100` give a determinant
-around `10^100â°â°â°`, which overflows to `inf`. `inf != 0`, so the test passes and
+around `10^100⁰⁰⁰`, which overflows to `inf`. `inf != 0`, so the test passes and
 you proceed to invert a matrix whose factorisation is already meaningless.
 
 **The deeper problem: nonzero is not the same as well-conditioned.** Even when
 `det(A)` is representable and nonzero, its magnitude carries no information about
 *how hard* the inversion is, because it conflates the size of the matrix with how
-close it is to singular. `diag(1, 10â»Â¹â´)` has `det = 10â»Â¹â´ â‰  0` and an exact
-inverse â€” and roughly 14 of your 16 digits destroyed by the round trip. The
+close it is to singular. `diag(1, 10⁻¹⁴)` has `det = 10⁻¹⁴ ≠ 0` and an exact
+inverse — and roughly 14 of your 16 digits destroyed by the round trip. The
 detected failure mode is therefore not just "wrong verdict about invertibility" but
 the worse one: a *right* verdict followed by a *wrong* answer.
 
@@ -1644,48 +1644,48 @@ the worse one: a *right* verdict followed by a *wrong* answer.
 
 - A pivot tolerance inside the factorisation. `determinant_lu` here compares
   `abs(pivot) > tol` with `tol = 1e-12` and returns `0.0` otherwise. This is
-  scale-relative â€” the pivot is compared against the matrix's own scale â€” and it
+  scale-relative — the pivot is compared against the matrix's own scale — and it
   is what every production LU solver does internally.
 - `np.linalg.slogdet(A)`, which returns `(sign, log|det|)`. The log never
   underflows or overflows, so it is the right way to ask the determinant question
   on a large sparse matrix. The code uses it to recover the sign `+1` and
-  `log|det| = âˆ’757.6559` for the matrix `det` calls zero.
-- `np.linalg.cond(A) = â€–Aâ€–Â·â€–Aâ»Â¹â€–`, which is the quantity that actually predicts
+  `log|det| = −757.6559` for the matrix `det` calls zero.
+- `np.linalg.cond(A) = ‖A‖·‖A⁻¹‖`, which is the quantity that actually predicts
   how many digits you keep. This is the honest diagnostic and the one to reach for
   when the answer will be used in a subsequent calculation rather than merely
   displayed.
 
 The underlying lesson generalises: in exact arithmetic a theorem tells you
 *whether* a thing exists, and the dichotomy is clean. In floating point, existence
-is not the question that matters â€” *usefulness* is, and that is a continuous,
+is not the question that matters — *usefulness* is, and that is a continuous,
 scale-dependent quantity.
 
 </details>
 
-**Q2. The adjugate identity `AÂ·adj(A) = det(A)Â·I` holds for every square matrix.
-Why is it not circular as a proof that `A` is invertible when `det(A) â‰  0`?**
+**Q2. The adjugate identity `A·adj(A) = det(A)·I` holds for every square matrix.
+Why is it not circular as a proof that `A` is invertible when `det(A) ≠ 0`?**
 
 <details>
 <summary>Model answer</summary>
 
 The apparent circularity would be real if the identity had a hypothesis. It does
-not. `AÂ·adj(A) = det(A)Â·I` is a *polynomial* identity: both sides are polynomials
+not. `A·adj(A) = det(A)·I` is a *polynomial* identity: both sides are polynomials
 in the entries of `A`, and they are equal as polynomials, so they agree on every
 substitution over any commutative field. There is no assumption about `det(A)`
 anywhere in its statement or proof.
 
 The proof is pure cofactor expansion and does not divide. Expand
-`(A adj(A))_ij = Î£_k a_ik Â· adj(A)_kj`. Since `adj(A)_kj = C_jk`, this is
-`Î£_k a_ik C_jk`. When `i = j` this is cofactor expansion of row `i` of `A`,
-giving `det(A)`. When `i â‰  j`, it is cofactor expansion of `A` along row `j`
-after row `i` has been moved to the top; that move costs `(iâˆ’j)` transpositions,
-each a sign flip, contributing `(+1)^{iâˆ’j}`, while the cofactor contributes
-`(âˆ’1)^{j+k}`â€¦ combining the two gives a matrix with a zero row and hence a
+`(A adj(A))_ij = Σ_k a_ik · adj(A)_kj`. Since `adj(A)_kj = C_jk`, this is
+`Σ_k a_ik C_jk`. When `i = j` this is cofactor expansion of row `i` of `A`,
+giving `det(A)`. When `i ≠ j`, it is cofactor expansion of `A` along row `j`
+after row `i` has been moved to the top; that move costs `(i−j)` transpositions,
+each a sign flip, contributing `(+1)^{i−j}`, while the cofactor contributes
+`(−1)^{j+k}`… combining the two gives a matrix with a zero row and hence a
 determinant of `0`. So the off-diagonal entries vanish and the diagonal is
 `det(A)`.
 
-**What *would* be circular** is stating the identity with `det(A) â‰  0` as a
-hypothesis, because then to prove "invertibility follows from `det(A) â‰  0`" you
+**What *would* be circular** is stating the identity with `det(A) ≠ 0` as a
+hypothesis, because then to prove "invertibility follows from `det(A) ≠ 0`" you
 would need the identity on matrices you have not yet established to be
 nonsingular. Stating it unconditionally is what lets the proof go through, and the
 code separates the two: it computes `adjugate(S3)` and `matmul(S3, adjugate(S3))`
@@ -1693,10 +1693,10 @@ for the *singular* matrix `S3` without complaint, obtaining the zero matrix,
 which is `det(S3) I = 0 I`.
 
 The division happens exactly once, afterwards, and only there does the hypothesis
-`det(A) â‰  0` appear. So the structure of the argument is: unconditional identity â†’
-conditional division â†’ conditional existence of the inverse. Each step uses only
-what the previous step established. The general pattern â€” state the algebraic
-identity without assumptions, and put the division at the end â€” is worth copying;
+`det(A) ≠ 0` appear. So the structure of the argument is: unconditional identity →
+conditional division → conditional existence of the inverse. Each step uses only
+what the previous step established. The general pattern — state the algebraic
+identity without assumptions, and put the division at the end — is worth copying;
 it is why `adj(A)` is defined for singular matrices rather than only for
 invertible ones.
 
@@ -1712,28 +1712,28 @@ what happens in the degenerate case.**
 The statement is right up to the sign and the shape of the argument. Precisely:
 
 - The parallelepiped is spanned by the **columns** of `A` as vectors from the
-  origin â€” though this equals the one spanned by the rows, because `det(Aáµ€) =
+  origin — though this equals the one spanned by the rows, because `det(Aᵀ) =
   det(A)`, so the student's choice is harmless.
 - Its `n`-dimensional **volume** is `|det(A)|`, not `det(A)`. Volume is a
   nonnegative number; the determinant may be negative.
 - `det(A)` is the **signed** volume: positive when the ordered basis
-  `(col_1, â€¦, col_n)` has the same orientation as the standard basis, negative
+  `(col_1, …, col_n)` has the same orientation as the standard basis, negative
   when it has the opposite.
 
 The sign is not a technicality, and the Leibniz formula is what shows why. Expand
 the unit cube's images: each of the `n!` permutations indexes one simplex, and
-`sgn(Ïƒ) = +1` for the permutations preserving orientation, `âˆ’1` for those
+`sgn(σ) = +1` for the permutations preserving orientation, `−1` for those
 reversing it. The even and odd simplices tile the parallelepiped in two
-half-volume sets, so the signed sum is exactly the volume with a `+` or `âˆ’`
+half-volume sets, so the signed sum is exactly the volume with a `+` or `−`
 attached. The code demonstrates the geometry directly: `G1 = [[2,0],[0,3]]` sends
 the unit square's corners to `(0,0), (2,0), (2,3), (0,3)`, shoelace signed area
 `6 = det(G1)`, counterclockwise preserved. `G2 = [[1,2],[2,1]]` sends them to
-`(0,0), (1,2), (3,3), (2,1)`, shoelace signed area `âˆ’3 = det(G2)` â€” the same
+`(0,0), (1,2), (3,3), (2,1)`, shoelace signed area `−3 = det(G2)` — the same
 order of points, now walked clockwise, so the map turned the square over like a
 glove.
 
 The degenerate case is where the claim needs the most care. When `det(A) = 0` the
-parallelepiped has **zero** `n`-dimensional volume â€” it is flat. It is not empty,
+parallelepiped has **zero** `n`-dimensional volume — it is flat. It is not empty,
 and it is not zero-dimensional: `G3 = [[1,1],[1,1]]` sends the unit square's
 corners to `(0,0), (1,1), (2,2), (1,1)`, four collinear points lying on the line
 `y = x`. The image is a line segment, which has `1`-dimensional volume 1 and
@@ -1742,9 +1742,9 @@ dimension, and `A` is not the zero matrix: it still moves points, just not
 independently in every direction.
 
 That is exactly why `det(A) = 0` is the invertibility criterion. The transformation
-`A` is invertible on `â„â¿` if and only if it is a bijection of `â„â¿`, and a linear
-map is a bijection exactly when its columns stay independent â€” exactly when the
-flat object they span has full dimension â€” exactly when `det(A) â‰  0`.
+`A` is invertible on `ℝⁿ` if and only if it is a bijection of `ℝⁿ`, and a linear
+map is a bijection exactly when its columns stay independent — exactly when the
+flat object they span has full dimension — exactly when `det(A) ≠ 0`.
 
 </details>
 
@@ -1757,14 +1757,14 @@ on a large sparse matrix?**
 
 **Why it earns its keep.** It makes the determinant the *scale factor* of a
 transformation rather than an arbitrary function of a grid. Volume satisfies
-`vol(A(BS)) = |det A| Â· |det B| Â· vol(S)` because applying `B` then `A` scales
+`vol(A(BS)) = |det A| · |det B| · vol(S)` because applying `B` then `A` scales
 volume twice, and composition of scalings multiplies. So any candidate for "the
 determinant" must satisfy multiplicativity, and it is the volume argument that
-identifies it uniquely (up to the sign convention) â€” Leibniz's formula is the
+identifies it uniquely (up to the sign convention) — Leibniz's formula is the
 proof that the `n!` signed simplices tile exactly once.
 
 The sign also composes correctly, which the code checks: `P = [[1,2],[3,4]]` and
-`Q = [[5,6],[7,8]]` both have `det = âˆ’2`, so `det(PQ) = (+4) > 0`. Two
+`Q = [[5,6],[7,8]]` both have `det = −2`, so `det(PQ) = (+4) > 0`. Two
 orientation-reversing maps compose to an orientation-preserving one. You cannot
 see that from either determinant alone, and it is a genuine fact about geometry
 rather than bookkeeping.
@@ -1772,24 +1772,24 @@ rather than bookkeeping.
 **What breaks.** Two things, and the second is fatal.
 
 First, cost and conditioning. `det(A) det(B)` requires forming both determinants
-numerically and then dividing â€” two `O(nÂ³)` factorisations plus a quotient of two
+numerically and then dividing — two `O(n³)` factorisations plus a quotient of two
 possibly-tiny numbers, which amplifies both relative errors by `1/|det|`. If
 `A` is nearly singular (exactly when you care most) the quotient is garbage.
-Computing `det(AB)` directly is `O((n+m)^{2.1})` to `(n+m)Â³` and involves no
+Computing `det(AB)` directly is `O((n+m)^{2.1})` to `(n+m)³` and involves no
 division at all.
 
 Second, and decisively for sparse matrices, range. A large sparse matrix, say a
-`10âµ Ã— 10âµ` web-graph matrix, has a determinant whose magnitude is astronomically
-far outside double precision â€” anywhere from underflow to `0.0` to overflow to
-`inf`. The code's `slogdet` table shows the underflow case with a mere `3 Ã— 3`:
+`10⁵ × 10⁵` web-graph matrix, has a determinant whose magnitude is astronomically
+far outside double precision — anywhere from underflow to `0.0` to overflow to
+`inf`. The code's `slogdet` table shows the underflow case with a mere `3 × 3`:
 `A * 1e-110` reports `det = 0.0` from `np.linalg.det` while `np.linalg.slogdet`
-reports sign `+1` and `log|det| = âˆ’757.6559`. Scale a matrix down by a constant
+reports sign `+1` and `log|det| = −757.6559`. Scale a matrix down by a constant
 and you can force underflow with no change in its structure whatsoever.
 
 The fix is to keep the determinant in log form. Since `log(det(AB)) = log(det A) +
-log(det B)`, a computation needing `det(P)^k` â€” a random walk, a Markov chain
-normalisation, a PageRank damping constant â€” should use `k Â· slogdet(P)[1]`, which
-is a single `O(nÂ³)` factorisation reused `k` times. The code verifies the identity
+log(det B)`, a computation needing `det(P)^k` — a random walk, a Markov chain
+normalisation, a PageRank damping constant — should use `k · slogdet(P)[1]`, which
+is a single `O(n³)` factorisation reused `k` times. The code verifies the identity
 holds there: `slogdet(A) + slogdet(A)` and `slogdet(A @ A)` both give
 `(+1, 4.3944)`.
 
@@ -1801,7 +1801,7 @@ the identity in your head; use LU, `slogdet`, and `cond` in your code.
 
 ## Exercises and Solutions
 
-**[ ] Exercise 1 â€” cofactor expansion of a 4Ã—4, twice.** For
+**[ ] Exercise 1 — cofactor expansion of a 4×4, twice.** For
 
     A = | 2  1  1  0 |
         | 1  3  0  1 |
@@ -1809,59 +1809,59 @@ the identity in your head; use LU, `slogdet`, and `cond` in your code.
         | 1  0  1  5 |
 
 (a) compute `det(A)` by expanding along row 0; (b) compute `det(A)` by expanding
-along column 3; (c) confirm your two answers with a third method â€” Gaussian
-elimination, reading the determinant off the pivots â€” and say in one sentence why
+along column 3; (c) confirm your two answers with a third method — Gaussian
+elimination, reading the determinant off the pivots — and say in one sentence why
 the three must agree.
 
 <details>
 <summary>Solution</summary>
 
-**(a) Along row 0.** The signs are `+ âˆ’ + âˆ’`. Each minor is `3 Ã— 3`, so expand
+**(a) Along row 0.** The signs are `+ − + −`. Each minor is `3 × 3`, so expand
 each one along its own first row.
 
-`Mâ‚€â‚€` (delete row 0, column 0):
+`M₀₀` (delete row 0, column 0):
 
     | 3  0  1 |
     | 1  4  1 |
     | 0  1  5 |
 
-`= 3Â·(4Â·5 âˆ’ 1Â·1) âˆ’ 0Â·(1Â·5 âˆ’ 1Â·0) + 1Â·(1Â·1 âˆ’ 4Â·0) = 3Â·19 âˆ’ 0 + 1 = 58`.
-Sign `(+1)`, so `Câ‚€â‚€ = 58` and the term is `2 Â· 58 = 116`.
+`= 3·(4·5 − 1·1) − 0·(1·5 − 1·0) + 1·(1·1 − 4·0) = 3·19 − 0 + 1 = 58`.
+Sign `(+1)`, so `C₀₀ = 58` and the term is `2 · 58 = 116`.
 
-`Mâ‚€â‚` (delete row 0, column 1):
+`M₀₁` (delete row 0, column 1):
 
     | 1  0  1 |
     | 0  4  1 |
     | 1  1  5 |
 
-`= 1Â·(4Â·5 âˆ’ 1Â·1) âˆ’ 0Â·(0Â·5 âˆ’ 1Â·1) + 1Â·(0Â·1 âˆ’ 4Â·1) = 19 âˆ’ 0 + (0 âˆ’ 4) = 15`.
-Sign `(âˆ’1)`, so `Câ‚€â‚ = âˆ’15` and the term is `1 Â· (âˆ’15) = âˆ’15`.
+`= 1·(4·5 − 1·1) − 0·(0·5 − 1·1) + 1·(0·1 − 4·1) = 19 − 0 + (0 − 4) = 15`.
+Sign `(−1)`, so `C₀₁ = −15` and the term is `1 · (−15) = −15`.
 
-`Mâ‚€â‚‚` (delete row 0, column 2):
+`M₀₂` (delete row 0, column 2):
 
     | 1  3  1 |
     | 0  1  1 |
     | 1  0  5 |
 
-`= 1Â·(1Â·5 âˆ’ 1Â·0) âˆ’ 3Â·(0Â·5 âˆ’ 1Â·1) + 1Â·(0Â·0 âˆ’ 1Â·1) = 5 âˆ’ 3Â·(âˆ’1) + (âˆ’1) = 7`.
-Sign `(+1)`, so `Câ‚€â‚‚ = 7` and the term is `1 Â· 7 = 7`.
+`= 1·(1·5 − 1·0) − 3·(0·5 − 1·1) + 1·(0·0 − 1·1) = 5 − 3·(−1) + (−1) = 7`.
+Sign `(+1)`, so `C₀₂ = 7` and the term is `1 · 7 = 7`.
 
-`Mâ‚€â‚ƒ` (delete row 0, column 3):
+`M₀₃` (delete row 0, column 3):
 
     | 1  3  0 |
     | 0  1  4 |
     | 1  0  1 |
 
-`= 1Â·(1Â·1 âˆ’ 4Â·0) âˆ’ 3Â·(0Â·1 âˆ’ 4Â·1) + 0Â·(0Â·0 âˆ’ 1Â·1) = 1 âˆ’ 3Â·(âˆ’4) + 0 = 13`.
-Sign `(âˆ’1)`, so `Câ‚€â‚ƒ = âˆ’13`. The entry `aâ‚€â‚ƒ = 0`, so the term is `0 Â· (âˆ’13) = 0`.
+`= 1·(1·1 − 4·0) − 3·(0·1 − 4·1) + 0·(0·0 − 1·1) = 1 − 3·(−4) + 0 = 13`.
+Sign `(−1)`, so `C₀₃ = −13`. The entry `a₀₃ = 0`, so the term is `0 · (−13) = 0`.
 
-Total: `116 âˆ’ 15 + 7 + 0 = 108`. So **`det(A) = 108`**.
+Total: `116 − 15 + 7 + 0 = 108`. So **`det(A) = 108`**.
 
 **(b) Along column 3.** The entries are `0, 1, 1, 5` at rows 0 to 3, with signs
-`(âˆ’1)^{i+3}` for `i = 0,1,2,3` giving `âˆ’, +, âˆ’, +`. Two of the four minors were
+`(−1)^{i+3}` for `i = 0,1,2,3` giving `−, +, −, +`. Two of the four minors were
 already computed in (a).
 
-`i = 0`: minor `Mâ‚€â‚ƒ` has `det = 13`, sign `âˆ’`, so `Câ‚€â‚ƒ = âˆ’13`. Entry `aâ‚€â‚ƒ = 0`,
+`i = 0`: minor `M₀₃` has `det = 13`, sign `−`, so `C₀₃ = −13`. Entry `a₀₃ = 0`,
 term `0`.
 
 `i = 1`: delete row 1 and column 3, leaving
@@ -1870,8 +1870,8 @@ term `0`.
     | 0  1  4 |
     | 1  0  1 |
 
-`= 2Â·(1Â·1 âˆ’ 4Â·0) âˆ’ 1Â·(0Â·1 âˆ’ 4Â·1) + 1Â·(0Â·0 âˆ’ 1Â·1) = 2Â·1 âˆ’ (âˆ’4) + (âˆ’1) = 5`.
-Sign `(+1)`, so `Câ‚â‚ƒ = 5` and the term is `1 Â· 5 = 5`.
+`= 2·(1·1 − 4·0) − 1·(0·1 − 4·1) + 1·(0·0 − 1·1) = 2·1 − (−4) + (−1) = 5`.
+Sign `(+1)`, so `C₁₃ = 5` and the term is `1 · 5 = 5`.
 
 `i = 2`: delete row 2 and column 3, leaving
 
@@ -1879,8 +1879,8 @@ Sign `(+1)`, so `Câ‚â‚ƒ = 5` and the term is `1 Â· 5 = 5`.
     | 1  3  0 |
     | 1  0  1 |
 
-`= 2Â·(3Â·1 âˆ’ 0Â·0) âˆ’ 1Â·(1Â·1 âˆ’ 0Â·1) + 1Â·(1Â·0 âˆ’ 3Â·1) = 6 âˆ’ 1 + (âˆ’3) = 2`.
-Sign `(âˆ’1)`, so `Câ‚‚â‚ƒ = âˆ’2` and the term is `1 Â· (âˆ’2) = âˆ’2`.
+`= 2·(3·1 − 0·0) − 1·(1·1 − 0·1) + 1·(1·0 − 3·1) = 6 − 1 + (−3) = 2`.
+Sign `(−1)`, so `C₂₃ = −2` and the term is `1 · (−2) = −2`.
 
 `i = 3`: delete row 3 and column 3, leaving
 
@@ -1888,13 +1888,13 @@ Sign `(âˆ’1)`, so `Câ‚‚â‚ƒ = âˆ’2` and the term is `1 Â· (â�
     | 1  3  0 |
     | 0  1  4 |
 
-`= 2Â·(3Â·4 âˆ’ 0Â·1) âˆ’ 1Â·(1Â·4 âˆ’ 0Â·0) + 1Â·(1Â·1 âˆ’ 3Â·0) = 24 âˆ’ 4 + 1 = 21`.
-Sign `(+1)`, so `Câ‚ƒâ‚ƒ = 21` and the term is `5 Â· 21 = 105`.
+`= 2·(3·4 − 0·1) − 1·(1·4 − 0·0) + 1·(1·1 − 3·0) = 24 − 4 + 1 = 21`.
+Sign `(+1)`, so `C₃₃ = 21` and the term is `5 · 21 = 105`.
 
-Total: `0 + 5 âˆ’ 2 + 105 = 108`. Same as (a). âœ“
+Total: `0 + 5 − 2 + 105 = 108`. Same as (a). ✓
 
 **(c) By elimination.** Start from `A`, and never scale a row, so the determinant
-is the product of the pivots times `(âˆ’1)^{swaps}`.
+is the product of the pivots times `(−1)^{swaps}`.
 
 Clear column 0:
 
@@ -1921,13 +1921,13 @@ Clear column 2 (pivot `21/5` already largest, no swap):
 So `U` is upper triangular with **zero row swaps** and pivots
 `2, 5/2, 21/5, 36/7`. The determinant is the diagonal product:
 
-    det(A) = 2 Â· (5/2) Â· (21/5) Â· (36/7)
-           = (2 Â· 5 Â· 21 Â· 36) / (2 Â· 5 Â· 7)
-           = 2 Â· 3 Â· 36
+    det(A) = 2 · (5/2) · (21/5) · (36/7)
+           = (2 · 5 · 21 · 36) / (2 · 5 · 7)
+           = 2 · 3 · 36
            = 216 / 2
-           = 108   âœ“
+           = 108   ✓
 
-**(c) continued â€” why all three agree.** They must, because all three are
+**(c) continued — why all three agree.** They must, because all three are
 computations of the *same* function: cofactor expansion along row 0, along
 column 3, and the pivot product from LU are three routes to `det(A)`, and the
 elimination route agrees with cofactor expansion because each of its three
@@ -1936,54 +1936,54 @@ arithmetic error, which is exactly why doing it twice is worth doing.
 
 </details>
 
-**[ ] Exercise 2 â€” the adjugate of a 2Ã—2, and why the transpose is not optional.**
+**[ ] Exercise 2 — the adjugate of a 2×2, and why the transpose is not optional.**
 For `A = [[a, b], [c, d]]`, write down `adj(A)` in closed form, then evaluate it
-for `A = [[4, 7], [2, 6]]` and check `AÂ·adj(A) = det(A)Â·I`.
+for `A = [[4, 7], [2, 6]]` and check `A·adj(A) = det(A)·I`.
 
 <details>
 <summary>Solution</summary>
 
 **(a) Closed form.** The cofactor matrix is
 
-    C = | Câ‚€â‚€ Câ‚€â‚ |  =  |  d   âˆ’c |
-        | Câ‚â‚€ Câ‚â‚ |     | âˆ’b    a |
+    C = | C₀₀ C₀₁ |  =  |  d   −c |
+        | C₁₀ C₁₁ |     | −b    a |
 
-because `Câ‚€â‚€ = det[[d]] = d`, `Câ‚€â‚ = âˆ’det[[c]] = âˆ’c`, `Câ‚â‚€ = âˆ’det[[b]] = âˆ’b`,
-`Câ‚â‚ = det[[a]] = a`. Transposing gives
+because `C₀₀ = det[[d]] = d`, `C₀₁ = −det[[c]] = −c`, `C₁₀ = −det[[b]] = −b`,
+`C₁₁ = det[[a]] = a`. Transposing gives
 
-    adj(A) = |  d  âˆ’b |      and      det(A) = ad âˆ’ bc
-             | âˆ’c   a |
+    adj(A) = |  d  −b |      and      det(A) = ad − bc
+             | −c   a |
 
 so
 
-    Aâ»Â¹ = 1/(ad âˆ’ bc) Â· |  d  âˆ’b |
-                           | âˆ’c   a |
+    A⁻¹ = 1/(ad − bc) · |  d  −b |
+                           | −c   a |
 
-which is the familiar 2Ã—2 inverse with the diagonal entries swapped and the
+which is the familiar 2×2 inverse with the diagonal entries swapped and the
 off-diagonal entries negated.
 
-**(b) Evaluate.** For `A = [[4, 7], [2, 6]]`, `det(A) = 4Â·6 âˆ’ 7Â·2 = 24 âˆ’ 14 = 10`.
+**(b) Evaluate.** For `A = [[4, 7], [2, 6]]`, `det(A) = 4·6 − 7·2 = 24 − 14 = 10`.
 
-    adj(A) = | 6  âˆ’7 |     and     Aâ»Â¹ = | 0.6  âˆ’0.7 |
-             | âˆ’2   4 |              | âˆ’0.2  0.4 |
+    adj(A) = | 6  −7 |     and     A⁻¹ = | 0.6  −0.7 |
+             | −2   4 |              | −0.2  0.4 |
 
-**(c) Verify.** `A Â· adj(A)`:
+**(c) Verify.** `A · adj(A)`:
 
-- `(0,0)`: `4Â·6 + 7Â·(âˆ’2) = 24 âˆ’ 14 = 10` âœ“
-- `(0,1)`: `4Â·(âˆ’7) + 7Â·4 = âˆ’28 + 28 = 0` âœ“
-- `(1,0)`: `2Â·6 + 6Â·(âˆ’2) = 12 âˆ’ 12 = 0` âœ“
-- `(1,1)`: `2Â·(âˆ’7) + 6Â·4 = âˆ’14 + 24 = 10` âœ“
+- `(0,0)`: `4·6 + 7·(−2) = 24 − 14 = 10` ✓
+- `(0,1)`: `4·(−7) + 7·4 = −28 + 28 = 0` ✓
+- `(1,0)`: `2·6 + 6·(−2) = 12 − 12 = 0` ✓
+- `(1,1)`: `2·(−7) + 6·4 = −14 + 24 = 10` ✓
 
 So `A adj(A) = 10 I = det(A) I`.
 
-Note the transpose mattered: the cofactor matrix of `A` is `[[6, âˆ’2], [âˆ’7, 4]]`,
-which is a *different* matrix from `adj(A) = [[6, âˆ’7], [âˆ’2, 4]]`. Using the
+Note the transpose mattered: the cofactor matrix of `A` is `[[6, −2], [−7, 4]]`,
+which is a *different* matrix from `adj(A) = [[6, −7], [−2, 4]]`. Using the
 cofactor matrix directly would give a wrong "inverse" that still multiplies out to
 `10 I` in only two of the four positions.
 
 </details>
 
-**[ ] Exercise 3 â€” what `det(A) = 0` does and does not determine.** Let
+**Challenge — Exercise 3 — what `det(A) = 0` does and does not determine.** Let
 
     A = | 1  2  0 |
         | 2  4  0 |
@@ -1997,72 +1997,72 @@ situation.
 <details>
 <summary>Solution</summary>
 
-**(a)** Expand along row 0, signs `+ âˆ’ +`:
+**(a)** Expand along row 0, signs `+ − +`:
 
-`det(A) = 1Â·det[[4,0],[0,5]] âˆ’ 2Â·det[[2,0],[0,5]] + 0Â·det[[2,4],[0,0]]`
-`= 1Â·(4Â·5 âˆ’ 0Â·0) âˆ’ 2Â·(2Â·5 âˆ’ 0Â·0) + 0`
-`= 20 âˆ’ 20 + 0 = 0`.
+`det(A) = 1·det[[4,0],[0,5]] − 2·det[[2,0],[0,5]] + 0·det[[2,4],[0,0]]`
+`= 1·(4·5 − 0·0) − 2·(2·5 − 0·0) + 0`
+`= 20 − 20 + 0 = 0`.
 
 **(b)** `Ax = b` with `A` block-diagonal `diag(M, 5)` where `M = [[1,2],[2,4]]`:
 
-- rows 2 and 3 of the system are `0 = bâ‚‚` and `5xâ‚ƒ = bâ‚ƒ`, so `bâ‚‚ = 0` is required
-  and `xâ‚ƒ = bâ‚ƒ/5`.
-- rows 0 and 1 are `xâ‚ + 2xâ‚‚ = bâ‚€` and `2xâ‚ + 4xâ‚‚ = bâ‚`. The second left-hand side
-  is twice the first, so consistency needs `bâ‚ = 2bâ‚€`. When it holds, `xâ‚ = bâ‚€ âˆ’
-  2xâ‚‚` and `xâ‚‚` is free.
+- rows 2 and 3 of the system are `0 = b₂` and `5x₃ = b₃`, so `b₂ = 0` is required
+  and `x₃ = b₃/5`.
+- rows 0 and 1 are `x₁ + 2x₂ = b₀` and `2x₁ + 4x₂ = b₁`. The second left-hand side
+  is twice the first, so consistency needs `b₁ = 2b₀`. When it holds, `x₁ = b₀ −
+  2x₂` and `x₂` is free.
 
-So: solutions exist **iff** `bâ‚ = 2bâ‚€` **and** `bâ‚‚ = 0`. The general solution is
+So: solutions exist **iff** `b₁ = 2b₀` **and** `b₂ = 0`. The general solution is
 
-    x = (bâ‚€ âˆ’ 2t, t, bâ‚ƒ/5),   t âˆˆ â„
+    x = (b₀ − 2t, t, b₃/5),   t ∈ ℝ
 
 a one-parameter family, i.e. infinitely many. (Compare
 [lesson 32](32_linear_systems_gaussian_elimination.md), where the free variable is
 read off the pivot pattern.)
 
-**(c)** `b = (1, 2, 5)` works, but `b = (1, 0, 5)` does not: `bâ‚ = 0 â‰  2Â·1 = 2bâ‚€`,
-so the equations `xâ‚ + 2xâ‚‚ = 1` and `2xâ‚ + 4xâ‚‚ = 0` contradict â€” the second demands
-`2(xâ‚ + 2xâ‚‚) = 0`, i.e. `xâ‚ + 2xâ‚‚ = 0`. Equally, `b = (1, 2, 1)` fails on `bâ‚‚ = 0`.
+**(c)** `b = (1, 2, 5)` works, but `b = (1, 0, 5)` does not: `b₁ = 0 ≠ 2·1 = 2b₀`,
+so the equations `x₁ + 2x₂ = 1` and `2x₁ + 4x₂ = 0` contradict — the second demands
+`2(x₁ + 2x₂) = 0`, i.e. `x₁ + 2x₂ = 0`. Equally, `b = (1, 2, 1)` fails on `b₂ = 0`.
 Two independent reasons for failure in the same matrix, which is a useful thing
 to see.
 
 **(d)** The cofactors:
 
-- `Câ‚€â‚€ = det[[4,0],[0,5]] = 20`
-- `Câ‚€â‚ = âˆ’det[[2,0],[0,5]] = âˆ’10`
-- `Câ‚€â‚‚ = +det[[2,4],[0,0]] = 0`
-- `Câ‚â‚€ = âˆ’det[[2,0],[0,5]] = âˆ’10`
-- `Câ‚â‚ = +det[[1,0],[0,5]] = 5`
-- `Câ‚â‚‚ = âˆ’det[[1,2],[0,0]] = 0`
-- `Câ‚‚â‚€ = +det[[2,0],[4,0]] = 0`
-- `Câ‚‚â‚ = âˆ’det[[1,0],[2,0]] = 0`
-- `Câ‚‚â‚‚ = +det[[1,2],[2,4]] = 4 âˆ’ 4 = 0`
+- `C₀₀ = det[[4,0],[0,5]] = 20`
+- `C₀₁ = −det[[2,0],[0,5]] = −10`
+- `C₀₂ = +det[[2,4],[0,0]] = 0`
+- `C₁₀ = −det[[2,0],[0,5]] = −10`
+- `C₁₁ = +det[[1,0],[0,5]] = 5`
+- `C₁₂ = −det[[1,2],[0,0]] = 0`
+- `C₂₀ = +det[[2,0],[4,0]] = 0`
+- `C₂₁ = −det[[1,0],[2,0]] = 0`
+- `C₂₂ = +det[[1,2],[2,4]] = 4 − 4 = 0`
 
-    C = | 20  âˆ’10   0 |      adj(A) = Cáµ€ = | 20  âˆ’10   0 |
-        | âˆ’10   5   0 |                    | âˆ’10   5   0 |
+    C = | 20  −10   0 |      adj(A) = Cᵀ = | 20  −10   0 |
+        | −10   5   0 |                    | −10   5   0 |
         |  0    0   0 |                    |  0    0   0 |
 
-`A Â· adj(A)`: row 0 of `A` is `[1, 2, 0]` and row 0 of `adj(A)` is `[20, âˆ’10, 0]`, so
-row 0 of the product is `[20 âˆ’ 20, âˆ’10 + 10, 0] = [0, 0, 0]`. Row 1 of `A` is twice
+`A · adj(A)`: row 0 of `A` is `[1, 2, 0]` and row 0 of `adj(A)` is `[20, −10, 0]`, so
+row 0 of the product is `[20 − 20, −10 + 10, 0] = [0, 0, 0]`. Row 1 of `A` is twice
 row 0, so its product row is also `[0, 0, 0]`. Row 2 is `[0, 0, 5]` times a zero
 row, also zero. Hence
 
     A adj(A) = 0 = det(A) I
 
-exactly as the adjugate identity predicts. The identity holds â€” but it is now a
+exactly as the adjugate identity predicts. The identity holds — but it is now a
 statement about nothing, since the left-hand side is the zero matrix whatever
 `adj(A)` had been. Dividing by `det(A) = 0` is what fails, and `A` has no inverse.
 
 Note the shape of `adj(A)` here: rank 1, with every row but one proportional to
-`(2, âˆ’1, 0)`. This is the general shape of the adjugate of a singular matrix â€”
-it encodes the dependence relation rather than an inverse, and for `n â‰¥ 2` its
-rank is exactly `n âˆ’ 1` if the rank of `A` is `n âˆ’ 1`, and `0` otherwise.
+`(2, −1, 0)`. This is the general shape of the adjugate of a singular matrix —
+it encodes the dependence relation rather than an inverse, and for `n ≥ 2` its
+rank is exactly `n − 1` if the rank of `A` is `n − 1`, and `0` otherwise.
 
 </details>
 
-**[ ] Exercise 4 â€” determinant as a volume scale factor, checked by hand.** Let
+**[ ] Exercise 4 — determinant as a volume scale factor, checked by hand.** Let
 `G = [[3, 1], [0, 2]]`. (a) Apply `G` to the unit square and find the area of the
 image by the shoelace formula. (b) Compare with `det(G)` and explain the
-disagreement, if any. (c) Now let `H = [[3, 1], [0, âˆ’2]]` and repeat, explaining
+disagreement, if any. (c) Now let `H = [[3, 1], [0, −2]]` and repeat, explaining
 what the sign change does to the picture.
 
 <details>
@@ -2071,38 +2071,38 @@ what the sign change does to the picture.
 **(a)** The unit square's corners in counterclockwise order are
 `(0,0), (1,0), (1,1), (0,1)`. Their images:
 
-- `(0,0) â†’ (3Â·0 + 1Â·0, 0Â·0 + 2Â·0) = (0, 0)`
-- `(1,0) â†’ (3, 0)`
-- `(1,1) â†’ (4, 2)`
-- `(0,1) â†’ (1, 2)`
+- `(0,0) → (3·0 + 1·0, 0·0 + 2·0) = (0, 0)`
+- `(1,0) → (3, 0)`
+- `(1,1) → (4, 2)`
+- `(0,1) → (1, 2)`
 
 Shoelace over `(0,0), (3,0), (4,2), (1,2)`:
-`Î£ (x_i y_{i+1} âˆ’ x_{i+1} y_i) = (0Â·0 âˆ’ 3Â·0) + (3Â·2 âˆ’ 4Â·0) + (4Â·2 âˆ’ 1Â·2) + (1Â·0 âˆ’ 0Â·2)`
+`Σ (x_i y_{i+1} − x_{i+1} y_i) = (0·0 − 3·0) + (3·2 − 4·0) + (4·2 − 1·2) + (1·0 − 0·2)`
 `= 0 + 6 + 6 + 0 = 12`, so signed area `12/2 = 6`.
 
-**(b)** `det(G) = 3Â·2 âˆ’ 1Â·0 = 6`. **They agree exactly**, and the signed area is
+**(b)** `det(G) = 3·2 − 1·0 = 6`. **They agree exactly**, and the signed area is
 positive because the images still run counterclockwise. Geometrically: `G`
-stretches horizontally by 3 and vertically by 2, so areas scale by `3 Â· 2 = 6`.
+stretches horizontally by 3 and vertically by 2, so areas scale by `3 · 2 = 6`.
 The code's `G1 = [[2,0],[0,3]]` case is the same phenomenon with the factors
 swapped, giving shoelace area `6` and `det = 6`.
 
 **(c)** `H` differs from `G` only in the sign of the bottom-right entry.
 
-- `(0,0) â†’ (0,0)`
-- `(1,0) â†’ (3, 0)`
-- `(1,1) â†’ (4, âˆ’2)`
-- `(0,1) â†’ (1, âˆ’2)`
+- `(0,0) → (0,0)`
+- `(1,0) → (3, 0)`
+- `(1,1) → (4, −2)`
+- `(0,1) → (1, −2)`
 
-Shoelace over `(0,0), (3,0), (4,âˆ’2), (1,âˆ’2)`:
-`(0Â·0 âˆ’ 3Â·0) + (3Â·(âˆ’2) âˆ’ 4Â·0) + (4Â·(âˆ’2) âˆ’ 1Â·(âˆ’2)) + (1Â·0 âˆ’ 0Â·(âˆ’2))`
-`= 0 + (âˆ’6) + (âˆ’8 + 2) + 0 = 0 âˆ’ 6 âˆ’ 6 + 0 = âˆ’12`, signed area `âˆ’6`.
+Shoelace over `(0,0), (3,0), (4,−2), (1,−2)`:
+`(0·0 − 3·0) + (3·(−2) − 4·0) + (4·(−2) − 1·(−2)) + (1·0 − 0·(−2))`
+`= 0 + (−6) + (−8 + 2) + 0 = 0 − 6 − 6 + 0 = −12`, signed area `−6`.
 
-`det(H) = 3Â·(âˆ’2) âˆ’ 1Â·0 = âˆ’6`. Agreement again, but now negative. The unsigned area
-is still `6` â€” stretching by 3 and by 2 â€” while the sign records that the corner
+`det(H) = 3·(−2) − 1·0 = −6`. Agreement again, but now negative. The unsigned area
+is still `6` — stretching by 3 and by 2 — while the sign records that the corner
 order came out **clockwise**. Visually, `H` reflects the plane across the
-horizontal axis (stretch Ã—3, flip, stretch Ã—2), and a reflection reverses
+horizontal axis (stretch ×3, flip, stretch ×2), and a reflection reverses
 orientation. This is precisely the code's `G2 = [[1,2],[2,1]]` case, where
-`det = âˆ’3` and the shoelace area is `âˆ’3`: same area, opposite winding.
+`det = −3` and the shoelace area is `−3`: same area, opposite winding.
 
 So the pattern across all three examples is one rule: `|det|` is the area scale
 factor, and the sign is the orientation, and the shoelace formula measures both at
@@ -2110,7 +2110,7 @@ once because it is itself a signed area.
 
 </details>
 
-**[ ] Exercise 5 â€” `det(AB) = det(A)det(B)` on a case where `AB â‰  BA`.** Let
+**[ ] Exercise 5 — `det(AB) = det(A)det(B)` on a case where `AB ≠ BA`.** Let
 
     A = | 1  2 |      B = | 0  1 |
         | 0  1 |          | 1  0 |
@@ -2124,38 +2124,38 @@ says about the relationship between the determinant and non-commutativity.
 
 **(a)** `A` is upper triangular and `B` is the transposition matrix.
 
-`AB = |1Â·0 + 2Â·1, 1Â·1 + 2Â·0; 0Â·0 + 1Â·1, 0Â·1 + 1Â·0| = |2  1; 1  0|`.
+`AB = |1·0 + 2·1, 1·1 + 2·0; 0·0 + 1·1, 0·1 + 1·0| = |2  1; 1  0|`.
 
-`BA = |0Â·1 + 1Â·0, 0Â·2 + 1Â·1; 1Â·1 + 0Â·0, 1Â·2 + 0Â·1| = |0  1; 1  2|`.
+`BA = |0·1 + 1·0, 0·2 + 1·1; 1·1 + 0·0, 1·2 + 0·1| = |0  1; 1  2|`.
 
-So `AB â‰  BA`, as expected: `AB` is upper triangular while `BA` is lower.
+So `AB ≠ BA`, as expected: `AB` is upper triangular while `BA` is lower.
 
-**(b)** `det(A) = 1Â·1 âˆ’ 2Â·0 = 1`. `det(B) = 0Â·0 âˆ’ 1Â·1 = âˆ’1`.
-`det(AB) = 2Â·0 âˆ’ 1Â·1 = âˆ’1`. `det(BA) = 0Â·2 âˆ’ 1Â·1 = âˆ’1`.
+**(b)** `det(A) = 1·1 − 2·0 = 1`. `det(B) = 0·0 − 1·1 = −1`.
+`det(AB) = 2·0 − 1·1 = −1`. `det(BA) = 0·2 − 1·1 = −1`.
 
-**(c)** `det(A)det(B) = 1Â·(âˆ’1) = âˆ’1 = det(AB)` âœ“
-and `det(B)det(A) = (âˆ’1)Â·1 = âˆ’1 = det(BA)` âœ“.
+**(c)** `det(A)det(B) = 1·(−1) = −1 = det(AB)` ✓
+and `det(B)det(A) = (−1)·1 = −1 = det(BA)` ✓.
 
-Both hold. Now the interesting part: `AB â‰  BA`, yet `det(AB) = det(BA)`. The
+Both hold. Now the interesting part: `AB ≠ BA`, yet `det(AB) = det(BA)`. The
 determinant is not sensitive to order at all, because it is a *scale factor* and
 scale factors multiply commutatively. What the determinant cannot tell you, and
-what `AB â‰  BA` shows, is that the two products are different maps: `AB` sends
+what `AB ≠ BA` shows, is that the two products are different maps: `AB` sends
 `(1,0)` to `(2,1)` while `BA` sends it to `(0,1)`. They scale area identically
-(so `det` agrees) while pointing in different directions (so `AB â‰  BA`).
+(so `det` agrees) while pointing in different directions (so `AB ≠ BA`).
 
 This is the honest limit of what the determinant knows. It is a complete invariant
 for the *magnitude* of a transformation's effect on volume, and no information at
 all about the rotation or shear part. To recover that you need eigenvalues,
-singular values, or the polar decomposition â€”
+singular values, or the polar decomposition —
 [lesson 39](39_diagonalization_and_spectral.md) and
 [lesson 40](40_svd_and_pca.md).
 
 </details>
 
-**[ ] Exercise 6 â€” a rank story told by determinants.** Let
+**[ ] Exercise 6 — a rank story told by determinants.** Let
 
     A = | 1  2  3  4 |
-        | 2  4  6  8 |      (row 1 = 2 Â· row 0)
+        | 2  4  6  8 |      (row 1 = 2 · row 0)
         | 1  1  1  1 |
         | 0  1  2  3 |
 
@@ -2166,22 +2166,22 @@ zero matrix, and what does.
 <details>
 <summary>Solution</summary>
 
-**(a)** Row 1 is twice row 0, so eliminate it: `Râ‚ â† Râ‚ âˆ’ 2Râ‚€` produces a zero row.
+**(a)** Row 1 is twice row 0, so eliminate it: `R₁ ← R₁ − 2R₀` produces a zero row.
 That operation leaves the determinant unchanged, and a matrix with a zero row has
-determinant `0` â€” expand along that row and every term is `0 Â· (cofactor)`. So
+determinant `0` — expand along that row and every term is `0 · (cofactor)`. So
 `det(A) = 0`.
 
-The same fact seen through cofactors: every cofactor `Câ‚â±¼` is the determinant of a
-`3 Ã— 3` minor obtained by deleting row 1 and column `j`, and every such minor
+The same fact seen through cofactors: every cofactor `C₁ⱼ` is the determinant of a
+`3 × 3` minor obtained by deleting row 1 and column `j`, and every such minor
 still contains row 0 intact plus one of rows 2 and 3. Those rows are not
 proportional in general, so this argument alone does not force the minors to
-vanish. The cofactors `Câ‚‚â±¼` and `Câ‚ƒâ±¼` do vanish, though: their minors contain both
+vanish. The cofactors `C₂ⱼ` and `C₃ⱼ` do vanish, though: their minors contain both
 rows 0 and 1, which are proportional, so each is `0`. Either way the expansion
 along row 1 gives `det(A) = 0`.
 
 **(b)** Reduce `A` by elimination, which is determinant-preserving at every step.
-The rows are `râ‚€ = (1,2,3,4)`, `râ‚ = (2,4,6,8) = 2râ‚€`, `râ‚‚ = (1,1,1,1)`,
-`râ‚ƒ = (0,1,2,3)`.
+The rows are `r₀ = (1,2,3,4)`, `r₁ = (2,4,6,8) = 2r₀`, `r₂ = (1,1,1,1)`,
+`r₃ = (0,1,2,3)`.
 
     R_1 <- R_1 - 2 R_0      ->   0  0  0  0
     R_2 <- R_2 - R_0        ->   0 -1 -2 -3
@@ -2198,40 +2198,40 @@ Swap rows 1 and 2, then add, and the two remaining rows cancel:
                                  | 0  0  0  0 |
                                  | 0  0  0  0 |
 
-Finally `R_0 â† R_0 âˆ’ 2R_1`, and the RREF is
+Finally `R_0 ← R_0 − 2R_1`, and the RREF is
 
     | 1  0  -1  -2 |
     | 0  1   2   3 |
     | 0  0   0   0 |
     | 0  0   0   0 |
 
-Read off the equations. The first row says `xâ‚€ âˆ’ xâ‚‚ âˆ’ 2xâ‚ƒ = 0`, so
-`xâ‚€ = xâ‚‚ + 2xâ‚ƒ`. The second says `xâ‚ + 2xâ‚‚ + 3xâ‚ƒ = 0`, so `xâ‚ = âˆ’2xâ‚‚ âˆ’ 3xâ‚ƒ`.
+Read off the equations. The first row says `x₀ − x₂ − 2x₃ = 0`, so
+`x₀ = x₂ + 2x₃`. The second says `x₁ + 2x₂ + 3x₃ = 0`, so `x₁ = −2x₂ − 3x₃`.
 Columns 2 and 3 have no pivot, so both are free.
 
-Set `xâ‚‚ = 0`, `xâ‚ƒ = 1`: **`v = (2, âˆ’3, 0, 1)`**.
+Set `x₂ = 0`, `x₃ = 1`: **`v = (2, −3, 0, 1)`**.
 
 Verify by direct multiplication, row by row:
 
-- row 0: `1Â·2 + 2Â·(âˆ’3) + 3Â·0 + 4Â·1 = 2 âˆ’ 6 + 0 + 4 = 0` âœ“
-- row 1: `2Â·2 + 4Â·(âˆ’3) + 6Â·0 + 8Â·1 = 4 âˆ’ 12 + 0 + 8 = 0` âœ“
-- row 2: `1Â·2 + 1Â·(âˆ’3) + 1Â·0 + 1Â·1 = 2 âˆ’ 3 + 0 + 1 = 0` âœ“
-- row 3: `0Â·2 + 1Â·(âˆ’3) + 2Â·0 + 3Â·1 = 0 âˆ’ 3 + 0 + 3 = 0` âœ“
+- row 0: `1·2 + 2·(−3) + 3·0 + 4·1 = 2 − 6 + 0 + 4 = 0` ✓
+- row 1: `2·2 + 4·(−3) + 6·0 + 8·1 = 4 − 12 + 0 + 8 = 0` ✓
+- row 2: `1·2 + 1·(−3) + 1·0 + 1·1 = 2 − 3 + 0 + 1 = 0` ✓
+- row 3: `0·2 + 1·(−3) + 2·0 + 3·1 = 0 − 3 + 0 + 3 = 0` ✓
 
-**(c)** `xâ‚‚` and `xâ‚ƒ` are both free, so
+**(c)** `x₂` and `x₃` are both free, so
 
-    ker(A) = { (s + 2t, âˆ’2s âˆ’ 3t, s, t) : s, t âˆˆ â„ }
-           = span{ (1, âˆ’2, 1, 0),  (2, âˆ’3, 0, 1) }
+    ker(A) = { (s + 2t, −2s − 3t, s, t) : s, t ∈ ℝ }
+           = span{ (1, −2, 1, 0),  (2, −3, 0, 1) }
 
-Check the first basis vector: `A(1,âˆ’2,1,0) = (1âˆ’4+3+0, 2âˆ’8+6+0, 1âˆ’2+1+0,
-0âˆ’2+2+0) = (0, 0, 0, 0)` âœ“, and the second was just verified. They are
+Check the first basis vector: `A(1,−2,1,0) = (1−4+3+0, 2−8+6+0, 1−2+1+0,
+0−2+2+0) = (0, 0, 0, 0)` ✓, and the second was just verified. They are
 independent: the third coordinate of the first forces `s = 0`, and the fourth of
 the second forces `t = 0`.
 
-Two free variables means `dim ker(A) = 2`, and since `A` is `4 Ã— 4` the rank is
-`4 âˆ’ 2 = 2` â€” matching the two pivots found in (b). Note that **two**
+Two free variables means `dim ker(A) = 2`, and since `A` is `4 × 4` the rank is
+`4 − 2 = 2` — matching the two pivots found in (b). Note that **two**
 dependencies are at work, not one: row 1 being twice row 0 is the obvious
-redundancy, but row 3 is *also* redundant, being `âˆ’(râ‚‚ âˆ’ râ‚€)` up to sign. That is
+redundancy, but row 3 is *also* redundant, being `−(r₂ − r₀)` up to sign. That is
 exactly the kind of detail the determinant cannot report and the pivot count can;
 see (d). [Lesson 34](34_basis_dimension_rank.md) makes this bookkeeping
 systematic, and [lesson 35](35_linear_transformations_and_kernels.md) proves
@@ -2239,19 +2239,19 @@ systematic, and [lesson 35](35_linear_transformations_and_kernels.md) proves
 
 **(d)** The determinant cannot distinguish `A` from the zero matrix, because both
 have `det = 0`. It cannot distinguish rank 3 from rank 1, nor rank 1 from rank 0.
-It is one number standing in for an `nÂ²`-dimensional object, so almost all of the
+It is one number standing in for an `n²`-dimensional object, so almost all of the
 information is necessarily thrown away.
 
 What distinguishes them is the **rank**: the number of pivots after row reduction,
-equivalently `n âˆ’ dim ker(A)`, equivalently `dim im(A)`. The lesson's
-`determinant_lu` is blunt here â€” it returns `0.0` the instant it fails to find a
-pivot, and `0.0` is compatible with rank `0, 1, â€¦, nâˆ’1` alike. For this `A`,
+equivalently `n − dim ker(A)`, equivalently `dim im(A)`. The lesson's
+`determinant_lu` is blunt here — it returns `0.0` the instant it fails to find a
+pivot, and `0.0` is compatible with rank `0, 1, …, n−1` alike. For this `A`,
 `det = 0` narrows things only to "rank < 4", while the pivot count pins it down to
 "rank = 2".
 
 The two invariants measure genuinely different things, and neither determines the
-other. Rank counts directions retained, so `Iâ‚„` and `diag(1,1,1,10â»â¹)` both have
-rank 4 while their determinants are `1` and `10â»â¹` â€” a nine-order-of-magnitude
+other. Rank counts directions retained, so `I₄` and `diag(1,1,1,10⁻⁹)` both have
+rank 4 while their determinants are `1` and `10⁻⁹` — a nine-order-of-magnitude
 spread invisible to the rank. The determinant is the total volume scale, so it is
 sensitive to every direction at once, which is exactly why it collapses to a single
 uninformative `0` the moment *any* direction is lost. The lesson's cofactor matrix
@@ -2264,21 +2264,21 @@ determinant, while the pivot count recovers it exactly.
 ## Summary
 
 - `det(A)` is a single number attached to a square matrix, defined by cofactor
-  expansion (`Î˜(n!)`) or equivalently by the Leibniz formula over `n!` signed
+  expansion (`Θ(n!)`) or equivalently by the Leibniz formula over `n!` signed
   permutation terms.
 - Geometrically `|det(A)|` is the factor by which `A` multiplies every
   `n`-dimensional volume; the sign records orientation, and `det = 0` means the
   image collapses to a lower-dimensional subspace.
 - Three row facts carry the whole practical theory: row addition leaves `det`
-  alone, row scaling by `c` multiplies it by `c`, and a row swap negates it â€” so
-  elimination gives `det(A) = (âˆ’1)^{swaps} Â· Î  u_ii` in `Î˜(nÂ³)`.
-- `det(AB) = det(A)det(B)` and `det(Aáµ€) = det(A)` make it the scale factor of the
+  alone, row scaling by `c` multiplies it by `c`, and a row swap negates it — so
+  elimination gives `det(A) = (−1)^{swaps} · Π u_ii` in `Θ(n³)`.
+- `det(AB) = det(A)det(B)` and `det(Aᵀ) = det(A)` make it the scale factor of the
   transformation; `det(A + B) = det(A) + det(B)` is **false**.
-- `det(A) â‰  0` **iff** `A` is invertible; `det(A) = 0` means "not exactly one
-  solution", which may be none or infinitely many â€” the determinant never sees `b`.
-- `adj(A) = Cáµ€` satisfies `AÂ·adj(A) = det(A)Â·I` for **every** square `A`;
-  dividing to get `Aâ»Â¹ = adj(A)/det(A)` is the step that needs `det(A) â‰  0`.
-- Triangular matrices give `det(U) = Î  u_ii`, so an LU factorisation hands you the
+- `det(A) ≠ 0` **iff** `A` is invertible; `det(A) = 0` means "not exactly one
+  solution", which may be none or infinitely many — the determinant never sees `b`.
+- `adj(A) = Cᵀ` satisfies `A·adj(A) = det(A)·I` for **every** square `A`;
+  dividing to get `A⁻¹ = adj(A)/det(A)` is the step that needs `det(A) ≠ 0`.
+- Triangular matrices give `det(U) = Π u_ii`, so an LU factorisation hands you the
   determinant for free and no library ever asks for one separately.
 - In floating point `det == 0` is not a test: use `solve`, `slogdet`, or
   `np.linalg.cond`, because underflow reports `0.0` for matrices that are
@@ -2286,7 +2286,7 @@ determinant, while the pivot count recovers it exactly.
 
 ## Next
 
-[34 â€” Basis, Dimension, and Rank](34_basis_dimension_rank.md) asks the question
+[34 — Basis, Dimension, and Rank](34_basis_dimension_rank.md) asks the question
 the determinant cannot answer. `det(A) = 0` says *that* a matrix is deficient, but
-not *how* â€” and how deficient is the whole content of rank, nullity, and the four
+not *how* — and how deficient is the whole content of rank, nullity, and the four
 fundamental subspaces that make linear algebra cohere.

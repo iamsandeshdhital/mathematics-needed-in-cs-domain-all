@@ -181,49 +181,6 @@ It matters here because it is the other way to describe a subspace — by an
 orthonormal list rather than by a spanning set — and the two descriptions are
 interchangeable.
 
-## Formula Sheet
-
-`A` is `m × n` over a field `F`; `a_ij` is row `i`, column `j`; `V, W` are vector
-spaces; `S = {v₁,…,v_k} ⊆ V`; `x ∈ Fⁿ`; `y ∈ F^m`; `c ∈ F`; `r` is the rank; `I` is
-the identity; `‖·‖` and `·` are the Euclidean norm and dot product from
-[lesson 37](37_inner_products_norms_geometry.md).
-
-| Symbol | Formula | In plain words | When you use it |
-| --- | --- | --- | --- |
-| `$\operatorname{span}(S)$` | `$\{\sum_{i=1}^{k} c_i v_i : c_i \in F\}$` | Everything you can build by scaling and adding members of `S`. Always contains `0`. | "What can this data represent?" |
-| independent | `$\sum_i c_i v_i = 0 \Rightarrow c_1 = \dots = c_k = 0$` | No nonzero weighting cancels to zero. Equivalently: no vector is a combination of the others. | "Is this vector needed?" |
-| dependent | `$\exists\, (c_1,\dots,c_k) \ne 0$ with `$\sum_i c_i v_i = 0$` | They cancel each other out; at least one is redundant. | Reported as a witness, not just a verdict |
-| basis `B` of `V` | `$\operatorname{span}(B) = V$` **and** `B` independent | Spans everything **and** has no redundancy. Both halves are required. | The canonical representative of a subspace |
-| `$\dim(V)$` | `$\dim(V) = \lvert B\rvert$` for any basis `B` | How many independent directions. Basis-independent, so any two answers agree. | "How many real factors are in this data?" |
-| basis exists | `$\dim V = n \Rightarrow$ a basis of `n` vectors exists | `n` vectors, no redundancy, spans all of `Fⁿ`. | Certifying a matrix as invertible |
-| `$\dim V = n \Rightarrow$ `$\dim(\operatorname{span} S) \le \lvert S\rvert$` | More vectors than dimensions is never independent | A free argument needing no computation. Valid for `$\lvert S\rvert > n$` only. | Quick impossibility check |
-| extension | independent `S`, `$\dim V = n \Rightarrow$ basis `B` with `S \subseteq B` | You can always add more vectors until you span. | Building a basis from a partial list |
-| **rank** | `$\operatorname{rank}(A) = \dim\operatorname{col}(A) = \dim\operatorname{row}(A)$` | Number of independent directions. `A` is `m × n`. | The master diagnostic for any matrix |
-| rank bound | `$\operatorname{rank}(A) \le \min(m,n)$` | A ceiling only. **Never** an answer on its own. | The mistake in MCQ Q6 |
-| rank by elimination | `$\operatorname{rank}(A) = $` # pivots in the RREF | Count, don't argue. Costs `Θ(mn min(m,n))`. | Every rank computation you write |
-| rank by LU | `$\operatorname{rank}(A) = $` # nonzero entries of `U`'s diagonal | Free once you have the factors. | Repeated solves, `scipy.linalg.lu` |
-| rank by SVD | `$\operatorname{rank}(A) = \#\{i : \sigma_i > \text{tol}\}$`, `$\text{tol} = \max(m,n)\,\varepsilon\,\sigma_0$` | Counts numerically significant singular values. `A` is `m × n`, so `min(m,n)` singular values. | What `numpy.linalg.matrix_rank` actually does |
-| **nullity** | `$\operatorname{nullity}(A) = \dim\ker(A) = n - \operatorname{rank}(A)$` | Degrees of freedom the system leaves open. Requires `A` `m × n`. | "How many solutions are there?" |
-| rank–nullity | `$\operatorname{rank}(A) + \operatorname{nullity}(A) = n$` | Constraints plus freedoms equal unknowns. | Every solvability question; proved in [35](35_linear_transformations_and_kernels.md) |
-| `$\operatorname{col}(A)$ | `$\operatorname{span}\{$columns of `A`$\}$`, in `F^m` | Every vector `Ax` can produce. | "Which targets are reachable?" |
-| `$\operatorname{row}(A)$ | `$\operatorname{span}\{$rows of `A`$\}$`, in `F^n` | Every vector that is orthogonal to `ker(A)`. | Least-sgeometry; normal equations |
-| `$\ker(A)$ | `$\{x : Ax = 0\}$`, in `F^n` | Inputs that vanish. One basis vector per free column. | The general solution of `Ax = b` |
-| `$\ker(A^{\mathsf T})$ | `$\{y : A^{\mathsf T}y = 0\}$`, in `F^m` | Constraints `Ax = b` must satisfy. | Detecting inconsistency |
-| **Fundamental Theorem** | `$\operatorname{col}(A) \oplus \ker(A^{\mathsf T}) = F^m$` and `$\operatorname{row}(A) \oplus \ker(A) = F^n$` | Two complementary pairs, splitting each ambient space by rank `r` and the rest. | Projections, least squares, Gram–Schmidt |
-| orthogonality pair | `$\ker(A) = \operatorname{row}(A)^{\perp}$` | An input vanishes exactly when it is orthogonal to every row. | Why the residual of a least-squares fit lies in `ker(A)` |
-| orthogonality pair | `$\ker(A^{\mathsf T}) = \operatorname{col}(A)^{\perp}$` | A target is reachable exactly when it is orthogonal to every vector in `ker(Aᵀ)`. | Deciding whether `b` is in `col(A)` |
-| dimension table | `col` and `row` have dim `r`; `ker` has dim `n−r`; `ker(Aᵀ)` has dim `m−r` | One rank determines all four. | The whole of lesson 33's failure to localise |
-| rank deficient | `$\operatorname{rank}(A) < \min(m,n)$` | Some direction was lost. | Detecting collinear features |
-| square equivalence | `$\det(A) \ne 0 \iff \operatorname{rank}(A) = n \iff \ker(A) = \{0\} \iff A$ invertible | Four ways to say one thing. | Ties lesson 33 to this one |
-| always solvable | `$\forall b: Ax = b$ solvable $\iff \operatorname{rank}(A) = m$` | Surjective onto the whole codomain. | A map `F^n → F^m` that never fails |
-| always unique | `$\forall b: Ax = b$ unique $\iff \operatorname{rank}(A) = n$` | Injective, so no free variables. | A map that never has to choose |
-| degrees of freedom | `r` determined, `n − r` free unknowns | Rank is the number of constraints; nullity the number of choices left. | Reading a solution off an RREF |
-| general solution | `$x = x_0 + \sum_{i} t_i v_i$`, `v_i` a `ker(A)` basis | A particular point plus a span of directions. | Complete answer for a singular system |
-| consistent `iff` | `$Ax = b$ consistent $\iff b \in \operatorname{col}(A) \iff b \perp \ker(A^{\mathsf T})$` | The target must be reachable. | Before you solve, decide whether to bother |
-| orthonormal basis | `$x = \sum_i (x\cdot u_i)\,u_i$` with `u_i · u_j = δ_ij` | Coordinates are dot products, no solving. | Numerical stability; see [37](37_inner_products_norms_geometry.md) |
-| subspace coordinates | `$x = c_1 v_1 + \dots + c_r v_r$` in a basis `{v_i}` of `W` | The `r` numbers `c_i` identify `x ∈ W` uniquely. | Parametrising a solution set |
-| greedy basis cost | `Θ(k)` rank calls, `Θ(k·m·n·min(m,n))` naive | Keep a vector only if it raises the rank. | Feature pruning |
-
 ## Worked Example
 
 Five samples, three features: a weight, a length, and a width. Each entry is the
@@ -1084,6 +1041,49 @@ governed by the nullity. A consistent `Ax = b` has either one solution (nullity
 `0`) or infinitely many (nullity `> 0`) — never "three solutions", and never a
 finite number greater than one, for a linear system. Rank and nullity are
 complementary: `r + (n − r) = n`. The code's degrees-of-freedom section shows the
+## Formula Sheet
+
+`A` is `m × n` over a field `F`; `a_ij` is row `i`, column `j`; `V, W` are vector
+spaces; `S = {v₁,…,v_k} ⊆ V`; `x ∈ Fⁿ`; `y ∈ F^m`; `c ∈ F`; `r` is the rank; `I` is
+the identity; `‖·‖` and `·` are the Euclidean norm and dot product from
+[lesson 37](37_inner_products_norms_geometry.md).
+
+| Symbol | Formula | In plain words | When you use it |
+| --- | --- | --- | --- |
+| `$\operatorname{span}(S)$` | `$\{\sum_{i=1}^{k} c_i v_i : c_i \in F\}$` | Everything you can build by scaling and adding members of `S`. Always contains `0`. | "What can this data represent?" |
+| independent | `$\sum_i c_i v_i = 0 \Rightarrow c_1 = \dots = c_k = 0$` | No nonzero weighting cancels to zero. Equivalently: no vector is a combination of the others. | "Is this vector needed?" |
+| dependent | `$\exists\, (c_1,\dots,c_k) \ne 0$ with `$\sum_i c_i v_i = 0$` | They cancel each other out; at least one is redundant. | Reported as a witness, not just a verdict |
+| basis `B` of `V` | `$\operatorname{span}(B) = V$` **and** `B` independent | Spans everything **and** has no redundancy. Both halves are required. | The canonical representative of a subspace |
+| `$\dim(V)$` | `$\dim(V) = \lvert B\rvert$` for any basis `B` | How many independent directions. Basis-independent, so any two answers agree. | "How many real factors are in this data?" |
+| basis exists | `$\dim V = n \Rightarrow$ a basis of `n` vectors exists | `n` vectors, no redundancy, spans all of `Fⁿ`. | Certifying a matrix as invertible |
+| `$\dim V = n \Rightarrow$ `$\dim(\operatorname{span} S) \le \lvert S\rvert$` | More vectors than dimensions is never independent | A free argument needing no computation. Valid for `$\lvert S\rvert > n$` only. | Quick impossibility check |
+| extension | independent `S`, `$\dim V = n \Rightarrow$ basis `B` with `S \subseteq B` | You can always add more vectors until you span. | Building a basis from a partial list |
+| **rank** | `$\operatorname{rank}(A) = \dim\operatorname{col}(A) = \dim\operatorname{row}(A)$` | Number of independent directions. `A` is `m × n`. | The master diagnostic for any matrix |
+| rank bound | `$\operatorname{rank}(A) \le \min(m,n)$` | A ceiling only. **Never** an answer on its own. | The mistake in MCQ Q6 |
+| rank by elimination | `$\operatorname{rank}(A) = $` # pivots in the RREF | Count, don't argue. Costs `Θ(mn min(m,n))`. | Every rank computation you write |
+| rank by LU | `$\operatorname{rank}(A) = $` # nonzero entries of `U`'s diagonal | Free once you have the factors. | Repeated solves, `scipy.linalg.lu` |
+| rank by SVD | `$\operatorname{rank}(A) = \#\{i : \sigma_i > \text{tol}\}$`, `$\text{tol} = \max(m,n)\,\varepsilon\,\sigma_0$` | Counts numerically significant singular values. `A` is `m × n`, so `min(m,n)` singular values. | What `numpy.linalg.matrix_rank` actually does |
+| **nullity** | `$\operatorname{nullity}(A) = \dim\ker(A) = n - \operatorname{rank}(A)$` | Degrees of freedom the system leaves open. Requires `A` `m × n`. | "How many solutions are there?" |
+| rank–nullity | `$\operatorname{rank}(A) + \operatorname{nullity}(A) = n$` | Constraints plus freedoms equal unknowns. | Every solvability question; proved in [35](35_linear_transformations_and_kernels.md) |
+| `$\operatorname{col}(A)$ | `$\operatorname{span}\{$columns of `A`$\}$`, in `F^m` | Every vector `Ax` can produce. | "Which targets are reachable?" |
+| `$\operatorname{row}(A)$ | `$\operatorname{span}\{$rows of `A`$\}$`, in `F^n` | Every vector that is orthogonal to `ker(A)`. | Least-sgeometry; normal equations |
+| `$\ker(A)$ | `$\{x : Ax = 0\}$`, in `F^n` | Inputs that vanish. One basis vector per free column. | The general solution of `Ax = b` |
+| `$\ker(A^{\mathsf T})$ | `$\{y : A^{\mathsf T}y = 0\}$`, in `F^m` | Constraints `Ax = b` must satisfy. | Detecting inconsistency |
+| **Fundamental Theorem** | `$\operatorname{col}(A) \oplus \ker(A^{\mathsf T}) = F^m$` and `$\operatorname{row}(A) \oplus \ker(A) = F^n$` | Two complementary pairs, splitting each ambient space by rank `r` and the rest. | Projections, least squares, Gram–Schmidt |
+| orthogonality pair | `$\ker(A) = \operatorname{row}(A)^{\perp}$` | An input vanishes exactly when it is orthogonal to every row. | Why the residual of a least-squares fit lies in `ker(A)` |
+| orthogonality pair | `$\ker(A^{\mathsf T}) = \operatorname{col}(A)^{\perp}$` | A target is reachable exactly when it is orthogonal to every vector in `ker(Aᵀ)`. | Deciding whether `b` is in `col(A)` |
+| dimension table | `col` and `row` have dim `r`; `ker` has dim `n−r`; `ker(Aᵀ)` has dim `m−r` | One rank determines all four. | The whole of lesson 33's failure to localise |
+| rank deficient | `$\operatorname{rank}(A) < \min(m,n)$` | Some direction was lost. | Detecting collinear features |
+| square equivalence | `$\det(A) \ne 0 \iff \operatorname{rank}(A) = n \iff \ker(A) = \{0\} \iff A$ invertible | Four ways to say one thing. | Ties lesson 33 to this one |
+| always solvable | `$\forall b: Ax = b$ solvable $\iff \operatorname{rank}(A) = m$` | Surjective onto the whole codomain. | A map `F^n → F^m` that never fails |
+| always unique | `$\forall b: Ax = b$ unique $\iff \operatorname{rank}(A) = n$` | Injective, so no free variables. | A map that never has to choose |
+| degrees of freedom | `r` determined, `n − r` free unknowns | Rank is the number of constraints; nullity the number of choices left. | Reading a solution off an RREF |
+| general solution | `$x = x_0 + \sum_{i} t_i v_i$`, `v_i` a `ker(A)` basis | A particular point plus a span of directions. | Complete answer for a singular system |
+| consistent `iff` | `$Ax = b$ consistent $\iff b \in \operatorname{col}(A) \iff b \perp \ker(A^{\mathsf T})$` | The target must be reachable. | Before you solve, decide whether to bother |
+| orthonormal basis | `$x = \sum_i (x\cdot u_i)\,u_i$` with `u_i · u_j = δ_ij` | Coordinates are dot products, no solving. | Numerical stability; see [37](37_inner_products_norms_geometry.md) |
+| subspace coordinates | `$x = c_1 v_1 + \dots + c_r v_r$` in a basis `{v_i}` of `W` | The `r` numbers `c_i` identify `x ∈ W` uniquely. | Parametrising a solution set |
+| greedy basis cost | `Θ(k)` rank calls, `Θ(k·m·n·min(m,n))` naive | Keep a vector only if it raises the rank. | Feature pruning |
+
 one-and-only-one-mechanism: one free variable means a one-parameter family
 `x₀ + t·v`, which is uncountably many solutions.
 
@@ -1924,7 +1924,7 @@ injective, so distinct inputs give distinct outputs.
 
 </details>
 
-**[ ] Exercise 2 — a matrix with one genuine redundancy, all four
+**Challenge — Exercise 2 — a matrix with one genuine redundancy, all four
 subspaces computed.** Let
 
     A = | 1  2  0  3 |

@@ -1777,17 +1777,15 @@ alpha_hat = reject_null / TRIALS
 print(f"(a) null always true: rejection rate = {alpha_hat:.4f} "
       f"(target {ALPHA}, Monte Carlo error ~{sqrt(ALPHA * (1 - ALPHA) / TRIALS):.4f})")
 
-# (b) half the worlds have a real +1 point effect.
+# (b) half the worlds have a real +2 point effect.
 reject_real = reject_fake = n_real = n_fake = 0
 for _ in range(TRIALS):
     has_effect = rng.random() < 0.5
+    ka = binom(rng, N_ARM, P_BASE)
+    kb = binom(rng, N_ARM, P_BASE + (EFFECT if has_effect else 0.0))
     if has_effect:
-        ka = binom(rng, N_ARM, P_BASE)
-        kb = binom(rng, N_ARM, P_BASE + 0.01)
         n_real += 1
     else:
-        ka = binom(rng, N_ARM, P_BASE)
-        kb = binom(rng, N_ARM, P_BASE)
         n_fake += 1
     if two_sided_p(ka, N_ARM, kb, N_ARM) < ALPHA:
         if has_effect:
@@ -1797,9 +1795,12 @@ for _ in range(TRIALS):
 
 power = reject_real / n_real
 type1 = reject_fake / n_fake
+pool_theory = P_BASE + EFFECT / 2
+power_theory = cdf(EFFECT / (2 * pool_theory * (1 - pool_theory) / N_ARM) ** 0.5 - 1.96)
 print()
-print(f"(b) n={N_ARM:,}/arm, effect +1.0 pp")
-print(f"    power (real effect detected) = {power:.4f}")
+print(f"(b) n={N_ARM:,}/arm, effect +{EFFECT * 100:.1f} pp")
+print(f"    power (real effect detected) = {power:.4f}  "
+      f"(theory {power_theory:.4f})")
 print(f"    Type I (false alarm)         = {type1:.4f}   "
       f"-> pinned at alpha regardless of the effect: "
       f"{abs(type1 - ALPHA) < 0.01}")
@@ -1810,17 +1811,17 @@ def posterior_given_significant(prior, power, alpha=ALPHA):
 
 
 print()
-print("(c) P(real | p < 0.05) by Bayes")
+print("(c) P(real | p < 0.05) by Bayes, using the simulated power")
 for prior in (0.5, 0.1, 0.01):
     print(f"    prior {prior:.2f} -> {posterior_given_significant(prior, power):.4f}")
 
 print()
-print("(d) levers, holding the observed power fixed:")
-print(f"    power 0.90 -> 0.99, prior 0.01: "
+print("(d) levers, at prior = 0.01:")
+print(f"    power 0.94 -> 0.99, prior 0.01: "
       f"{posterior_given_significant(0.01, 0.99):.4f} "
-      f"(vs {posterior_given_significant(0.01, 0.90):.4f} at 0.90)")
+      f"(vs {posterior_given_significant(0.01, 0.94):.4f} at 0.94)")
 print(f"    alpha 0.05 -> 0.01, prior 0.01: "
-      f"{posterior_given_significant(0.01, 0.90, 0.01):.4f}")
+      f"{posterior_given_significant(0.01, 0.94, 0.01):.4f}")
 print("    -> lowering alpha moves the posterior far more than raising power,")
 print("       because the false-positive pool is the one that is too large.")
 ```
