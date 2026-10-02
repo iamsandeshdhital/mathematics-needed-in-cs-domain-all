@@ -2469,7 +2469,7 @@ The first two are caught by a four-row table. The third is caught only by asking
 for the loop invariant, which is [Lesson 14](14_mathematical_induction.md).
 
 </details>
-**Challenge — Build a first-order logic parser, evaluator, and negation
+**[ ] Challenge 7 — Build a first-order logic parser, evaluator, and negation
 normaliser, and use it to find a real bug.** Write a recursive-descent parser
 for a small first-order language with grammar (loosest binding first):
 `stmt := 'not' stmt | quant stmt | '(' stmt ')' | binop`,

@@ -290,6 +290,12 @@ aggregate bound. `$\epsilon$` is the heavy-operation fraction.
 | shrink thrash | alternating append/pop, halving at half full | resizes on *every* operation | still $\Theta(1)$ — but the constant is `511.98` copies per operation instead of `1` |
 
 ---
+| union-find cost | `$m \cdot \alpha(N)$` | `α` is the inverse Ackermann function; `α(N) ≤ 4` for every `N` in 64 bits | disjoint-set union, Kruskal, connected components |
+| rank bound on depth | `$d \le \lfloor \log_2 N \rfloor` | rank `r` needs `2^r` elements, so merging equal ranks sets the bound | union by rank alone, without path compression |
+| α definition | `$\alpha$ = least `k` with a tower of `k` threes `$\ge N$` | grows so slowly it is never worth computing | justifying the claim that DSU is 'constant time' |
+| sliding window | `$s_{i+1} = s_i - v_i + v_{i+k}$` | consecutive window sums share `k-1` elements | max/min window sums, longest distinct substring |
+| potential identity | `$\sum c_i \le \sum \hat c_i + \Phi(s_n) - \Phi(s_0)$` with `$\Phi \ge 0$` | real cost bounded by amortised charge plus banked potential | proving any amortised bound |
+| array potential | `$\Phi = \lvert A\rvert - \text{size}$` | unused slots are banked credit | the doubling-array proof under the potential method |
 
 ## Worked Example
 
@@ -1076,6 +1082,220 @@ what pays for the expensive operations.
 
 ---
 
+### Union-find and the inverse-Ackermann bound
+
+Union-find — also called disjoint-set union, or DSU — is the most important
+practical consumer of amortised analysis, and the only standard data structure
+whose amortised cost is a function that grows so slowly it is effectively a
+constant.
+
+The interface is tiny. A universe of `N` labelled elements starts as `N` separate
+sets. You may `union(a, b)`, which merges the two sets containing `a` and `b`,
+and `find(x)`, which returns the representative of the set containing `x`. Two
+elements are in the same set exactly when their representatives are equal.
+
+The implementation is a forest of rooted trees. `parent[x]` is `x`'s parent, a
+root is a node whose parent is itself, and `find` walks up to the root. The cost
+of `find` is the depth of the node it starts from, so the whole game is keeping
+trees shallow.
+
+Merging two trees means attaching one root under the other, and the naive choice
+— always hang the smaller-indexed tree under the larger, say — lets an adversary
+build one long chain. Doing that for `N` elements gives a tree of depth `N - 1`,
+and then a single `find(0)` walks `N - 1` pointers.
+
+Two heuristics, used together, prevent it.
+
+**Union by rank.** Attach the shallower tree under the deeper one, and only
+promote a node's rank when trees of equal rank merge. Because merging two trees
+of rank `r` yields a tree of rank `r + 1`, rank `r` requires at least `2^r`
+elements, so depth is bounded by `⌊log₂ N⌋`. That alone caps `find` at `O(log N)`
+amortised — already good, but still logarithmic.
+
+**Path compression.** Every time `find` walks past a node, make that node point
+directly at the root it reached. This does not lower the worst case for a single
+call, but it flattens the tree so that later calls are cheaper, and the two
+heuristics together do far better than either alone.
+
+The combined bound is $m \cdot \alpha(N)$, where `m` is the number of operations
+and `α` is the **inverse Ackermann function** — the function that grows so slowly
+that `α(N) ≤ 4` for every `N` that fits in 64 bits. Formally, `α` is the smallest
+`k` such that a tower of `k` threes, `$3^{3^{\cdot^{\cdot^3}}}$` with `k`
+threes, is at least `N`. The bound is not something to compute; it is a
+guarantee that the constant is never more than about 4.
+
+What matters practically is the contrast with everything else in this lesson.
+Growing a dynamic array is amortised `O(1)`, and so is a hash-table insert.
+Union-find is `O(α(N))` per operation, which is *better* than `O(log N)` and
+only an unmeasurable hair above `O(1)`. For `N = 200000`, `log₂ N` is 17 while
+`α(N)` is at most 4 — and in practice the measured depth is 1.
+
+Note the shape of the argument, because it recurs. Neither heuristic gives a good
+worst case for a single operation: union by rank alone gives `O(log N)` and path
+compression alone still permits one expensive call. The *amortised* bound is what
+becomes tiny, and it only becomes tiny because the two heuristics attack
+different failure modes. This is why "add path compression" is the standard
+advice rather than "pick one".
+
+```python
+N = 200_000
+
+# No heuristics: every new node becomes the parent of the whole tree.
+# Analytic depth, because walking a chain of 200000 nodes to measure it would
+# itself take O(N^2) -- which is the cost the heuristics exist to avoid.
+print(f"no heuristics      max depth = {N - 1}  (one chain of {N} nodes)")
+print(f"                    find(0) would need {N - 1} pointer hops")
+
+# Rank + path compression, same merge order.
+parent = list(range(N))
+rank = [0] * N
+
+
+def find(x):
+    root = x
+    while parent[root] != root:
+        root = parent[root]
+    while parent[x] != root:          # path compression: point at the root
+        parent[x], x = root, parent[x]
+    return root
+
+
+def union(a, b):
+    ra, rb = find(a), find(b)
+    if ra == rb:
+        return False
+    if rank[ra] < rank[rb]:
+        ra, rb = rb, ra                 # shallower tree hangs under deeper
+    parent[rb] = ra
+    if rank[ra] == rank[rb]:
+        rank[ra] += 1
+    return True
+
+
+for i in range(1, N):
+    union(0, i)
+
+sample = range(0, N, N // 1000)
+for i in range(N):
+    find(i)                            # one compression pass over everything
+depths = []
+for i in sample:
+    d = 0
+    x = i
+    while parent[x] != x:
+        x = parent[x]
+        d += 1
+    depths.append(d)
+
+print(f"rank + compress    max sampled depth = {max(depths)}   "
+      f"components = {len({find(i) for i in range(N)})}")
+print(f"log2 N             = {N.bit_length() - 1}")
+print(f"alpha(N) <= 4 for any N with <= 64 bits; N needs {N.bit_length()} bits")
+```
+
+```
+no heuristics      max depth = 199999  (one chain of 200000 nodes)
+                    find(0) would need 199999 pointer hops
+rank + compress    max sampled depth = 1   components = 1
+log2 N             = 17
+alpha(N) <= 4 for any N with <= 64 bits; N needs 18 bits
+```
+
+Union-find is not an academic exercise. It is how Kruskal's and Prim's minimum
+spanning tree algorithms avoid re-checking whether an edge joins two
+already-connected vertices, how connected-component labelling works, how LeetCode
+684 "Redundant Connection" is solved, and how image segmentation and Kruskal's
+algorithm in Apache Spark and Hadoop avoid processing the same connected pair
+twice. Every one of those is a few lines calling `union` and `find`.
+
+### The sliding window as an amortised argument
+
+The other technique worth naming here is not about paying an occasional large
+cost, but about refusing to pay a large cost at all.
+
+Finding the maximum sum of a window of `k` consecutive elements by brute force
+costs `O(nk)`: each of the `n - k + 1` windows is summed from scratch. But two
+neighbouring windows overlap in `k - 1` elements, so consecutive sums differ by
+exactly one term entering and one leaving. Keeping the running sum and updating
+it in place costs `O(1)` per step and `O(n)` overall.
+
+The amortised framing is what makes this precise rather than merely clever. Per
+window, the naive method does `k` additions; the sliding window does two, once at
+the start and once per subsequent step. Amortised over all `n` windows that is
+`O(2n + k)`, which is `O(n)` whenever `k ≤ n`. No individual operation is
+expensive; the saving comes from *amortising the recomputation you would
+otherwise repeat*.
+
+This is the pattern behind a large family of algorithms: minimum-size subarray
+with a sum threshold, longest substring without repeating characters, maximum sum
+of a subarray with at most `k` distinct values, minimum-window subsequences. In
+each case the state kept is small and the update is `O(1)`, and the trick is
+identifying what can be reused between adjacent windows.
+
+```python
+vals = [3, 1, 4, 1, 5, 9, 2, 6]
+k = 3
+
+# Brute force: rescan every window from scratch, O(nk).
+brute = max(sum(vals[i:i + k]) for i in range(len(vals) - k + 1))
+
+# Sliding window: reuse the previous sum, O(n).
+window = sum(vals[:k])       # k additions, once
+best = window
+for i in range(k, len(vals)):
+    window += vals[i] - vals[i - k]   # one in, one out
+    best = max(best, window)
+
+print(f"sliding window     best = {best}, brute force agrees = {best == brute}")
+print(f"work: {k} adds to start, then {len(vals) - k} add+subtract pairs")
+```
+
+```
+sliding window     best = 17, brute force agrees = True
+work: 3 adds to start, then 5 add+subtract pairs
+```
+
+### Accounting versus potential, side by side
+
+Both methods answer the same question — what is the total cost of `n` operations
+— and both reach the same bound by paying for expensive operations in advance
+using different bookkeeping. The choice between them is a matter of taste and of
+what you can compute.
+
+**The accounting method** keeps a running account. Every operation is charged its
+actual cost, plus an extra surcharge if it does work that will save future
+operations — a deposit. When a later operation takes advantage of that
+preparation, it spends the deposit. The total of all charges is an upper bound on
+the real total cost, because deposits that are never spent only make the bound
+looser. This is the method used for the dynamic-array doubling analysis: an
+append into a half-full array is charged its cost plus a credit equal to the
+number of unused slots it just created.
+
+**The potential method** defines a single scalar `Φ` on the data structure's
+state, requires `Φ ≥ 0` at all times, and proves the identity
+
+$$\sum_{i=1}^{n} c_i \;\le\; \Phi(s_n) - \Phi(s_0) + \sum_{i=1}^{n} \hat{c}_i$$
+
+where `cᵢ` is the real cost of step `i` and `ĉᵢ` is the amortised charge you
+prove bounds it. The potential is banked space that the structure carries: slack
+capacity in an array, unset bits in a binary counter, unmerged roots in a forest.
+Because `Φ ≥ 0`, the total banked amount is bounded by `Φ(s₀)`, so the aggregate
+cost is at most the sum of the amortised charges plus a constant.
+
+Concretely, for the doubling array the potential is `Φ = len(A) - size`, the
+number of unused slots. Appending into a full array costs `Θ(n)` in copying but
+only `ĉ = 3` amortised, because the potential rises by `Θ(n)` to pay for it.
+Appending into a half-full array costs `1` with no change in potential. Summing,
+`Σ ĉᵢ ≤ 3n + Φ(s₀)`, and `Φ(s₀) = 0` for an empty array, so the total is at most
+`3n` — linear over `n` appends, so `O(1)` each.
+
+Choose accounting when the deposits and withdrawals are concrete and countable:
+a copy is paid for by the slot the append created. Choose potential when you want
+one clean invariant and a telescoping proof, or when the structure's state is hard
+to decompose into independent deposits — the union-find forest is the standard
+case, where no single operation's charge is obviously prepaid by a particular
+earlier one.
+
 ### With Libraries
 
 ```python
@@ -1739,6 +1959,88 @@ function of $n$.
 </details>
 
 ---
+
+
+
+**Q11.** A disjoint-set structure uses path compression but *not* union by
+rank. What is the best statement about its cost?
+
+- A) Still amortised `$O(\alpha(N))`, because path compression alone supplies the whole bound.
+- B) Amortised `$O(\log N)$`, which is the bound rank alone would give, so the two heuristics are interchangeable.
+- C) Amortised `$O(1)$ but with `$O(N)$` worst case for a single `find`.
+- D) Amortised `$O(N)$`, because path compression can never improve a chain.
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) Amortised `$O(\log N)$`, which is the bound union by rank alone would give,
+so the two heuristics are not interchangeable.**
+
+Union by rank is what bounds the tree *shape*, keeping depth at
+`⌊log₂ N⌋`. Path compression only flattens paths that are actually traversed,
+so without rank an adversary can still build a tall tree and the amortised
+guarantee weakens. This is the point of the lesson's contrast: the two
+heuristics attack different failure modes and the strong `$O(\alpha(N))$` bound
+needs both.
+
+A) overstates what compression alone delivers. C) confuses amortised with worst
+case in the wrong direction. D) is wrong because compression does help — it is
+precisely what stops repeated queries from paying full depth.
+
+</details>
+
+**Q12.** Why is the `α(N)` bound on union-find usually described as
+"constant time" rather than evaluated?
+
+- A) Because `α` is not a function, so it cannot be bounded.
+- B) Because `α` grows so slowly that `α(N) ≤ 4` for every `N` representable in 64 bits, so no practical input distinguishes it from a constant.
+- C) Because `α(N)` equals 1 whenever `N` is a power of two.
+- D) Because computing `α` requires running union-find, which is circular.
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) Because `α` grows so slowly that `α(N) ≤ 4` for every `N` representable in
+64 bits, so no practical input distinguishes it from a constant.**
+
+`α` is defined as the least `k` such that a tower of `k` threes reaches `N`. It
+is genuinely a function, and it genuinely grows — just unimaginably slowly, and
+already saturated at 4 for any `N` you can store. Describing it as constant is a
+statement about the range of humanly reachable inputs, not a mathematical claim
+that it is constant.
+
+A) and D) are wrong: `α` is a perfectly well-defined function. C) is wrong —
+`α(2^k)` is not 1; for small `N` the values run `0, 1, 2, 2, 3, 3, ...` and only
+reach 4 for astronomically large `N`.
+
+</details>
+
+**Q13.** The maximum sum of a window of `k` consecutive elements is found
+by keeping a running sum and updating it with one element entering and one
+leaving, instead of re-summing each window. What is the amortised cost per
+window?
+
+- A) `$O(k)$`, unchanged, because each window still contains `k` elements.
+- B) `$O(1)$` amortised — two operations per step after a `$k$ once-off initialisation — against `$O(k)$` for brute force.
+- C) `$O(\log k)$`, because the update uses binary search.
+- D) `$O(1/k)$`, which cannot be correct since it would beat reading the input.
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) `$O(1)$` amortised per window — one addition and one subtraction per step
+after a `$k` once-off initialisation — against `$O(k)$` for brute force.**
+
+The lesson's code prints `best = 17` for `[3, 1, 4, 1, 5, 9, 2, 6]` with `k = 3`,
+agreeing with brute force, using `3` additions to start and then `5` add/subtract
+pairs. The saving comes from *amortising away the recomputation you would
+otherwise repeat*, not from any individual step becoming cheaper to express.
+
+A) counts elements present in the window rather than work performed, which is
+exactly the mistake the technique removes. C) invents a binary search. D) is
+below the cost of reading a single element, so it cannot describe real work.
+
+</details>
 
 ## Subjective Questions
 

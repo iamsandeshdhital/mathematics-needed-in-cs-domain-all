@@ -1340,15 +1340,15 @@ required : is_admin or (is_public and not archived)
 written  : is_admin or is_public and not archived
             Python reads that as (is_admin or is_public) and not archived
 
-  is_admin  is_public  archived  required  written  result
-      False      False     False     False    False  ok
-      False      False      True     False    False  ok
-      False       True     False      True     True  ok
-      False       True      True     False    False  ok
-       True      False     False      True     True  ok
-       True      False      True      True    False  BUG
-       True       True     False      True     True  ok
-       True       True      True      True    False  BUG
+ is_admin  is_public   archived   required  written  result
+    False      False      False      False    False  ok
+    False      False       True      False    False  ok
+    False       True      False       True     True  ok
+    False       True       True      False    False  ok
+     True      False      False       True     True  ok
+     True      False       True       True    False  BUG
+     True       True      False       True     True  ok
+     True       True       True       True    False  BUG
 
 2 of 8 rows disagree.
 ```

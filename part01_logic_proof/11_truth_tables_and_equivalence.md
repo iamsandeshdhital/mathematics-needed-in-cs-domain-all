@@ -2813,7 +2813,7 @@ p iff q               3         4            4  ok
 
 the function:  x0 OR (y0a AND y0b) OR (y1a AND y1b) OR ...
 
-  units   vars   source            2^vars rows                DNF terms   BDD nodes
+ units   vars   source            2^vars rows                DNF terms   BDD nodes
      1      3       22                      8                        2           3
      2      5       36                     32                        9           5
      4      9       64                    512                      257           9

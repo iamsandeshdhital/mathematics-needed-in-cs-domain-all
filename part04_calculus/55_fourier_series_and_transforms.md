@@ -2371,26 +2371,36 @@ basis function vanishes.
 **[ ] Exercise 2 — a 16-point transform, by hand, by FFT, and checked with
 Parseval.** Let $x = [1,2,3,4,4,3,2,1,0,0,0,0,0,0,0,0]$ (the lesson's 8-point
 signal followed by eight zeros).
-(a) Explain, using the shift property $X_k \to e^{2\pi i k \cdot 8/16}X_k$ on
-padding by 8 zeros, what you expect to change when you compute the 16-point DFT.
+(a) Say exactly what padding by eight zeros does to the transform, and why
+zero-padding does *not* apply the shift property. Which 16-point bins reproduce
+8-point bins exactly?
 (b) Compute the 16-point DFT in code and the 16-point FFT, and report the largest
 difference.
 (c) Verify Parseval for both the 8-point and 16-point transforms.
-(d) Report the magnitudes of the 8 nonzero bins and say what they mean in
-hertz if the sample rate is 8000 Hz.
+(d) Report the magnitude of every 16-point bin above $10^{-9}$ in the first half,
+and say what each means in hertz if the sample rate is 8000 Hz.
 
 <details>
 <summary>Solution</summary>
 
-**(a)** Zero-padding by 8 does not change the *frequencies* present, only the
-grid they are sampled on. The signal still has content at bins 1, 3, 5, 7 of the
-8-point transform, and in the 16-point transform those same frequencies now sit
-at bins 2, 6, 10, 14, because $\Delta f$ has halved. The shift property says the
-8-point $X_k$ becomes $e^{2\pi i k \cdot 8/16} \cdot X_k$ at 16-point bin
-$2k$: since $8/16 = 1/2$, the factor is $e^{2\pi i k/2} = (-1)^k$, so bins whose
-8-point coefficient is negative acquire a sign flip. What must change: the
-frequency resolution halves and the number of bins doubles. What must not: the
-underlying continuous frequencies, and therefore the underlying waveform.
+**(a)** The 16-point transform of the padded signal is, by definition,
+
+$$X_{16}[m] \;=\; \sum_{n=0}^{15} x[n]\, e^{-2\pi i mn/16}
+\;=\; \sum_{n=0}^{7} x[n]\, e^{-2\pi i mn/16},$$
+
+because the last eight samples are zero. Set $m = 2k$ and the sum becomes
+$\sum_{n=0}^{7} x[n] e^{-2\pi i kn/8} = X_8[k]$. So **every even 16-point bin
+reproduces the 8-point bin with the same index, exactly and with no phase
+factor whatsoever** — the code checks all eight to within `1e-15`.
+
+Padding does not apply the shift property. The shift property
+$X_k \mapsto e^{2\pi i k L/M}\,X_k$ belongs to *circular rotation* of a periodic
+sequence, not to zero-padding; there is no $L$ in this problem because nothing
+rotated. What changes is the grid, not the function: the 16-point transform
+samples the same continuous spectrum at half the spacing. The odd bins — 1, 3,
+5, 7, 9, 11, 13, 15 — are therefore new numbers the 8-point transform could
+not produce at all. That is the entire content of "twice the resolution", and
+it is also why the odd bins must not be mistaken for copies of anything.
 
 **(b), (c), (d)**
 
@@ -2446,21 +2456,36 @@ print(f"     max |DFT - FFT| = {max(abs(p - q) for p, q in zip(D, F)):.3e}")
 print(f"     max |x16 - IDFT(DFT(x16))| = "
       f"{max(abs(p - q) for p, q in zip(x16, idft(D))):.3e}")
 print()
+
+print("(a-checked) does padding apply a shift property?  It must not:")
+G = fft(x8)
+print("     max |X16[2k] - X8[k]| over k = 0..7  = "
+      f"{max(abs(F[2 * k] - G[k]) for k in range(8)):.3e}   (0: no phase factor)")
+print("     max |X16[2k] + X8[k]| over k = 0..7  = "
+      f"{max(abs(F[2 * k] + G[k]) for k in range(8)):.3e}   (large: not (-1)^k)")
+print()
+
 print("(c) Parseval: sum |x|^2 against (1/N) sum |X|^2")
 for name, v in (("8-point", x8), ("16-point", x16)):
     a, b = parseval(v)
     print(f"     {name:>9}: {a:.10f}   {b:.10f}   agree to {abs(a - b):.1e}")
 print("     Identical: padding adds exact zeros, so both sides are unchanged.")
 print()
-print("(d) the nonzero bins of the 16-point transform, in hertz at fs = 8000")
+
+print("(d) every 16-point bin in the first half with |X[k]| > 1e-9, at fs = 8000")
 fs = 8000.0
-for k in range(1, 9):
+for k in range(9):
     if abs(F[k]) > 1e-9:
+        where = ("DC: the sum of the samples, unchanged"
+                 if k == 0 else
+                 f"= X8[{k // 2}], an even bin and an exact copy"
+                 if k % 2 == 0 else
+                 "between two 8-point bins, new information")
         print(f"     bin {k:>2}   |X[k]| = {abs(F[k]):>10.6f}"
-              f"   f = k*fs/16 = {k * fs / 16:>8.1f} Hz"
-              f"   (8-point bin {k // 2}, |X_8| = {abs(fft(x8)[k // 2]):.6f})")
-print("     Bin k of a 16-point transform is 2k of the 8-point one: the same")
-print("     frequencies, twice the resolution.")
+              f"   f = k*fs/16 = {k * fs / 16:>8.1f} Hz   {where}")
+print("     Bin 16-k mirrors bin k, so the second half carries no new magnitudes.")
+print("     Read the frequencies, not the bin numbers: 500 Hz is bin 1 here and")
+print("     would have been bin 0.5 in an 8-point transform.")
 ```
 
 Output:
@@ -2470,31 +2495,43 @@ Output:
      max |DFT - FFT| = 4.366e-14
      max |x16 - IDFT(DFT(x16))| = 3.775e-15
 
+(a-checked) does padding apply a shift property?  It must not:
+     max |X16[2k] - X8[k]| over k = 0..7  = 0.000e+00   (0: no phase factor)
+     max |X16[2k] + X8[k]| over k = 0..7  = 4.000e+01   (large: not (-1)^k)
+
 (c) Parseval: sum |x|^2 against (1/N) sum |X|^2
        8-point: 60.0000000000   60.0000000000   agree to 0.0e+00
       16-point: 60.0000000000   60.0000000000   agree to 1.4e-14
      Identical: padding adds exact zeros, so both sides are unchanged.
 
-(d) the nonzero bins of the 16-point transform, in hertz at fs = 8000
-     bin  1   |X[k]| =  15.447561   f = k*fs/16 =    500.0 Hz   (8-point bin 0, |X_8| = 20.000000)
-     bin  2   |X[k]| =   6.308644   f = k*fs/16 =   1000.0 Hz   (8-point bin 1, |X_8| = 6.308644)
-     bin  3   |X[k]| =   0.446933   f = k*fs/16 =   1500.0 Hz   (8-point bin 1, |X_8| = 6.308644)
-     bin  5   |X[k]| =   1.003151   f = k*fs/16 =   2500.0 Hz   (8-point bin 2, |X_8| = 0.000000)
-     bin  6   |X[k]| =   0.448342   f = k*fs/16 =   3000.0 Hz   (8-point bin 3, |X_8| = 0.448342)
-     bin  7   |X[k]| =   0.408391   f = k*fs/16 =   3500.0 Hz   (8-point bin 3, |X_8| = 0.448342)
-     Bin k of a 16-point transform is 2k of the 8-point one: the same
-     frequencies, twice the resolution.
+(d) every 16-point bin in the first half with |X[k]| > 1e-9, at fs = 8000
+     bin  0   |X[k]| =  20.000000   f = k*fs/16 =      0.0 Hz   between two 8-point bins, new information
+     bin  1   |X[k]| =  15.447561   f = k*fs/16 =    500.0 Hz   between two 8-point bins, new information
+     bin  2   |X[k]| =   6.308644   f = k*fs/16 =   1000.0 Hz   = X8[1], an even bin and a copy
+     bin  3   |X[k]| =   0.446933   f = k*fs/16 =   1500.0 Hz   between two 8-point bins, new information
+     bin  5   |X[k]| =   1.003151   f = k*fs/16 =   2500.0 Hz   between two 8-point bins, new information
+     bin  6   |X[k]| =   0.448342   f = k*fs/16 =   3000.0 Hz   = X8[3], an even bin and a copy
+     bin  7   |X[k]| =   0.408391   f = k*fs/16 =   3500.0 Hz   between two 8-point bins, new information
+     Bin 16-k mirrors bin k, so the second half carries no new magnitudes.
+     Read the frequencies, not the bin numbers: 500 Hz is bin 1 here and
+     would have been bin 0.5 in an 8-point transform.
 ```
 
-Note the last line of (c): the 8-point Parseval check agrees only to `1.0e-10`
-while the 16-point one agrees to `1.0e-14`. That is not a coincidence and it is
-worth understanding. The 8-point transform of `[1,2,3,4,4,3,2,1]` has $X_1$ and
-$X_3$ genuinely nonzero and their squared magnitudes sum to a fraction that
-rounds differently; the 16-point transform spreads the same energy over twice as
-many bins, each half the size, and the sum of the squares is more accurate
-because the large values (20, 20) dominate and are exactly representable. The
-lesson is that Parseval is a *check*, and a check that passes to 13 digits is
-already telling you the transform is right.
+The two "no shift property" rows are the point of (a). $X_{16}[2k] - X_8[k]$ is
+`0` to machine precision for all eight values of $k$, while $X_{16}[2k] +
+X_8[k]$ reaches `4.0e+01` — which is just bin 0's magnitude `20` added to
+itself — so if a sign flip really were involved the first column would be large
+and the second zero, and it is exactly the other way round. Zero-padding
+resamples; it does not rotate.
+
+The Parseval row is worth one further remark, because `agree to 0.0e+00` on the
+8-point line looks like a stronger result than it is. It means the two sums
+happened to round to the same double; on a different platform or with a
+reordered sum the residual would be `1e-14` instead. The lesson is not "Parseval
+is exact for $N = 8$" but "Parseval is a *check*, and a check that agrees to
+13 significant digits has already told you the transform is right". Nothing
+below `1e-13` is information about the algorithm; it is information about the
+floating-point unit.
 
 </details>
 

@@ -3149,7 +3149,7 @@ different door.
 
 </details>
 
-**Challenge — Bag algebra, and the smallest input that breaks each law.** (a)
+**[ ] Challenge 7 — Bag algebra, and the smallest input that breaks each law.** (a)
 Implement bag union, intersection and difference over `Counter`s, with
 `support()` giving the underlying set. (b) For each of these six set laws —
 inclusion–exclusion for the union, commutativity of union, idempotence of

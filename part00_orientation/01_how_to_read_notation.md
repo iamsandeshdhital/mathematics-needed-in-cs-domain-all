@@ -1938,7 +1938,7 @@ Output:
    the notation says the FIRST: 1 + 4 + 9 + 16 + 25 = 55
 
 2. |{x in 1..10 : even}|        = 5   (a NUMBER)
-   {|x| : x in 1..10, even}     = [2, 4, 6, 8, 10]  (a SET)
+   {|x| : x in 1..10, even}    = [2, 4, 6, 8, 10]   (a SET)
    same elements, different type: True
    len() on the set gives the number back: True
 

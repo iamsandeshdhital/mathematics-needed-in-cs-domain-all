@@ -2827,7 +2827,7 @@ print("""
 
 </details>
 
-**Challenge — Write a small induction-based prover for claims about sequences,
+**[ ] Challenge 6 — Write a small induction-based prover for claims about sequences,
 and use it to discover a bug in a real algorithm.** Build a framework with
 three parts: (a) a class of claims about lists, each carrying a `holds` function
 and a `step` function; (b) a prover that, given a claim, checks the base case at
@@ -3041,7 +3041,7 @@ print("  no proof.")
 
 </details>
 
-**[ ] Exercise 6 — Prove that a dependency graph with no cycle has an ordering,
+**[ ] Exercise 7 — Prove that a dependency graph with no cycle has an ordering,
 and watch the proof run.** (a) Implement Kahn's algorithm: repeatedly remove a
 node whose dependencies have all been removed, and report the removal order and
 whatever nodes remain. (b) Implement an independent cycle detector using DFS
