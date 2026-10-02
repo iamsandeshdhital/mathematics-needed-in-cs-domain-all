@@ -74,7 +74,7 @@ out loud.
 Throughout, $f$ and $g$ are functions from $\mathbb{N}$ to $\mathbb{R}_{\ge 0}$
 measuring cost, $n_0$ is a threshold in $\mathbb{N}$, and $c, c_1, c_2,
 \varepsilon$ are positive constants. "As $n \to \infty$" is always implied. See
-[SYMBOLS.md](../../SYMBOLS.md) and [Lesson 24](../part02_discrete_combinatorics/24_recurrence_relations.md).
+[SYMBOLS.md](../SYMBOLS.md) and [Lesson 24](../part02_discrete_combinatorics/24_recurrence_relations.md).
 
 **Definition.** $f = O(g)$, read "$f$ is big-O of $g$", if there exist
 constants $c > 0$ and $n_0$ such that

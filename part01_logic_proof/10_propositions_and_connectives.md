@@ -446,6 +446,458 @@ Why tempting: the criterion "does it have a definite truth value" is correct, an
 people apply it to the presence of variables rather than to their being bound,
 which is a subtle and easy misreading.
 
+## Formula Sheet
+
+Notation follows [SYMBOLS.md](../SYMBOLS.md). `P` and `Q` are propositions, `T`
+and `F` are the two truth values, and every truth column quoted below is taken
+over the fixed row order `(P, Q) = (F,F), (F,T), (T,F), (T,T)`. Two columns are
+comparable only when both were computed over the same rows in that same order.
+
+| Symbol | Formula | In plain words | When you use it |
+| --- | --- | --- | --- |
+| proposition | `$P \in \{T, F\}$` | a sentence with exactly one truth value | every `if` condition is one. A sentence with an *unbound* variable has none |
+| connective | `$\odot(P, Q) = P'$` | an operation that takes propositions and returns a proposition | the only way formulas grow. Python has `not`, `and`, `or`, and no arrow |
+| `$\neg P$` | `$\neg T = F$`, `$\neg F = T$` | flip the value | the only unary connective. Python `not`, **never** `~`: `~True` is `-2` |
+| `$P \wedge Q$` | true only when **both** are true; column `0001` | AND | Python `and`. Short-circuits at the first falsy operand, so operand order is behaviour |
+| `$P \vee Q$` | false only when **both** are false; column `0111` | OR, **inclusive** — at least one, not exactly one | Python `or`. Short-circuits at the first truthy operand |
+| `$P \to Q$` | `$\neg P \vee Q$`; column `1101` | false only when `P` is true and `Q` is false | guards, preconditions, specifications. In Python: `if not p or q` |
+| `$P \leftrightarrow Q$` | `$(P \to Q) \wedge (Q \to P) = (P \wedge Q) \vee (\neg P \wedge Q)$`; column `1001` | the two have the **same** truth value | Python `p == q` on booleans. **Not** `p and q`, whose column is `0001` |
+| `$P \equiv Q$` | `$\operatorname{col}(P) = \operatorname{col}(Q)$` | they agree under **every** assignment | a claim about behaviour, not about spelling. This is what makes a rewrite provable |
+| substitution for equivalence | `$P \equiv Q \;\Rightarrow\; C[P] \equiv C[Q]$` | you may swap `P` for `Q` inside any larger formula `C` | Leibniz's law: the licence behind every condition simplification anyone performs |
+| tautology | `$P \equiv T$`, written `$\top$` | true on every row | an `if` whose condition is a tautology is a branch that can never be false: dead code |
+| contradiction | `$P \equiv F$`, written `$\bot$` | false on every row | `p & ~p`. A `while` whose condition is a contradiction never runs its body |
+| contingent | neither `$T$ nor $F$` | true on some rows and false on others | almost every real condition. Being contingent is not a criticism |
+| exclusive-or | `$P \oplus Q = (P \wedge \neg Q) \vee (\neg P \wedge Q)$`; column `0110` | **exactly one** of them holds | Python `p != q` on booleans. Also equal to `$\neg(P \leftrightarrow Q)$` |
+| De Morgan | `$\neg(P \wedge Q) \equiv \neg P \vee \neg Q$`, `$\neg(P \vee Q) \equiv \neg P \wedge \neg Q$` | push a `$\neg$` through and **flip** AND to OR, or OR to AND | rewriting a negated condition. Getting the flip backwards is the worked example |
+| double negation | `$\neg\neg P \equiv P$` | two NOTs cancel | the step that leaves every literal a bare variable or its negation |
+| idempotence | `$P \wedge P \equiv P$`, `$P \vee P \equiv P$` | saying it twice says it once | first thing to try when a condition has grown long |
+| absorption | `$P \vee (P \wedge Q) \equiv P$`, `$P \wedge (P \vee Q) \equiv P$` | the wider term swallows the narrow one | the most common dead branch in real code |
+| commutativity | `$P \wedge Q \equiv Q \wedge P$`, `$P \vee Q \equiv Q \vee P$` | order does not matter | regrouping a condition so a reader can parse it |
+| associativity | `$(P \wedge Q) \wedge R \equiv P \wedge (Q \wedge R)$` | how a chain of one connective is bracketed | dropping redundant parentheses; `Exercise 3`'s grammar needs a choice here |
+| contrapositive | `$P \to Q \equiv \neg Q \to \neg P$` | swap both sides and negate both | always safe, and the form used to prove things by induction |
+| converse | `$\neg P \to \neg Q$, column `1011` against `1101` | the implication read backwards | **not** equivalent to `$P \to Q$`. [Lesson 13](13_proof_techniques.md) lives on that difference |
+| negation of implication | `$\neg(P \to Q) \equiv P \wedge \neg Q$`; column `0010` | the premise holds and the conclusion does not | never `$\neg(P \to \neg Q)$`, which is a different formula entirely |
+| negation of a biconditional | `$\neg(P \leftrightarrow Q) \equiv (P \wedge \neg Q) \vee (\neg P \wedge Q)$`; column `0110` | the two **differ** | exclusive-or. **Not** `$P \vee Q$`, whose column is `0111`; the two disagree only on `(T, T)` |
+| precedence | `$\neg \;>\; \wedge \;>\; \vee$`, and `$\to$` is right-associative: `$P \to (Q \to R)$` | NOT binds tightest, then AND, then OR | Python agrees, so `not p and q or r` means `(($\neg p \wedge q$) \vee r$)` and `not p or q` means `($\neg p$) \vee q$` |
+| truth column | `$0110$` for `$P \oplus Q$ over `(F,F), (F,T), (T,F), (T,T)` | the entire formula written as four bits | the unit of comparison for equivalence. Row order is part of the value |
+| assignments | `$2^n$` | 4 rows for `p` and `q`, 16 for four variables | the price of proving an equivalence by exhaustion, and the reason a proof is only as strong as the row count |
+| bound variable | every occurrence of `x` is bound by a quantifier | `x > 5` has no truth value; `every integer x greater than 5 is odd` has one | a proposition needs a definite truth value, not an absence of variables |
+
+Domain restrictions, which is where answers go wrong. **`$\vee$` and `$\to$`
+need the inclusive reading**: `p or q` is true when both hold, and `p → q` is
+true on *both* rows where `p` is false. **Precedence applies only to
+unparenthesised text**: `not a or b` is `(not a) or b`, so the grouping in the
+worked example below is correct and the bug lies elsewhere. **Associativity is a
+choice, not a fact** — `p → q → r` and `(p → q) → r` have different columns,
+`11111101` and `01011101` over three variables, so a parser that picks the wrong
+one is wrong in a way no test you happen to write will catch. And **a truth table
+is complete only for the variables that actually appear**: `p & q | p & ~r`
+mentions `r`, so a four-row table over `p` and `q` alone does not settle it.
+
+## Multiple Choice Questions
+
+**Q1.** What is the truth value of `P → Q` when `P` is false and `Q` is false?
+
+- A) False
+- B) True
+- C) Undefined, because a false premise makes the implication vacuous
+- D) True only if `P` and `Q` are equivalent
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) True.**
+
+`P → Q` is false in exactly one case: `P` true and `Q` false. Every other row
+is true, including this one. Option A comes from reading implication as "both
+must hold", which is `P ∧ Q`. Option C is a real philosophical position — the
+principle of vacuous truth — and classical logic adopts it; but "undefined" is
+not an option in a truth table, and programmers need a total function. Option D
+confuses the connective with equivalence: `P ↔ Q` is a different connective that
+does compare the two values.
+
+</details>
+
+**Q2.** Which Python expression is equivalent to `not (a and b)`?
+
+- A) `not a or not b`
+- B) `not a and not b`
+- C) `not a or b`
+- D) `a or not b`
+
+<details>
+<summary>Answer and explanation</summary>
+
+**A) `not a or not b`.**
+
+De Morgan's first law is `¬(P ∧ Q) ≡ ¬P ∨ ¬Q`, and it flips `and` to `or`.
+Option B is De Morgan's *second* law, which applies to `not (a or b)` — the
+connective has to match. This is the single most common logic error in code
+review, and it is why both laws need to be in your head rather than one.
+Options C and D keep the wrong connective in place and so are not equivalent to
+anything useful: check `a=True, b=False`, where the original is `False` and both
+C and D are `True`.
+
+</details>
+
+**Q3.** You want "allow the request if the caller is an admin **or** a
+superuser". Which condition is correct?
+
+- A) `if not (is_admin or is_superuser): allow()`
+- B) `if not is_admin or not is_superuser: allow()`
+- C) `if is_admin or is_superuser: allow()`
+- D) `if is_admin and is_superuser: allow()`
+
+<details>
+<summary>Answer and explanation</summary>
+
+**C) `if is_admin or is_superuser: allow()`.**
+
+`or` is inclusive and does exactly what the requirement says. Option B is the
+tempting wrong answer: `not is_admin or not is_superuser` is true whenever
+*either* privilege is missing, so it allows almost everyone — the De Morgan
+mistake from the lesson's worked example. Option A denies the common case and
+inverts the whole guard. Option D requires both privileges, which is `and`
+semantics and matches "admin **and** superuser", not "or".
+
+</details>
+
+**Q4.** `P → Q` and `¬Q → ¬P` are logically equivalent. What is
+`¬P → ¬Q` in relation to `P → Q`?
+
+- A) Equivalent, by contraposition
+- B) The converse, and not equivalent
+- C) The contrapositive, and equivalent
+- D) A tautology
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) The converse, and not equivalent.**
+
+Swap and negate both sides of `¬P → ¬Q` and you get `P → Q`, which means it is
+the *converse* of the original. Converse and contrapositive are different
+things: the contrapositive is equivalent to the original, the converse generally
+is not.
+
+A concrete counterexample over the integers. Let `P` be "`n` is even" and `Q` be
+"`n > 10`". At `n = 4` the premise `P` is true and the conclusion `Q` is false, so
+`P → Q` is false. But `¬P` is false at `n = 4` too, so `¬P → ¬Q` is vacuously
+true there. One formula false where the other is true: not equivalent.
+
+Option A misnames the relationship. Option C describes what you get from
+`¬Q → ¬P`, not from `¬P → ¬Q`. Option D is wrong because the converse is a
+perfectly good proposition that simply is not a tautology — evaluate it at
+`n = 4` as above and it is `False`.
+
+</details>
+
+**Q5.** `(p ∧ q) → (p ∨ q)` is a tautology. Why?
+
+- A) Because `p` and `q` cannot both be false
+- B) Because whenever both are true, at least one is true
+- C) Because implication is false only when the premise is true and the
+  conclusion false, and the conclusion follows from the premise
+- D) Because `p ∨ q` is equivalent to `p`
+
+<details>
+<summary>Answer and explanation</summary>
+
+**C) Because implication is false only when the premise is true and the
+conclusion false, and the conclusion follows from the premise.**
+
+That is the definition, applied. If `p ∧ q` is true then `p` is true, so `p ∨ q`
+is true, so the implication is not false. Option A is a different claim — `p`
+and `q` *can* both be false — and it is false as stated. Option B describes only
+the row where both are true, ignoring the three rows where the premise is false
+and the implication is vacuously true; a tautology has to hold in all four.
+Option D is just wrong: `p ∨ q` and `p` differ at `p = False, q = True`.
+
+</details>
+
+**Q6.** Which of these is a proposition?
+
+- A) "Sort this list in ascending order"
+- B) "This list is sorted in ascending order"
+- C) "Close the file"
+- D) "x > 5"
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) "This list is sorted in ascending order".**
+
+A proposition is declarative — it asserts something rather than requesting
+something — and has a truth value that does not depend on the reader. Option A
+and option C are imperatives: they are instructions, so they are neither true nor
+false. Option D looks like a proposition but contains an unbound `x`, so its
+truth value depends on an assignment that has not been made; it becomes a
+proposition once you say "every integer `x` greater than 5 is odd", which is
+Lesson 12's territory.
+
+</details>
+
+**Q7.** You are told `P → Q` is true and `Q` is false. What follows?
+
+- A) `P` is false, by modus tollens on the implication
+- B) `P` is true
+- C) Nothing at all follows
+- D) `¬P → ¬Q`
+
+<details>
+<summary>Answer and explanation</summary>
+
+**A) `P` is false, by modus tollens on the implication.**
+
+The only row where `P → Q` is false is `P` true and `Q` false. Since the
+implication is *true* and `Q` is *false*, `P` must be false. Option B is the
+mistake of reading the arrow as `P ∧ Q`. Option C would be right if you knew
+only that `P → Q` is true with nothing about `Q`; the extra fact is what makes
+the deduction go through. Option D is a true formula but it tells you nothing
+new, and its being a valid rewrite is a separate fact from the deduction asked
+about.
+
+</details>
+
+**Q8.** Why does Python not catch `not is_admin or not is_superuser` when the
+requirement was "allow admins and superusers"?
+
+- A) Because Python evaluates `or` lazily and skips the second operand
+- B) Because the expression is well-formed, has a well-defined value, and
+  Python has no access to what you meant
+- C) Because `not` has lower precedence than `or` in Python
+- D) Because type checkers ignore boolean operators
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) Because the expression is well-formed, has a well-defined value, and
+Python has no access to what you meant.**
+
+The bug is a mismatch between the requirement and the code, not between the code
+and the language. Python parses `(not is_admin) or (not is_superuser)` exactly
+as written and evaluates it correctly; the error was made before the code
+existed. Option A is false — `or` returns the first truthy operand, which is a
+short-circuit on *values*, not a skipping of evaluation of the second operand
+when the first is truthy. Option C has the precedence backwards: `not` binds
+*tighter* than `or` in Python, which is exactly why the grouping is `¬A ∨ ¬S`.
+Option D is a distraction; the issue is not that a tool ignores the operator but
+that the requirement was never expressed in a form a tool could check.
+
+</details>
+
+---
+
+## Subjective Questions
+
+### Short Answer
+
+**Q1. State `P → Q` in terms of `or` and `not`, and explain in one sentence why
+that rewrite is the one worth memorising.**
+
+<details>
+<summary>Answer</summary>
+
+`P → Q ≡ ¬P ∨ Q`.
+
+It is worth memorising because everything else follows from it. The negation
+`¬(P → Q) ≡ P ∧ ¬Q` is obtained by negating both sides with De Morgan, and the
+contrapositive `P → Q ≡ ¬Q → ¬P` is obtained by applying the rewrite to both
+sides in a chain. De Morgan's laws, idempotence, and absorption are independent
+identities, but implication needs this one to join them.
+
+</details>
+
+**Q2. What is the negation of `P ↔ Q`, and why is it not `P ∨ Q`?**
+
+<details>
+<summary>Answer</summary>
+
+`¬(P ↔ Q) ≡ (P ∧ ¬Q) ∨ (¬P ∧ Q)` — the two propositions have *different*
+truth values.
+
+`P ↔ Q` is true when both are true or both are false, so its negation is the
+union of the two mixed cases. `P ∨ Q` is much weaker: it is true whenever
+either is true, so it also covers the case where both are true, which is exactly
+the case where the biconditional holds. Since the biconditional is true there
+and `P ∨ Q` is too, `P ∨ Q` cannot be its negation.
+
+</details>
+
+**Q3. Give a one-line proof that `P → (Q → P)` is a tautology.**
+
+<details>
+<summary>Answer</summary>
+
+Take any assignment. If `Q` is false then `Q → P` is true, so the outer
+implication is true. If `Q` is true then `Q → P` reduces to `P`, and in either
+case `P → P` holds.
+
+Equivalently, algebraically: `P → (Q → P) ≡ ¬P ∨ (¬Q ∨ P) ≡ (¬P ∨ P) ∨ ¬Q ≡
+¬Q ∨ ¬Q ≡ ¬Q`, which is a tautology.
+
+</details>
+
+**Q4. Why is `p or q` not an exclusive-or, and what should you write when you
+want exclusive-or?**
+
+<details>
+<summary>Answer</summary>
+
+`or` is inclusive: it is true when both operands are true, as well as when
+exactly one is. Exclusive-or wants the second case excluded.
+
+Write `(a and not b) or (not a and b)`, or on booleans simply `a != b`. In
+Python `bool(a) ^ bool(b)` also works if you convert first, but `^` on non-
+booleans means something else entirely, so the explicit form is safer.
+
+</details>
+
+**Q5. You know `P → Q` and `Q → R`. What can you conclude, and what is the
+resulting formula?**
+
+<details>
+<summary>Answer</summary>
+
+You can conclude `P → R`. This is transitivity, also called the hypothetical
+silicone, and it is what lets a chain of guards stand in for a single
+requirement.
+
+The proof: `P → Q ≡ ¬P ∨ Q` and `Q → R ≡ ¬Q ∨ R`, so chaining gives
+`¬P ∨ (¬Q ∨ R)`, which by associativity is `(¬P ∨ ¬Q) ∨ R`. Now `¬P ∨ ¬Q`
+*implies* `¬P`, so absorption gives `¬P ∨ R`, which is `P → R`.
+
+</details>
+
+**Q6. In `if not a and not b:`, does Python evaluate `not b` when `not a` is
+false?**
+
+<details>
+<summary>Answer</summary>
+
+No. Python's `and` returns the first falsy operand, and when `not a` is false it
+returns that `False` immediately without evaluating `not b`.
+
+This is why `if not a and not b:` is safe to write when `a` and `b` are values
+whose evaluation could fail — `None > 0` will not be attempted once the guard has
+already failed. It is *not* a general permission to skip null checks, because
+the skipping depends on the order you wrote.
+
+</details>
+
+### Long Answer
+
+**Q1. A security check is written `if not is_admin or not is_superuser:
+deny()`. The requirement was "deny unless the caller is an admin or a
+superuser". Diagnose the bug, explain why no tool catches it, and say what
+defence exists.**
+
+<details>
+<summary>Model answer</summary>
+
+The written expression parses as `(¬is_admin) ∨ (¬is_superuser)`, so it denies
+whenever *either* privilege is missing. The correct guard is
+`if not (is_admin or is_superuser): deny()` — equivalently
+`if not is_admin and not is_superuser: deny()`.
+
+The programmer applied De Morgan with the wrong connective. The rule
+`¬(P ∨ Q) ≡ ¬P ∧ ¬Q` was used where `¬(P ∧ Q) ≡ ¬P ∨ ¬Q` was needed. The
+result fails *closed*: it denies legitimate admins who are not superusers. The
+same mistake with `or` swapped for `and` fails *open*, which is worse.
+
+No tool catches it because the code is correct Python. `not is_admin or not
+is_superuser` is a well-formed expression with a definite value; Python has no
+access to the requirement, and no type checker or linter does either. The defect
+lives in the gap between the specification and the program, which is precisely
+the gap a truth table lets you inspect.
+
+The defence is procedural rather than automated: translate the requirement into
+propositions, write the truth table, and compare the code's column against the
+requirement's. Here four rows are checkable, and they disagree on two. Where you
+can make the requirement executable — as an assertion, a property test, or a
+table of cases — you get a check. Absent that, the discipline is to parenthesise
+deliberately and to distrust any rewrite that changes a connective.
+
+</details>
+
+**Q2. Explain why `P → Q` is not the same as `P ∧ Q`, and why treating it as
+such produces bugs in both directions.**
+
+<details>
+<summary>Model answer</summary>
+
+`P → Q` is true in three of four rows; `P ∧ Q` is true in one. They agree only
+on `(P, Q) = (T, T)`, and they agree on both rows where `P` is false: both are
+true when `Q` is false, but `P → Q` is also true when `Q` is true, because a
+false premise makes the implication vacuously true.
+
+Reading implication as conjunction produces two distinct failure modes.
+
+**Failing open.** `if x is not None and x > 0:` is a correct guard written in
+conjunctive form, and it is what a programmer writes when they think of "if" as
+introducing a precondition. But `if x is not None then do_something(x)` needs no
+such guard: when `x` is `None` the implication is simply true. Adding `x is not
+None` to an `if x:` guard is redundant, and worse, writing
+`if x is None or x > 0:` produces the opposite of the intent — the disjunction
+passes when `x` is `None`, which is exactly the case to reject.
+
+**Failing closed.** Treating "if `P` then `Q`" as "both `P` and `Q` must hold"
+makes a requirement vacuous case into a hard requirement. A spec that says "if
+the user is an admin, log the action" does not require that non-admins do not
+log. Implemented as `if is_admin and log()`, the log becomes mandatory for
+everyone.
+
+The asymmetry to remember: conjunction is a *test* of two facts, implication is a
+*conditional* about one. Reading a specification's "if" as a test adds
+requirements the author did not state, and that is how a correct program becomes
+incorrect without anything looking broken.
+
+</details>
+
+**Q3. You must show that a code change preserved behaviour across every
+reachable state. Where does propositional logic help, and where do you need
+something more?**
+
+<details>
+<summary>Model answer</summary>
+
+Propositional logic helps when the property is *compositional*: it is built from
+independent conditions combined with `and`, `or`, `not`, and `→`, with no
+arithmetic and no quantification over a domain. Then equivalence is decidable by
+exhaustion — enumerate all `2^n` assignments, evaluate the requirement and the
+code, compare columns — and you get a proof rather than evidence. That is what a
+truth table is for, and it is why the lesson's Challenge uses reachability to
+cut the table down.
+
+You need more when something leaves the propositional world. Three cases matter
+in practice.
+
+*Quantification over data.* `all(items)` and `any(items)` are quantifiers. "Every
+item passes validation" is `∀i ∈ items. valid(i)`, and there are infinitely many
+possible `items`, so no truth table covers it. You need an argument about the
+loop, or a test over a sample plus the argument — which is Lesson 13 and Lesson
+14.
+
+*Arithmetic.* `len(x) > 0` is not a proposition about a boolean; it is a
+comparison, and its behaviour depends on the value. A bitmask condition has `2^64`
+inputs, not two. Modelling it as a boolean to get a truth table is what hides
+the bug in the Challenge's case B: the unreachable-wrong row and the
+reachable-wrong rows collapse together.
+
+*Unbounded state and aliasing.* Whether a change is safe depends on the history
+of the program, not just the current values. No truth table over booleans
+captures "this list is aliased somewhere else".
+
+The practical rule: reach for a truth table when the condition is a tree of
+boolean operations with no arithmetic, and for a proof about the algorithm when
+it is not. Reaching for the truth table in the second case produces a false
+sense of completeness — you will have enumerated every case of a model that
+omits the thing that matters.
+
+</details>
+
+## Exercises and Solutions
+
 **[ ] Exercise 1 — Build the truth table for eight propositions.** For each,
 write the plain-English condition, then produce the truth column over
 `(p, q) = (F,F), (F,T), (T,F), (T,T)` using the `Formula` classes from the
@@ -648,10 +1100,10 @@ Output:
  7 not p -> not q                      1011  contingent
  8 (p and q) -> (p or q)               1111  tautology
 
-  p=False q=False  q->p=True   p->(q->p)=True
-  p=False q=True   q->p=False  p->(q->p)=True
-  p=True  q=False  q->p=True   p->(q->p)=True
-  p=True  q=True   q->p=True   p->(q->p)=True
+  p=False q=False q->p=True  p->(q->p)=True
+  p=False q=True  q->p=False p->(q->p)=True
+  p=True  q=False q->p=True  p->(q->p)=True
+  p=True  q=True  q->p=True  p->(q->p)=True
 
   p -> q          1101
   not q -> not p  1101   contrapositive, equal to original: True
@@ -881,7 +1333,7 @@ written  : (not failed) or (not idempotent)
 
 witness: failed=False, idempotent=False
   required says : False   -> do not retry
-  written says  : True    -> RETRY
+  written says  : True   -> RETRY
 
 3. 'grant if admin, or public and not archived'
 required : is_admin or (is_public and not archived)
@@ -1254,6 +1706,948 @@ Right-associative is right because the arrow reads like a nested `if`.
 
 </details>
 
+**[ ] Exercise 4 — Prove the equivalence laws by exhaustion, and settle the
+converse question.** (a) Write out the four rows of `p` and `q`, and report the
+truth column of each of `¬p ∧ q`, `p ∨ q`, `p → q`, and `p ↔ q`. (b) For each
+law below, verify it under all four assignments and report the two columns side
+by side: double negation, commutativity of `∧` and `∨`, idempotence, absorption,
+`p → q ≡ ¬p ∨ q`, both De Morgan laws, and `p ↔ q ≡ (p → q) ∧ (q → p)`. (c)
+Compute the columns for `p → q`, its contrapositive `¬q → ¬p`, and its converse
+`¬p → ¬q`, and state which pair is equivalent. (d) Give the specific assignment
+that separates the converse from the original.
+
+<details>
+<summary>Solution</summary>
+
+```python
+import itertools
+
+
+# ---------------------------------------------------------------------------
+# The equivalence laws, checked exhaustively. For each one, the identity must
+# hold under EVERY assignment, not most of them. 'Holds everywhere' is the
+# definition of a tautology, and a tautology is what licenses a rewrite.
+# ---------------------------------------------------------------------------
+
+ATOMS = ["p", "q"]
+
+
+def all_assignments(names):
+    for values in itertools.product([False, True], repeat=len(names)):
+        yield dict(zip(names, values))
+
+
+def truth_table(formula, names):
+    """Return the truth column as a string of 1s and 0s, in row order."""
+    return "".join(
+        "1" if formula(a) else "0"
+        for a in all_assignments(names)
+    )
+
+
+# --- 1. The four rows we actually use -----------------------------------
+print("1. The four rows, and which connectives are true in each")
+print(f"  {'p':>3} {'q':>3} {'~p & q':>7} {'p | q':>7} {'p -> q':>7} {'p <-> q':>9}")
+for a in all_assignments(ATOMS):
+    p, q = a["p"], a["q"]
+    print(f"  {int(p):>3} {int(q):>3} {int((not p) and q):>7} "
+          f"{int(p or q):>7} {int((not p) or q):>7} {int(p == q):>9}")
+print()
+print("  Conjunction has one true row. Disjunction has three. Implication has")
+print("  three, and its only false row is p=1, q=0 -- which is why")
+print("  `p -> q` and `~p | q` are the same proposition.")
+
+print()
+print("2. The equivalence laws, each checked on all 4 assignments")
+
+
+def check(name, left, right):
+    """Verify left == right everywhere; report the truth columns side by side."""
+    lt, rt = truth_table(left, ATOMS), truth_table(right, ATOMS)
+    print(f"  {name:<34} {lt}  ==  {rt}   {'ok' if lt == rt else 'MISMATCH'}")
+    return lt == rt
+
+
+laws = [
+    ("double negation",     lambda a: not not a["p"],
+     lambda a: a["p"]),
+    ("P & Q  ==  Q & P",    lambda a: a["p"] and a["q"],
+     lambda a: a["q"] and a["p"]),
+    ("P | Q  ==  Q | P",    lambda a: a["p"] or a["q"],
+     lambda a: a["q"] or a["p"]),
+    ("P & P  ==  P",        lambda a: a["p"] and a["p"],
+     lambda a: a["p"]),
+    ("P | P  ==  P",        lambda a: a["p"] or a["p"],
+     lambda a: a["p"]),
+    ("P | (P & Q) == P",    lambda a: a["p"] or (a["p"] and a["q"]),
+     lambda a: a["p"]),
+    ("P & (P | Q) == P",    lambda a: a["p"] and (a["p"] or a["q"]),
+     lambda a: a["p"]),
+    ("P -> Q  ==  ~P | Q",  lambda a: (not a["p"]) or a["q"],
+     lambda a: (not a["p"]) or a["q"]),
+    ("~(P & Q) == ~P | ~Q", lambda a: not (a["p"] and a["q"]),
+     lambda a: (not a["p"]) or (not a["q"])),
+    ("~(P | Q) == ~P & ~Q", lambda a: not (a["p"] or a["q"]),
+     lambda a: (not a["p"]) and (not a["q"])),
+    ("P <-> Q == (P->Q)&(Q->P)", lambda a: a["p"] == a["q"],
+     lambda a: ((not a["p"]) or a["q"]) and ((not a["q"]) or a["p"])),
+]
+
+all_ok = True
+for name, left, right in laws:
+    all_ok &= check(name, left, right)
+
+# Associativity needs three atoms, so it gets its own table.
+three = ["p", "q", "r"]
+assoc_l = "".join("1" if ((a["p"] and a["q"]) and a["r"]) else "0"
+                  for a in all_assignments(three))
+assoc_r = "".join("1" if (a["p"] and (a["q"] and a["r"])) else "0"
+                  for a in all_assignments(three))
+print()
+print(f"  {'(P & Q) & R == P & (Q & R)':<34} {assoc_l}  ==  {assoc_r}"
+      f"   {'ok' if assoc_l == assoc_r else 'MISMATCH'}")
+all_ok &= assoc_l == assoc_r
+print()
+print(f"  every law holds on every assignment: {all_ok}")
+print()
+print("  These are tautologies: true under every assignment. A tautology is")
+print("  exactly what makes a rewrite safe, because substituting one side for")
+print("  the other cannot change a formula's value in any context. Note that")
+print("  the columns for absorption, idempotence and double negation are all")
+print("  `0011` -- the column of `p` itself, which is the signature of a law")
+print("  that says 'this simplifies to P'.")
+
+print()
+print("3. Converse, contrapositive, inverse -- three different formulas")
+print(f"  {'p':>3} {'q':>3} {'P->Q':>6} {'~Q->~P contra':>17} {'~P->~Q converse':>19}")
+columns = []
+for a in all_assignments(ATOMS):
+    p, q = a["p"], a["q"]
+    forward = (not p) or q
+    contra = q or (not p)
+    converse = p or (not q)
+    columns.append((forward, contra, converse))
+    print(f"  {int(p):>3} {int(q):>3} {int(forward):>6} {int(contra):>17} "
+          f"{int(converse):>19}")
+same_as_forward = all(f == c for f, c, _ in columns)
+same_as_converse = all(f == v for f, _, v in columns)
+print()
+print(f"  the contrapositive matches P -> Q      : {same_as_forward}")
+print(f"  the converse matches P -> Q            : {same_as_converse}")
+print()
+p, q, f, v = next(
+    (a["p"], a["q"], row[0], row[2])
+    for a, row in zip(all_assignments(ATOMS), columns)
+    if row[0] != row[2])
+print(f"  (d) The separating assignment is p={int(p)}, q={int(q)}:")
+print(f"        P -> Q   = {int(f)}   (true: the premise is false)")
+print(f"        ~P -> ~Q = {int(v)}   (false: P is true and ~Q is false)")
+print()
+print("  One is true and the other false, so they are not equivalent. The")
+print("  contrapositive, by contrast, has the identical column in every row,")
+print("  which is why proving the contrapositive proves the original -- the")
+print("  technique Lesson 13 builds on.")
+```
+
+Output:
+
+```text
+1. The four rows, and which connectives are true in each
+    p   q  ~p & q   p | q  p -> q   p <-> q
+    0   0       0       0       1         1
+    0   1       1       1       1         0
+    1   0       0       1       0         0
+    1   1       0       1       1         1
+
+  Conjunction has one true row. Disjunction has three. Implication has
+  three, and its only false row is p=1, q=0 -- which is why
+  `p -> q` and `~p | q` are the same proposition.
+
+2. The equivalence laws, each checked on all 4 assignments
+  double negation                    0011  ==  0011   ok
+  P & Q  ==  Q & P                   0001  ==  0001   ok
+  P | Q  ==  Q | P                   0111  ==  0111   ok
+  P & P  ==  P                       0011  ==  0011   ok
+  P | P  ==  P                       0011  ==  0011   ok
+  P | (P & Q) == P                   0011  ==  0011   ok
+  P & (P | Q) == P                   0011  ==  0011   ok
+  P -> Q  ==  ~P | Q                 1101  ==  1101   ok
+  ~(P & Q) == ~P | ~Q                1110  ==  1110   ok
+  ~(P | Q) == ~P & ~Q                1000  ==  1000   ok
+  P <-> Q == (P->Q)&(Q->P)           1001  ==  1001   ok
+
+  (P & Q) & R == P & (Q & R)         00000001  ==  00000001   ok
+
+  every law holds on every assignment: True
+
+  These are tautologies: true under every assignment. A tautology is
+  exactly what makes a rewrite safe, because substituting one side for
+  the other cannot change a formula's value in any context. Note that
+  the columns for absorption, idempotence and double negation are all
+  `0011` -- the column of `p` itself, which is the signature of a law
+  that says 'this simplifies to P'.
+
+3. Converse, contrapositive, inverse -- three different formulas
+    p   q   P->Q     ~Q->~P contra     ~P->~Q converse
+    0   0      1                 1                   1
+    0   1      1                 1                   0
+    1   0      0                 0                   1
+    1   1      1                 1                   1
+
+  the contrapositive matches P -> Q      : True
+  the converse matches P -> Q            : False
+
+  (d) The separating assignment is p=0, q=1:
+        P -> Q   = 1   (true: the premise is false)
+        ~P -> ~Q = 0   (false: P is true and ~Q is false)
+
+  One is true and the other false, so they are not equivalent. The
+  contrapositive, by contrast, has the identical column in every row,
+  which is why proving the contrapositive proves the original -- the
+  technique Lesson 13 builds on.
+```
+
+The rows to read off carefully are the two where `p` is false. Both `p → q` and
+`¬p ∧ ¬q` are true there regardless of `q`, which is the vacuous-truth case and
+the reason implication cannot be read as conjunction.
+
+</details>
+
+**[ ] Exercise 5 — Audit four conditions mechanically, and separate "wrong"
+from "wrong only on rows the system cannot reach".** Write a helper that takes
+a requirement and a code condition as functions of a dictionary of booleans,
+enumerates every assignment, and returns the assignments where they disagree.
+Then use it on: (1) "deny unless admin or superuser", (2) "return 400 if the
+request is malformed **or** unauthenticated", (3) "retry if the request failed
+**and** was idempotent", (4) "grant access if the user is an admin **or** the
+resource is public **and** not archived". For each: print both truth columns,
+state the disagreement count, and diagnose whether the connective is wrong or
+only the grouping. Finally, re-run case 4 under the invariant that a public
+resource is never archived, and report the reachable and unreachable
+disagreement counts separately.
+
+<details>
+<summary>Solution</summary>
+
+The whole exercise is four lines of machinery and then a column comparison per
+condition. The count of disagreeing rows is the diagnostic: a condition that
+disagrees on most rows has the wrong connective, while one that disagrees on a
+few rows with the same shape has the wrong grouping.
+
+```python
+import itertools
+
+
+# ---------------------------------------------------------------------------
+# A checker for a small condition language. The point is not the parser, it is
+# that you can hand the checker a REQUIREMENT and the CODE and get told whether
+# they agree -- mechanically, on every row, with no reading involved.
+# ---------------------------------------------------------------------------
+
+def rows(names):
+    for values in itertools.product([False, True], repeat=len(names)):
+        yield dict(zip(names, values))
+
+
+def column(formula, names):
+    return tuple(1 if formula(a) else 0 for a in rows(names))
+
+
+def find_disagreements(requirement, code, names):
+    """Every assignment where requirement and code differ."""
+    bad = []
+    for a in rows(names):
+        want, got = requirement(a), code(a)
+        if want != got:
+            bad.append((a, want, got))
+    return bad
+
+
+def report(label, requirement, code, names):
+    bad = find_disagreements(requirement, code, names)
+    total = 1 << len(names)
+    print(f"  {label}")
+    print(f"    requirement column : {column(requirement, names)}")
+    print(f"    code column        : {column(code, names)}")
+    print(f"    rows               : {total}")
+    print(f"    disagreements      : {len(bad)}")
+    if bad:
+        print("    the disagreeing assignments:")
+        shown = 0
+        for a, want, got in bad:
+            if shown == 4:
+                print(f"      ... and {len(bad) - shown} more")
+                break
+            print(f"      {a}  want={int(want)}  got={int(got)}")
+            shown += 1
+    print()
+    return bad
+
+
+print("Four conditions, each as requirement against code.")
+print("Read the two columns side by side: an all-1s requirement against an")
+print("all-0s code is a condition that never fires, which is the failure mode")
+print("in case 2.")
+print()
+
+# 1. "deny unless admin or superuser"
+report(
+    "1. deny unless admin or superuser",
+    lambda a: not (a["is_admin"] or a["is_superuser"]),
+    lambda a: (not a["is_admin"]) or (not a["is_superuser"]),
+    ["is_admin", "is_superuser"])
+
+# 2. "return 400 if malformed OR unauthenticated"
+report(
+    "2. 400 if malformed or unauthenticated",
+    lambda a: (not a["well_formed"]) or (not a["authed"]),
+    lambda a: (not a["well_formed"]) and (not a["authed"]),
+    ["well_formed", "authed"])
+
+# 3. "retry if failed AND idempotent"
+report(
+    "3. retry if failed and idempotent",
+    lambda a: a["failed"] and a["idempotent"],
+    lambda a: (not a["failed"]) or (not a["idempotent"]),
+    ["failed", "idempotent"])
+
+# 4. "grant if admin OR (public AND not archived)"
+report(
+    "4. grant if admin or (public and not archived)",
+    lambda a: a["is_admin"] or (a["resource_public"] and not a["archived"]),
+    lambda a: (a["is_admin"] or a["resource_public"]) and not a["archived"],
+    ["is_admin", "resource_public", "archived"])
+
+print("5. What Python actually computes for the same source text")
+print("   Python binds `not` tighter than `or`, so these are the same formula:")
+print(f"     not a or not b     -> "
+      f"{column(lambda a: (not a['p']) or (not a['q']), ['p', 'q'])}")
+print(f"     (not a) or (not b) -> "
+      f"{column(lambda a: (not a['p']) or (not a['q']), ['p', 'q'])}")
+print("   and this is a different formula, the one the author meant:")
+print(f"     not (a or b)       -> "
+      f"{column(lambda a: not (a['p'] or a['q']), ['p', 'q'])}")
+print()
+print("   The first two evaluate 'at least one privilege is missing'. The")
+print("   third evaluates 'neither privilege is held'. Two of four rows")
+print("   differ, and both are rows where exactly one privilege is held --")
+print("   the entire population the check exists to serve.")
+print()
+
+print("6. Safe rewrites, tested by comparing columns rather than by eye")
+require = lambda a: not (a["is_admin"] or a["is_superuser"])
+names = ["is_admin", "is_superuser"]
+base = column(require, names)
+spellings = [
+    ("not (a or s)",                   lambda a: not (a["is_admin"] or a["is_superuser"])),
+    ("not a and not s",                lambda a: (not a["is_admin"]) and (not a["is_superuser"])),
+    ("not (a or s or False)",          lambda a: not (a["is_admin"] or a["is_superuser"] or False)),
+    ("not a and not s and not False",  lambda a: (not a["is_admin"]) and (not a["is_superuser"]) and not False),
+    ("THE WRONG ONE: not a or not s",  lambda a: (not a["is_admin"]) or (not a["is_superuser"])),
+]
+print(f"     {'requirement':<38} {base}  baseline")
+for label, fn in spellings:
+    col = column(fn, names)
+    tag = "same" if col == base else "DIFFERENT"
+    print(f"     {label:<38} {col}  {tag}")
+print()
+print("   The four correct spellings have the same column as the requirement")
+print("   and the wrong one does not. That is the entire test, and it takes")
+print("   one line. No cleverness is required, only the columns.")
+print()
+
+print("7. Reachability changes the question, so report both counts")
+print("   Everything above assumes any combination of flags is reachable.")
+print("   Suppose the system guarantees public implies not archived:")
+guaranteed = lambda a: not (a["resource_public"] and a["archived"])
+names3 = ["is_admin", "resource_public", "archived"]
+bad = find_disagreements(
+    lambda a: a["is_admin"] or (a["resource_public"] and not a["archived"]),
+    lambda a: (a["is_admin"] or a["resource_public"]) and not a["archived"],
+    names3)
+print(f"   rows in the table                    : {1 << len(names3)}")
+print(f"   rows the invariant makes unreachable : "
+      f"{sum(1 for a in rows(names3) if not guaranteed(a))}")
+print(f"   total disagreements                  : {len(bad)}")
+print(f"   disagreements on reachable rows      : "
+      f"{sum(1 for a, _, _ in bad if guaranteed(a))}")
+print(f"   disagreements on unreachable rows    : "
+      f"{sum(1 for a, _, _ in bad if not guaranteed(a))}")
+print()
+print("   The two counts answer different questions. The reachable count says")
+print("   whether the code is right where it can actually run. The")
+print("   unreachable count says whether the code is wrong at all: a")
+print("   disagreement on an unreachable row is still a disagreement with the")
+print("   specification, and it goes live the moment someone relaxes the")
+print("   invariant. Reporting only the reachable count hides a real defect;")
+print("   reporting only the total count cries wolf on rows that cannot occur.")
+```
+
+Output:
+
+```text
+Four conditions, each as requirement against code.
+Read the two columns side by side: an all-1s requirement against an
+all-0s code is a condition that never fires, which is the failure mode
+in case 2.
+
+  1. deny unless admin or superuser
+    requirement column : (1, 0, 0, 0)
+    code column        : (1, 1, 1, 0)
+    rows               : 4
+    disagreements      : 2
+    the disagreeing assignments:
+      {'is_admin': False, 'is_superuser': True}  want=0  got=1
+      {'is_admin': True, 'is_superuser': False}  want=0  got=1
+
+  2. 400 if malformed or unauthenticated
+    requirement column : (1, 1, 1, 0)
+    code column        : (1, 0, 0, 0)
+    rows               : 4
+    disagreements      : 2
+    the disagreeing assignments:
+      {'well_formed': False, 'authed': True}  want=1  got=0
+      {'well_formed': True, 'authed': False}  want=1  got=0
+
+  3. retry if failed and idempotent
+    requirement column : (0, 0, 0, 1)
+    code column        : (1, 1, 1, 0)
+    rows               : 4
+    disagreements      : 4
+    the disagreeing assignments:
+      {'failed': False, 'idempotent': False}  want=0  got=1
+      {'failed': False, 'idempotent': True}  want=0  got=1
+      {'failed': True, 'idempotent': False}  want=0  got=1
+      {'failed': True, 'idempotent': True}  want=1  got=0
+
+  4. grant if admin or (public and not archived)
+    requirement column : (0, 0, 1, 0, 1, 1, 1, 1)
+    code column        : (0, 0, 1, 0, 1, 0, 1, 0)
+    rows               : 8
+    disagreements      : 2
+    the disagreeing assignments:
+      {'is_admin': True, 'resource_public': False, 'archived': True}  want=1  got=0
+      {'is_admin': True, 'resource_public': True, 'archived': True}  want=1  got=0
+
+5. What Python actually computes for the same source text
+   Python binds `not` tighter than `or`, so these are the same formula:
+     not a or not b     -> (1, 1, 1, 0)
+     (not a) or (not b) -> (1, 1, 1, 0)
+   and this is a different formula, the one the author meant:
+     not (a or b)       -> (1, 0, 0, 0)
+
+   The first two evaluate 'at least one privilege is missing'. The
+   third evaluates 'neither privilege is held'. Two of four rows
+   differ, and both are rows where exactly one privilege is held --
+   the entire population the check exists to serve.
+
+6. Safe rewrites, tested by comparing columns rather than by eye
+     requirement                            (1, 0, 0, 0)  baseline
+     not (a or s)                           (1, 0, 0, 0)  same
+     not a and not s                        (1, 0, 0, 0)  same
+     not (a or s or False)                  (1, 0, 0, 0)  same
+     not a and not s and not False          (1, 0, 0, 0)  same
+     THE WRONG ONE: not a or not s          (1, 1, 1, 0)  DIFFERENT
+
+   The four correct spellings have the same column as the requirement
+   and the wrong one does not. That is the entire test, and it takes
+   one line. No cleverness is required, only the columns.
+
+7. Reachability changes the question, so report both counts
+   Everything above assumes any combination of flags is reachable.
+   Suppose the system guarantees public implies not archived:
+   rows in the table                    : 8
+   rows the invariant makes unreachable : 2
+   total disagreements                  : 2
+   disagreements on reachable rows      : 1
+   disagreements on unreachable rows    : 1
+
+   The two counts answer different questions. The reachable count says
+   whether the code is right where it can actually run. The
+   unreachable count says whether the code is wrong at all: a
+   disagreement on an unreachable row is still a disagreement with the
+   specification, and it goes live the moment someone relaxes the
+   invariant. Reporting only the reachable count hides a real defect;
+   reporting only the total count cries wolf on rows that cannot occur.
+```
+
+**Diagnoses.** Case 1 disagrees on two of four rows, both with exactly one
+privilege held, which is the De Morgan mistake with the wrong connective. Case
+2's requirement column is all 1s except one row while the code's column is 1
+only on the first row: the condition almost never fires, so malformed *and*
+authenticated requests pass. That is the worst shape of this bug, because it
+fails **open** — a request that should have been rejected is served. Case 3
+disagrees on all four rows, the signature of both connectives being wrong at
+once: it retries every request that succeeded and none that failed. Case 4
+disagrees on two of eight rows, both with `is_admin` true and `archived` true,
+which points at the grouping rather than a wholesale connective swap: the code
+requires `not archived` of the whole disjunction rather than only of the public
+branch.
+
+</details>
+
+**[ ] Exercise 6 — Build a formula library and use it to settle four questions
+you would otherwise argue about.** (a) Implement `Var`, `Not`, `And`, `Or`,
+`Implies`, and `Iff` so that each builds a formula object, each formula knows
+which variables occur in it, and each formula evaluates under a complete
+assignment. (b) Using those, check mechanically that `p → q ≡ ¬p ∨ q`, that
+`p ∧ q ≢ p ∨ q`, that `p ∧ q ≢ p → q`, and that
+`p ↔ q ≡ (p → q) ∧ (q → p)`. (c) Take the requirement "admin, or superuser and
+not archived", then test four candidate rewrites plus two correct ones against
+it by comparing truth columns, and say which are safe. (d) Implement negation
+two ways — by reading the definition of each connective, and by De Morgan — and
+check that they agree. (e) Classify ten formulas as tautology, contradiction,
+or contingent from their columns alone.
+
+<details>
+<summary>Solution</summary>
+
+Building formulas as objects rather than strings is what makes this mechanical.
+`evaluate` walks the tree, `variables` tells you how big the table needs to be,
+and `repr` gives you something to print. Once `column` exists, every question in
+the exercise is a string comparison.
+
+```python
+import itertools
+
+
+# ---------------------------------------------------------------------------
+# A tiny formula language: build formulas as objects, evaluate them under an
+# assignment, and print them. The point of building objects rather than strings
+# is that equality becomes structural, so 'are these two conditions the same?'
+# has an answer a machine can give.
+# ---------------------------------------------------------------------------
+
+class Formula:
+    """Base class. Operators build new formulas; nothing is evaluated here."""
+
+    def variables(self):
+        """Every variable occurring anywhere in this formula."""
+        raise NotImplementedError
+
+    def evaluate(self, assignment):
+        """The truth value under a complete assignment."""
+        raise NotImplementedError
+
+
+class Var(Formula):
+    def __init__(self, name):
+        self.name = name
+
+    def variables(self):
+        return {self.name}
+
+    def evaluate(self, a):
+        return a[self.name]
+
+    def __repr__(self):
+        return self.name
+
+
+class Not(Formula):
+    def __init__(self, inner):
+        self.inner = inner
+
+    def variables(self):
+        return self.inner.variables()
+
+    def evaluate(self, a):
+        return not self.inner.evaluate(a)
+
+    def __repr__(self):
+        return f"~{self.inner!r}"
+
+
+class And(Formula):
+    def __init__(self, *parts):
+        self.parts = list(parts)
+
+    def variables(self):
+        out = set()
+        for part in self.parts:
+            out |= part.variables()
+        return out
+
+    def evaluate(self, a):
+        return all(part.evaluate(a) for part in self.parts)
+
+    def __repr__(self):
+        return "(" + " & ".join(repr(p) for p in self.parts) + ")"
+
+
+class Or(Formula):
+    def __init__(self, *parts):
+        self.parts = list(parts)
+
+    def variables(self):
+        out = set()
+        for part in self.parts:
+            out |= part.variables()
+        return out
+
+    def evaluate(self, a):
+        return any(part.evaluate(a) for part in self.parts)
+
+    def __repr__(self):
+        return "(" + " | ".join(repr(p) for p in self.parts) + ")"
+
+
+class Implies(Formula):
+    def __init__(self, left, right):
+        self.left, self.right = left, right
+
+    def variables(self):
+        return self.left.variables() | self.right.variables()
+
+    def evaluate(self, a):
+        # Implication is 'not p, or q'. Never evaluate the right side when the
+        # left is false -- the same short circuit the language gives you.
+        return (not self.left.evaluate(a)) or self.right.evaluate(a)
+
+    def __repr__(self):
+        return f"({self.left!r} -> {self.right!r})"
+
+
+class Iff(Formula):
+    def __init__(self, left, right):
+        self.left, self.right = left, right
+
+    def variables(self):
+        return self.left.variables() | self.right.variables()
+
+    def evaluate(self, a):
+        return self.left.evaluate(a) == self.right.evaluate(a)
+
+    def __repr__(self):
+        return f"({self.left!r} <-> {self.right!r})"
+
+
+def all_assignments(names):
+    """Every assignment to `names`, as a list of dicts."""
+    return [dict(zip(names, values))
+            for values in itertools.product([False, True], repeat=len(names))]
+
+
+def column(formula):
+    """The truth column of `formula`, as a tuple of 0s and 1s."""
+    names = sorted(formula.variables())
+    return tuple(1 if formula.evaluate(a) else 0
+                 for a in all_assignments(names))
+
+
+def equivalent(f, g):
+    """True exactly when f and g agree under every assignment."""
+    return column(f) == column(g)
+
+
+def show(label, formula):
+    print(f"  {label:<44} {''.join(str(c) for c in column(formula))}"
+          f"   {formula!r}")
+    return column(formula)
+
+
+p, q, r = Var("p"), Var("q"), Var("r")
+
+print("1. The same condition, several spellings")
+print("   Equal columns mean the conditions are interchangeable.")
+show("p -> q", Implies(p, q))
+show("~p | q", Or(Not(p), q))
+print(f"   p -> q  and  ~p | q  equivalent : "
+      f"{equivalent(Implies(p, q), Or(Not(p), q))}")
+print(f"   their columns are identical      : "
+      f"{column(Implies(p, q)) == column(Or(Not(p), q))}")
+print()
+print(f"   ~p & q and p | q equivalent       : "
+      f"{equivalent(And(Not(p), q), Or(p, q))}")
+print(f"   p & q  and p | q  equivalent      : "
+      f"{equivalent(And(p, q), Or(p, q))}")
+print(f"   p & q  and p -> q  equivalent     : "
+      f"{equivalent(And(p, q), Implies(p, q))}")
+print(f"   p <-> q and (p->q)&(q->p) equal   : "
+      f"{equivalent(Iff(p, q), And(Implies(p, q), Implies(q, p)))}")
+print(f"   p <-> q and p | q     equivalent   : "
+      f"{equivalent(Iff(p, q), Or(p, q))}")
+print()
+print("   The last two lines are the ones worth remembering. `p & q` is NOT")
+print("   `p -> q`, and `p <-> q` is NOT `p | q`. Both pairs differ on exactly")
+print("   one row, which is the row a careless reading skips.")
+print()
+
+print("2. Equivalence as a decidable question, not an intuition")
+ADMIN, SUPER, ARCHIVED = Var("is_admin"), Var("is_superuser"), Var("archived")
+requirement = Or(ADMIN, And(SUPER, Not(ARCHIVED)))
+candidates = {
+    "requirement: a | (s & ~v)": requirement,
+    "safe:  ~(~a & (~s | v))":   Not(And(Not(ADMIN), Or(Not(SUPER), ARCHIVED))),
+    "safe:  (a | s) & (a | ~v)": And(Or(ADMIN, SUPER), Or(ADMIN, Not(ARCHIVED))),
+    "wrong: (a | s) & ~v":       And(Or(ADMIN, SUPER), Not(ARCHIVED)),
+    "wrong: a | (s & v)":        Or(ADMIN, And(SUPER, ARCHIVED)),
+    "wrong: a & (s | ~v)":       And(ADMIN, Or(SUPER, Not(ARCHIVED))),
+    "wrong: ~(~a & ~s) | v":     Or(Not(And(Not(ADMIN), Not(SUPER))), ARCHIVED),
+}
+base = column(requirement)
+print(f"  {'candidate':<32} {'column':<9} verdict")
+safe_count = wrong_count = 0
+for label, f in candidates.items():
+    col = column(f)
+    if col == base:
+        verdict, safe_count = "equivalent", safe_count + 1
+    else:
+        verdict, wrong_count = "NOT equivalent", wrong_count + 1
+    print(f"  {label:<32} {''.join(str(c) for c in col):<9} {verdict}")
+print()
+print(f"  equivalent rewrites: {safe_count}, wrong ones: {wrong_count}")
+print()
+print(f"  variables in the requirement : {sorted(requirement.variables())}")
+print(f"  size of the table             : "
+      f"{1 << len(requirement.variables())} rows")
+print()
+print("   This is the mechanical form of 'is that rewrite safe?'. You do not")
+print("   have to be careful; you have to run the columns.")
+print()
+
+print("3. Negation, computed rather than guessed")
+print("   `structural_negate` builds the negation by walking the tree. De")
+print("   Morgan says it should agree with `demorgan_negate`, which flips")
+print("   connectives and pushes the negation inward. Compare the columns.")
+
+
+def structural_negate(f):
+    """The negation built from the truth-table definition of each connective.
+
+    Each case is read straight off the definition: a conjunction is false
+    when either side is false, so its negation mentions the whole conjunction.
+    Note that the children are NOT negated here -- that would apply the rule
+    twice and hand back the original formula.
+    """
+    if isinstance(f, Var):
+        return Not(f)
+    if isinstance(f, Not):
+        return f.inner
+    if isinstance(f, And):
+        return Not(And(*f.parts))
+    if isinstance(f, Or):
+        return Not(Or(*f.parts))
+    if isinstance(f, Implies):
+        return And(f.left, Not(f.right))
+    if isinstance(f, Iff):
+        return Or(And(f.left, Not(f.right)),
+                  And(Not(f.left), f.right))
+    raise TypeError(f)
+
+
+def demorgan_negate(f):
+    """The negation built by De Morgan: flip & to | and vice versa, recurse."""
+    if isinstance(f, Var):
+        return Not(f)
+    if isinstance(f, Not):
+        return f.inner
+    if isinstance(f, And):
+        return Or(*[demorgan_negate(part) for part in f.parts])
+    if isinstance(f, Or):
+        return And(*[demorgan_negate(part) for part in f.parts])
+    if isinstance(f, Implies):
+        return And(f.left, Not(f.right))
+    if isinstance(f, Iff):
+        return Or(And(f.left, Not(f.right)),
+                  And(Not(f.left), f.right))
+    raise TypeError(f)
+
+
+negations = [
+    ("p",            p),
+    ("p & q",        And(p, q)),
+    ("p | q",        Or(p, q)),
+    ("p -> q",       Implies(p, q)),
+    ("p <-> q",      Iff(p, q)),
+    ("(p & q) | r",  Or(And(p, q), r)),
+    ("(p | q) & ~r", And(Or(p, q), Not(r))),
+    ("~p | q",       Or(Not(p), q)),
+]
+print(f"  {'formula':<14} {'column':<9} {'~f':<9} {'De Morgan ~f':<12} agree")
+all_agree = True
+for label, f in negations:
+    col_f = column(f)
+    col_s = column(structural_negate(f))
+    col_d = column(demorgan_negate(f))
+    agree = col_s == col_d == column(Not(f))
+    all_agree &= agree
+    print(f"  {label:<14} {''.join(map(str, col_f)):<9} "
+          f"{''.join(map(str, col_s)):<9} {''.join(map(str, col_d)):<12} "
+          f"{agree}")
+print()
+print(f"  De Morgan agrees with the truth-table definition everywhere: "
+      f"{all_agree}")
+print()
+print("   The '~f' column is computed by recursion into the tree and the")
+print("   'De Morgan ~f' column by flipping connectives. They are identical")
+print("   in every row, which is why you can remember one rule instead of")
+print("   building a negation routine -- and why, when the two disagree, the")
+print("   recursion is the one to trust.")
+print()
+print("   Note `p -> q` and `~p | q` negate to the same formula, which is the")
+print("   master identity restated as a computed fact rather than a thing to")
+print("   memorise.")
+print()
+
+print("4. Tautology, contradiction, contingent -- decided mechanically")
+
+
+def classify(f):
+    """Decide which of the three classes f belongs to, from its column."""
+    col = column(f)
+    if all(col):
+        return "tautology"
+    if not any(col):
+        return "contradiction"
+    return "contingent"
+
+
+samples = [
+    ("p -> q", Implies(p, q)),
+    ("~(p -> q)", Not(Implies(p, q))),
+    ("(p & q) -> (p | q)", Implies(And(p, q), Or(p, q))),
+    ("p -> (q -> p)", Implies(p, Implies(q, p))),
+    ("~(p | q) -> (~p & ~q)", Implies(Not(Or(p, q)), And(Not(p), Not(q)))),
+    ("p -> ~p", Implies(p, Not(p))),
+    ("~p | p", Or(Not(p), p)),
+    ("p & ~p", And(p, Not(p))),
+    ("p <-> q", Iff(p, q)),
+    ("p | ~p", Or(p, Not(p))),
+]
+print(f"  {'formula':<26} {'column':<9} class")
+for label, f in samples:
+    print(f"  {label:<26} {''.join(str(c) for c in column(f)):<9} "
+          f"{classify(f)}")
+print()
+print("   `p -> ~p` is contingent, not a contradiction, and that surprises")
+print("   people. It is true whenever p is false, which is half the table.")
+print("   The contradiction is `p & ~p`, and the tautology is `p | ~p`.")
+print("   Both are listed above so the contrast is visible: a class is about")
+print("   the whole column, not about one row.")
+print()
+
+print("5. Three variables, one table, every row accounted for")
+three = [And(p, q), Or(q, r), Implies(p, Not(r)), Not(Or(p, r))]
+combined = three[0]
+for extra in three[1:]:
+    combined = And(combined, extra)
+print(f"  formula  : {combined!r}")
+print(f"  variables : {sorted(combined.variables())}, so "
+      f"{1 << len(combined.variables())} rows")
+print(f"  class     : {classify(combined)}")
+print()
+print("  The whole procedure scales as 2^n, which is why nobody does this by")
+print("  hand past a handful of variables -- and why a real solver uses")
+print("  satisfiability search with propagation instead of enumeration. Same")
+print("  space, better strategy. See Lesson 11's BDD section.")
+```
+
+Output:
+
+```text
+1. The same condition, several spellings
+   Equal columns mean the conditions are interchangeable.
+  p -> q                                       1101   (p -> q)
+  ~p | q                                       1101   (~p | q)
+   p -> q  and  ~p | q  equivalent : True
+   their columns are identical      : True
+
+   ~p & q and p | q equivalent       : False
+   p & q  and p | q  equivalent      : False
+   p & q  and p -> q  equivalent     : False
+   p <-> q and (p->q)&(q->p) equal   : True
+   p <-> q and p | q     equivalent   : False
+
+   The last two lines are the ones worth remembering. `p & q` is NOT
+   `p -> q`, and `p <-> q` is NOT `p | q`. Both pairs differ on exactly
+   one row, which is the row a careless reading skips.
+
+2. Equivalence as a decidable question, not an intuition
+  candidate                        column    verdict
+  requirement: a | (s & ~v)        01110011  equivalent
+  safe:  ~(~a & (~s | v))          01110011  equivalent
+  safe:  (a | s) & (a | ~v)        01110011  equivalent
+  wrong: (a | s) & ~v              01110000  NOT equivalent
+  wrong: a | (s & v)               00110111  NOT equivalent
+  wrong: a & (s | ~v)              00110001  NOT equivalent
+  wrong: ~(~a & ~s) | v            01111111  NOT equivalent
+
+  equivalent rewrites: 3, wrong ones: 4
+
+  variables in the requirement : ['archived', 'is_admin', 'is_superuser']
+  size of the table             : 8 rows
+
+   This is the mechanical form of 'is that rewrite safe?'. You do not
+   have to be careful; you have to run the columns.
+
+3. Negation, computed rather than guessed
+   `structural_negate` builds the negation by walking the tree. De
+   Morgan says it should agree with `demorgan_negate`, which flips
+   connectives and pushes the negation inward. Compare the columns.
+  formula        column    ~f        De Morgan ~f agree
+  p              01        10        10           True
+  p & q          0001      1110      1110         True
+  p | q          0111      1000      1000         True
+  p -> q         1101      0010      0010         True
+  p <-> q        1001      0110      0110         True
+  (p & q) | r    01010111  10101000  10101000     True
+  (p | q) & ~r   00101010  11010101  11010101     True
+  ~p | q         1101      0010      0010         True
+
+  De Morgan agrees with the truth-table definition everywhere: True
+
+   The '~f' column is computed by recursion into the tree and the
+   'De Morgan ~f' column by flipping connectives. They are identical
+   in every row, which is why you can remember one rule instead of
+   building a negation routine -- and why, when the two disagree, the
+   recursion is the one to trust.
+
+   Note `p -> q` and `~p | q` negate to the same formula, which is the
+   master identity restated as a computed fact rather than a thing to
+   memorise.
+
+4. Tautology, contradiction, contingent -- decided mechanically
+  formula                    column    class
+  p -> q                     1101      contingent
+  ~(p -> q)                  0010      contingent
+  (p & q) -> (p | q)         1111      tautology
+  p -> (q -> p)              1111      tautology
+  ~(p | q) -> (~p & ~q)      1111      tautology
+  p -> ~p                    10        contingent
+  ~p | p                     11        tautology
+  p & ~p                     00        contradiction
+  p <-> q                    1001      contingent
+  p | ~p                     11        tautology
+
+   `p -> ~p` is contingent, not a contradiction, and that surprises
+   people. It is true whenever p is false, which is half the table.
+   The contradiction is `p & ~p`, and the tautology is `p | ~p`.
+   Both are listed above so the contrast is visible: a class is about
+   the whole column, not about one row.
+
+5. Three variables, one table, every row accounted for
+  formula  : ((((p & q) & (q | r)) & (p -> ~r)) & ~(p | r))
+  variables : ['p', 'q', 'r'], so 8 rows
+  class     : contradiction
+
+  The whole procedure scales as 2^n, which is why nobody does this by
+  hand past a handful of variables -- and why a real solver uses
+  satisfiability search with propagation instead of enumeration. Same
+  space, better strategy. See Lesson 11's BDD section.
+```
+
+**What the columns settle.** Part (b)'s fourth and fifth lines are the ones that
+change how you write code: `p ∧ q` and `p → q` have different columns, and
+`p ↔ q` and `p ∨ q` have different columns, so neither pair is a legal
+substitution. In part (c), three of the seven candidates match the requirement
+and four do not; the four wrong ones all fail on the same two rows, where
+`is_admin` is true and `archived` is true, which is precisely where the
+grouping matters. In part (e), note that `p → ¬p` is *contingent*, not a
+contradiction — it is true on every row where `p` is false, which is half the
+table. That is the row a casual reading skips.
+
+</details>
 **Challenge — Decide whether conditions are correct, using reachability as well
 as equivalence.** Take three conditions and, for each: (1) enumerate every input
 combination, (2) mark which combinations are actually reachable, using invariants
@@ -1454,11 +2848,13 @@ unreachable, and the only thing saving you is an assumption about where
 `page_size` comes from. Four reachable rows all agree, which is exactly why the
 bug survived: production exercised four rows and they were the four that work.
 
-</details>## Summary
+</details>
+
+## Summary
 
 - A proposition is a declarative sentence with a definite truth value.
   "Sort this list" is not one, and "x > 5" is not one until `x` is bound.
-- `¬P ∧ Q`, `P ∨ Q`, and `P ↔ Q` have exact truth conditions, and `∨` is
+- `P ∧ Q`, `P ∨ Q`, and `P ↔ Q` have exact truth conditions, and `∨` is
   inclusive: `P ∨ Q` is true when both are true.
 - `P → Q` is false in exactly one case, `P` true and `Q` false. It is therefore
   true in three of four cases, and it is **not** `P ∧ Q`.
@@ -1471,12 +2867,6 @@ bug survived: production exercised four rows and they were the four that work.
 - Negating `P ↔ Q` gives `(P ∧ ¬Q) ∨ (¬P ∧ Q)`, not `P ∨ Q`.
 - A tautology is true everywhere and a contradiction is false everywhere.
   Most propositions are contingent, and being contingent is not a criticism.
-- Logical equivalence means agreement under every assignment, and substitution
-  for equivalence is what licenses rewriting a condition without changing what
-  it does.
-- Python's `not` binds tighter than `and`, which binds tighter than `or`. When
-  a requirement mixes connectives, write the parentheses anyway: Python will
-  sometimes infer the wrong ones and will not tell you.
 
 ## Next
 

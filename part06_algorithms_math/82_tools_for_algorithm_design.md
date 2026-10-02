@@ -6,16 +6,17 @@
 
 ## In Plain Words
 
-This lesson is the toolbox you reach for after you know what big-O is. It
-covers four things: how to work out how long a recursive algorithm takes by
-writing down a recurrence and solving it, how to prove an algorithm is
-correct rather than merely hopeful, how to decide whether a problem should be
-attacked by divide and conquer, by taking the locally best choice, or by
-building a table of answers, and how to prove that a problem is intrinsically
-hard so you stop looking for something clever. Each tool is a way of turning
-a vague intuition into a statement you can check, and the whole subject comes
-down to a handful of patterns that reappear in every algorithm you will ever
-read.
+This lesson is the toolbox you reach for once you know how to say how fast
+something is. It has four parts: how to work out how long a recursive
+algorithm takes by writing down an equation for its cost and solving it, and
+how to prove an algorithm is correct rather than merely hopeful. Then the two
+design patterns you will use for the rest of your career — taking the locally
+best choice and hoping, or building a table of answers — together with the test
+that tells you which one a problem wants. And finally how to prove that a
+problem is hard on purpose, so you stop looking for something clever that does
+not exist. Each tool is a way of turning a vague intuition into a statement
+you can check, and the whole subject comes down to a handful of patterns that
+reappear in every algorithm you will ever read.
 
 ---
 
@@ -62,8 +63,9 @@ statement about an actually-terminating program.
 
 *Explanation.* The notation is
 [Lesson 80](80_big_o_and_complexity.md)'s, but the content is
-[Lesson 24](24_recurrence_relations.md)'s: the cost of a recursive function
-on $n$ is a sum of the costs of its recursive calls plus its own work.
+[Lesson 24](../part02_discrete_combinatorics/24_recurrence_relations.md)'s: the
+cost of a recursive function on $n$ is a sum of the costs of its recursive
+calls plus its own work.
 
 **Theorem (Master Theorem).** Let $T(n) = a\,T(n/b) + \Theta(n^c)$ with
 $a \ge 1$, $b > 1$, and let $d = \log_b a$. Then
@@ -161,6 +163,43 @@ $$\log_2 (n!) = \log_2(n\log_2 e - n + \tfrac12 \log_2 (2\pi n) + O(1/n)) = \The
 inputs and a binary question gives at most one bit, so $\log_2 n!$ questions
 are needed. Merge sort uses $n\log_2 n - n + 1$ comparisons, leaving a gap of
 $(\log_2 e - 1)n \approx 0.4427n$ that nobody has closed.
+
+---
+
+## Formula Sheet
+
+| Symbol | Formula | In plain words | When you use it |
+| --- | --- | --- | --- |
+| recurrence | `$T(n)=\sum_i a_iT(n/b_i)+\Theta(n^c)$` | $a_i$ subproblems of size $n/b_i$, plus $n^c$ local work | analysing any recursive algorithm |
+| well-founded recurrence | repeated substitution reaches a base case | it describes a terminating program | before solving, not after |
+| Master Theorem | `$T(n)=a\,T(n/b)+\Theta(n^c)$`, `$d=\log_ba$ | split into `$a$` parts of size `$n/b$` | merge sort, binary search, Karatsuba, FFT |
+| case `$c<d$` | `$T(n)=\Theta(n^d)$` | leaves dominate | Karatsuba: `$3T(n/2)+n$` `$\Rightarrow\Theta(n^{1.5850})$` |
+| case `$c=d$` | `$T(n)=\Theta(n^d\log n)$` | every level costs the same | `$2T(n/2)+n$` `$\Rightarrow\Theta(n\log n)$` |
+| case `$c>d$` | `$T(n)=\Theta(n^c)$` | the top of the tree dominates | quicksort's balanced case |
+| exact solution here | `$T(2^k)=3^{k+1}-2^{k+1}$` | closed form for `$3T(n/2)+n$` | `175099` at `$n=1024$` |
+| substitution step | `$c\,n^d\ge a\,c(n/b)^d+n$` | check the guess survives one level | the step that fails without slack |
+| slack guess | `$T(n)\le c\,n^d-\lambda n$`, needs `$\lambda\ge2$` and `$c\ge\lambda+1$` | leaves the room the additive term needs | worked at `$\lambda=2$`, `$c=3$` in Block 1 |
+| level cost | `$n(3/2)^i$ at level $i$ | geometric series, ratio `a/b` | the recursion tree method |
+| merge sort comparisons | `$\le n\log_2 n-n+1$`, `$\ge n\log_2 n/2$` | exact at `$n=2^k$` | the tightness of divide and conquer | `45057` worst at `$n=4096$` |
+| Karatsuba | `$T(n)=3T(n/2)+\Theta(n)$` | three half-size products instead of four | `$3^{16}=43046721$` leaves at 65536 digits |
+| invariant template | `init /\ I\wedge g \Rightarrow I' /\ I\wedge\neg g \Rightarrow$ post | three obligations per loop | every correctness proof with a loop |
+| termination variant | `$V$ strictly decreases, `$V\ge0$` | proves the loop ends | the window length in binary search |
+| exchange argument | `$O'=(O\setminus\{o\})\cup\{g\}$ optimal and containing `$g$` | one swap repairs the disagreement | activity selection, Huffman, MST |
+| matroid | hereditary, and `$\lvert A\rvert<\lvert B\rvert` forces an `$x\in B\setminus A$` that keeps `$\lvert A\cup\{x\}\rvert$` feasible | the exchange property | why "sort and take" is right on MST, matching |
+| optimal substructure | `OPT(i) = combine(OPT(j), OPT(k))` | the optimum is built from smaller optima | prerequisite for DP |
+| overlapping subproblems | the same state recurs in many branches | e.g. `$fib(n-1)$` appears twice | prerequisite for memoisation |
+| DP cost | `$\#\text{states}\times$` work per state | table fill | LCS `$O(mn)$`, knapsack `$O(nC)$` |
+| LCS recurrence | `$L(i,j)=L(i-1,j-1)+1$ if equal else `$\max(L(i-1,j),L(i,j-1))$` | match diagonally or skip | sequence alignment, `git diff` |
+| knapsack recurrence | `$OPT(i,c)=\max(OPT(i-1,c),v_i+OPT(i-1,c-w_i))$` | skip or take item $i$ | capacity-constrained problems |
+| subset states | `$C(n,k)$ states, not `$2^n$` | the state is a subset of fixed size | bitmask DP; `C(20,3)=1140` |
+| Bellman-Ford | `$V-1$ relaxation passes suffice | one pass per edge of a path | graphs with negative edges |
+| negative cycle test | a `$V$-th pass still relaxes something | then a negative cycle is reachable | edges `X->Y->Z->X` of weight `-1` | detection |
+| DAG shortest path | topological order, `$O(V+E)$` | one pass settles everything | `P->Q->R->S = 2+1-3 = 0` |
+| Dijkstra | correct iff no negative edge | settles each vertex once | `T=4` instead of `-4` in Block 5 |
+| comparison lower bound | `$\log_2 n!$` bits `=$\Theta(n\log n)$` | binary questions distinguish `$n!$` orderings | sorting |
+| Stirling | `$\log_2 n!=n\log_2 n-n\log_2 e+\tfrac12\log_2(2\pi n)+O(1/n)$` | the exact shape of the bound | `716.162` bits at `$n=128$ |
+| merge sort gap | `$(\log_2 e-1)n\approx0.4427n$` | room left in comparison sorting | `52.84` at `$n=128` |
+| counting sort | `$\Theta(n+k)$` operations and `0` comparisons | uses the key range instead of comparing | `1040` vs `9217` at `$n=1024` |
 
 ---
 
@@ -693,7 +732,7 @@ print(f"    plain recursion : {naive_calls} function calls")
 print(f"    with memoisation: {memo_states} distinct states evaluated, each "
       f"exactly once")
 print("  Plain recursion grows like the golden ratio to the n -- about")
-print(f"  1.6^28 = {1.618 ** 28:.0f} -- while memoisation is linear in n.")
+print(f"  1.618^28 = {1.618 ** 28:.0f} -- while memoisation is linear in n.")
 print("  That is the entire argument for memoisation: the overlapping")
 print("  subproblems ARE the subproblems.")
 
@@ -1028,6 +1067,84 @@ print("  32-bit words, or fixed-width strings, is this same idea, and it is")
 print("  why a database sorts a million rows faster than any comparison sort.")
 ```
 
+### With Libraries
+
+```python
+# Requires numpy + matplotlib; not runnable with the standard library alone.
+import math
+
+import matplotlib
+matplotlib.use("Agg")          # so the script runs without a display
+import matplotlib.pyplot as plt
+import numpy as np
+
+fig, axes = plt.subplots(1, 3, figsize=(16.5, 4.6))
+
+
+def level_cost(n, a, b, level):
+    """Work at one level of the recursion tree for T(n) = a*T(n/b) + Theta(n)."""
+    return a ** level * n / b ** level
+
+
+# 1. Recursion trees for the Master's three cases, side by side.
+levels = np.arange(0, 13)
+n = 4096
+for ax, (a, c, case) in zip(axes[:2], ((2, 0, "c < d: leaves dominate"),
+                                        (2, 1, "c = d: every level equal"),
+                                        (2, 2, "c > d: the top dominates"))):
+    ax.bar(levels, level_cost(n, a, 2, levels), color="tab:blue", width=0.7,
+           label=f"work at level i")
+    ax.set_yscale("log")
+    ax.set_xlabel("recursion level i")
+    ax.set_ylabel("work at this level")
+    ax.set_title(f"T(n) = {a}T(n/{2}) + n^{c}   ({case})")
+    ax.grid(alpha=0.3, which="both")
+    ax.legend(fontsize=8)
+
+# 3. The comparison-sorting lower bound against what merge sort actually pays.
+ns = 2 ** np.arange(2, 13)
+lower = np.array([math.lgamma(int(n) + 1) / math.log(2) for n in ns])
+merge = np.array([int(n) * (int(n).bit_length() - 1) - int(n) + 1 for n in ns])
+axes[2].plot(ns, lower, lw=2, color="tab:red", label=r"lower bound  $\log_2 n!$")
+axes[2].plot(ns, merge, lw=2, color="tab:blue", label="merge sort")
+axes[2].fill_between(ns, lower, merge, color="tab:orange", alpha=0.35,
+                     label="the gap nobody has closed")
+axes[2].set_xscale("log", base=2)
+axes[2].set_yscale("log")
+axes[2].set_title("Sorting: the bound and the best we know")
+axes[2].set_xlabel("n")
+axes[2].set_ylabel("comparisons")
+axes[2].legend(fontsize=8)
+axes[2].grid(alpha=0.3, which="both")
+
+plt.tight_layout()
+plt.savefig("lesson82_tools.png", dpi=110)
+print("wrote lesson82_tools.png")
+print(f"  n = {ns[-1]}: log2(n!) = {lower[-1]:.1f} comparisons are unavoidable, "
+      f"merge sort pays {merge[-1]}")
+print(f"  the gap is {merge[-1] - lower[-1]:.1f}, tracking (log2(e) - 1) * n = "
+      f"{0.4427 * ns[-1]:.1f}")
+print("  -- it grows linearly, and that is the whole remaining room for")
+print("  cleverness in comparison sorting.  The first two panels are why the")
+print("  Master Theorem needs three cases rather than one: which of the two")
+print("  geometric series dominates is decided by c against log_b(a), and the")
+print("  picture changes shape at c = d.")
+plt.close(fig)
+```
+
+Output:
+
+```text
+wrote lesson82_tools.png
+  n = 4096: log2(n!) = 43250.0 comparisons are unavoidable, merge sort pays 45057
+  the gap is 1807.0, tracking (log2(e) - 1) * n = 1813.3
+  -- it grows linearly, and that is the whole remaining room for
+  cleverness in comparison sorting.  The first two panels are why the
+  Master Theorem needs three cases rather than one: which of the two
+  geometric series dominates is decided by c against log_b(a), and the
+  picture changes shape at c = d.
+```
+
 ---
 
 ## Common Mistakes
@@ -1150,8 +1267,13 @@ work. The counterexample is three items long.
 ```python
 from functools import lru_cache
 
+CALLS = 0
+
 
 def naive_lcs(x, y, i=0, j=0):
+    """Correct, and quadratic-exponential in the number of calls it makes."""
+    global CALLS
+    CALLS += 1
     if i == len(x) or j == len(y):
         return 0
     if x[i] == y[j]:
@@ -1161,6 +1283,7 @@ def naive_lcs(x, y, i=0, j=0):
 
 @lru_cache(maxsize=None)
 def memo_lcs(x, y, i=0, j=0):
+    """The same function with one line added: the cache.  This is the whole DP."""
     if i == len(x) or j == len(y):
         return 0
     if x[i] == y[j]:
@@ -1170,13 +1293,22 @@ def memo_lcs(x, y, i=0, j=0):
 
 x, y = "ABCBDAB", "BDCABA"
 answer = naive_lcs(x, y)
-print(f"  LCS length of {x} and {y} = {answer}")
-print(f"    memoised states computed : {memo_lcs.cache_info().currsize}")
-print(f"    states in the whole table: {(len(x) + 1) * (len(y) + 1)}")
+naive_calls = CALLS
+assert memo_lcs(x, y) == answer            # same answer, different cost
+states = memo_lcs.cache_info().currsize
+assert states < naive_calls
+print(f"  LCS length of {x} and {y} = {answer}   (both versions agree)")
+print(f"    plain recursion     : {naive_calls} calls to lcs()")
+print(f"    memoised states     : {states} of the {(len(x) + 1) * (len(y) + 1)}"
+      f" in the table")
+print(f"    speed-up            : {naive_calls / states:.1f}x")
 print()
-print("  The naive recursion costs Theta(C(m+n, m)), which is 2*C(13,7) - 1")
-print("  = 3431 calls when nothing matches; this pair happens to match often")
-print("  enough to bring it down.  With memoisation it is Theta(mn).")
+print("  The naive version is Theta(C(m+n, m)) calls.  The recursion has at most")
+print("  C(m+n, m) distinct diagonals through the (m+1)(n+1) grid, so when")
+print("  nothing matches -- no diagonal ever takes the 'match and move' branch --")
+print("  every one of them is walked: 2*C(13,7) - 1 = 3431 calls for two strings")
+print("  of length 7.  This pair shares a lot of characters, which collapses the")
+print("  count to 309, and the cache takes it to 38 states evaluated once each.")
 print("  Memoisation is not an optimisation here, it is the difference")
 print("  between a program that finishes and one that does not.")
 ```
@@ -1206,43 +1338,6 @@ print("  slogan.")
 Tempting because "sorting requires $n \log n$ comparisons" is repeated so
 often that the model restriction drops out. State the model or the bound is
 about nothing.
-
----
-
-## Formula Sheet
-
-| Symbol | Formula | In plain words | When you use it |
-| --- | --- | --- | --- |
-| recurrence | `$T(n)=\sum_i a_iT(n/b_i)+\Theta(n^c)$` | $a_i$ subproblems of size $n/b_i$, plus $n^c$ local work | analysing any recursive algorithm |
-| well-founded recurrence | repeated substitution reaches a base case | it describes a terminating program | before solving, not after |
-| Master Theorem | `$T(n)=a\,T(n/b)+\Theta(n^c)$`, `$d=\log_ba$ | split into `$a$` parts of size `$n/b$` | merge sort, binary search, Karatsuba, FFT |
-| case `$c<d$` | `$T(n)=\Theta(n^d)$` | leaves dominate | Karatsuba: `$3T(n/2)+n$` `$\Rightarrow\Theta(n^{1.5850})$` |
-| case `$c=d$` | `$T(n)=\Theta(n^d\log n)$` | every level costs the same | `$2T(n/2)+n$` `$\Rightarrow\Theta(n\log n)$` |
-| case `$c>d$` | `$T(n)=\Theta(n^c)$` | the top of the tree dominates | quicksort's balanced case |
-| exact solution here | `$T(2^k)=3^{k+1}-2^{k+1}$` | closed form for `$3T(n/2)+n$` | `175099` at `$n=1024$` |
-| substitution step | `$c\,n^d\ge a\,c(n/b)^d+n$` | check the guess survives one level | the step that fails without slack |
-| slack guess | `$T(n)\le c\,n^d-\lambda n$ |r-1|\ge2$, `$c\ge\lambda+1$ | | leaves the room the additive term needs | worked at `$\lambda=2$`, `$c=3$` |
-| level cost | `$n(3/2)^i$ at level $i$ | geometric series, ratio `a/b` | the recursion tree method |
-| merge sort comparisons | `$\le n\log_2 n-n+1$`, `$\ge n\log_2 n/2$` | exact at `$n=2^k$ | the tightness of divide and conquer | `45057` worst at `$n=4096$` |
-| Karatsuba | `$T(n)=3T(n/2)+\Theta(n)$ | three half-size products instead of four | | `$3^{16}=43046721$` leaves at 65536 digits |
-| invariant template | `init /\ I\wedge g \Rightarrow I' /\ I\wedge\neg g \Rightarrow$ post | three obligations per loop | every correctness proof with a loop |
-| termination variant | `$V$ strictly decreases, `$V\ge0$` | proves the loop ends | e.g. `$V=|hi-lo|+1$` in binary search |
-| exchange argument | `$O'=(O\setminus\{o\})\cup\{g\}$ optimal and containing `$g$` | one swap repairs the disagreement | activity selection, Huffman, MST |
-| matroid | hereditary + `$|A|<|B|\Rightarrow\exists x\in B\setminus A$ | exchange property | why "sort and take" is right on MST, matching |
-| optimal substructure | `OPT(i) = combine(OPT(j), OPT(k))` | the optimum is built from smaller optima | prerequisite for DP |
-| overlapping subproblems | the same state recurs in many branches | e.g. `$fib(n-1)$` appears twice | prerequisite for memoisation |
-| DP cost | `$\#\text{states}\times$` work per state | table fill | LCS `$O(mn)$`, knapsack `$O(nC)$` |
-| LCS recurrence | `$L(i,j)=L(i-1,j-1)+1$ if equal else `$\max(L(i-1,j),L(i,j-1))$` | match diagonally or skip | sequence alignment, `git diff` |
-| knapsack recurrence | `$OPT(i,c)=\max(OPT(i-1,c),v_i+OPT(i-1,c-w_i))$` | skip or take item $i$ | capacity-constrained problems |
-| subset states | `$C(n,k)$ not `$2^n$ |` | the state is a subset of fixed size | bitmask DP; `C(20,3)=1140` |
-| Bellman-Ford | `$V-1$ relaxation passes suffice | | one pass per edge of a path | graphs with negative edges |
-| negative cycle test | `$V$-th pass still relaxes `$\Rightarrow$` negative cycle | | edges `X->Y->Z->X` weight `-1` | detection |
-| DAG shortest path | topological order, `$O(V+E)$ | | one pass settles everything | `P->Q->R->S = 2+1-3 = 0` |
-| Dijkstra | correct iff no negative edge | settles each vertex once | `T=4` instead of `-4` in Block 5 |
-| comparison lower bound | `$\log_2 n!$ | = `\Theta(n\log n)$` | binary questions distinguish `$n!$` orderings | sorting |
-| Stirling | `$\log_2 n!=n\log_2 n-n\log_2 e+\tfrac12\log_2(2\pi n)+O(1/n)$` | the exact shape of the bound | `716.162` bits at `$n=128$ |
-| merge sort gap | `$(\log_2 e-1)n\approx0.4427n$ |` | room left in comparison sorting | `52.84` at `$n=128$` |
-| counting sort | `$\Theta(n+k)$ operations, `0$ comparisons | | uses the key range | `1040` vs `9217` at `$n=1024$` |
 
 ---
 
@@ -1768,118 +1863,782 @@ it quantifies over.
 
 ## Exercises and Solutions
 
-**[ ] Exercise 1 —** Solve each recurrence by the Master Theorem, saying which
-case applies and why: (a) $T(n) = 2T(n/2) + \Theta(n)$; (b) $T(n) = 7T(n/2) +
-\Theta(n)$; (c) $T(n) = 4T(n/2) + \Theta(n^2)$; (d) $T(n) = T(n/3) +
-\Theta(n \log n)$ — and say what happens to (d).
+**[ ] Exercise 1 —** Solve each recurrence $T(n) = a\,T(n/b) + \Theta(n^c)$ by the
+Master Theorem, saying which case applies and why: (a) $T(n) = 2T(n/2) +
+\Theta(n)$; (b) $T(n) = 7T(n/2) + \Theta(n)$; (c) $T(n) = 4T(n/2) +
+\Theta(n^2)$; (d) $T(n) = T(n/3) + \Theta(n \log n)$ — and for (d) say what
+happens to the Master Theorem and what replaces it.
 
 <details>
 <summary>Solution</summary>
 
-(a) $a = b = 2$ gives $d = 1$, and $c = 1$, so $c = d$ and
+(a) $a = b = 2$ gives $d = 1$ and $c = 1$, so $c = d$ and
 $T(n) = \Theta(n \log n)$. This is merge sort; Block 2's exact count
-$n\log_2 n - n + 1$ confirms the shape.
+$n\log_2 n - n + 1$ confirms the shape. **Case 2**, and it is the boundary
+case: the level ratio $a/b^c = 2/2 = 1$, so no level dominates.
 
-(b) $d = \log_2 7 \approx 2.807$ and $c = 1 < d$, so
-$T(n) = \Theta(n^{2.8074})$ — a 7-way split of a linear-cost problem. The
+(b) $d = \log_2 7 \approx 2.8074$ and $c = 1 < d$, so $T(n) = \Theta(n^{2.8074})$
+— a 7-way split of a linear-cost problem. **Case 1**: the leaves win. The
 Master Theorem works fine; the algorithm is just a bad idea.
 
-(c) $d = \log_2 4 = 2 = c$, so $T(n) = \Theta(n^2 \log n)$. This is the
-counterintuitive case: doubling the branching factor *doubled* the answer,
-because the merge cost grew just as fast as the branching.
+(c) $d = \log_2 4 = 2 = c$, so $T(n) = \Theta(n^2 \log n)$. **Case 2** again.
+This is the counterintuitive one: doubling the branching factor *doubled*
+the answer, because the merge cost grew just as fast as the branching.
 
-(d) $a = 1$, $b = 3$, $d = \log_3 1 = 0$, and the additive term is
-$\Theta(n \log n)$, which is **not** of the form $\Theta(n^c)$ for any $c$.
-The Master Theorem does not apply. Two correct routes: $T(n) = T(n/3) +
-\Theta(n\log n)$ expands to $T(n) = \Theta(n\log n)$ because the per-level
-work doubles while the sizes shrink by 3, so the last few levels dominate and
-the total is $\Theta(n\log n)$; or apply Akra–Bazzi, which gives
-$\Theta(n^1(1 + \int_1^n \frac{u\log u}{u}du)) = \Theta(n(\log n)^2)$.
+(d) $a = 1$, so $d = \log_3 1 = 0$, and the additive term $\Theta(n \log n)$
+is **not** of the form $\Theta(n^c)$ for any $c$. The Master Theorem does not
+apply. Use Akra–Bazzi: solve $\sum_i a_i b_i^p = 1$, i.e. $(1/3)^p = 1$, giving
+$p = 0$. Then
+
+$$\Theta\left(n^0\left(1 + \int_1^n \frac{u \log u}{u^{p+1}}\,du\right)\right) = \Theta\left(1 + \int_1^n \log u\,du\right) = \Theta(n \log n).$$
+
+The $n^0$ prefactor is the whole answer and it is easy to drop: writing
+$\Theta(n(\log n)^2)$ instead is the correct answer to a *different*
+recurrence, namely $2T(n/2) + \Theta(n \log n)$ — see Challenge (d). The
+recursion tree confirms $\Theta(n\log n)$ and even pins the constant: level $i$
+costs $(n/3^i)\log_2(n/3^i)$, so with $j = k - i$ for $n = 3^k$ the total is
+$\log_2 3 \sum_{j=1}^{k} j\,3^j = \log_2 3 \cdot \tfrac34\,(1 + (2k-1)3^k)$,
+which is a constant — $3/2$ — times $n\log_2 n$.
+
+```python
+"""Exercise 1 code block."""
+import math
+from math import log2
+
+CASES = [
+    ("(a)  T(n) = 2T(n/2) + Theta(n)",   2, 2, 1),
+    ("(b)  T(n) = 7T(n/2) + Theta(n)",   7, 2, 1),
+    ("(c)  T(n) = 4T(n/2) + Theta(n^2)", 4, 2, 2),
+]
+
+print("Solve T(n) = a T(n/b) + Theta(n^c) with the Master Theorem.")
+print()
+print(f"{'recurrence':<32} {'d = log_b a':>12} {'c':>3} {'case':>5} {'result':>20}")
+for label, a, b, c in CASES:
+    d = log2(a) / log2(b)
+    if c < d:
+        case, result = 1, f"Theta(n^{d:.4f})"
+    elif abs(c - d) < 1e-12:
+        case, result = 2, "Theta(n^d log n)"
+    else:
+        case, result = 3, f"Theta(n^{c})"
+    print(f"{label:<32} {d:12.4f} {c:3d} {case:5d} {result:>20}")
+
+print()
+print("(d)  T(n) = T(n/3) + Theta(n log n):  a = 1, so d = log_3 1 = 0, and")
+print("     n log n is not Theta(n^c) for any c.  Master Theorem: DOES NOT APPLY.")
+print()
+print("     Akra-Bazzi.  Solve  a_1 b_1^p = 1  ->  (1/3)^p = 1  ->  p = 0.")
+print("         T(n) = Theta( n^p (1 + INT_1^n g(u)/u^(p+1) du ) )")
+print("               = Theta( n^0 (1 + INT_1^n u log u / u^1 du ) )")
+print("               = Theta( 1 + INT_1^n log u du )")
+print("               = Theta( 1 + n log n - n + 1 )")
+print("               = Theta(n log n)")
+print()
+print("     The n^0 prefactor is the whole answer.  Drop it and you get n log n")
+print("     out of an integral that is only n log n in total -- i.e. n (log n)^2,")
+print("     which is the answer to a DIFFERENT recurrence (Challenge (d)).")
+print()
+print("     Recursion tree check.  Level i has 1 node of size n/3^i doing")
+print("     (n/3^i) log2(n/3^i) work, so with j = k - i the total is")
+print("         SUM_{j=1..k} 3^j * j * log2(3) = log2(3) * (3/4)(1 + (2k-1)3^k).")
+print()
+print(f"       {'k':>3} {'n = 3^k':>10} {'tree total':>16} {'closed form':>16} {'n log2 n':>16} {'ratio':>8}")
+for k in range(3, 15):
+    n = 3 ** k
+    total, size = 0.0, float(n)
+    while size >= 1.0:
+        total += size * math.log2(size) if size > 1 else 0.0
+        size /= 3
+    closed = math.log2(3) * 0.75 * (1 + (2 * k - 1) * 3 ** k)
+    print(f"       {k:3d} {n:10d} {total:16.2f} {closed:16.2f} "
+          f"{n*math.log2(n):16.2f} {total/(n*math.log2(n)):8.4f}")
+print()
+print("     The two total columns agree to the last digit, and the ratio tends")
+print("     to 3/2 rather than 1.  The constant is not 1 because the work is")
+print("     dominated by the LAST levels, not the first: the j-th-from-last")
+print("     level does 3^(k-j) * j * log2(3) work, and the j series sums to 3/4,")
+print("     which is what produces the factor 3/2 = (3/4) * 2.")
+```
+
+```text
+Solve T(n) = a T(n/b) + Theta(n^c) with the Master Theorem.
+
+recurrence                        d = log_b a   c  case               result
+(a)  T(n) = 2T(n/2) + Theta(n)         1.0000   1     2     Theta(n^d log n)
+(b)  T(n) = 7T(n/2) + Theta(n)         2.8074   1     1      Theta(n^2.8074)
+(c)  T(n) = 4T(n/2) + Theta(n^2)       2.0000   2     2     Theta(n^d log n)
+
+(d)  T(n) = T(n/3) + Theta(n log n):  a = 1, so d = log_3 1 = 0, and
+     n log n is not Theta(n^c) for any c.  Master Theorem: DOES NOT APPLY.
+
+     Akra-Bazzi.  Solve  a_1 b_1^p = 1  ->  (1/3)^p = 1  ->  p = 0.
+         T(n) = Theta( n^p (1 + INT_1^n g(u)/u^(p+1) du ) )
+               = Theta( n^0 (1 + INT_1^n u log u / u^1 du ) )
+               = Theta( 1 + INT_1^n log u du )
+               = Theta( 1 + n log n - n + 1 )
+               = Theta(n log n)
+
+     The n^0 prefactor is the whole answer.  Drop it and you get n log n
+     out of an integral that is only n log n in total -- i.e. n (log n)^2,
+     which is the answer to a DIFFERENT recurrence (Challenge (d)).
+
+     Recursion tree check.  Level i has 1 node of size n/3^i doing
+     (n/3^i) log2(n/3^i) work, so with j = k - i the total is
+         SUM_{j=1..k} 3^j * j * log2(3) = log2(3) * (3/4)(1 + (2k-1)3^k).
+
+         k    n = 3^k       tree total      closed form         n log2 n    ratio
+         3         27           161.67           161.67           128.38   1.2593
+         4         81           675.19           675.19           513.53   1.3148
+         5        243          2600.92          2600.92          1925.73   1.3506
+         6        729          9533.55          9533.55          6932.63   1.3752
+         7       2187         33797.74         33797.74         24264.19   1.3929
+         8       6561        116989.25        116989.25         83191.51   1.4063
+         9      19683        397760.60        397760.60        280771.35   1.4167
+        10      59049       1333665.11       1333665.11        935904.51   1.4250
+        11     177147       4422149.98       4422149.98       3088484.87   1.4318
+        12     531441      14529918.66      14529918.66      10107768.68   1.4375
+        13    1594323      47380166.86      47380166.86      32850248.20   1.4423
+        14    4782969     153511737.96     153511737.96     106131571.10   1.4464
+
+     The two total columns agree to the last digit, and the ratio tends
+     to 3/2 rather than 1.  The constant is not 1 because the work is
+     dominated by the LAST levels, not the first: the j-th-from-last
+     level does 3^(k-j) * j * log2(3) work, and the j series sums to 3/4,
+     which is what produces the factor 3/2 = (3/4) * 2.
+```
 
 </details>
 
 **[ ] Exercise 2 —** For the recurrence $T(n) = 2T(n/3) + \Theta(n)$: (a) apply
 the Master Theorem; (b) write the recursion-tree level costs and sum the
-geometric series; (c) prove $T(n) = \Theta(n^{\log_3 2})$ by substitution,
-including the base case.
+geometric series; (c) prove $T(n) = \Theta(n)$ by substitution, including the
+base case.
 
 <details>
 <summary>Solution</summary>
 
 (a) $a = 2$, $b = 3$, $d = \log_3 2 \approx 0.6309$; the additive term is
-$\Theta(n^1)$ with $c = 1 > d$, so $T(n) = \Theta(n^1) = \Theta(n)$.
+$\Theta(n^1)$ with $c = 1 > d$, so $T(n) = \Theta(n)$. **Case 3**: the root
+alone dominates, because the tree shrinks faster than it branches.
 
 (b) Level $i$ has $2^i$ nodes of size $n/3^i$, each doing $n/3^i$ work, so
-level $i$ costs $2^i n/3^i = n(2/3)^i$ — a *decreasing* geometric series with
-ratio $2/3 < 1$, summing to at most $3n$. The leaves number $2^{\log_3 n} =
-n^{0.6309}$. Total $\le 3n + n^{0.6309} = O(n)$, and $\Omega(n)$ comes from the
-top level, so $T(n) = \Theta(n)$.
+level $i$ costs $2^i n / 3^i = n (2/3)^i$ — a *decreasing* geometric series
+with ratio $2/3 < 1$, summing to at most $n/(1 - 2/3) = 3n$. The leaves number
+$2^{\log_3 n} = n^{0.6309}$, which is sublinear. Total $\le 3n + n^{0.6309} = O(n)$,
+and $\Omega(n)$ comes from the top level, so $T(n) = \Theta(n)$.
 
-(c) Guess $T(n) \le c\,n$. The step: $2c(n/3) + n = \frac{2c}{3}n + n \le c\,n$
-iff $1 \le c/3$, i.e. $c \ge 3$. The base case $n = 1$ needs $T(1) \le c$, so
-$c \ge 3$ works there too. Hence $T(n) = \Theta(n)$, and it is *tight* here —
-unlike Example 1, the pure power guess succeeds because the recursion shrinks
-faster than it branches.
+(c) Guess $T(n) \le C n$. The step:
+
+$$T(n) = 2\,T(n/3) + n \le 2C(n/3) + n = \tfrac{2C}{3}n + n \le C n \iff 1 \le \tfrac{C}{3} \iff C \ge 3.$$
+
+The base case $n = 1$ needs $T(1) = 1 \le C$, which $C = 3$ satisfies, and
+$\Omega(n)$ is immediate from the root. So $T(n) = \Theta(n)$, and the pure
+power guess is *tight* here — unlike Exercise 1(d), where the additive term is
+not a power at all. The substitution succeeds exactly when $c \ne d$, and
+Challenge (b) proves that statement.
+
+```python
+"""Exercise 2 code block."""
+from math import log2, log
+
+
+def log3(x):
+    return log(x) / log(3)
+
+a, b, c = 2, 3, 1
+d = log3(a)
+
+print(f"a = {a}, b = {b}, f(n) = Theta(n^{c})")
+print(f"d = log_{b} a = log_{b} {a} = {d:.4f}")
+print(f"c = {c} > d, so Case 3:  T(n) = Theta(n^{c}) = Theta(n)")
+print()
+print("(b) Recursion tree.  Level i has a^i = %d^i nodes of size n/%d^i," % (a, b))
+print("    each doing n/%d^i work, so level i costs n (a/b)^i." % b)
+print(f"       {'level':>6} {'nodes':>10} {'size each':>14} {'level work':>16} {'total so far':>16}")
+n = 3 ** 10
+total, level, size = 0.0, 1, float(n)
+i = 0
+while size >= 1.0:
+    work = level * size
+    total += work
+    print(f"       {i:6d} {level:10d} {size:14.6f} {work:16.6f} {total:16.6f}")
+    level *= a
+    size /= b
+    i += 1
+leaves = n ** d
+print()
+print(f"    The level work is a GEOMETRIC series with ratio a/b = {a}/{b} = {a/b:.6f} < 1,")
+print(f"    so it sums to at most n / (1 - a/b) = {1/(1-a/b):.4f} n.")
+print(f"    Leaves: a^(log_b n) = n^(log_b a) = n^{d:.4f} = {leaves:.2f}")
+print(f"    Total <= {1/(1-a/b):.4f}n + {leaves:.2f} = O(n);  Omega(n) from the root.  Theta(n).")
+print()
+print("    Measured:")
+print(f"       {'n':>12} {'tree total':>16} {'total / n':>12}")
+for k in (4, 6, 8, 10, 12):
+    n = 3 ** k
+    tot, lev, sz = 0.0, 1, float(n)
+    while sz >= 1.0:
+        tot += lev * sz
+        lev *= a
+        sz /= b
+    print(f"       {n:12d} {tot:16.4f} {tot/n:12.4f}")
+print()
+print("    total / n climbs toward 3 and then stalls: Theta(n).  The constant 3")
+print("    is exactly the geometric sum 1/(1 - 2/3) = 3, and it is reached")
+print("    rather slowly because the leaf term n^0.63 is still visible at these")
+print("    sizes -- but n^0.63 is sublinear, so it vanishes as n grows.")
+print()
+print("(c) Substitution.  Claim: T(n) <= C n for all n >= 1, with C = 3.")
+print()
+print("    Inductive step, assuming T(m) <= C m for every m < n:")
+print("        T(n) = 2 T(n/3) + n <= 2 C (n/3) + n = (2C/3) n + n")
+print("        (2C/3) n + n <= C n   iff   1 <= C/3   iff   C >= 3.")
+print("    Base case: T(1) = 1 <= C for every C >= 3.  Take C = 3.")
+print("    Omega(n) is immediate: the root alone does n units of work.")
+
+
+def t(n):
+    """T(n) = 2 T(n/3) + n, T(1) = 1."""
+    if n <= 1:
+        return 1
+    return 2 * t(n // 3) + n
+
+
+print()
+print(f"       {'n':>10} {'T(n)':>10} {'T(n)/n':>10} {'<= 3n ?':>9}")
+for n in (27, 81, 243, 729, 2187, 6561):
+    v = t(n)
+    print(f"       {n:10d} {v:10d} {v/n:10.4f} {str(v <= 3*n):>9}")
+print()
+print("    The bound T(n) <= 3n is never violated, and T(n)/n grows slowly")
+print("    because n//3 truncation leaves a residue that recurses once more.")
+```
+
+```text
+a = 2, b = 3, f(n) = Theta(n^1)
+d = log_3 a = log_3 2 = 0.6309
+c = 1 > d, so Case 3:  T(n) = Theta(n^1) = Theta(n)
+
+(b) Recursion tree.  Level i has a^i = 2^i nodes of size n/3^i,
+    each doing n/3^i work, so level i costs n (a/b)^i.
+        level      nodes      size each       level work     total so far
+            0          1   59049.000000     59049.000000     59049.000000
+            1          2   19683.000000     39366.000000     98415.000000
+            2          4    6561.000000     26244.000000    124659.000000
+            3          8    2187.000000     17496.000000    142155.000000
+            4         16     729.000000     11664.000000    153819.000000
+            5         32     243.000000      7776.000000    161595.000000
+            6         64      81.000000      5184.000000    166779.000000
+            7        128      27.000000      3456.000000    170235.000000
+            8        256       9.000000      2304.000000    172539.000000
+            9        512       3.000000      1536.000000    174075.000000
+           10       1024       1.000000      1024.000000    175099.000000
+
+    The level work is a GEOMETRIC series with ratio a/b = 2/3 = 0.666667 < 1,
+    so it sums to at most n / (1 - a/b) = 3.0000 n.
+    Leaves: a^(log_b n) = n^(log_b a) = n^0.6309 = 1024.00
+    Total <= 3.0000n + 1024.00 = O(n);  Omega(n) from the root.  Theta(n).
+
+    Measured:
+                  n       tree total    total / n
+                 81         211.0000       2.6049
+                729        2059.0000       2.8244
+               6561       19171.0000       2.9220
+              59049      175099.0000       2.9653
+             531441     1586131.0000       2.9846
+
+    total / n climbs toward 3 and then stalls: Theta(n).  The constant 3
+    is exactly the geometric sum 1/(1 - 2/3) = 3, and it is reached
+    rather slowly because the leaf term n^0.63 is still visible at these
+    sizes -- but n^0.63 is sublinear, so it vanishes as n grows.
+
+(c) Substitution.  Claim: T(n) <= C n for all n >= 1, with C = 3.
+
+    Inductive step, assuming T(m) <= C m for every m < n:
+        T(n) = 2 T(n/3) + n <= 2 C (n/3) + n = (2C/3) n + n
+        (2C/3) n + n <= C n   iff   1 <= C/3   iff   C >= 3.
+    Base case: T(1) = 1 <= C for every C >= 3.  Take C = 3.
+    Omega(n) is immediate: the root alone does n units of work.
+
+                n       T(n)     T(n)/n   <= 3n ?
+               27         65     2.4074      True
+               81        211     2.6049      True
+              243        665     2.7366      True
+              729       2059     2.8244      True
+             2187       6305     2.8829      True
+             6561      19171     2.9220      True
+
+    The bound T(n) <= 3n is never violated, and T(n)/n grows slowly
+    because n//3 truncation leaves a residue that recurses once more.
+```
 
 </details>
 
 **[ ] Exercise 3 —** Activity selection: (a) give the greedy algorithm and its
-exchange proof; (b) give a set of intervals where *latest* start time greedy
-fails while earliest finish succeeds; (c) for the interval set
-$\{(1,4),(3,5),(5,7),(6,8),(2,6)\}$, compute both greedies and the true optimum.
+exchange proof; (b) give a set of intervals where *earliest start* time greedy
+fails while earliest finish succeeds, and explain which step of the exchange
+argument breaks; (c) for the interval set $\{(1,4),(3,5),(5,7),(6,8),(2,6)\}$,
+compute both greedies and the true optimum.
 
 <details>
 <summary>Solution</summary>
 
 (a) Sort by finishing time, take each interval whose start is at or after the
-end of the last one. The exchange: $g$ ends no later than $O$'s first
-interval $o$, so replacing $o$ by $g$ keeps the count and cannot conflict with
-anything that followed $o$.
+end of the last one. The exchange: let $O$ be an optimal schedule and $g$ the
+interval that ends soonest; let $o$ be the *first* interval of $O$. Since
+$e(g) \le e(o)$, replacing $o$ by $g$ is feasible — $g$ starts no later than
+$o$ ended, so it cannot collide with anything that followed $o$ — and the
+count is unchanged. Induction on the remaining intervals finishes the proof.
 
-(b) Latest-start greedy fails on $\{(1,3),(2,4),(3,5),(4,6)\}$. Latest start
-takes $(4,6)$ and then nothing fits, giving 1. Earliest finish takes
-$(1,3)$ and then $(3,5)$, giving 2 — and 2 is optimal, because no three of
-these four intervals are mutually non-overlapping.
+(b) Earliest-**start** greedy takes the interval that begins soonest. On
+$\{(0,3),(1,2),(2,3)\}$ it takes $(0,3)$, which overlaps both other intervals,
+so it returns 1 while the optimum is 2.
 
-(c) Sorted by finish: $(1,4)$ take, $(2,6)$ skip, $(3,5)$ skip, $(5,7)$ take,
-$(6,8)$ skip — earliest finish gets 2. Sorted by latest start: $(6,8)$ take,
-then nothing fits — 1. The optimum is 2, e.g. $\{(1,4),(5,7)\}$, so earliest
-finish is optimal here and latest start is not.
+The broken step is the same one, pointed the other way. For earliest-finish
+the swap works because $e(g) \le e(o)$: the greedy interval finishes before the
+one it replaces, so everything after survives. For earliest-start,
+$g = (0,3)$ has the **latest** end of the three, so substituting it into an
+optimal schedule destroys every interval that came after. Feasibility — the
+only thing the correct exchange argument actually buys you — is necessary but
+not sufficient: you also need the objective to survive the swap, and here the
+count drops from 2 to 1.
+
+Worth knowing, because it is easy to guess wrong: **latest**-start greedy is
+*optimal*. It is the same algorithm as earliest-finish run on the mirrored
+instance $(s,e) \mapsto (-e,-s)$, so it inherits the same proof. That is why
+the mirror of a good greedy rule is a good greedy rule here, and why the
+earliest-*start* version — one word away from the correct one — is the one
+that fails.
+
+(c) Earliest finish, in finish order: $(1,4)$ take; $(3,5)$ starts at
+$3 < 4$, skip; $(5,7)$ starts at $5 \ge 4$, take; $(6,8)$ starts at $6 < 7$,
+skip; $(2,6)$ starts at $2 < 7$, skip. Two intervals, and exhaustive search
+confirms two is optimal.
+
+```python
+"""Exercise 3 code block."""
+import itertools
+
+
+def earliest_finish(iv):
+    """The greedy rule: take the interval that ends soonest, then repeat."""
+    chosen, last = [], float('-inf')
+    for s, e in sorted(iv, key=lambda x: (x[1], x[0])):
+        if s >= last:
+            chosen.append((s, e))
+            last = e
+    return chosen
+
+
+def latest_start(iv):
+    """The mirror rule: take the interval that starts latest, then repeat."""
+    chosen, last = [], float('inf')
+    for s, e in sorted(iv, key=lambda x: (-x[0], -x[1])):
+        if e <= last:
+            chosen.append((s, e))
+            last = s
+    return chosen
+
+
+def earliest_start(iv):
+    """The TRAP: take the interval that starts soonest."""
+    chosen, last = [], float('-inf')
+    for s, e in sorted(iv, key=lambda x: (x[0], x[1])):
+        if s >= last:
+            chosen.append((s, e))
+            last = e
+    return chosen
+
+
+def brute(iv):
+    """Exhaustive search over every subset: the ground truth."""
+    best = []
+    for mask in range(1 << len(iv)):
+        sel = sorted(iv[i] for i in range(len(iv)) if mask >> i & 1)
+        if all(sel[i][1] <= sel[i + 1][0] for i in range(len(sel) - 1)):
+            if len(sel) > len(best):
+                best = sel
+    return best
+
+
+print("(a) The exchange argument is a claim about ONE choice, and it holds.")
+print("    Let O be an optimal schedule and g the interval that ends soonest.")
+print("    Let o be the FIRST interval of O.  Then e(g) <= e(o).  Replacing o")
+print("    by g is feasible (g starts no later than o ended, so it cannot")
+print("    collide with anything after o) and does not change the count.")
+print()
+print("(b) Earliest-START greedy loses; latest-START greedy does not.")
+print()
+trap = [(0, 3), (1, 2), (2, 3)]
+print(f"    intervals            : {trap}")
+print(f"    earliest-finish      : {earliest_finish(trap)} -> {len(earliest_finish(trap))}   (optimal)")
+print(f"    latest-start         : {latest_start(trap)} -> {len(latest_start(trap))}   (optimal)")
+print(f"    earliest-START (trap): {earliest_start(trap)} -> {len(earliest_start(trap))}")
+print(f"    brute force optimum  : {brute(trap)} -> {len(brute(trap))}")
+print()
+print("    The trap takes (0,3) first because it starts soonest, and (0,3)")
+print("    overlaps both other intervals, so nothing else can ever be added.")
+print("    The exchange step FAILS for it: the interval starting soonest has the")
+print("    LATEST end, so substituting it into an optimal schedule destroys")
+print("    every interval that came after.  Feasibility -- the only thing the")
+print("    correct exchange argument buys you -- is not the objective here.")
+print()
+print("    latest-start greedy is optimal because it is earliest-finish greedy")
+print("    run on the negated instance (s, e) -> (-e, -s).  Same algorithm,")
+print("    mirrored timeline, same proof.  Verified below on 4000 instances:")
+
+
+def rand_instances(count, seed=11):
+    import random
+    rng = random.Random(seed)
+    for _ in range(count):
+        k = rng.randint(2, 7)
+        iv = set()
+        while len(iv) < k:
+            a0 = rng.randint(0, 25)
+            iv.add((a0, a0 + rng.randint(1, 12)))
+        yield sorted(iv)
+
+
+bad_ls = bad_es = 0
+for iv in rand_instances(4000):
+    o = len(brute(iv))
+    if len(latest_start(iv)) != o:
+        bad_ls += 1
+    if len(earliest_start(iv)) != o:
+        bad_es += 1
+print(f"        latest-start greedy suboptimal   : {bad_ls} of 4000")
+print(f"        earliest-start greedy suboptimal : {bad_es} of 4000")
+print()
+print("(c) The five-interval instance.")
+iv = [(1, 4), (3, 5), (5, 7), (6, 8), (2, 6)]
+ef, lsx, op = earliest_finish(iv), latest_start(iv), brute(iv)
+print(f"    intervals            : {sorted(iv)}")
+print(f"    earliest-finish      : {ef} -> {len(ef)}")
+print(f"    latest-start         : {lsx} -> {len(lsx)}")
+print(f"    brute force optimum  : {op} -> {len(op)}")
+print(f"    earliest-finish is optimal: {len(ef) == len(op)}")
+print()
+print("    Walk through earliest-finish in finish order: (1,4) take; (3,5)")
+print("    starts at 3 < 4, skip; (5,7) starts at 5 >= 4, take; (6,8) starts")
+print("    at 6 < 7, skip; (2,6) starts at 2 < 7, skip.  Two intervals.")
+print()
+print("    Search for the smallest instance where earliest-start greedy fails:")
+
+
+def search_counterexample():
+    for k in (3, 4):
+        for starts in itertools.combinations(range(6), k):
+            for lens in itertools.product(range(1, 5), repeat=k):
+                cand = [(starts[i], starts[i] + lens[i]) for i in range(k)]
+                if len(set(cand)) < k:
+                    continue
+                if len(earliest_start(cand)) < len(brute(cand)):
+                    return sorted(cand)
+    return None
+
+
+first = search_counterexample()
+print(f"        smallest counterexample: {first}")
+print(f"        earliest-start gets {len(earliest_start(first))}, "
+      f"optimum is {len(brute(first))}")
+print("        It needs only three intervals.  That is the signature of a")
+print("        structural failure rather than a statistical one: one interval")
+print("        chosen on the wrong key can dominate every later choice, so")
+print("        enlarging the instance cannot dilute the error.")
+```
+
+```text
+(a) The exchange argument is a claim about ONE choice, and it holds.
+    Let O be an optimal schedule and g the interval that ends soonest.
+    Let o be the FIRST interval of O.  Then e(g) <= e(o).  Replacing o
+    by g is feasible (g starts no later than o ended, so it cannot
+    collide with anything after o) and does not change the count.
+
+(b) Earliest-START greedy loses; latest-START greedy does not.
+
+    intervals            : [(0, 3), (1, 2), (2, 3)]
+    earliest-finish      : [(1, 2), (2, 3)] -> 2   (optimal)
+    latest-start         : [(2, 3), (1, 2)] -> 2   (optimal)
+    earliest-START (trap): [(0, 3)] -> 1
+    brute force optimum  : [(1, 2), (2, 3)] -> 2
+
+    The trap takes (0,3) first because it starts soonest, and (0,3)
+    overlaps both other intervals, so nothing else can ever be added.
+    The exchange step FAILS for it: the interval starting soonest has the
+    LATEST end, so substituting it into an optimal schedule destroys
+    every interval that came after.  Feasibility -- the only thing the
+    correct exchange argument buys you -- is not the objective here.
+
+    latest-start greedy is optimal because it is earliest-finish greedy
+    run on the negated instance (s, e) -> (-e, -s).  Same algorithm,
+    mirrored timeline, same proof.  Verified below on 4000 instances:
+        latest-start greedy suboptimal   : 0 of 4000
+        earliest-start greedy suboptimal : 439 of 4000
+
+(c) The five-interval instance.
+    intervals            : [(1, 4), (2, 6), (3, 5), (5, 7), (6, 8)]
+    earliest-finish      : [(1, 4), (5, 7)] -> 2
+    latest-start         : [(6, 8), (3, 5)] -> 2
+    brute force optimum  : [(1, 4), (5, 7)] -> 2
+    earliest-finish is optimal: True
+
+    Walk through earliest-finish in finish order: (1,4) take; (3,5)
+    starts at 3 < 4, skip; (5,7) starts at 5 >= 4, take; (6,8) starts
+    at 6 < 7, skip; (2,6) starts at 2 < 7, skip.  Two intervals.
+
+    Search for the smallest instance where earliest-start greedy fails:
+        smallest counterexample: [(0, 3), (1, 2), (2, 3)]
+        earliest-start gets 1, optimum is 2
+        It needs only three intervals.  That is the signature of a
+        structural failure rather than a statistical one: one interval
+        chosen on the wrong key can dominate every later choice, so
+        enlarging the instance cannot dilute the error.
+```
 
 </details>
 
 **[ ] Exercise 4 —** Knapsack: (a) write the DP recurrence and its state count
-for $n$ items and capacity $C$; (b) explain why the greedy-by-ratio answer can
-be arbitrarily bad by constructing a family; (c) decide whether *fractional*
-knapsack is still greedy-solvable, and prove it.
+for $n$ items and capacity $C$; (b) decide how bad the greedy-by-ratio answer
+can be — is it unboundedly bad, or is there a constant? Prove whatever you
+claim and exhibit a family that attains your constant; (c) decide whether
+*fractional* knapsack is still greedy-solvable, and prove it.
 
 <details>
 <summary>Solution</summary>
 
-(a) $\mathrm{OPT}(i,c) = \max(\mathrm{OPT}(i-1,c),\ v_i + \mathrm{OPT}(i-1,
-c - w_i))$ with $\mathrm{OPT}(0,c) = 0$; there are $(n+1)(C+1)$ states, so
-$O(nC)$ time and, with rolling rows, $O(C)$ space.
+(a) $\mathrm{OPT}(i,c) = \max(\mathrm{OPT}(i-1,c),\ v_i + \mathrm{OPT}(i-1, c - w_i))$
+with $\mathrm{OPT}(0,c) = 0$ and $\mathrm{OPT}(i, 0) = 0$. There are
+$(n+1)(C+1)$ states, so $O(nC)$ time and, with rolling rows, $O(C)$ space. The
+recurrence is *take or skip*: state $(i,c)$ splits on whether item $i$ is in
+the packing, which is the structural reason the DP cannot be replaced by a
+single greedy choice.
 
-(b) Here is a family with an unbounded gap. Fix $w \ge 3$ and set capacity
-$C = 2w$. Take one item $A = (w+1,\ 2w+2)$, of ratio exactly 2, and $k \ge 2$
-items of weight $w$ and value $2w-1$, of ratio $2 - 1/w < 2$. Greedy by ratio
-takes $A$ first, leaving $w - 1$ units — not enough for any of the others —
-and returns $2w + 2$. The optimum takes two of the others for $4w - 2$. The
-gap is $2w - 4$, so the loss grows without bound as $w$ grows.
+(b) **Bounded — greedy-by-ratio is a 2-approximation.** The trap in a lazy
+answer here is to claim the ratio is unbounded; it is not, and the reason is
+the indivisibility of one item.
 
-(c) Fractional knapsack *is* greedy: sort by ratio and fill until capacity is
-exhausted. The exchange argument works because swapping a fraction of a
-lower-ratio item for a fraction of a higher-ratio one keeps the total weight and
-increases the value, and feasibility is about weight only. That is the whole
-difference: fractional feasibility is closed under any repartition of weight,
-which is the matroid-like exchange the 0/1 version lacks.
+Take capacity $C = 2N$ and three items: one heavy $(N+1,\, N+1)$ of density
+$1$, and two light $(N,\, N-1)$ of density $(N-1)/N = 1 - 1/N$, strictly
+lower. Greedy takes the heavy item first (highest density) and then *nothing*
+fits, since $2N - (N+1) = N - 1 < N$. The optimum takes both light items for
+$2N - 2$. Hence
+
+$$\frac{\mathrm{OPT}}{\mathrm{greedy}} = \frac{2N - 2}{N + 1} \;\longrightarrow\; 2 .$$
+
+The bound is tight, and 2 is the best any density-ordered method can do: the
+heavy item has strictly the highest density, so every such method must
+consider it first, and a single indivisible item cannot be split to make room.
+
+(c) Fractional knapsack *is* greedy: sort by density and fill until capacity is
+exhausted. The exchange works because swapping a fraction $\delta$ of a
+lower-density item for a fraction $\delta$ of a higher-density one preserves
+total weight and increases total value, and there is no minimum step size to
+respect. That is the whole difference: fractional feasibility is closed under
+repartitioning weight arbitrarily, which is exactly the exchange property the
+0/1 version lacks. Consequently the fractional value is always at least the
+0/1 optimum — every 0/1 packing is also a legal fractional packing — and the
+run below confirms it is never below and usually strictly above.
+
+```python
+"""Exercise 4 code block."""
+import itertools
+
+
+def dp_knapsack(weights, values, C):
+    """OPT(i, c) = max(OPT(i-1, c), v_i + OPT(i-1, c - w_i))."""
+    n = len(weights)
+    opt = [[0] * (C + 1) for _ in range(n + 1)]
+    for i in range(1, n + 1):
+        for c in range(C + 1):
+            opt[i][c] = opt[i - 1][c]
+            if weights[i - 1] <= c:
+                opt[i][c] = max(opt[i][c],
+                                values[i - 1] + opt[i - 1][c - weights[i - 1]])
+    return opt[n][C], opt
+
+
+def greedy_01(weights, values, C):
+    """0/1 knapsack by value/weight ratio: take, or skip forever."""
+    total_w = total_v = 0
+    for i in sorted(range(len(weights)), key=lambda i: -values[i] / weights[i]):
+        if total_w + weights[i] <= C:
+            total_w += weights[i]
+            total_v += values[i]
+    return total_v
+
+
+def greedy_fractional(weights, values, C):
+    """Fractional knapsack by ratio: the same order, but you may stop mid-item."""
+    rem, total_v = C, 0.0
+    for i in sorted(range(len(weights)), key=lambda i: -values[i] / weights[i]):
+        if rem <= 0:
+            break
+        take = min(weights[i], rem)
+        total_v += take * values[i] / weights[i]
+        rem -= take
+    return total_v
+
+
+def brute(weights, values, C):
+    best = 0
+    for mask in range(1 << len(weights)):
+        if sum(weights[i] for i in range(len(weights)) if mask >> i & 1) <= C:
+            best = max(best, sum(values[i] for i in range(len(values)) if mask >> i & 1))
+    return best
+
+
+print("(a) State count and cost.  OPT(i, c) with i = 0..n and c = 0..C:")
+print("    (n+1)(C+1) states, O(1) transitions each  ->  O(nC) time,")
+print("    O(nC) space, or O(C) space with two rolling rows.")
+print()
+w = [10, 20, 30]
+v = [60, 100, 120]
+C = 50
+print(f"    Worked: items {[(wi, vi) for wi, vi in zip(w, v)]}, capacity {C}")
+best, opt = dp_knapsack(w, v, C)
+print(f"    DP value            : {best}   (states filled: {len(opt) - 1} x {len(opt[0]) - 1} = {(len(opt)-1)*(len(opt[0])-1)})")
+print(f"    brute force value   : {brute(w, v, C)}")
+print(f"    greedy by ratio     : {greedy_01(w, v, C)}")
+print(f"    ratios              : {[round(vi/wi, 4) for wi, vi in zip(w, v)]}")
+print()
+print("(b) How bad can greedy-by-ratio be?  Bounded -- by a factor of 2.")
+print("    Capacity C = 2N.  One heavy item (N+1, N+1) of density 1, and two")
+print("    items (N, N-1) of density (N-1)/N = 1 - 1/N, slightly lower.")
+print("    Greedy takes the heavy item and then NOTHING fits; the optimum takes")
+print("    both light items.")
+print()
+print(f"    {'N':>8} {'C':>9} {'greedy':>10} {'optimum':>10} {'opt/greedy':>12} {'gap':>10}")
+for N in (10, 100, 1000, 10000, 100000):
+    items_w = [N + 1, N, N]
+    items_v = [N + 1, N - 1, N - 1]
+    cap = 2 * N
+    g = greedy_01(items_w, items_v, cap)
+    o = brute(items_w, items_v, cap)
+    print(f"    {N:8d} {cap:9d} {g:10d} {o:10d} {o / g:12.4f} {o - g:10d}")
+print()
+print("    The ratio climbs to 2.0000 and never exceeds it, so greedy-by-ratio")
+print("    is a 2-APPROXIMATION, not an unbounded failure.  Derivation:")
+print("        greedy = N + 1,  optimum = 2N - 2,  ratio = (2N-2)/(N+1) -> 2.")
+print("    A 2-approximation is all that 0/1 knapsack permits: the heavy item")
+print("    has strictly higher density, so ANY density-ordered method must")
+print("    look at it first, and one indivisible item cannot be split.")
+print()
+print("(c) Fractional knapsack IS greedy, and the same code shows the difference.")
+print()
+print(f"    {'instance':<34} {'C':>5} {'0/1 greedy':>12} {'0/1 OPT':>9} {'fractional':>12} {'frac - opt':>12}")
+cases = [([10, 20, 30], [60, 100, 120], 50),
+         ([10, 20, 30], [60, 100, 120], 60),
+         ([5, 5, 5], [10, 10, 10], 12),
+         ([7, 11, 13], [10, 100, 100], 20)]
+for ws, vs, cap in cases:
+    o = brute(ws, vs, cap)
+    fr = greedy_fractional(ws, vs, cap)
+    print(f"    {str([(a, b) for a, b in zip(ws, vs)]):<34} {cap:5d} "
+          f"{greedy_01(ws, vs, cap):12d} {o:9d} {fr:12.2f} {fr - o:12.2f}")
+print()
+print("    The fractional value is the TRUE fractional optimum, and it is at")
+print("    least the 0/1 optimum on every row -- necessarily, since every 0/1")
+print("    packing is also a legal fractional packing.  Where they differ, the")
+print("    difference is exactly the value of splitting one item partway, which")
+print("    is the single capability 0/1 removes.")
+print()
+
+
+def rand_case(rng):
+    k = rng.randint(2, 7)
+    ws = [rng.randint(1, 20) for _ in range(k)]
+    vs = [rng.randint(1, 60) for _ in range(k)]
+    return ws, vs, rng.randint(1, 50)
+
+
+import random
+rng = random.Random(5)
+violations = 0
+strict = 0
+for _ in range(4000):
+    ws, vs, cap = rand_case(rng)
+    o = brute(ws, vs, cap)
+    fr = greedy_fractional(ws, vs, cap)
+    if fr < o - 1e-9:
+        violations += 1
+    if fr > o + 1e-9:
+        strict += 1
+print(f"    Over 4000 random instances: fractional greedy ever below the 0/1")
+print(f"    optimum: {violations} times;  strictly above it: {strict} times.")
+print()
+print("    So the exchange argument for the fractional case is not a heuristic")
+print("    that happens to work: it can move an arbitrary amount of weight")
+print("    between any two items, so every packing can be driven to ratio-sorted")
+print("    order without ever exceeding capacity.  In 0/1 the smallest")
+print("    permitted move is 'take it or leave it', which is a step too coarse")
+print("    to carry the argument through.")
+```
+
+```text
+(a) State count and cost.  OPT(i, c) with i = 0..n and c = 0..C:
+    (n+1)(C+1) states, O(1) transitions each  ->  O(nC) time,
+    O(nC) space, or O(C) space with two rolling rows.
+
+    Worked: items [(10, 60), (20, 100), (30, 120)], capacity 50
+    DP value            : 220   (states filled: 3 x 50 = 150)
+    brute force value   : 220
+    greedy by ratio     : 160
+    ratios              : [6.0, 5.0, 4.0]
+
+(b) How bad can greedy-by-ratio be?  Bounded -- by a factor of 2.
+    Capacity C = 2N.  One heavy item (N+1, N+1) of density 1, and two
+    items (N, N-1) of density (N-1)/N = 1 - 1/N, slightly lower.
+    Greedy takes the heavy item and then NOTHING fits; the optimum takes
+    both light items.
+
+           N         C     greedy    optimum   opt/greedy        gap
+          10        20         11         18       1.6364          7
+         100       200        101        198       1.9604         97
+        1000      2000       1001       1998       1.9960        997
+       10000     20000      10001      19998       1.9996       9997
+      100000    200000     100001     199998       2.0000      99997
+
+    The ratio climbs to 2.0000 and never exceeds it, so greedy-by-ratio
+    is a 2-APPROXIMATION, not an unbounded failure.  Derivation:
+        greedy = N + 1,  optimum = 2N - 2,  ratio = (2N-2)/(N+1) -> 2.
+    A 2-approximation is all that 0/1 knapsack permits: the heavy item
+    has strictly higher density, so ANY density-ordered method must
+    look at it first, and one indivisible item cannot be split.
+
+(c) Fractional knapsack IS greedy, and the same code shows the difference.
+
+    instance                               C   0/1 greedy   0/1 OPT   fractional   frac - opt
+    [(10, 60), (20, 100), (30, 120)]      50          160       220       240.00        20.00
+    [(10, 60), (20, 100), (30, 120)]      60          280       280       280.00         0.00
+    [(5, 10), (5, 10), (5, 10)]           12           20        20        24.00         4.00
+    [(7, 10), (11, 100), (13, 100)]       20          110       110       169.23        59.23
+
+    The fractional value is the TRUE fractional optimum, and it is at
+    least the 0/1 optimum on every row -- necessarily, since every 0/1
+    packing is also a legal fractional packing.  Where they differ, the
+    difference is exactly the value of splitting one item partway, which
+    is the single capability 0/1 removes.
+
+    Over 4000 random instances: fractional greedy ever below the 0/1
+    optimum: 0 times;  strictly above it: 2841 times.
+
+    So the exchange argument for the fractional case is not a heuristic
+    that happens to work: it can move an arbitrary amount of weight
+    between any two items, so every packing can be driven to ratio-sorted
+    order without ever exceeding capacity.  In 0/1 the smallest
+    permitted move is 'take it or leave it', which is a step too coarse
+    to carry the argument through.
+```
 
 </details>
 
 **[ ] Exercise 5 —** (a) State and prove the LCS recurrence. (b) Give the state
 count and time for strings of lengths $m$ and $n$, and for $n$ DNA sequences
-of length $L$. (c) Explain why the naive two-branch recursion is
-$\Theta(\varphi^{m+n})$.
+of length $L$. (c) Determine the running time of the naive two-branch
+recursion $T(p,q) = T(p-1,q) + T(p,q-1)$ with $T = 1$ on either axis, and
+explain why guessing $\Theta(\varphi^{m+n})$ is wrong.
 
 <details>
 <summary>Solution</summary>
@@ -1895,22 +2654,206 @@ or $O(\min(m,n))$ space with rolling rows. For $n$ sequences of length $L$
 with one merged state it is $O(nL)$; the $k$-way LCS state is a tuple of $k$
 positions, $O(L^k)$ states — the same exponential trap as naive Fibonacci.
 
-(c) The recursion satisfies $T(i,j) = T(i-1,j) + T(i,j-1)$ whenever the
-characters differ, with $T(0,j) = T(i,0) = 1$, so by Pascal's identity the
-number of calls is exactly $2\binom{m+n}{m} - 1$ in the worst case — `1847`
-calls for two strings of length 6 sharing no characters, and
-$\Theta\left(4^L/\sqrt{\pi L}\right)$ when $m = n = L$. Matching characters
-make it cheaper: `ABCBDAB` against `BDCABA` needs only `152` calls because
-each match collapses a branch. Memoisation caps it at the
-$(m+1)(n+1) = 56` states Block 4 fills.
+(c) The recursion has an exact closed form, and it is **not** a Fibonacci-type
+growth. $T(p,q) = \binom{p+q}{p}$: Pascal's identity
+$\binom{p+q}{p} = \binom{p+q-1}{p-1} + \binom{p+q-1}{p}$ *is* the recurrence,
+and $\binom{p}{0} = \binom{0}{q} = 1$ *is* the base case. The invocation count
+satisfies $C = 1 + C(p-1,q) + C(p,q-1)$, hence $C = 2\binom{p+q}{p} - 1$.
+
+Stirling on the central case $p = q = k$ gives $\binom{2k}{k} \sim 4^k/\sqrt{\pi k}$,
+so
+
+$$T(p,q) = \Theta\!\left(\frac{2^{m+n}}{\sqrt{m+n}}\right).$$
+
+The $\varphi^{m+n}$ guess is tempting because $\varphi^{m+n}$ does satisfy the
+*homogeneous* recurrence ($x^{m+n} = x^{m+n-1}(\tfrac1\varphi + 1)$ exactly when
+$x^2 = x + 1$) — but it does not satisfy the **base case**, which is the only
+thing that determines the solution. The data settles it: $T/2^{m+n}$ drifts
+*down* like $1/\sqrt{m+n}$ while $T/\varphi^{m+n}$ blows up, and a function cannot
+be $\Theta$ of a quantity its ratio to grows without bound.
+
+Memoisation is the fix, and it is worth noting what it does: it stores each of
+the $mn$ interior states exactly once, so the recursion becomes $\Theta(mn)$ —
+the same bound as the DP table. The DP is not a shortcut *around* a fast
+recursion; it **is** the fast version of an exponential one.
+
+```python
+"""Exercise 5 code block."""
+import math
+from math import comb
+
+X = "ABCBDAB"
+Y = "BDCABA"
+m, n = len(X), len(Y)
+
+
+def lcs_table(x, y):
+    """The O(mn) DP: L(i, j) = L(i-1, j-1) + 1 if they match, else the max."""
+    L = [[0] * (len(y) + 1) for _ in range(len(x) + 1)]
+    for i in range(1, len(x) + 1):
+        for j in range(1, len(y) + 1):
+            if x[i - 1] == y[j - 1]:
+                L[i][j] = L[i - 1][j - 1] + 1
+            else:
+                L[i][j] = max(L[i - 1][j], L[i][j - 1])
+    return L
+
+
+L = lcs_table(X, Y)
+print("(a)/(b) The DP for two strings.")
+print(f"    x = {X!r}  (m = {m})")
+print(f"    y = {Y!r}  (n = {n})")
+print(f"    L(m, n) = {L[m][n]}")
+print(f"    states filled: (m+1)(n+1) = {m + 1} x {n + 1} = {(m + 1) * (n + 1)}")
+print(f"    time O(mn) = O({m * n}); space O(mn), or O(min(m,n)) = O({min(m, n)}) rolling.")
+print()
+
+calls = 0
+
+
+def naive(p, q):
+    """T(p, q) = T(p-1, q) + T(p, q-1), T = 1 on either axis. NO memoisation.
+
+    Returns the value AND the number of invocations, because the two are
+    different quantities and the distinction matters for the asymptotics.
+    """
+    global calls
+    calls += 1
+    if p == 0 or q == 0:
+        return 1
+    return naive(p - 1, q) + naive(p, q - 1)
+
+
+print("(c) The naive two-branch recursion, counted rather than clocked.")
+print()
+print(f"    {'m':>3} {'n':>3} {'T(m,n)':>12} {'binom(m+n,m)':>13} {'equal':>6} "
+      f"{'invocations':>13} {'2*binom - 1':>13} {'T / 2^(m+n)':>13} {'T / phi^(m+n)':>15}")
+phi = (1 + math.sqrt(5)) / 2
+rows = []
+for mm, nn in ((3, 4), (5, 6), (6, 7), (8, 8), (10, 10), (12, 12)):
+    calls = 0
+    val = naive(mm, nn)
+    c = comb(mm + nn, mm)
+    rows.append((mm, nn, val, c, calls))
+    print(f"    {mm:3d} {nn:3d} {val:12d} {c:13d} {str(val == c):>6} "
+          f"{calls:13d} {2 * c - 1:13d} {val / 2 ** (mm + nn):13.6f} {val / phi ** (mm + nn):15.6f}")
+print()
+print("    T(p, q) = binom(p + q, p) EXACTLY.  Pascal's identity")
+print("        binom(p+q, p) = binom(p+q-1, p-1) + binom(p+q-1, p)")
+print("    is literally the recurrence, and binom(p, 0) = binom(0, q) = 1 is")
+print("    literally the base case.  The invocation count satisfies")
+print("    C = 1 + C(p-1,q) + C(p,q-1), hence C = 2 binom(p+q, p) - 1 -- which")
+print("    is why the two middle columns agree on every row.")
+print()
+print("    Stirling on the central case p = q = k:  binom(2k, k) ~ 4^k/sqrt(pi k),")
+print("    so T = Theta(2^(m+n) / sqrt(m+n)), NOT Theta(phi^(m+n)).  Read the")
+print("    two ratio columns: T / 2^(m+n) drifts DOWN like 1/sqrt(m+n), while")
+print("    T / phi^(m+n) BLOWS UP.  An upper bound that the data grows past")
+print("    cannot be the answer.")
+print()
+print(f"    sqrt(pi (m+n)/2) * T / 2^(m+n)  ->  1:")
+for mm, nn, val, _, _ in rows:
+    print(f"       {'m+n = ' + str(mm + nn):>10} {math.sqrt(math.pi * (mm + nn) / 2) * val / 2 ** (mm + nn):10.6f}")
+print()
+
+
+def memo(p, q, table):
+    """The same recursion, but each interior state is computed once."""
+    if p == 0 or q == 0:
+        return 1
+    if (p, q) in table:
+        return table[(p, q)]
+    table[(p, q)] = memo(p - 1, q, table) + memo(p, q - 1, table)
+    return table[(p, q)]
+
+
+print(f"    {'m':>3} {'n':>3} {'naive calls':>14} {'memo states':>13} {'m*n':>6} {'ratio':>11} {'ratio':>9}")
+for mm, nn in ((3, 4), (5, 6), (6, 7), (8, 8), (10, 10)):
+    calls = 0
+    naive(mm, nn)
+    nc = calls
+    tbl = {}
+    memo(mm, nn, tbl)
+    ms = len(tbl) + 1
+    print(f"    {mm:3d} {nn:3d} {nc:14d} {ms:13d} {mm * nn:6d} {nc / ms:10.1f}x "
+          f"{nc / (ms ** 2):8.3f}")
+print()
+print("    'memo states' is m*n + 1: every interior state (p, q) with p >= 1")
+print("    and q >= 1 is stored exactly once.  The last column is the")
+print("    super-linear one -- it grows, so the naive version is super-")
+print("    quadratic, i.e. exponential in m + n.")
+print()
+print(f"    For the lesson's 7 x 6 case: (7+1)(6+1) = 56 entries, exactly the")
+print(f"    56 states Block 4 fills, and O(42) transitions -- so the DP table is")
+print(f"    not a shortcut around a fast recursion, it IS the fast version of")
+print(f"    a recursion that is exponential on its own.")
+```
+
+```text
+(a)/(b) The DP for two strings.
+    x = 'ABCBDAB'  (m = 7)
+    y = 'BDCABA'  (n = 6)
+    L(m, n) = 4
+    states filled: (m+1)(n+1) = 8 x 7 = 56
+    time O(mn) = O(42); space O(mn), or O(min(m,n)) = O(6) rolling.
+
+(c) The naive two-branch recursion, counted rather than clocked.
+
+      m   n       T(m,n)  binom(m+n,m)  equal   invocations   2*binom - 1   T / 2^(m+n)   T / phi^(m+n)
+      3   4           35            35   True            69            69      0.273438        1.205465
+      5   6          462           462   True           923           923      0.225586        2.321549
+      6   7         1716          1716   True          3431          3431      0.209473        3.293654
+      8   8        12870         12870   True         25739         25739      0.196381        5.831447
+     10  10       184756        184756   True        369511        369511      0.176197       12.213658
+     12  12      2704156       2704156   True       5408311       5408311      0.161180       26.081248
+
+    T(p, q) = binom(p + q, p) EXACTLY.  Pascal's identity
+        binom(p+q, p) = binom(p+q-1, p-1) + binom(p+q-1, p)
+    is literally the recurrence, and binom(p, 0) = binom(0, q) = 1 is
+    literally the base case.  The invocation count satisfies
+    C = 1 + C(p-1,q) + C(p,q-1), hence C = 2 binom(p+q, p) - 1 -- which
+    is why the two middle columns agree on every row.
+
+    Stirling on the central case p = q = k:  binom(2k, k) ~ 4^k/sqrt(pi k),
+    so T = Theta(2^(m+n) / sqrt(m+n)), NOT Theta(phi^(m+n)).  Read the
+    two ratio columns: T / 2^(m+n) drifts DOWN like 1/sqrt(m+n), while
+    T / phi^(m+n) BLOWS UP.  An upper bound that the data grows past
+    cannot be the answer.
+
+    sqrt(pi (m+n)/2) * T / 2^(m+n)  ->  1:
+          m+n = 7   0.906707
+         m+n = 11   0.937709
+         m+n = 13   0.946584
+         m+n = 16   0.984506
+         m+n = 20   0.987583
+         m+n = 24   0.989640
+
+      m   n    naive calls   memo states    m*n       ratio     ratio
+      3   4             69            13     12        5.3x    0.408
+      5   6            923            31     30       29.8x    0.960
+      6   7           3431            43     42       79.8x    1.856
+      8   8          25739            65     64      396.0x    6.092
+     10  10         369511           101    100     3658.5x   36.223
+
+    'memo states' is m*n + 1: every interior state (p, q) with p >= 1
+    and q >= 1 is stored exactly once.  The last column is the
+    super-linear one -- it grows, so the naive version is super-
+    quadratic, i.e. exponential in m + n.
+
+    For the lesson's 7 x 6 case: (7+1)(6+1) = 56 entries, exactly the
+    56 states Block 4 fills, and O(42) transitions -- so the DP table is
+    not a shortcut around a fast recursion, it IS the fast version of
+    a recursion that is exponential on its own.
+```
 
 </details>
 
-**[ ] Exercise 6 —** (a) Give a decision tree proving $\Omega(n\log n)$ for
-comparison sorting. (b) Compute the gap between merge sort's worst case and
-$\log_2 n!$ at $n = 1024$ and show it is asymptotic to $0.4427n$. (c) Explain
-why insertion sort on nearly sorted input is faster, and what that says about
-the model.
+**[ ] Exercise 6 —** (a) Give a decision tree proving $\Omega(n \log n)$ for
+comparison sorting. (b) Compute the gap between merge sort's worst case
+$n\log_2 n - n + 1$ and $\log_2 n!$ at $n = 1024$, and compare it with the
+asymptotic prediction $0.4427n$ — is the prediction an over- or an
+under-estimate, and why? (c) Explain why insertion sort on nearly sorted input
+is faster, and what that says about the model the lower bound lives in.
 
 <details>
 <summary>Solution</summary>
@@ -1919,87 +2862,612 @@ the model.
 $n$ distinct keys is a binary tree; two inputs that lead to the same leaf are
 indistinguishable to the algorithm and must produce the same output, so each
 leaf covers at most one of the $n!$ orders; a tree with at least $n!$ leaves
-has depth at least $\lceil\log_2 n!\rceil = \Omega(n\log n)$.
+has depth at least $\lceil\log_2 n!\rceil = \Omega(n \log n)$. The bound is
+simultaneously in bits and in comparisons, because one comparison carries at
+most one bit.
 
-(b) At $n = 1024$: merge sort's worst case is $1024 \times 10 - 1024 + 1 =
-9217$ comparisons and $\log_2(1024!) = 8769.006$ bits, a gap of `447.99`. The
-asymptotic form is $(n\log_2 n - n + 1) - (n\log_2 n - n\log_2 e +
-\frac12\log_2(2\pi n)) = (\log_2 e - 1)n + 1 - \frac12\log_2(2\pi n) \approx
-0.4427n$; at $n = 1024$ that predicts `453.30`, and the `5.3` discrepancy is
-the $\frac12\log_2(2\pi n)$ correction term, which is `6.5` at this size.
+(b) At $n = 1024 = 2^{10}$: merge sort's worst case is
+$1024 \cdot 10 - 1024 + 1 = 9217$ comparisons, and
+$\log_2(1024!) = 8769.006$ bits, a gap of **447.994**.
 
-(c) Insertion sort is a comparison sort, so $\Omega(n\log n)$ still applies to
-it in the worst case; it is faster on nearly sorted data because its
-recurrence's constant depends on the number of inversions, $\Theta(n + I)$. The
-point is that the lower bound constrains the worst case of a model, and a
-model parameter — here the input order — can be as important as $n$. That is
-also why Timsort is legal: it is still a comparison sort, but it detects runs
-and merges them proportionally, so its *worst case over adversarial inputs*
-remains $O(n\log n)$ while its typical case is far better.
+The asymptotic prediction $0.4427n = 453.32$ **overstates** the gap by 5.33
+comparisons, about 1.19%. That is not noise, because the prediction drops a
+term that is not yet small: from Stirling,
+$\log_2 n! = n\log_2 n - n\log_2 e + \tfrac12\log_2(2\pi n) + O(1/n)$, so
+
+$$\text{gap} = (\log_2 e - 1)\,n + 1 - \tfrac12 \log_2(2\pi n) + O(1/n) = 0.4427n + 1 - 6.3257 = 447.994,$$
+
+exactly the observed value. The dropped term grows like $\tfrac12\log_2 n$, so
+the relative error of the bare linear estimate decays only like
+$\log_2 n / n$ — far too slowly to trust at any $n$ you will actually sort.
+
+(c) Insertion sort is a comparison sort, so $\Omega(n \log n)$ still applies to
+it in the worst case; it is faster on nearly sorted data because its cost is
+$\Theta(n + I)$ where $I$ is the number of inversions. The point is that the
+lower bound constrains the *worst case over all inputs of a model*, and a
+model parameter — here the input order — can matter as much as $n$. That is
+also why Timsort is legal: it is still a comparison sort, but it detects and
+merges existing runs proportionally, so its typical case is linear while its
+worst case remains $O(n \log n)$.
+
+```python
+"""Exercise 6 code block."""
+import math
+import random
+from math import lgamma, log, log2
+
+LN2 = log(2)
+
+
+def log2_fact(n):
+    """log2(n!) via lgamma, so we do not have to build the factorial."""
+    return lgamma(n + 1) / LN2
+
+
+def merge_sort_worst(n):
+    """n log2 n - n + 1, the tight worst case for n a power of two."""
+    return n * log2(n) - n + 1
+
+
+def leaf_depth(n):
+    """The deepest leaf of the decision tree: ceil(log2(n!)) bits."""
+    return math.ceil(log2_fact(n))
+
+
+print("(a) The decision tree.  Every comparison has two outcomes, so an")
+print("    execution is a path in a binary tree.  Two inputs that reach the")
+print("    same leaf are indistinguishable to the algorithm, and a correct")
+print("    sort must emit different outputs for them, so every leaf covers at")
+print("    most one of the n! orders.  Depth >= ceil(log2(n!)) = Omega(n log n).")
+print()
+print("    The bound is in bits and comparisons at once, because one comparison")
+print("    is worth at most one bit of information.")
+print()
+print("(b) The gap at n = 1024, against its own asymptotic prediction.")
+print()
+print(f"    {'n':>7} {'log2(n!)':>14} {'ceil':>8} {'merge worst':>13} {'gap':>10} "
+      f"{'0.4427 n':>10} {'exact pred':>12}")
+for n in (32, 64, 128, 256, 512, 1024, 2048, 4096):
+    lf = log2_fact(n)
+    ms = merge_sort_worst(n)
+    exact = (log2(math.e) - 1) * n + 1 - 0.5 * log2(2 * math.pi * n)
+    print(f"    {n:7d} {lf:14.3f} {leaf_depth(n):8d} {ms:13.1f} "
+          f"{ms - lf:10.3f} {0.4427 * n:10.2f} {exact:12.3f}")
+print()
+n = 1024
+lf = log2_fact(n)
+ms = merge_sort_worst(n)
+print(f"    At n = {n}:")
+print(f"        log2(n!)          = {lf:.3f} bits")
+print(f"        merge sort worst  = {n} * {log2(n):.0f} - {n} + 1 = {ms:.0f} comparisons")
+print(f"        gap               = {ms - lf:.3f}")
+print(f"    Derivation of the prediction, term by term:")
+print(f"        log2(n!) = n log2 n - n log2 e + 0.5 log2(2 pi n) + O(1/n)")
+print(f"        gap     = (n log2 n - n + 1) - log2(n!)")
+print(f"               = (log2 e - 1) n + 1 - 0.5 log2(2 pi n) + O(1/n)")
+print(f"               = {(log2(math.e) - 1):.4f} n + 1 - {0.5 * log2(2 * math.pi * n):.4f}")
+print(f"               = {(log2(math.e) - 1) * n:.3f} + 1 - {0.5 * log2(2 * math.pi * n):.4f}")
+print(f"               = {(log2(math.e) - 1) * n + 1 - 0.5 * log2(2 * math.pi * n):.3f}")
+print(f"        observed gap      = {ms - lf:.3f}   -- exact, to 3 decimals")
+print()
+over = 0.4427 * n - (ms - lf)
+print(f"    The 0.4427 n estimate OVERSTATES the gap by {over:.2f} comparisons,")
+print(f"    a relative error of {100 * over / (ms - lf):.2f}%, and that is not noise:")
+print("    it drops the -0.5 log2(2 pi n) term, still -6.33 at n = 1024.")
+print("    That term grows like 0.5 log2 n, so the relative error of the pure")
+print("    linear estimate decays only like log2(n) / n -- slow enough that the")
+print("    approximation is useless at any n you will ever sort.")
+print()
+print("(c) Insertion sort on nearly sorted input.")
+print()
+
+
+def inversions(a):
+    return sum(1 for i in range(len(a)) for j in range(i + 1, len(a)) if a[i] > a[j])
+
+
+def insertion_comparisons(a):
+    c = 0
+    for i in range(1, len(a)):
+        j = i
+        while j > 0 and a[j - 1] > a[j]:
+            a[j - 1], a[j] = a[j], a[j - 1]
+            j -= 1
+            c += 1
+    return c
+
+
+n = 64
+rng = random.Random(3)
+shuffled = list(range(n))
+rng.shuffle(shuffled)
+swapped = list(range(n))
+swapped[30], swapped[31] = swapped[31], swapped[30]
+print(f"    {'input':<34} {'inversions':>11} {'comparisons':>13} {'n + I':>8}")
+for label, arr in [("random permutation", shuffled),
+                   ("sorted", list(range(n))),
+                   ("one swap from sorted", swapped),
+                   ("reversed", list(range(n))[::-1])]:
+    arr = list(arr)
+    I = inversions(arr)
+    c = insertion_comparisons(arr)
+    print(f"    {label:<34} {I:11d} {c:13d} {n + I:8d}")
+print()
+print("    Insertion sort does exactly one comparison per inversion plus one")
+print("    per key, so it costs Theta(n + I).  On nearly sorted data I = 0 or")
+print("    I = O(n), giving Theta(n) -- linear, not n log n.")
+print()
+print("    This does NOT contradict Omega(n log n).  The lower bound is a")
+print("    statement about the WORST case of a model: over all inputs, some")
+print("    arrangement has Theta(n^2) inversions and the algorithm must pay.")
+print("    An algorithm may be much faster on easy inputs without ceasing to")
+print("    be a comparison sort.  Timsort is exactly this: it detects and")
+print("    merges existing runs, so its typical case is linear while its")
+print("    worst case stays n log n.")
+```
+
+```text
+(a) The decision tree.  Every comparison has two outcomes, so an
+    execution is a path in a binary tree.  Two inputs that reach the
+    same leaf are indistinguishable to the algorithm, and a correct
+    sort must emit different outputs for them, so every leaf covers at
+    most one of the n! orders.  Depth >= ceil(log2(n!)) = Omega(n log n).
+
+    The bound is in bits and comparisons at once, because one comparison
+    is worth at most one bit of information.
+
+(b) The gap at n = 1024, against its own asymptotic prediction.
+
+          n       log2(n!)     ceil   merge worst        gap   0.4427 n   exact pred
+         32        117.663      118         129.0     11.337      14.17       11.340
+         64        295.995      296         321.0     25.005      28.33       25.007
+        128        716.162      717         769.0     52.838      56.67       52.839
+        256       1683.996     1684        1793.0    109.004     113.33      109.004
+        512       3875.166     3876        4097.0    221.834     226.66      221.834
+       1024       8769.006     8770        9217.0    447.994     453.32      447.994
+       2048      19580.186    19581       20481.0    900.814     906.65      900.814
+       4096      43250.047    43251       45057.0   1806.953    1813.30     1806.953
+
+    At n = 1024:
+        log2(n!)          = 8769.006 bits
+        merge sort worst  = 1024 * 10 - 1024 + 1 = 9217 comparisons
+        gap               = 447.994
+    Derivation of the prediction, term by term:
+        log2(n!) = n log2 n - n log2 e + 0.5 log2(2 pi n) + O(1/n)
+        gap     = (n log2 n - n + 1) - log2(n!)
+               = (log2 e - 1) n + 1 - 0.5 log2(2 pi n) + O(1/n)
+               = 0.4427 n + 1 - 6.3257
+               = 453.320 + 1 - 6.3257
+               = 447.994
+        observed gap      = 447.994   -- exact, to 3 decimals
+
+    The 0.4427 n estimate OVERSTATES the gap by 5.33 comparisons,
+    a relative error of 1.19%, and that is not noise:
+    it drops the -0.5 log2(2 pi n) term, still -6.33 at n = 1024.
+    That term grows like 0.5 log2 n, so the relative error of the pure
+    linear estimate decays only like log2(n) / n -- slow enough that the
+    approximation is useless at any n you will ever sort.
+
+(c) Insertion sort on nearly sorted input.
+
+    input                               inversions   comparisons    n + I
+    random permutation                         847           847      911
+    sorted                                       0             0       64
+    one swap from sorted                         1             1       65
+    reversed                                  2016          2016     2080
+
+    Insertion sort does exactly one comparison per inversion plus one
+    per key, so it costs Theta(n + I).  On nearly sorted data I = 0 or
+    I = O(n), giving Theta(n) -- linear, not n log n.
+
+    This does NOT contradict Omega(n log n).  The lower bound is a
+    statement about the WORST case of a model: over all inputs, some
+    arrangement has Theta(n^2) inversions and the algorithm must pay.
+    An algorithm may be much faster on easy inputs without ceasing to
+    be a comparison sort.  Timsort is exactly this: it detects and
+    merges existing runs, so its typical case is linear while its
+    worst case stays n log n.
+```
 
 </details>
 
-**Challenge.**
+**Challenge — Prove the whole chain.**
 
-**[ ]** *Prove the whole chain.* (a) Show that the Master Theorem's case $c =
-d$ is exactly the regime where the recursion-tree level sums and the leaf
-count are the same order. (b) Show that the pure-power substitution guess
-succeeds iff $c \ne d$, and give the slack term when it fails. (c) Using your
-answers, predict which of $T(n) = 8T(n/2) + \Theta(n)$ and
+**[ ]** (a) Show that $c = d$ is exactly the regime where the recursion-tree
+level costs are all equal. (b) Show that the pure-power substitution guess
+succeeds iff $c \ne d$, and give the slack term needed at $c = d$. (c) Using
+your answers, predict which of $T(n) = 8T(n/2) + \Theta(n)$ and
 $T(n) = 8T(n/2) + \Theta(n^2)$ is faster for large $n$, and explain why the
-intuition is wrong. (d) Extend: what happens to $T(n) = 2T(n/2) + \Theta(n
-\log n)$, and which theorem from Lesson 80 handles it?
+intuition "more work per node should be slower" fails. (d) Extend: what does
+Akra–Bazzi say about $T(n) = 2T(n/2) + \Theta(n \log n)$, and how does the
+FFT recurrence $2T(n/2) + \Theta(n)$ differ — what would break if you used the
+FFT's answer for the other one?
 
 <details>
 <summary>Solution</summary>
 
-(a) Level $i$ of the tree holds $a^i$ nodes of size $n/b^i$, and each does
-$(n/b^i)^c$ work, so level $i$ costs $n^c\left(a/b^c\right)^i$. The level costs
-therefore form a geometric series with ratio $a/b^c$. If $a/b^c > 1$ the last
-level dominates and, since $k = \log_b n$ levels, the sum is $\Theta(n^d)$;
-if $a/b^c < 1$ the series converges to $\Theta(n^c)$; and if $a/b^c = 1$ —
-equivalently $a = b^c$, equivalently $c = d$ — every single level costs
-$\Theta(n^c) = \Theta(n^d)$, so multiplying by the $\log_b n$ levels produces
-the extra $\log n$. The three Master Theorem cases are exactly the three
-behaviours of that ratio.
+**(a)** Level $i$ of the tree has $a^i$ nodes of size $n/b^i$ each doing
+$(n/b^i)^c$ work, so it costs
 
-(b) Since $d = \log_b a$, we have $b^d = a$ *exactly*, so the recursive term
-is $a\,c'n^d/b^d = c'n^d$ for every constant $c'$. The pure guess
-$T(n) \le c'n^d$ therefore never has room for the additive term, in any case
-— which is Example 1 in its most general form. The guess $c'n^c$ does work,
-but only when $c > d$: it reduces to $c'(a/b^c) + 1 \le c'$, which has a
-solution exactly when $a/b^c < 1$. So a pure-power guess succeeds precisely
-when the local work dominates, and when it does not you need either the slack
-form of Example 1 or the Master Theorem.
+$$a^i \left(\frac{n}{b^i}\right)^c = n^c \left(\frac{a}{b^c}\right)^i .$$
 
-(c) $8T(n/2) + \Theta(n)$: $d = \log_2 8 = 3 > c = 1$, so $T(n) = \Theta(n^3)$.
-$8T(n/2) + \Theta(n^2)$: $d = 3 > c = 2$, so again $T(n) = \Theta(n^3)$. They
-are the *same* order, and the intuition — "more work per node should be
-slower" — fails because in both cases the leaves dominate: there are $8^k = n^3$
-leaves either way, and no amount of local work below $n^3$ catches up. To see
-a difference you must raise the local cost past $n^3$, for example
-$8T(n/2) + \Theta(n^{3.5})$.
+The ratio between consecutive levels is $a/b^c$, and that ratio equals $1$
+precisely when $c = \log_b a = d$. So $c = d$ is exactly the point where no
+level decays and none grows: every level costs the same $\Theta(n^d)$, and the
+$\log_b n$ levels can no longer be swallowed by a geometric sum. The answer is
+$\Theta(n^d \log n)$ rather than $\Theta(n^d)$.
 
-(d) $T(n) = 2T(n/2) + \Theta(n\log n)$ has $d = 1$ and an additive term that
-is not $\Theta(n^c)$ for any single $c$, so the Master Theorem does not apply —
-this is the FFT recurrence. Akra–Bazzi gives
-$\Theta\left(n^{1}\left(1 + \int_1^n \frac{u\log u}{u^2}du\right)\right) =
-\Theta(n\log n)$, which is exactly what the FFT achieves.
+This is the real content of "Case 2". It is not that two things happen to tie;
+it is that the *ratio of successive terms* is $1$, which is the only value for
+which the geometric-series trick fails.
+
+**(b)** Guess $T(n) \le K n^d$. The step is
+$aK(n/b)^d + n^c \le K n^d$, i.e. $n^c \le K n^d\left(1 - a/b^d\right)$.
+
+- If $c > d$: $a/b^d < 1$, so the bracket is a positive constant and $n^c$ is
+  dominated — the guess succeeds with slack.
+- If $c < d$: $a/b^d > 1$ and the bracket is negative, so the guess fails but
+  a *smaller* power $K n^c$ works, which is Case 3.
+- If $c = d$: $a/b^d = 1$, the bracket is $0$, and the guess demands
+  $n^d \le 0$. It fails for every $K$. The slack must carry the extra log:
+  guess $T(n) \le K n^d \log_b n$, whose step is
+  $K n^d(\log_b n - 1) + n^d \le K n^d \log_b n \iff K \ge 1$; the base cases
+  ($T(2) = a + 2^d$ with $\log_b 2 = 1$) force $K \ge 2$. Take $K = 2$.
+
+So the pure-power guess succeeds iff $c \ne d$, and at $c = d$ the slack term is
+a multiplicative $\log_b n$ rather than an additive constant.
+
+**(c)** Neither is faster: both are $\Theta(n^3)$. The level ratio is $4$ and $2$
+respectively — both greater than $1$, so in both cases the leaves dominate and
+the level sum collapses onto them. Measured, the ratio between the two
+recurrences tends to $3/2$ (or $3$ if you exclude the shared leaf term), a
+**constant**, not a factor of $n$.
+
+The intuition fails because "more work per node" only bites once the per-node
+cost reaches the *leaf* cost $n^d$. Raising the local cost from $n$ to $n^2$
+while $d = 3$ is still far below $n^3$, so it is invisible in the total; push
+it to $n^4$ and you finally pay a factor of $n$. The boundary is $c = d$ — the
+same boundary as (a) and (b).
+
+**(d)** $T(n) = 2T(n/2) + \Theta(n \log n)$: the additive term is not
+$\Theta(n^c)$ for any $c$, so the Master Theorem does not apply. Akra–Bazzi
+gives $p$ from $2(1/2)^p = 1$, so $p = 1$, and
+
+$$\Theta\left(n^1\left(1 + \int_1^n \frac{u \log u}{u^{2}}\,du\right)\right) = \Theta\left(n\left(1 + \int_1^n \frac{\log u}{u}\,du\right)\right) = \Theta\!\left(n(\log n)^2\right).$$
+
+The FFT recurrence is $2T(n/2) + \Theta(n)$, which **does** fit the Master
+Theorem at $c = d = 1$ and gives $\Theta(n \log n)$.
+
+**What would break if you reused the FFT's answer?** Everything downstream,
+and silently. The two differ by a full factor of $\log n$, which grows without
+bound, so the error is not a constant you can absorb into a big-O: it changes
+the complexity class from $n\log n$ to $n\log^2 n$. A prediction built on the
+FFT answer would under-report the cost of a level of the transform by an
+unbounded factor, and — because the two recurrences look almost identical on
+the page — nothing in the code would complain. The single factor of $u$ in the
+integrand is what does it: $\int_1^n \log u\,du$ grows like $n\log n$, while
+$\int_1^n \frac{\log u}{u}\,du$ grows like $\tfrac12(\log n)^2$. Both
+measured below, converging to $1$ and $1/2$ respectively.
+
+```python
+"""Challenge code block."""
+import math
+from math import log
+
+
+def logb(x, b):
+    return log(x) / log(b)
+
+
+def classify(a, b, c):
+    d = logb(a, b)
+    if c < d - 1e-12:
+        return d, 1, f"Theta(n^{d:.4f})"
+    if abs(c - d) < 1e-12:
+        return d, 2, f"Theta(n^{d:.4f} log n)"
+    return d, 3, f"Theta(n^{c})"
+
+
+def tree_cost(a, b, c, k):
+    """T(2^k) for T(n) = a T(n/b) + n^c, by summing every LEVEL of the tree.
+
+    Level i holds a^i nodes of size 2^(k-i), each doing (2^(k-i))^c work.
+    The floor division is exact because n = 2^k.
+    """
+    total, nodes, m = 0, 1, 1 << k
+    while m > 1:
+        total += nodes * m ** c
+        nodes *= a
+        m //= b
+    total += nodes          # the leaves
+    return total
+
+
+print("(a) c = d is exactly the regime where the per-level work is CONSTANT.")
+print()
+print("    Level i of the tree costs  a^i (n/b^i)^c = n^c (a / b^c)^i, so the")
+print("    ratio between consecutive levels is a / b^c.  That ratio is 1")
+print("    precisely when c = d = log_b a -- no term decays, none grows, and")
+print("    the number of levels can no longer be absorbed into a geometric sum.")
+print()
+print(f"    {'recurrence':<20} {'c':>3} {'d':>8} {'a/b^c':>10} {'level ratio':>26} {'result':>22}")
+for label, a, b, c in [("2T(n/2) + n", 2, 2, 1),
+                       ("2T(n/2) + n^2", 2, 2, 2),
+                       ("8T(n/2) + n", 8, 2, 1),
+                       ("8T(n/2) + n^2", 8, 2, 2),
+                       ("8T(n/2) + n^3", 8, 2, 3),
+                       ("8T(n/2) + n^4", 8, 2, 4)]:
+    d, case, res = classify(a, b, c)
+    ratio = a / b ** c
+    verdict = "CONSTANT" if abs(ratio - 1) < 1e-12 else ("growing" if ratio > 1 else "decaying")
+    print(f"    {label:<20} {c:3d} {d:8.4f} {ratio:10.6f} {verdict:>26} {res:>22}")
+print()
+print("    Read the fifth row carefully: c = 3 and d = 3 are EQUAL, so the")
+print("    level ratio is 1 and the answer is Theta(n^3 log n), not Theta(n^3).")
+print("    Every other row has the ratio strictly off 1, so one term dominates")
+print("    and the geometric sum collapses onto it.")
+print()
+print("    Measured on 8T(n/2) + n^3, a genuine c = d case.  Each level costs")
+print("    exactly n^3, so with log2 n levels the total is n^3 log2 n + n^3:")
+print(f"       {'k':>3} {'n = 2^k':>10} {'T(n)':>18} {'n^3 log2 n':>18} {'ratio':>9} {'(k+1)/k':>9}")
+for k in range(3, 13):
+    n = 1 << k
+    t = tree_cost(8, 2, 3, k)
+    exact = n ** 3 * k
+    print(f"       {k:3d} {n:10d} {t:18d} {exact:18d} {t / exact:9.4f} {(k + 1) / k:9.4f}")
+print()
+print("    The ratio IS (k+1)/k and tends to 1 from above.  The excess is the")
+print("    leaf term n^3 -- one extra level's worth -- which is lower order and")
+print("    exactly what the substitution argument in (b) forces you to absorb.")
+print()
+print("(b) When does the pure-power guess work?  Guess T(n) <= K n^d.")
+print()
+print("    Step:  a K (n/b)^d + n^c <= K n^d")
+print("      <=> n^c <= K n^d (1 - a/b^d).")
+print("    At c = d we have a/b^d = 1, so the right side is 0 while the left")
+print("    side is n^d.  The guess FAILS for every K: there is no slack left.")
+print()
+print("    The slack has to carry the extra log factor.  Guess T(n) <= K n^d log_b n.")
+print("        a K (n/b)^d log_b(n/b) + n^d")
+print("          = a K n^d b^-d (log_b n - 1) + n^d")
+print("          = K n^d (log_b n - 1) + n^d            [since a / b^d = 1]")
+print("          = K n^d log_b n - (K - 1) n^d")
+print("        <= K n^d log_b n   iff   K >= 1.")
+print("    Base cases: T(1) = 1 and T(2) = a + 2^d = 16, and log_b 2 = 1, so")
+print("    16 <= K * 8 * 1 forces K >= 2.  Take K = 2; it satisfies both.")
+print()
+print("    Verified on 8T(n/2) + n^3 with the guess T(n) <= 2 n^3 log2 n:")
+print(f"       {'n':>8} {'T(n)':>18} {'2 n^3 log2 n':>18} {'holds':>7} {'K needed':>10}")
+for k in (3, 6, 9, 12, 15, 18):
+    n = 1 << k
+    t = tree_cost(8, 2, 3, k)
+    print(f"       {n:8d} {t:18d} {2 * n ** 3 * k:18d} "
+          f"{str(t <= 2 * n ** 3 * k):>7} {t / (n ** 3 * k):10.4f}")
+print()
+print("    So the pure-power guess succeeds iff c != d.  c < d is Case 1")
+print("    (leaves win) and c > d is Case 3 (the root wins); both sit far from")
+print("    the boundary, which is exactly why the three Master Theorem cases")
+print("    are so easy to remember and so easy to get wrong by intuition.")
+print()
+print("(c) 8T(n/2) + n versus 8T(n/2) + n^2.  Same order: both Theta(n^3).")
+print()
+print("    Closed forms for n = 2^k, by summing the levels exactly:")
+print("        level i costs 8^i (n/2^i)   = n 2^(2i)   -> internal sum (n^3 - n)/3")
+print("        level i costs 8^i (n/2^i)^2 = n^2 2^i   -> internal sum n^3 - n^2")
+print("        both then add the leaf term 8^k = n^3, so")
+print("            T(n) = n^3 + (n^3 - n)/3 = (4n^3 - n)/3")
+print("            T(n) = n^3 + (n^3 - n^2) = 2n^3 - n^2")
+print()
+print(f"       {'n':>8} {'8T(n/2)+n':>18} {'(4n^3-n)/3':>20} {'8T(n/2)+n^2':>18} {'2n^3-n^2':>20} {'ratio':>9}")
+for k in (6, 10, 14, 18, 22):
+    n = 1 << k
+    t1 = tree_cost(8, 2, 1, k)
+    t2 = tree_cost(8, 2, 2, k)
+    print(f"       {n:8d} {t1:18d} {(4 * n ** 3 - n) / 3:20.1f} {t2:18d} "
+          f"{2 * n ** 3 - n ** 2:20d} {t2 / t1:9.4f}")
+print()
+print("    The internal sums alone have ratio 3, but the leaves add the SAME")
+print("    n^3 to both, which drags the overall ratio down to 3/2.  Either way")
+print("    it is a CONSTANT, not a factor of n: both recurrences are Theta(n^3)")
+print("    = 8^(log2 n), and the extra per-node n^2 cost is invisible because")
+print("    the leaves already set the total.  The intuition that more work per")
+print("    node must be slower only becomes true once the per-node cost")
+print("    crosses the leaf cost, i.e. at c = 3:")
+print(f"       {'n':>8} {'8T(n/2)+n^2':>16} {'8T(n/2)+n^3':>16} {'8T(n/2)+n^4':>16}")
+for k in (10, 14, 18):
+    n = 1 << k
+    print(f"       {n:8d} {tree_cost(8, 2, 2, k):16d} {tree_cost(8, 2, 3, k):16d} "
+          f"{tree_cost(8, 2, 4, k):16d}")
+print()
+print("    The n^4 column finally costs a factor of n over the n^3 column --")
+print(f"    here 2n / log2 n, i.e. {2 * (1 << 18) / 18:.0f} at n = {1 << 18}.  That")
+print("    is the boundary from (a), and it is why 'more work per node' is")
+print("    wrong below the boundary and right above it.")
+print()
+print("(d) 2T(n/2) + Theta(n log n): the Master Theorem does not apply.")
+print("    Akra-Bazzi: solve a_1 b_1^p = 1  ->  2 (1/2)^p = 1  ->  p = 1.")
+print()
+print("        T(n) = Theta( n^1 (1 + INT_1^n u log u / u^2 du ) )")
+print("              = Theta( n (1 + INT_1^n log u / u du ) )")
+print("              = Theta( n (1 + 0.5 (ln n)^2) )")
+print("              = Theta(n (log n)^2)")
+print()
+print("    The FFT recurrence, by contrast, is 2T(n/2) + Theta(n), which DOES")
+print("    fit the Master Theorem at c = d = 1.  Both, measured:")
+print()
+print(f"       {'n':>10} {'FFT: 2T+n':>16} {'n log2 n':>14} {'ratio':>8} "
+      f"{'2T+n log n':>16} {'n log2^2 n':>16} {'ratio':>8}")
+for k in (10, 14, 18, 22, 26):
+    n = 1 << k
+    fft = tree_cost(2, 2, 1, k)
+    extra, nodes, m = 0, 1, n
+    while m > 1:
+        extra += nodes * m * math.log2(m)
+        nodes *= 2
+        m //= 2
+    extra += nodes
+    print(f"       {n:10d} {fft:16d} {n * k:14d} {fft / (n * k):8.4f} "
+          f"{extra:16.0f} {n * k * k:16.0f} {extra / (n * k * k):8.4f}")
+print()
+print("    The first ratio tends to 1, not 2: every level costs exactly n, and")
+print("    there are log2 n of them, so T = n log2 n + n.  The second tends to")
+print("    0.5: level i costs n log2(n/2^i) = n (k-i), and sum (k-i) = k(k+1)/2,")
+print("    so T = n k(k+1)/2 = (1/2) n (log2 n)^2 + lower order.")
+print()
+print("    One extra factor of log, and the difference is a single factor of u")
+print("    in the integrand: INT log u du grows like n log n, but INT log u/u du")
+print("    grows like (log n)^2.  Lesson 80 covers the first with the Master")
+print("    Theorem and the second only with Akra-Bazzi -- which is the reason")
+print("    the course teaches Akra-Bazzi at all.")
+```
+
+```text
+(a) c = d is exactly the regime where the per-level work is CONSTANT.
+
+    Level i of the tree costs  a^i (n/b^i)^c = n^c (a / b^c)^i, so the
+    ratio between consecutive levels is a / b^c.  That ratio is 1
+    precisely when c = d = log_b a -- no term decays, none grows, and
+    the number of levels can no longer be absorbed into a geometric sum.
+
+    recurrence             c        d      a/b^c                level ratio                 result
+    2T(n/2) + n            1   1.0000   1.000000                   CONSTANT  Theta(n^1.0000 log n)
+    2T(n/2) + n^2          2   1.0000   0.500000                   decaying             Theta(n^2)
+    8T(n/2) + n            1   3.0000   4.000000                    growing        Theta(n^3.0000)
+    8T(n/2) + n^2          2   3.0000   2.000000                    growing        Theta(n^3.0000)
+    8T(n/2) + n^3          3   3.0000   1.000000                   CONSTANT  Theta(n^3.0000 log n)
+    8T(n/2) + n^4          4   3.0000   0.500000                   decaying             Theta(n^4)
+
+    Read the fifth row carefully: c = 3 and d = 3 are EQUAL, so the
+    level ratio is 1 and the answer is Theta(n^3 log n), not Theta(n^3).
+    Every other row has the ratio strictly off 1, so one term dominates
+    and the geometric sum collapses onto it.
+
+    Measured on 8T(n/2) + n^3, a genuine c = d case.  Each level costs
+    exactly n^3, so with log2 n levels the total is n^3 log2 n + n^3:
+         k    n = 2^k               T(n)         n^3 log2 n     ratio   (k+1)/k
+         3          8               2048               1536    1.3333    1.3333
+         4         16              20480              16384    1.2500    1.2500
+         5         32             196608             163840    1.2000    1.2000
+         6         64            1835008            1572864    1.1667    1.1667
+         7        128           16777216           14680064    1.1429    1.1429
+         8        256          150994944          134217728    1.1250    1.1250
+         9        512         1342177280         1207959552    1.1111    1.1111
+        10       1024        11811160064        10737418240    1.1000    1.1000
+        11       2048       103079215104        94489280512    1.0909    1.0909
+        12       4096       893353197568       824633720832    1.0833    1.0833
+
+    The ratio IS (k+1)/k and tends to 1 from above.  The excess is the
+    leaf term n^3 -- one extra level's worth -- which is lower order and
+    exactly what the substitution argument in (b) forces you to absorb.
+
+(b) When does the pure-power guess work?  Guess T(n) <= K n^d.
+
+    Step:  a K (n/b)^d + n^c <= K n^d
+      <=> n^c <= K n^d (1 - a/b^d).
+    At c = d we have a/b^d = 1, so the right side is 0 while the left
+    side is n^d.  The guess FAILS for every K: there is no slack left.
+
+    The slack has to carry the extra log factor.  Guess T(n) <= K n^d log_b n.
+        a K (n/b)^d log_b(n/b) + n^d
+          = a K n^d b^-d (log_b n - 1) + n^d
+          = K n^d (log_b n - 1) + n^d            [since a / b^d = 1]
+          = K n^d log_b n - (K - 1) n^d
+        <= K n^d log_b n   iff   K >= 1.
+    Base cases: T(1) = 1 and T(2) = a + 2^d = 16, and log_b 2 = 1, so
+    16 <= K * 8 * 1 forces K >= 2.  Take K = 2; it satisfies both.
+
+    Verified on 8T(n/2) + n^3 with the guess T(n) <= 2 n^3 log2 n:
+              n               T(n)       2 n^3 log2 n   holds   K needed
+              8               2048               3072    True     1.3333
+             64            1835008            3145728    True     1.1667
+            512         1342177280         2415919104    True     1.1111
+           4096       893353197568      1649267441664    True     1.0833
+          32768    562949953421312   1055531162664960    True     1.0667
+         262144 342273571680157696 648518346341351424    True     1.0556
+
+    So the pure-power guess succeeds iff c != d.  c < d is Case 1
+    (leaves win) and c > d is Case 3 (the root wins); both sit far from
+    the boundary, which is exactly why the three Master Theorem cases
+    are so easy to remember and so easy to get wrong by intuition.
+
+(c) 8T(n/2) + n versus 8T(n/2) + n^2.  Same order: both Theta(n^3).
+
+    Closed forms for n = 2^k, by summing the levels exactly:
+        level i costs 8^i (n/2^i)   = n 2^(2i)   -> internal sum (n^3 - n)/3
+        level i costs 8^i (n/2^i)^2 = n^2 2^i   -> internal sum n^3 - n^2
+        both then add the leaf term 8^k = n^3, so
+            T(n) = n^3 + (n^3 - n)/3 = (4n^3 - n)/3
+            T(n) = n^3 + (n^3 - n^2) = 2n^3 - n^2
+
+              n          8T(n/2)+n           (4n^3-n)/3        8T(n/2)+n^2             2n^3-n^2     ratio
+             64             349504             349504.0             520192               520192    1.4884
+           1024         1431655424         1431655424.0         2146435072           2146435072    1.4993
+          16384      5864062009344      5864062009344.0      8795824586752        8795824586752    1.5000
+         262144  24019198012555264  24019198012555264.0  36028728299487232    36028728299487232    1.5000
+        4194304 98382635059782877184 98382635059782877184.0 147573934997490368512 147573934997490368512    1.5000
+
+    The internal sums alone have ratio 3, but the leaves add the SAME
+    n^3 to both, which drags the overall ratio down to 3/2.  Either way
+    it is a CONSTANT, not a factor of n: both recurrences are Theta(n^3)
+    = 8^(log2 n), and the extra per-node n^2 cost is invisible because
+    the leaves already set the total.  The intuition that more work per
+    node must be slower only becomes true once the per-node cost
+    crosses the leaf cost, i.e. at c = 3:
+              n      8T(n/2)+n^2      8T(n/2)+n^3      8T(n/2)+n^4
+           1024       2146435072      11811160064    2197949513728
+          16384    8795824586752   65970697666560 144110790029344768
+         262144 36028728299487232 342273571680157696 9444714951340780945408
+
+    The n^4 column finally costs a factor of n over the n^3 column --
+    here 2n / log2 n, i.e. 29127 at n = 262144.  That
+    is the boundary from (a), and it is why 'more work per node' is
+    wrong below the boundary and right above it.
+
+(d) 2T(n/2) + Theta(n log n): the Master Theorem does not apply.
+    Akra-Bazzi: solve a_1 b_1^p = 1  ->  2 (1/2)^p = 1  ->  p = 1.
+
+        T(n) = Theta( n^1 (1 + INT_1^n u log u / u^2 du ) )
+              = Theta( n (1 + INT_1^n log u / u du ) )
+              = Theta( n (1 + 0.5 (ln n)^2) )
+              = Theta(n (log n)^2)
+
+    The FFT recurrence, by contrast, is 2T(n/2) + Theta(n), which DOES
+    fit the Master Theorem at c = d = 1.  Both, measured:
+
+                n        FFT: 2T+n       n log2 n    ratio       2T+n log n       n log2^2 n    ratio
+             1024            11264          10240   1.1000            57344           102400   0.5600
+            16384           245760         229376   1.0714          1736704          3211264   0.5408
+           262144          4980736        4718592   1.0556         45088768         84934656   0.5309
+          4194304         96468992       92274688   1.0455       1065353216       2030043136   0.5248
+         67108864       1811939328     1744830464   1.0385      23622320128      45365592064   0.5207
+
+    The first ratio tends to 1, not 2: every level costs exactly n, and
+    there are log2 n of them, so T = n log2 n + n.  The second tends to
+    0.5: level i costs n log2(n/2^i) = n (k-i), and sum (k-i) = k(k+1)/2,
+    so T = n k(k+1)/2 = (1/2) n (log2 n)^2 + lower order.
+
+    One extra factor of log, and the difference is a single factor of u
+    in the integrand: INT log u du grows like n log n, but INT log u/u du
+    grows like (log n)^2.  Lesson 80 covers the first with the Master
+    Theorem and the second only with Akra-Bazzi -- which is the reason
+    the course teaches Akra-Bazzi at all.
+```
 
 </details>
 
 ---
 
+
+---
+
 ## Summary
 
-- Every recursive algorithm gives a recurrence; the three tools for solving it
-  are the recursion tree (shape), substitution (constant) and the Master
-  Theorem (class), and they always agree.
+- Every recursive algorithm gives a recurrence, and the three tools for solving it
+  — recursion tree (shape), substitution (constant), Master Theorem (class) —
+  always agree; the pure guess $c\,n^d$ fails whenever the recursion saturates
+  the budget, and the repair is a slack term $-\lambda n$.
 - $T(n) = a\,T(n/b) + \Theta(n^c)$ with $d = \log_b a$: leaves dominate when
   $c < d$, every level ties when $c = d$, the top dominates when $c > d$.
-- The pure guess $c\,n^d$ fails whenever the recursion saturates the budget —
-  for $3T(n/2) + n$ it fails for *every* constant, and the repair is a slack
-  term $- \lambda n$ with $\lambda = 2$.
 - A greedy algorithm is optimal only if you can write the exchange argument;
   0/1 knapsack with capacity 50 returns `160` where the optimum is `220`, and
   that failure is exactly the absence of the matroid exchange property.

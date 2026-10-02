@@ -3041,29 +3041,383 @@ print("  no proof.")
 
 </details>
 
-## Summary
+**[ ] Exercise 6 — Prove that a dependency graph with no cycle has an ordering,
+and watch the proof run.** (a) Implement Kahn's algorithm: repeatedly remove a
+node whose dependencies have all been removed, and report the removal order and
+whatever nodes remain. (b) Implement an independent cycle detector using DFS
+three-colouring, and check the two agree on both an acyclic graph and one with a
+cycle. (c) Verify the removal order really is a valid extension — every
+dependency precedes its dependent. (d) Add one edge that creates a cycle, report
+how many nodes are blocked, and explain why *all* of them are rather than only
+the ones on the cycle. (e) Write out the induction: what is `P(k)`, what is the
+base case, and what is the step? (f) Then say where in the code each half of the
+induction is visible.
 
-- Induction is two halves: a base case and a step from $P(k)$ to $P(k+1)$. Both
-  are required and neither is optional, and the step is where all the work is.
-- **Arbitrary** $k$ is the whole content of the step. A step for one value is a
-  test, and a long test suite is a long conjunction, not a universal claim.
+<details>
+<summary>Solution</summary>
+
+The interesting part is (f). Kahn's algorithm is not an implementation *of* the
+induction; it *is* the induction, running. Every loop iteration is one
+application of the step.
+
+```python
+import re
+
+
+# ---------------------------------------------------------------------------
+# A cycle detector for a dependency graph.
+#
+# The claim under test: a linear extension exists if and only if the graph has
+# no cycle.
+#
+# The proof is by induction on the number of nodes removed so far. Kahn's
+# algorithm is the step made executable: repeatedly remove a node with no
+# unmet dependency. If it removes every node, the removal order IS the linear
+# extension. If it stops early, the nodes left over each have a dependency
+# left over, and following those must revisit a node -- a cycle.
+# ---------------------------------------------------------------------------
+
+SAMPLE = """\
+lesson 10 needs
+lesson 11 needs 10
+lesson 12 needs 11
+lesson 13 needs 12, 10
+lesson 14 needs 13
+lesson 15 needs 14
+"""
+
+
+def parse_deps(text):
+    """deps[n] = set of lessons n needs. A bare list means 'needs lesson n-1',
+    except at the first lesson, which is the root and needs nothing."""
+    deps = {}
+    for line in text.strip().splitlines():
+        m = re.match(r"lesson (\d+) needs(.*)", line.strip())
+        if not m:
+            continue
+        n = int(m.group(1))
+        rest = [int(x) for x in m.group(2).split(",") if x.strip().isdigit()]
+        deps[n] = set(rest) if rest else set()
+    # The first line is the root: nothing precedes it.
+    first = min(deps)
+    deps[first] = set()
+    return deps
+
+
+def kahn(deps):
+    """Return (order, remaining). `order` is a linear extension when it covers
+    every node; anything left in `remaining` sits on or after a cycle."""
+    pending = {n: set(d) for n, d in deps.items()}
+    order, guard = [], 0
+    while pending and guard < 1000:
+        guard += 1
+        ready = sorted(n for n, needs in pending.items() if not needs)
+        if not ready:
+            break
+        for n in ready:
+            order.append(n)
+            del pending[n]
+        for needs in pending.values():
+            needs.difference_update(ready)
+    return order, set(pending)
+
+
+def has_cycle_by_walk(deps):
+    """Independent check: DFS three-colouring, not the removal algorithm.
+
+    Two independent methods agreeing is worth more than one method being
+    right, because the two fail in different ways.
+    """
+    WHITE, GREY, BLACK = 0, 1, 2
+    colour = {n: WHITE for n in deps}
+
+    def visit(n):
+        colour[n] = GREY
+        for m in deps.get(n, ()):
+            if colour.get(m, WHITE) == GREY:
+                return True
+            if colour.get(m, WHITE) == WHITE and visit(m):
+                return True
+        colour[n] = BLACK
+        return False
+
+    return any(colour[n] == WHITE and visit(n) for n in deps)
+
+
+print("=" * 74)
+print("1. A DAG: both methods agree that no cycle exists")
+print("=" * 74)
+deps = parse_deps(SAMPLE)
+order, remaining = kahn(deps)
+cyclic = has_cycle_by_walk(deps)
+print(f"  nodes                        : {sorted(deps)}")
+print(f"  Kahn's removal order          : {order}")
+print(f"  nodes left over              : {sorted(remaining)}")
+print(f"  linear extension exists       : {not remaining}")
+print(f"  cycle found by DFS colouring  : {cyclic}")
+print()
+print(f"  A linear extension exists: {not remaining}.  A cycle exists: {cyclic}.")
+print("  The two methods answer different questions -- 'can I order these?'")
+print("  and 'is there a cycle?' -- and for this graph they agree.")
+print()
+
+print("  Check the order really is an extension: every dependency comes first.")
+ok = True
+for n in order:
+    for m in deps[n]:
+        if m not in order or order.index(m) > order.index(n):
+            ok = False
+print(f"  every dependency precedes its dependent : {ok}")
+print()
+print("  That check is the whole content of the induction. Kahn's algorithm")
+print("  only ever removes a node whose dependencies are already gone, so the")
+print("  removal order satisfies the precondition by construction. The")
+print("  induction is on the number of nodes removed so far.")
+print()
+
+print("=" * 74)
+print("2. Adding one edge creates a cycle, and both methods notice")
+print("=" * 74)
+with_cycle = {n: set(d) for n, d in deps.items()}
+with_cycle[10].add(15)          # lesson 10 now needs lesson 15
+order2, remaining2 = kahn(with_cycle)
+cyclic2 = has_cycle_by_walk(with_cycle)
+print("  added edge: lesson 10 now needs 15")
+print(f"  Kahn's removal order          : {order2}")
+print(f"  nodes left over              : {sorted(remaining2)}")
+print(f"  linear extension exists       : {not remaining2}")
+print(f"  cycle found by DFS colouring  : {cyclic2}")
+print()
+print(f"  Kahn's removal order is empty: {order2 == []}")
+print(f"  every node is left over      : {sorted(remaining2) == sorted(deps)}")
+print(f"  nodes blocked by the cycle   : "
+      f"{len(remaining2)} of {len(deps)}")
+print(f"  fraction of the plan that survives: "
+      f"{1 - len(remaining2) / len(deps):.1%}")
+print()
+print("  (d) Why all of them, and not only the three on the cycle 10->15->")
+print("  14->13->12->11->10: because every leftover node has a dependency")
+print("  inside the leftover set. Kahn's loop only removes a node whose")
+print("  dependencies are already gone, and the cycle members never leave, so")
+print("  nothing downstream of them can leave either. The blocked set is")
+print("  exactly the cycle plus its downstream cone.")
+print()
+print("  This is the practical cost of the theorem. One wrong dependency does")
+print("  not fail one lesson; it fails every lesson that depends on it,")
+print("  transitively. That is why a scheduler reporting a cycle is more than")
+print("  a syntax complaint.")
+print()
+
+print("=" * 74)
+print("3. The base case, checked rather than asserted")
+print("=" * 74)
+for size in range(0, 5):
+    empty_graph = {n: set() for n in range(size)}
+    order3, rem3 = kahn(empty_graph)
+    print(f"  {size} nodes, no dependencies -> order {order3}, "
+          f"leftover {sorted(rem3)}, extension exists: {not rem3}")
+print()
+print("  An empty graph has an empty linear extension, and that is the base")
+print("  case of the induction: zero nodes is trivially orderable. Removing")
+print("  one node at a time gives the step, so every size is covered.")
+
+print()
+print("=" * 74)
+print("4. (e) and (f): where each half of the induction lives in the code")
+print("=" * 74)
+print()
+print("  Claim.  A finite dependency graph with no cycle admits an ordering in")
+print("  which every lesson appears after everything it needs.")
+print()
+print("  P(k).  After k removal steps, the k removed nodes can be listed with")
+print("  every dependency of each appearing earlier.")
+print()
+print("  Base case, P(0).  The empty list satisfies the property vacuously --")
+print("  there is no node to violate it.  In the code: `order = []` before the")
+print("  loop starts.")
+print()
+print("  Step.  Suppose P(k).  Kahn picks a node n with no unmet dependency, so")
+print("  every lesson n needs is among the k already removed and therefore")
+print("  already listed.  Appending n preserves the property, giving P(k+1).")
+print("  In the code: the line")
+print()
+print("      ready = sorted(n for n, needs in pending.items() if not needs)")
+print()
+print("  is the whole step.  The test `if not needs` IS the induction")
+print("  hypothesis being used -- it says every dependency of n is already")
+print("  gone, which is exactly what P(k) says about them.")
+print()
+print("  Termination.  Each step removes at least one node, and the node count")
+print("  is a non-negative integer, so the loop ends within |V| iterations.")
+print("  In the code: the `while pending` condition, plus the `guard` that")
+print("  makes 'stuck' an explicit outcome rather than a hang.")
+print()
+print("  Why no cycle implies the loop finishes with nothing left.  If it")
+print("  stopped early, every remaining node would have a dependency inside")
+print("  the remaining set (otherwise one would be removable).  Follow those")
+print("  dependencies: each step moves within a set of shrinking size, so")
+print("  within |V| steps a node repeats -- a cycle.  Contradiction.")
+print()
+print("  So the honest summary is that the code does not implement a proof")
+print("  about graphs; the code's own invariant is the induction, and the")
+print("  cycle case falls out of the termination argument. That is why this")
+print("  theorem feels obvious and is still worth proving.")
+
+print()
+print("=" * 74)
+print("5. Where strong induction would be needed instead")
+print("=" * 74)
+print()
+print("  Some claims have no P(k) -> P(k+1) step at all.  Proving that every")
+print("  integer above 1 is a sum of primes needs the result for every smaller")
+print("  value, not just k.  Strong induction assumes P(j) for all j < k, and")
+print("  the step then has the whole prefix available.")
+print()
+print("  The design choice this exposes is worth naming: the induction")
+print("  VARIABLE (what k counts) and the HYPOTHESIS AVAILABLE (what the step")
+print("  may assume) are independent.  Picking the wrong variable does not")
+print("  produce a false step -- it produces no step, which is the diagnostic")
+print("  sign that you are on the wrong one.")
+```
+
+Output:
+
+```text
+==========================================================================
+1. A DAG: both methods agree that no cycle exists
+==========================================================================
+  nodes                        : [10, 11, 12, 13, 14, 15]
+  Kahn's removal order          : [10, 11, 12, 13, 14, 15]
+  nodes left over              : []
+  linear extension exists       : True
+  cycle found by DFS colouring  : False
+
+  A linear extension exists: True.  A cycle exists: False.
+  The two methods answer different questions -- 'can I order these?'
+  and 'is there a cycle?' -- and for this graph they agree.
+
+  Check the order really is an extension: every dependency comes first.
+  every dependency precedes its dependent : True
+
+  That check is the whole content of the induction. Kahn's algorithm
+  only ever removes a node whose dependencies are already gone, so the
+  removal order satisfies the precondition by construction. The
+  induction is on the number of nodes removed so far.
+
+==========================================================================
+2. Adding one edge creates a cycle, and both methods notice
+==========================================================================
+  added edge: lesson 10 now needs 15
+  Kahn's removal order          : []
+  nodes left over              : [10, 11, 12, 13, 14, 15]
+  linear extension exists       : False
+  cycle found by DFS colouring  : True
+
+  Kahn's removal order is empty: True
+  every node is left over      : True
+  nodes blocked by the cycle   : 6 of 6
+  fraction of the plan that survives: 0.0%
+
+  (d) Why all of them, and not only the three on the cycle 10->15->
+  14->13->12->11->10: because every leftover node has a dependency
+  inside the leftover set. Kahn's loop only removes a node whose
+  dependencies are already gone, and the cycle members never leave, so
+  nothing downstream of them can leave either. The blocked set is
+  exactly the cycle plus its downstream cone.
+
+  This is the practical cost of the theorem. One wrong dependency does
+  not fail one lesson; it fails every lesson that depends on it,
+  transitively. That is why a scheduler reporting a cycle is more than
+  a syntax complaint.
+
+==========================================================================
+3. The base case, checked rather than asserted
+==========================================================================
+  0 nodes, no dependencies -> order [], leftover [], extension exists: True
+  1 nodes, no dependencies -> order [0], leftover [], extension exists: True
+  2 nodes, no dependencies -> order [0, 1], leftover [], extension exists: True
+  3 nodes, no dependencies -> order [0, 1, 2], leftover [], extension exists: True
+  4 nodes, no dependencies -> order [0, 1, 2, 3], leftover [], extension exists: True
+
+  An empty graph has an empty linear extension, and that is the base
+  case of the induction: zero nodes is trivially orderable. Removing
+  one node at a time gives the step, so every size is covered.
+
+==========================================================================
+4. (e) and (f): where each half of the induction lives in the code
+==========================================================================
+
+  Claim.  A finite dependency graph with no cycle admits an ordering in
+  which every lesson appears after everything it needs.
+
+  P(k).  After k removal steps, the k removed nodes can be listed with
+  every dependency of each appearing earlier.
+
+  Base case, P(0).  The empty list satisfies the property vacuously --
+  there is no node to violate it.  In the code: `order = []` before the
+  loop starts.
+
+  Step.  Suppose P(k).  Kahn picks a node n with no unmet dependency, so
+  every lesson n needs is among the k already removed and therefore
+  already listed.  Appending n preserves the property, giving P(k+1).
+  In the code: the line
+
+      ready = sorted(n for n, needs in pending.items() if not needs)
+
+  is the whole step.  The test `if not needs` IS the induction
+  hypothesis being used -- it says every dependency of n is already
+  gone, which is exactly what P(k) says about them.
+
+  Termination.  Each step removes at least one node, and the node count
+  is a non-negative integer, so the loop ends within |V| iterations.
+  In the code: the `while pending` condition, plus the `guard` that
+  makes 'stuck' an explicit outcome rather than a hang.
+
+  Why no cycle implies the loop finishes with nothing left.  If it
+  stopped early, every remaining node would have a dependency inside
+  the remaining set (otherwise one would be removable).  Follow those
+  dependencies: each step moves within a set of shrinking size, so
+  within |V| steps a node repeats -- a cycle.  Contradiction.
+
+  So the honest summary is that the code does not implement a proof
+  about graphs; the code's own invariant is the induction, and the
+  cycle case falls out of the termination argument. That is why this
+  theorem feels obvious and is still worth proving.
+
+==========================================================================
+5. Where strong induction would be needed instead
+==========================================================================
+
+  Some claims have no P(k) -> P(k+1) step at all.  Proving that every
+  integer above 1 is a sum of primes needs the result for every smaller
+  value, not just k.  Strong induction assumes P(j) for all j < k, and
+  the step then has the whole prefix available.
+
+  The design choice this exposes is worth naming: the induction
+  VARIABLE (what k counts) and the HYPOTHESIS AVAILABLE (what the step
+  may assume) are independent.  Picking the wrong variable does not
+  produce a false step -- it produces no step, which is the diagnostic
+  sign that you are on the wrong one.
+```</details>
+## Summary
+- Induction is two halves: a base case and a step from $P(k)$ to $P(k+1)$.
+  Both are required and neither is optional, and the step is where all the
+  work is.
+- **Arbitrary** $k$ is the whole content of the step. A step for one value is
+  a test, and a long test suite is a long conjunction, not a universal claim.
 - The one non-trivial ingredient is well-ordering: a chain of successor steps
   from 0 cannot skip a number. Remove it and the principle fails.
 - Strong induction lets the step use every earlier case. It proves the same
   things as ordinary induction, but some claims — every integer above 1 is a
   sum of primes — have no ordinary step at all.
-- Choosing the induction variable is the real work. The test: does the natural
-  decomposition of the object reduce this quantity by one?
-- Length for lists, height for trees, node count for linked lists, input length
-  for programs. Inducting on a *value* rather than a *size* is the most common
-  failure and produces no step rather than a wrong one.
-- A loop needs **three** clauses: invariant holds, invariant is preserved, loop
-  terminates with the invariant implying the postcondition. Induction supplies
-  the first two.
+- Length for lists, height for trees, node count for linked lists, input
+  length for programs. Inducting on a *value* rather than a *size* is the most
+  common failure and produces no step rather than a wrong one.
+- A loop needs **three** clauses: invariant holds, invariant is preserved,
+  loop terminates with the invariant implying the postcondition. Induction
+  supplies the first two.
 - A loop can satisfy its invariant throughout and still be wrong, because it
   stops early. That is a bug a passing test suite does not catch.
-- A recursive function is the induction template: base case, step, and "the
-  argument is smaller". Ask all three before you run anything.
 - The step advances the same quantity the recursion decreases, and that
   quantity must be bounded below. When it is not, there is no proof — only a
   test that hangs.

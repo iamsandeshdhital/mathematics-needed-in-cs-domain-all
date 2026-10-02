@@ -2813,13 +2813,13 @@ p iff q               3         4            4  ok
 
 the function:  x0 OR (y0a AND y0b) OR (y1a AND y1b) OR ...
 
- units   vars   source      2^vars rows                    DNF terms   BDD nodes
-     1      3       22                        8                          2           3
-     2      5       36                       32                          9           5
-     4      9       64                      512                        257           9
-     8     17      120                  131,072                    131,073          17
-    16     33      232              8,589,934,592             17,179,869,185          33
-    32     65      456  36,893,488,147,419,103,232 147,573,952,589,676,412,929          65
+  units   vars   source            2^vars rows                DNF terms   BDD nodes
+     1      3       22                      8                        2           3
+     2      5       36                     32                        9           5
+     4      9       64                    512                      257           9
+     8     17      120                131,072                  131,073          17
+    16     33      232          8,589,934,592           17,179,869,185          33
+    32     65      456 36,893,488,147,419,103,232 147,573,952,589,676,412,929          65
 
 3. Where it falls apart: the same function, a different variable order
 
@@ -2845,7 +2845,7 @@ still `2ⁿ`, and the constant depends on an ordering choice that is itself a
 search problem. Which is why production equivalence checking uses SAT solvers:
 they share nothing, so they pay nothing when there is nothing to share.
 
-
+</details>
 
 **[ ] Exercise 5 — Count the rows, then find the *minimum* formula for a function
 by exhaustive search over 3 variables.** (a) For `n = 1, 2, 3, 4`, report the
@@ -3123,7 +3123,8 @@ per level can express.
    almost everything expressible in three gates is already expressible
    in two. Majority, at 5 gates, is outside this range entirely -- and
    the arithmetic spelling needs no gates at all, which is the real
-   answer to (d).```
+   answer to (d).
+```
 
 **What (a) shows.** The gap between the two numbers is the whole point of the
 lesson. A truth table over 4 variables has 16 rows, which is a table you can write
@@ -3893,29 +3894,27 @@ starts.
 </details>
 
 ## Summary
-
-- A formula with `n` variables has exactly `2ⁿ` truth table rows, and that table
-  completely determines its behaviour.
 - A tautology is true on every row and a contradiction is false on every row.
   Both are bugs when they appear as conditions; a tautology never rejects
   anything.
-- `F ≡ G` means identical truth tables, which is the same as "same false rows".
-  Comparing two columns is a complete equivalence check.
+- `F ≡ G` means identical truth tables, which is the same as "same false
+  rows". Comparing two columns is a complete equivalence check.
 - The algebraic rules — De Morgan, idempotence, associativity, distributivity,
   absorption, double negation — are for *simplifying*. Normal forms are for
   *comparing*. Using DNF to shrink a formula is backwards.
-- Every formula has both a DNF and a CNF, and both are computable from the truth
-  table alone. That makes them canonical and therefore useful for equivalence.
+- Every formula has both a DNF and a CNF, and both are computable from the
+  truth table alone. That makes them canonical and therefore useful for
+  equivalence.
 - A DNF has at most `2ⁿ` terms. The example above expanded to 9 terms from a
   four-variable formula, and canonical is not the same as compact.
-- NAND is a universal gate because `~(a & b) = ~a | ~b`, so a machine with only
-  NAND can build everything. Short-circuit `and` in Python is the software
-  version of the same idea.
-- The most common dead branch in real code is `x | (x & y)`, which is just `x`,
-  and the truth table finds it in one comparison.
-- Truth tables do not scale: `2ⁿ` rows. Scaling to dozens of variables needs SAT
-  solving, BDDs, and whole-program summaries, which are the same logic with a
-  better search.
+- NAND is a universal gate because `~(a & b) = ~a | ~b`, so a machine with
+  only NAND can build everything. Short-circuit `and` in Python is the
+  software version of the same idea.
+- The most common dead branch in real code is `x | (x & y)`, which is just
+  `x`, and the truth table finds it in one comparison.
+- Truth tables do not scale: `2ⁿ` rows. Scaling to dozens of variables needs
+  SAT solving, BDDs, and whole-program summaries, which are the same logic
+  with a better search.
 
 ## Next
 

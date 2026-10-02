@@ -2813,22 +2813,19 @@ warning sign that a quantifier is missing.
 </details>
 
 ## Summary
-
 - A predicate is a formula with a free variable and no truth value; a closed
   sentence is a proposition. The domain is part of the statement, not part of
   the notation.
 - `∀` and `∃` are the two ways of turning per-element answers into one answer.
   `∀` is refuted by one counterexample; `∃` is confirmed by one witness.
-- Negating a quantified statement flips the quantifier **and** negates the body.
-  `¬∀x P(x) ≡ ∃x ¬P(x)` and `¬∃x P(x) ≡ ∀x ¬P(x)`, plus De Morgan on compound
-  bodies.
+- Negating a quantified statement flips the quantifier **and** negates the
+  body. `¬∀x P(x) ≡ ∃x ¬P(x)` and `¬∃x P(x) ≡ ∀x ¬P(x)`, plus De Morgan on
+  compound bodies.
 - `¬∃!x P(x)` needs two variables over the same domain, with `x ≠ y`. A naive
   single-variable negation reports every duplicate as absent.
-- Nested quantifier order is part of the meaning. `∀x ∃y` is a matching and the
-  witness may depend on `x`; `∃y ∀x` demands one universal witness and is much
-  stronger.
-- `k` quantifiers over a domain of size `n` cost up to `nᵏ` predicate
-  evaluations, so counting quantifiers is counting loop nests.
+- Nested quantifier order is part of the meaning. `∀x ∃y` is a matching and
+  the witness may depend on `x`; `∃y ∀x` demands one universal witness and is
+  much stronger.
 - Over the empty domain, `∀` is vacuously true and `∃` is false. One empty
   result set supports both conclusions, so the query must say which it means.
 - A SQL `WHERE` clause is a predicate and `SELECT` reports an existential.

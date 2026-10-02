@@ -50,8 +50,9 @@ passes and you still do not know whether the code is right.
 
 [Part 02 — Discrete Mathematics and Combinatorics](../part02_discrete_combinatorics/README.md)
 takes counting, graphs and recurrences, and it uses every technique here.
-[Part 06 — Mathematics for Algorithms](../part06_algorithms_math/README.md) uses
-proof and sets directly and is only three lessons long if you need big-O now.
+[Lesson 80 — Big-O and Complexity](../part06_algorithms_math/80_big_o_and_complexity.md)
+uses proof and sets directly, and is the one to read next if you want complexity
+analysis before anything else.
 
 The notation used throughout is listed in [SYMBOLS.md](../SYMBOLS.md), and the
 lesson-writing conventions are in [CONTRIBUTING.md](../CONTRIBUTING.md).

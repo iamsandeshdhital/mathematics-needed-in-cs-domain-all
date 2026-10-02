@@ -78,7 +78,7 @@ service's tail latency is made of.
 
 Throughout, $T_i$ is the actual cost of the $i$-th operation on a data structure,
 $n$ is the number of operations, and all costs are in units of "one element copy"
-or "one comparison" as appropriate. See [SYMBOLS.md](../../SYMBOLS.md) and
+or "one comparison" as appropriate. See [SYMBOLS.md](../SYMBOLS.md) and
 [Lesson 80](80_big_o_and_complexity.md).
 
 **Definition (aggregate bound).** A data structure has an **amortised** cost of
@@ -676,10 +676,10 @@ Output:
 
 === What CPython's list does, for calibration ===
      n   sys.getsizeof(list)   bytes per element   overallocation
-    100                    856                8.6              7.0%
-   1000                  8,056                8.1              0.7%
-  10000                 80,056                8.0              0.1%
- 100000                800,056                8.0              0.0%
+     100                    856                8.6              7.0%
+    1000                  8,056                8.1              0.7%
+   10000                 80,056                8.0              0.1%
+  100000                800,056                8.0              0.0%
   A slot holds an 8-byte pointer, so 8.0 bytes per element means the list is
   almost exactly full.  Here is the whole memory/speed trade in one
   formula.  With growth factor f the k-th resize copies C*f^k elements, and
@@ -691,8 +691,8 @@ Output:
    factor   1/(f-1) predicted   measured   slots wasted at worst
     1.125              8.0000      8.8263                       9.3%
       1.5              2.0000      2.8129                      28.9%
-        2              1.0000      0.9999                       0.0%
-        4              0.3333      0.3333                       0.0%
+      2.0              1.0000      0.9999                       0.0%
+      4.0              0.3333      0.3333                       0.0%
   The prediction 1/(f-1) tracks the measurement closely (the residual is the
   +4 start offset, which matters more when f is small).  f = 1.125 gives
   8.8263 copies per append -- nine times worse than doubling -- and wastes
@@ -829,6 +829,17 @@ print()
 print("=== Amortised versus average: the distinction, made concrete ===")
 
 
+def stable_hash(s):
+    """FNV-1a, a real hash function, written out so the numbers in this lesson
+    are the same on every machine and every run.  Python's built-in hash() is
+    deliberately randomised per process (that is exactly the defence described
+    below), so it would make these figures unreproducible."""
+    h = 0x811C9DC5
+    for byte in s.encode("utf-8"):
+        h = ((h ^ byte) * 0x01000193) & 0xFFFFFFFF
+    return h
+
+
 class BadHash:
     """Every key hashes to one bucket.  No randomness, so there is no average."""
     def __init__(self, n):
@@ -855,10 +866,10 @@ class GoodHash:
         self.probes = 0
 
     def put(self, k, v):
-        self.buckets[hash(k) % self.nbuckets].append((k, v))
+        self.buckets[stable_hash(k) % self.nbuckets].append((k, v))
 
     def get(self, k):
-        for kk, vv in self.buckets[hash(k) % self.nbuckets]:
+        for kk, vv in self.buckets[stable_hash(k) % self.nbuckets]:
             self.probes += 1
             if kk == k:
                 return vv
@@ -1011,11 +1022,11 @@ Output:
 
 === Amortised versus average: the distinction, made concrete ===
      n   BadHash probes   GoodHash probes   BadHash/n   GoodHash/n
-    16             136                20        8.50         1.25
-    64           2,080                85       32.50         1.33
-    256          32,896               313      128.50         1.22
-   1024         524,800             1,274      512.50         1.24
-   4096       8,390,656             5,126     2048.50         1.25
+     16             136                18        8.50         1.12
+     64           2,080                76       32.50         1.19
+    256          32,896               328      128.50         1.28
+   1024         524,800             1,296      512.50         1.27
+   4096       8,390,656             4,962     2048.50         1.21
   BadHash/n is (n+1)/2 exactly: a full scan of a chain of length k costs
   1 + 2 + ... + k, because the keys were inserted in order.  It is
   Theta(n) PER LOOKUP -- worst case and average case both, and there is no
@@ -1030,11 +1041,11 @@ Output:
 
 === A hash table CAN be amortised, if you add one line ===
        n   total rehash work   amortised per insert   rehashes   sizes at rehash
-    64                  50                 0.7812          2   [17, 33]
-   256                 244                 0.9531          4   [17, 33, 65, 129]
-  1024               1,014                 0.9902          6   [17, 33, 65, 129, 257, 513]
-  4096               4,088                 0.9980          8   [17, 33, 65, 129, 257, 513, 1025, 2049]
- 16384              16,378                 0.9996         10   [17, 33, 65, 129, 257, 513, 1025, 2049, 4097, 8193]
+     64                  50                 0.7812          2   [17, 33]
+    256                 244                 0.9531          4   [17, 33, 65, 129]
+   1024               1,014                 0.9902          6   [17, 33, 65, 129, 257, 513]
+   4096               4,088                 0.9980          8   [17, 33, 65, 129, 257, 513, 1025, 2049]
+  16384              16,378                 0.9996         10   [17, 33, 65, 129, 257, 513, 1025, 2049, 4097, 8193]
   The rehash sizes are 17, 33, 65, 129, 257, ... -- each 2^k + 1, since the
   trigger is size > 2*nbuckets -- so the total work is 17 + 33 + 65 + ...
   < 2n, giving an amortised rehash cost under 2 per insert.  This is a
@@ -2593,10 +2604,10 @@ Output:
 ```text
 === Growing by a constant: the full analysis ===
      k   n      total copies   amortised per append   total / n^2
-    1   4096       8,386,560              2047.5000                   0.49988
-    2   4096       4,192,256              1023.5000                   0.24988
-    8   4096       1,046,528               255.5000                   0.06238
-   64   4096         129,024                31.5000                   0.00769
+    1    4096       8,386,560              2047.5000                   0.49988
+    2    4096       4,192,256              1023.5000                   0.24988
+    8    4096       1,046,528               255.5000                   0.06238
+   64    4096         129,024                31.5000                   0.00769
   The last column is the total divided by n^2, and it is 1/(2k) for every k:
   0.4999, 0.2499, 0.0624, 0.0077.  It shrinks with k and never with n, so
   for each FIXED k the ratio to n^2 is a positive constant -- which is

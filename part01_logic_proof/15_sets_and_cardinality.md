@@ -294,42 +294,6 @@ average; against a list it is linear, because a list cannot answer the question
 without comparison against every member. Nothing about the mathematics changed
 between the two cases. The container did.
 
-## Formula Sheet
-
-Cardinality is written `\lvert A \rvert` inside the table below, because a bare
-`|` would be read as a column separator. Outside tables it is written `|A|`, and
-both mean the same thing.
-
-| Symbol | Formula | In plain words | When you use it |
-| --- | --- | --- | --- |
-| `$A = B$` | `$\forall x,\; (x \in A \Leftrightarrow x \in B)$` | same elements, whatever order they were written in | deciding whether two collections are the same collection |
-| `x ∈ A` | `$x \in A$` | x is one of the members of A | membership tests, the basis of `in` |
-| `$A \subseteq B$` | `$\forall x \in A,\; x \in B$` | every member of A is a member of B | permissions, feature coverage, "does this requirement fit" |
-| `$A \subsetneq B$` | `$A \subseteq B \wedge A \neq B$` | every member of A is in B, **and** they are not the same | distinguishing "fits" from "is exactly" |
-| `$∅ \subseteq A$` | always true | the empty collection is inside everything | edge case in every subset loop: `⊆` holds, `⊂` needs `$A \neq ∅$` |
-| `$A \cup B$` | `$\{x : x \in A \vee x \in B\}$` | everything in either, counting shared members once | `DISTINCT`, `UNION`, "all the tags we have seen" |
-| `$A \cap B$` | `$\{x : x \in A \wedge x \in B\}$` | only what is in both | inner join, "which countries have both users and leads" |
-| `$A \setminus B$` | `$\{x : x \in A \wedge x \notin B\}$` | what is in A and not in B | "what can this candidate drop", `EXCEPT`, revoked permissions |
-| `$A \Delta B$` | `(A \setminus B) \cup (B \setminus A)` | in exactly one of the two | symmetric difference, "what changed between two versions" |
-| `$A^c$` | `$U \setminus A$` | everything in U that is not in A | **needs a stated universal set U**; means different things for different U |
-| `$\lvert A \rvert$` | `$\lvert A \rvert$` | how many members | every cardinality argument |
-| `$\mathcal{P}(A)$` | `$\{B : B \subseteq A\}$` | the set of all subsets of A | feature selection, bitmasks, monotone circuits |
-| `$\lvert \mathcal{P}(A) \rvert$` | `$2^{\lvert A \rvert}$` | twice one for every element | sizing the configuration space; $n = 32$ gives 4.3 billion |
-| `$A \cup B$`, size | `$\lvert A \cup B \rvert = \lvert A \rvert + \lvert B \rvert - \lvert A \cap B \rvert$` | add the sizes, subtract what was counted twice | merging two overlapping collections |
-| disjoint | `$A \cap B = ∅$` | no shared members | the case where `$\lvert A \cup B \rvert = \lvert A \rvert + \lvert B \rvert$` is exact |
-| `$A \cup B \cup C$`, size | `$\sum \lvert A \rvert - \sum \lvert A \cap B \rvert + \lvert A \cap B \cap C \rvert$` | three-way version of the same correction | three-way dedup, three-way overlap reporting |
-| `$A \times B$`, size | `$\lvert A \times B \rvert = \lvert A \rvert \cdot \lvert B \rvert$` | one element for each ordered pair | join fan-out, matrices of combinations |
-| `$A^3$`, size | `$\lvert A \times A \times A \rvert = \lvert A \rvert^3$` | one element per ordered triple | three-way joins |
-| antichain | `$\mathcal{F} \subseteq \mathcal{P}(A)$, no member contains another` | a family of subsets, none inside another | independent tests, minimal true inputs of a monotone function |
-| Sperner's bound | `$\lvert \mathcal{F} \rvert \le \binom{n}{\lfloor n/2 \rfloor} \approx 2^n / \sqrt{n}$` | at most this many mutually incomparable subsets | **valid for any** $n$; the middle layer attains it |
-| binom | `$\binom{n}{k} = \frac{n!}{k!\,(n-k)!}$` | ways to choose $k$ of $n$ items, order irrelevant | sizes of the layers of the power set |
-| countably infinite | `$\aleph_0$` | the same size as N, via a bijection with N | Z, Q and N × N all have this size |
-| pairing function | `$\pi(a,b) = \frac{(a+b)(a+b+1)}{2} + b$` | a bijection from pairs of naturals to naturals | the proof that `$\lvert \mathbb{N} \times \mathbb{N} \rvert = \lvert \mathbb{N} \rvert$` |
-| Cantor diagonal | `$D = \{a_n : a_n \notin S_n\}$` where `$S_n = \{a_n\}$` | the subset that every proposed list misses | the proof that `$\lvert \mathcal{P}(A) \rvert > \lvert A \rvert$` |
-| Cantor–Schröder–Bernstein | injections `$A \to B$` and `$B \to A$` imply `$A = B$` in size | equal size without constructing the bijection | infinite sets; says nothing new for finite ones |
-| digit interleaving | `$\lvert \mathbb{R}^n \rvert = \lvert \mathbb{R} \rvert$` | $n$ infinite digit strings fit in one | space-filling curves; **not** `$\lvert \mathbb{N} \times \mathbb{N} \rvert = \lvert \mathbb{R} \rvert$` |
-
-
 ## Worked Example
 
 Three release candidates of a service are being compared. You have a log of every
@@ -1428,6 +1392,41 @@ and one comparison, which is `$O(1)$` for any ground set that fits in a word.
 Why tempting: both are written `<=` on a set, and both return the right answer.
 The difference only appears in a hot loop, where the difference is a constant
 factor that someone eventually notices with a profiler.
+
+## Formula Sheet
+
+Cardinality is written `\lvert A \rvert` inside the table below, because a bare
+`|` would be read as a column separator. Outside tables it is written `|A|`, and
+both mean the same thing.
+
+| Symbol | Formula | In plain words | When you use it |
+| --- | --- | --- | --- |
+| `$A = B$` | `$\forall x,\; (x \in A \Leftrightarrow x \in B)$` | same elements, whatever order they were written in | deciding whether two collections are the same collection |
+| `x ∈ A` | `$x \in A$` | x is one of the members of A | membership tests, the basis of `in` |
+| `$A \subseteq B$` | `$\forall x \in A,\; x \in B$` | every member of A is a member of B | permissions, feature coverage, "does this requirement fit" |
+| `$A \subsetneq B$` | `$A \subseteq B \wedge A \neq B$` | every member of A is in B, **and** they are not the same | distinguishing "fits" from "is exactly" |
+| `$∅ \subseteq A$` | always true | the empty collection is inside everything | edge case in every subset loop: `⊆` holds, `⊂` needs `$A \neq ∅$` |
+| `$A \cup B$` | `$\{x : x \in A \vee x \in B\}$` | everything in either, counting shared members once | `DISTINCT`, `UNION`, "all the tags we have seen" |
+| `$A \cap B$` | `$\{x : x \in A \wedge x \in B\}$` | only what is in both | inner join, "which countries have both users and leads" |
+| `$A \setminus B$` | `$\{x : x \in A \wedge x \notin B\}$` | what is in A and not in B | "what can this candidate drop", `EXCEPT`, revoked permissions |
+| `$A \Delta B$` | `(A \setminus B) \cup (B \setminus A)` | in exactly one of the two | symmetric difference, "what changed between two versions" |
+| `$A^c$` | `$U \setminus A$` | everything in U that is not in A | **needs a stated universal set U**; means different things for different U |
+| `$\lvert A \rvert$` | `$\lvert A \rvert$` | how many members | every cardinality argument |
+| `$\mathcal{P}(A)$` | `$\{B : B \subseteq A\}$` | the set of all subsets of A | feature selection, bitmasks, monotone circuits |
+| `$\lvert \mathcal{P}(A) \rvert$` | `$2^{\lvert A \rvert}$` | twice one for every element | sizing the configuration space; $n = 32$ gives 4.3 billion |
+| `$A \cup B$`, size | `$\lvert A \cup B \rvert = \lvert A \rvert + \lvert B \rvert - \lvert A \cap B \rvert$` | add the sizes, subtract what was counted twice | merging two overlapping collections |
+| disjoint | `$A \cap B = ∅$` | no shared members | the case where `$\lvert A \cup B \rvert = \lvert A \rvert + \lvert B \rvert$` is exact |
+| `$A \cup B \cup C$`, size | `$\sum \lvert A \rvert - \sum \lvert A \cap B \rvert + \lvert A \cap B \cap C \rvert$` | three-way version of the same correction | three-way dedup, three-way overlap reporting |
+| `$A \times B$`, size | `$\lvert A \times B \rvert = \lvert A \rvert \cdot \lvert B \rvert$` | one element for each ordered pair | join fan-out, matrices of combinations |
+| `$A^3$`, size | `$\lvert A \times A \times A \rvert = \lvert A \rvert^3$` | one element per ordered triple | three-way joins |
+| antichain | `$\mathcal{F} \subseteq \mathcal{P}(A)$, no member contains another` | a family of subsets, none inside another | independent tests, minimal true inputs of a monotone function |
+| Sperner's bound | `$\lvert \mathcal{F} \rvert \le \binom{n}{\lfloor n/2 \rfloor} \approx 2^n / \sqrt{n}$` | at most this many mutually incomparable subsets | **valid for any** $n$; the middle layer attains it |
+| binom | `$\binom{n}{k} = \frac{n!}{k!\,(n-k)!}$` | ways to choose $k$ of $n$ items, order irrelevant | sizes of the layers of the power set |
+| countably infinite | `$\aleph_0$` | the same size as N, via a bijection with N | Z, Q and N × N all have this size |
+| pairing function | `$\pi(a,b) = \frac{(a+b)(a+b+1)}{2} + b$` | a bijection from pairs of naturals to naturals | the proof that `$\lvert \mathbb{N} \times \mathbb{N} \rvert = \lvert \mathbb{N} \rvert$` |
+| Cantor diagonal | `$D = \{a_n : a_n \notin S_n\}$` where `$S_n = \{a_n\}$` | the subset that every proposed list misses | the proof that `$\lvert \mathcal{P}(A) \rvert > \lvert A \rvert$` |
+| Cantor–Schröder–Bernstein | injections `$A \to B$` and `$B \to A$` imply `$A = B$` in size | equal size without constructing the bijection | infinite sets; says nothing new for finite ones |
+| digit interleaving | `$\lvert \mathbb{R}^n \rvert = \lvert \mathbb{R} \rvert$` | $n$ infinite digit strings fit in one | space-filling curves; **not** `$\lvert \mathbb{N} \times \mathbb{N} \rvert = \lvert \mathbb{R} \rvert$` |
 
 ## Multiple Choice Questions
 
@@ -3174,7 +3173,7 @@ from itertools import combinations
 # ---------------------------------------------------------------------------
 # A challenge with two parts:
 #
-# 15 - Implement bag set algebra, find every set law that breaks, and give the
+#   1. Implement bag set algebra, find every set law that breaks, and give the
 #      smallest input that breaks each one.
 #   2. Build a query planner that only knows about SETS, and show why it
 #      silently produces a wrong row count on a bag.
@@ -3354,38 +3353,33 @@ care how many times you were told about it.
 </details>
 
 ## Summary
-
-- A set is a collection of distinct elements with no order, and two sets are
-  equal exactly when they have the same elements. Everything else follows.
-- `A ⊆ B` includes `$A = B$`; `A ⊂ B` (proper subset) does not. Getting this
-  wrong rejects exactly the user who has precisely the allowed permissions.
-- The correction formula is `$|A ∪ B| = |A| + |B| − |A ∩ B|$`, and it degenerates
-  to addition precisely when `$A ∩ B = ∅$`. For three sets there are seven terms,
-  and dropping the triple term makes the answer one too *small*.
-- `$|\mathcal{P}(A)| = 2^{|A|}$`, and it is a bijection argument rather than an
-  upper bound. A subset of an `$n$`-element set is an `$n$`-bit string, which is
-  why bitmask subset tests cost one instruction.
-- `$|A \times B| = |A| \cdot |B|$`: pairs are counted with a product, unions with
-  a sum-minus-correction. Confusing the two is how a join of two large tables
-  "returns 1M rows".
-- An antichain is a family of subsets with no member inside another; Sperner's
-  bound caps it at `$\binom{n}{\lfloor n/2\rfloor} \approx 2^n/\sqrt{n}$`.
+- The correction formula is `$|A ∪ B| = |A| + |B| − |A ∩ B|$`, and it
+  degenerates to addition precisely when `$A ∩ B = ∅$`. For three sets there
+  are seven terms, and dropping the triple term makes the answer one too
+  *small*.
+- `$|\mathcal{P}(A)| = 2^{|A|}$`, and it is a bijection argument rather than
+  an upper bound. A subset of an `$n$`-element set is an `$n$`-bit string,
+  which is why bitmask subset tests cost one instruction.
+- `$|A \times B| = |A| \cdot |B|$`: pairs are counted with a product, unions
+  with a sum-minus-correction. Confusing the two is how a join of two large
+  tables "returns 1M rows".
 - Hash membership is expected `$O(1)$` because the expected chain length is
   `$n/m$`, and only an *expectation* because pigeonhole forces some bucket to
   hold at least `$\lceil n/m \rceil$` keys.
-- `$|\mathbb{N}| = |\mathbb{Z}| = |\mathbb{Q}| = |\mathbb{N} \times \mathbb{N}|$`,
-  each proved by an explicit bijection that round-trips. Pairs of naturals are
-  countable; the reals are not.
-- `$|\mathcal{P}(A)| > |A|$` for every set $A$, by a one-line contradiction with
-  no counting in it. So `$|\mathbb{R}| > |\mathbb{N}|$ and there is no largest
-  set. Do **not** confuse this with `$|\mathbb{R} \times \mathbb{R}| =
+- `$|\mathbb{N}| = |\mathbb{Z}| = |\mathbb{Q}| = |\mathbb{N} \times
+  \mathbb{N}|$`, each proved by an explicit bijection that round-trips. Pairs
+  of naturals are countable; the reals are not.
+- `$|\mathcal{P}(A)| > |A|$` for every set $A$, by a one-line contradiction
+  with no counting in it. So `$|\mathbb{R}| > |\mathbb{N}|$ and there is no
+  largest set. Do **not** confuse this with `$|\mathbb{R} \times \mathbb{R}| =
   |\mathbb{R}|$ — the interleaving result is about reals, not naturals.
-- Cantor–Schröder–Bernstein: injections both ways give equal cardinality with no
-  bijection required. It says nothing new for finite sets and is indispensable
-  for infinite ones.
-- A database table without a unique constraint is a **bag**, and the set laws do
-  not hold on bags. `DISTINCT`, `UNION` and `EXISTS` are where the set-ness is
-  restored, and a bag accumulator changes its answer on every redelivered batch.
+- Cantor–Schröder–Bernstein: injections both ways give equal cardinality with
+  no bijection required. It says nothing new for finite sets and is
+  indispensable for infinite ones.
+- A database table without a unique constraint is a **bag**, and the set laws
+  do not hold on bags. `DISTINCT`, `UNION` and `EXISTS` are where the set-ness
+  is restored, and a bag accumulator changes its answer on every redelivered
+  batch.
 
 ## Next
 

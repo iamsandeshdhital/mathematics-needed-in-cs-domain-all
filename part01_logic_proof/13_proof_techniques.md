@@ -2828,29 +2828,26 @@ print("  worth doing.")
 </details>
 
 ## Summary
-
-- A proof is a list of lines, each a premise or a sound rule applied to earlier
-  lines. That structure is what makes it checkable by a machine and by a
-  sceptical reader.
-- Modus ponens is the rule you use constantly. Modus tollens is derived from it
-  via contraposition. The converse and the inverse are **not** rules, and the
-  converse is the most-used invalid step in the subject.
+- A proof is a list of lines, each a premise or a sound rule applied to
+  earlier lines. That structure is what makes it checkable by a machine and by
+  a sceptical reader.
+- Modus ponens is the rule you use constantly. Modus tollens is derived from
+  it via contraposition. The converse and the inverse are **not** rules, and
+  the converse is the most-used invalid step in the subject.
 - Direct, contrapositive, contradiction and exhaustion are four routes to one
   logical step — `¬P ∨ Q`. They differ in cost, not in result.
 - Contrapositive needs the converse in advance, which is why it is unavailable
   until you already understand the problem. Contradiction is the fallback: it
   never needs prior knowledge, only the ability to see a contradiction.
 - Exhaustion is **inapplicable** rather than defeated when the domain is
-  infinite, and complete when it is finite. Choosing it is a decision about the
-  size of the domain, not about the truth of the claim.
-- Soundness is what makes a proof worth having; completeness is what makes
-  "no proof found" informative. Not everything true is provable.
+  infinite, and complete when it is finite. Choosing it is a decision about
+  the size of the domain, not about the truth of the claim.
 - A proof checker compares syntax, not meaning. It will reject a re-ordered
   premise and accept a proof from false premises, and both behaviours are
   correct.
-- A loop invariant is the direct-proof technique applied to a loop, and stating
-  the bound as a **rate** rather than an endpoint is what makes the termination
-  argument work.
+- A loop invariant is the direct-proof technique applied to a loop, and
+  stating the bound as a **rate** rather than an endpoint is what makes the
+  termination argument work.
 - Proof effort tracks the maturity of your specification, not the severity of
   your risk. Writing the specification down is usually worth more than proving
   anything about it.

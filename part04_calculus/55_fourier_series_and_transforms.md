@@ -553,15 +553,15 @@ Output:
 
 === Fourier coefficients of a square wave, computed by integration ===
       n   b_n numeric     b_n exact       err       a_n numeric
-      1     1.273239545     1.273239545     5.2e-11        3.6e-16
-      2    -0.000000000     0.000000000     1.5e-16       -7.7e-17
-      3     0.424413182     0.424413182     1.6e-10        2.1e-16
-      4    -0.000000000     0.000000000     3.5e-17        3.4e-17
-      5     0.254647909     0.254647909     2.6e-10        4.8e-16
-      6    -0.000000000     0.000000000     1.5e-16        3.4e-19
-      7     0.181891364     0.181891364     3.7e-10        2.6e-16
-      8    -0.000000000     0.000000000     2.5e-16       -9.6e-17
-      9     0.141471061     0.141471061     4.7e-10        1.2e-16
+     1     1.273239545     1.273239545     5.2e-11        3.6e-16
+     2    -0.000000000     0.000000000     1.5e-16       -7.7e-17
+     3     0.424413182     0.424413182     1.6e-10        2.1e-16
+     4     0.000000000     0.000000000     3.5e-17        3.4e-17
+     5     0.254647909     0.254647909     2.6e-10        4.8e-16
+     6     0.000000000     0.000000000     1.5e-16        3.4e-19
+     7     0.181891364     0.181891364     3.7e-10        2.6e-16
+     8     0.000000000     0.000000000     2.5e-16        9.6e-17
+     9     0.141471061     0.141471061     4.7e-10        1.2e-16
   a_n is numerically ZERO for every n: the square wave is odd, and an odd
   function has no cosine content.  The 1e-10 gaps in the b_n column are
   QUADRATURE error in the midpoint rule, not error in the formula -- the
@@ -573,9 +573,9 @@ Output:
         9           1.064902291262      1.0     6.49e-02      0.5841
        99           0.993501845190      1.0     6.50e-03      0.6433
       999           0.999574127934      1.0     4.26e-04      0.4254
-      9999           1.000072037352      1.0     7.20e-05      0.7203
-     99999           1.000007560721      1.0     7.56e-06      0.7561
-    999999           0.999999291295      1.0     7.09e-07      0.7087
+     9999           1.000072037352      1.0     7.20e-05      0.7203
+    99999           1.000007560721      1.0     7.56e-06      0.7561
+   999999           0.999999291295      1.0     7.09e-07      0.7087
   err*N settles near 0.7, so the error really is Theta(1/N).  Reaching
   1e-9 at that rate needs about 7e8 terms -- which is exactly why nobody
   evaluates a raw Fourier series at a discontinuity, and why audio codecs
@@ -1136,14 +1136,14 @@ Output:
 
 === The response of a box average ===
        k    |H[k]| by FFT      closed form    width-3 box |H[k]|
-       0       1.000000000      1.000000000         1.000000000
-       1       0.990388003      0.990388003         0.996789818
-       2       0.961865925      0.961865925         0.987190187
-       4       0.852394525      0.852394525         0.949253022
-       8       0.482842712      0.482842712         0.804737854
-      16       0.200000000      0.200000000         0.333333333
-      24       0.082842712      0.082842712         0.138071187
-      31       0.194240221      0.194240221         0.330123151
+      0       1.000000000      1.000000000         1.000000000
+      1       0.990388003      0.990388003         0.996789818
+      2       0.961865925      0.961865925         0.987190187
+      4       0.852394525      0.852394525         0.949253022
+      8       0.482842712      0.482842712         0.804737854
+     16       0.200000000      0.200000000         0.333333333
+     24       0.082842712      0.082842712         0.138071187
+     31       0.194240221      0.194240221         0.330123151
   The width-5 response falls from 1.0 to 0.19 by bin 31; the narrower box
   falls faster.  Neither was designed as a filter -- averaging a few
   neighbours IS a low-pass filter, and H tells you how much low-pass it is
@@ -2338,12 +2338,12 @@ Output:
 
 ```text
   n    S_n(1)              error       S_n(pi)
-  1   1.6829419696     6.83e-01     0.00000000
-  2   0.7736445428     2.26e-01     0.00000000
-  3   0.8677245482     1.32e-01     0.00000000
-  9   0.9876473661     1.24e-02     0.00000000
-  99   0.9901929086     9.81e-03     0.00000000
-  999   1.0005201875     5.20e-04     0.00000000
+    1         1.6829419696     6.83e-01       0.00000000
+    2         0.7736445428     2.26e-01       0.00000000
+    3         0.8677245482     1.32e-01       0.00000000
+    9         0.9876473661     1.24e-02       0.00000000
+   99         0.9901929086     9.81e-03       0.00000000
+  999         1.0005201875     5.20e-04       0.00000000
   At x = 1 the error falls like 1/n.  At x = pi it is EXACTLY 0 at every
   n, because sin(n*pi) = 0 term by term -- and the true value at x = pi is
   the MIDPOINT of the jump from +pi to -pi, which is 0.  The two agree.
@@ -2467,18 +2467,21 @@ Output:
 
 ```text
 (b) 16-point DFT vs 16-point FFT
-     max |DFT - FFT| = 3.756e-15
-     max |x16 - IDFT(DFT(x16))| = 3.725e-15
+     max |DFT - FFT| = 4.366e-14
+     max |x16 - IDFT(DFT(x16))| = 3.775e-15
+
 (c) Parseval: sum |x|^2 against (1/N) sum |X|^2
-       8-point: 60.0000000000   59.9999999999   agree to 1.0e-10
-    16-point: 60.0000000000   60.0000000000   agree to 1.0e-14
+       8-point: 60.0000000000   60.0000000000   agree to 0.0e+00
+      16-point: 60.0000000000   60.0000000000   agree to 1.4e-14
      Identical: padding adds exact zeros, so both sides are unchanged.
+
 (d) the nonzero bins of the 16-point transform, in hertz at fs = 8000
-     bin  2   |X[k]| = 20.000000   f = k*fs/16 =  1000.0 Hz   (8-point bin 1, |X_8| = 6.308644)
-     bin  6   |X[k]| =  6.308644   f = k*fs/16 =  3000.0 Hz   (8-point bin 3, |X_8| = 0.448342)
-     bin 10   |X[k]| =  6.308644   f = k*fs/16 =  5000.0 Hz   (8-point bin 5, |X_8| = 0.448342)
-     bin 14   |X[k]| = 20.000000   f = k*fs/16 =  7000.0 Hz   (8-point bin 7, |X_8| = 6.308644)
-     Identical: padding adds exact zeros, so both sides are unchanged.
+     bin  1   |X[k]| =  15.447561   f = k*fs/16 =    500.0 Hz   (8-point bin 0, |X_8| = 20.000000)
+     bin  2   |X[k]| =   6.308644   f = k*fs/16 =   1000.0 Hz   (8-point bin 1, |X_8| = 6.308644)
+     bin  3   |X[k]| =   0.446933   f = k*fs/16 =   1500.0 Hz   (8-point bin 1, |X_8| = 6.308644)
+     bin  5   |X[k]| =   1.003151   f = k*fs/16 =   2500.0 Hz   (8-point bin 2, |X_8| = 0.000000)
+     bin  6   |X[k]| =   0.448342   f = k*fs/16 =   3000.0 Hz   (8-point bin 3, |X_8| = 0.448342)
+     bin  7   |X[k]| =   0.408391   f = k*fs/16 =   3500.0 Hz   (8-point bin 3, |X_8| = 0.448342)
      Bin k of a 16-point transform is 2k of the 8-point one: the same
      frequencies, twice the resolution.
 ```
@@ -2611,7 +2614,7 @@ Output:
 
 ```text
 (a) linear convolution by the sliding definition
-      [1.0, 3.0, 3.0, 1.0]   length 4
+      [1.0, 3.0, 3.0, 1.0]    length 4
 
 (b) circular convolution at N = 8 (minimum needed is 4)
       [1.0, 3.0, 3.0, 1.0, 0.0, 0.0, 0.0, 0.0]
@@ -2620,15 +2623,15 @@ Output:
 
 (c) the same via the convolution theorem
      max |via-FFT - linear| (first 4) = 2.220e-16
-     max |via-FFT - circular|        = 1.387e-16
+     max |via-FFT - circular|        = 2.220e-16
      Identical to rounding, not approximately: the theorem is an identity.
 
 (d) multiplications, N = 8
      sliding definition, len(p)*len(q)   = 6
-     FFT route, 2*(N/2)*log2(N) + N     = 40
-     ratio = 0.15x at N = 8; it grows as N/log N.
-     at N =     1024: direct      1,048,576   FFT            2,048   ratio      512x
-     at N =   1048576: direct 1,099,511,627,776   FFT           21,971,200   ratio     50,060x
+     FFT route, 2*(N/2)*log2(N) + N     = 32
+     ratio = 0.19x at N = 8; it grows as N/log N.
+     at N =      1024: direct        1,048,576   FFT       11,264   ratio         93x
+     at N =   1048576: direct 1,099,511,627,776   FFT   22,020,096   ratio     49,932x
 ```
 
 **The interesting line in (d) is the first one.** At $N = 8$ the FFT route uses
@@ -2799,9 +2802,9 @@ Averaged over 200 noise realisations.
 
 (a) prediction and (b) measurement
    cutoff   bins kept   predicted    measured    distortion   meas/pred
-      20           41    0.200098   0.199645     0.000000       0.998
-      40           81    0.281250   0.280253     0.000000       0.996
-      80          161    0.396518   0.400169     0.000000       1.009
+       20           41    0.200098   0.199645     0.000000       0.998
+       40           81    0.281250   0.280253     0.000000       0.996
+       80          161    0.396518   0.400169     0.000000       1.009
 
 (c) sweeping the cutoff (noise column averaged over 200 draws)
    cutoff   noise left   distortion   total RMS error
@@ -2820,9 +2823,9 @@ Averaged over 200 noise realisations.
 (d) band-limited noise in bins 90..120, same RMS as white
    band noise RMS before filtering = 0.984251
    cutoff   white noise left   band noise left   predicted white
-      20           0.392495          0.000000            0.393893
-      40           0.550112          0.000000            0.553641
-      80           0.776296          0.000000            0.780547
+       20           0.392495          0.000000          0.393893
+       40           0.550112          0.000000          0.553641
+       80           0.776296          0.000000          0.780547
 ```
 
 **(a)–(b)** The two-line prediction lands within 1%: `meas/pred` reads `0.998`, `0.996`,
@@ -3026,16 +3029,16 @@ Output:
 
 (b) agreement with both references
        n    max |rec - iter|    max |naive - iter|
-       8          3.140e-16            6.051e-15
-      16          1.776e-15            2.242e-14
-      64          1.638e-14            3.291e-13
-    1024          1.457e-12            2.265e-11
+      8          3.140e-16            6.051e-15
+     16          1.776e-15            2.242e-14
+     64          1.638e-14            3.291e-13
+   1024          1.457e-12            2.265e-11
 
 (c) how many cos/sin calls each version makes -- a count, not a clock
        n    recursive trig   iterative trig   naive trig
-      16               64                8           512
-      64              384               12          8192
-    1024            10240               20       2097152
+     16               64                8           512
+     64              384               12          8192
+   1024            10240               20       2097152
   Recursive: one cos and one sin per butterfly, n*log2(n) pairs.
   Iterative: one cos and one sin per STAGE, 2*log2(n) pairs, because the
   twiddles inside a stage come from a recurrence starting at w = 1.
@@ -3045,10 +3048,10 @@ Output:
 
 (c2) butterfly counts: identical for both FFTs
        n    log2(n)    (n/2)*log2(n)    naive N^2    ratio
-      16         4               32          256       8x
-      64         6              192         4096      21x
-     256         8             1024        65536      64x
-    1024        10             5120      1048576     205x
+     16         4               32          256       8x
+     64         6              192         4096      21x
+    256         8             1024        65536      64x
+   1024        10             5120      1048576     205x
   Same work, different memory.  The recursion's only cost is the list
   allocations; the arithmetic count is identical.
 
@@ -3436,43 +3439,44 @@ Output:
 
 ```text
 (a) at N = 64, no window
-  f = 5.0                peak bin   5   |X_peak| =   32.0000
-                         next 4 bins: [(29, 0.0), (4, 0.0), (6, 0.0), (26, 0.0)]
-                         2nd/peak = 0.0000   median tail/peak = 0.00000   occupied bins = 1
-  f = 5.25               peak bin   5   |X_peak| =   29.1792
-                         next 4 bins: [(6, 9.2919), (4, 6.2027), (7, 3.8513), (3, 3.7325)]
-                         2nd/peak = 0.3184   median tail/peak = 0.02105   occupied bins = 32
-  f = 5.5                peak bin   6   |X_peak| =   21.1809
-                         next 4 bins: [(5, 19.5108), (7, 7.5548), (4, 5.8708), (8, 4.7999)]
-                         2nd/peak = 0.9211   median tail/peak = 0.06452   occupied bins = 32
+  f = 5.0                  peak bin   5   |X_peak| =   32.0000
+                           next 4 bins: [(29, 0.0), (4, 0.0), (6, 0.0), (26, 0.0)]
+                           2nd/peak = 0.0000   median tail/peak = 0.00000   occupied bins = 1
+  f = 5.25                 peak bin   5   |X_peak| =   29.1792
+                           next 4 bins: [(6, 9.2919), (4, 6.2027), (7, 3.8513), (3, 3.7325)]
+                           2nd/peak = 0.3184   median tail/peak = 0.02105   occupied bins = 32
+  f = 5.5                  peak bin   6   |X_peak| =   21.1809
+                           next 4 bins: [(5, 19.5108), (7, 7.5548), (4, 5.8708), (8, 4.7999)]
+                           2nd/peak = 0.9211   median tail/peak = 0.06452   occupied bins = 32
 
 (b) the same two, zero-padded to 256 -- a 4x finer frequency grid
-  padded, f = 5.0        peak bin  20   |X_peak| =  128.0000
-                         next 4 bins: [(74, 0.0), (114, 0.0), (115, 0.0), (47, 0.0)]
-                         2nd/peak = 0.0000   median tail/peak = 0.00000   occupied bins = 1
-  padded, f = 5.25       peak bin  21   |X_peak| =  128.0000
-                         next 4 bins: [(69, 0.0), (27, 0.0), (116, 0.0), (68, 0.0)]
-                         2nd/peak = 0.0000   median tail/peak = 0.00000   occupied bins = 1
+  padded, f = 5.0          peak bin  20   |X_peak| =  128.0000
+                           next 4 bins: [(74, 0.0), (114, 0.0), (115, 0.0), (47, 0.0)]
+                           2nd/peak = 0.0000   median tail/peak = 0.00000   occupied bins = 1
+  padded, f = 5.25         peak bin  21   |X_peak| =  128.0000
+                           next 4 bins: [(69, 0.0), (27, 0.0), (116, 0.0), (68, 0.0)]
+                           2nd/peak = 0.0000   median tail/peak = 0.00000   occupied bins = 1
 
 (c) the same three at N = 64, with a Hann window
-  Hann, f = 5.0          peak bin   5   |X_peak| =   16.0000
-                         next 4 bins: [(4, 8.0), (6, 8.0), (29, 0.0), (28, 0.0)]
-                         2nd/peak = 0.5000   median tail/peak = 0.50000   occupied bins = 3
-  Hann, f = 5.25         peak bin   5   |X_peak| =   15.3654
-                         next 4 bins: [(6, 10.9753), (4, 5.1218), (7, 0.9978), (3, 0.394)]
-                         2nd/peak = 0.7143   median tail/peak = 0.00019   occupied bins = 32
-  Hann, f = 5.5          peak bin   5   |X_peak| =   13.5856
-                         next 4 bins: [(6, 13.5779), (7, 2.7188), (4, 2.7103), (8, 0.3901)]
-                         2nd/peak = 0.9994   median tail/peak = 0.00027   occupied bins = 31
+  Hann, f = 5.0            peak bin   5   |X_peak| =   16.0000
+                           next 4 bins: [(4, 8.0), (6, 8.0), (29, 0.0), (28, 0.0)]
+                           2nd/peak = 0.5000   median tail/peak = 0.50000   occupied bins = 3
+  Hann, f = 5.25           peak bin   5   |X_peak| =   15.3654
+                           next 4 bins: [(6, 10.9753), (4, 5.1218), (7, 0.9978), (3, 0.394)]
+                           2nd/peak = 0.7143   median tail/peak = 0.00019   occupied bins = 32
+  Hann, f = 5.5            peak bin   5   |X_peak| =   13.5856
+                           next 4 bins: [(6, 13.5779), (7, 2.7188), (4, 2.7103), (8, 0.3901)]
+                           2nd/peak = 0.9994   median tail/peak = 0.00027   occupied bins = 31
 
 (d) side by side: what each treatment costs and what it buys
    treatment      main lobe      2nd bin / peak     median tail / peak   occupied
   none,  f on grid    1 bin(s)          0.0000             0.00000         1
   none,  f = 5.25     5 bin(s)          0.0982             0.01827        32
-  none,  f = 5.50    10 bin(s)          0.0926             0.05478        32
+  none,  f = 5.50     10 bin(s)          0.0926             0.05478        32
   Hann, f on grid     3 bin(s)          0.0000             0.00000         3
   Hann, f = 5.25      3 bin(s)          0.0649             0.00015        32
   Hann, f = 5.50      4 bin(s)          0.0287             0.00021        31
+
   A Hann window turns a 1-bin main lobe into a 3-bin main lobe and cuts the
   far sidelobes by a factor of about 100.  Zero-padding changes the ruler,
   not the blur: the padded 5.25 tone looks like one bin, but its sidelobe

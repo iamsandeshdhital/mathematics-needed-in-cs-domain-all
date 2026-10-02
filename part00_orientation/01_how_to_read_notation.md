@@ -1937,7 +1937,7 @@ Output:
    ratio       : 1.8333333333333333
    the notation says the FIRST: 1 + 4 + 9 + 16 + 25 = 55
 
-2. |{x in 1..10 : even}|        = 5  (a NUMBER)
+2. |{x in 1..10 : even}|        = 5   (a NUMBER)
    {|x| : x in 1..10, even}     = [2, 4, 6, 8, 10]  (a SET)
    same elements, different type: True
    len() on the set gives the number back: True
@@ -2232,25 +2232,22 @@ explanation.
 </details>
 
 ## Summary
-
 - Notation is a compressed language with local rules. When a symbol is
   unfamiliar, look at what it is attached to; position carries the meaning.
 - The colon in set-builder notation is Python's `for` plus `if`. Left of the
   colon is what you build, right of the colon is the condition.
-- `Σ` is a `for` loop. Read the bounds line first: `Σ_{i=1}^{n}` is
-  `range(1, n + 1)`, and off-by-one translation errors come from here.
 - Big-O reads as an inequality with two unnamed constants: there exist `c` and
   `n₀` with `f(n) ≤ c·g(n)` for all `n ≥ n₀`. It is about growth, not values.
-- `∀` is `all()`, `∃` is `any()`, and negating flips the quantifier *and* negates
-  the predicate. The domain is part of the claim, not decoration.
-- A script letter like `S` is a placeholder. The mean formula divides by `|S|`,
-  which is undefined when `S` is empty, so the empty case is a real branch.
-- Bound variables are function parameters. `i` under a summation is created and
-  destroyed by the sum, exactly as a loop variable is by a loop.
-- A formula with a free variable is a function, not a value. Pin the variable and
-  it becomes a number; that is the only difference.
-- Some notation has no Python equivalent — big-O, limits, infinite cardinality.
-  That notation is where the mathematics lives rather than the mechanics.
+- `∀` is `all()`, `∃` is `any()`, and negating flips the quantifier *and*
+  negates the predicate. The domain is part of the claim, not decoration.
+- A script letter like `S` is a placeholder. The mean formula divides by
+  `|S|`, which is undefined when `S` is empty, so the empty case is a real
+  branch.
+- Bound variables are function parameters. `i` under a summation is created
+  and destroyed by the sum, exactly as a loop variable is by a loop.
+- Some notation has no Python equivalent — big-O, limits, infinite
+  cardinality. That notation is where the mathematics lives rather than the
+  mechanics.
 - Translating a definition into code is mechanical: name the guard, turn "for
   every" into a loop, turn "there exists" into a search, and watch for vacuous
   truth over an empty range.

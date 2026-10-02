@@ -1752,7 +1752,7 @@ only one of them was worth the time.
 
 
 
-**[ ] Exercise 4 — Prove the achievable session bound, and beat the lesson's
+**[ ] Exercise 5 — Prove the achievable session bound, and beat the lesson's
 packer.** Using only `MINUTES` (read them out of the catalog the lesson's code
 builds), do all of the following.
 
@@ -1962,7 +1962,8 @@ The lesson's real unstated choice was cap = 60, not the algorithm. At
    cap  90: 34 sessions, 1.8 lessons each
    cap 120: 29 sessions, 2.1 lessons each
    cap 150: 20 sessions, 3.1 lessons each
-Packing tighter buys fewer sittings at the cost of longer ones.```
+Packing tighter buys fewer sittings at the cost of longer ones.
+```
 
 **Why the volume bound fails.** It asks whether the *sum* of the lengths fits in 43
 slots, and it does — 43 × 60 = 2580 ≥ 2570. But no actual packing achieves it,
@@ -2004,7 +2005,7 @@ lesson warns about in its fifth Common Mistake, showing up in its own code.
 
 </details>
 
-**[ ] Exercise 5 — Audit the diagnostic's scoring bands against the null
+**[ ] Exercise 6 — Audit the diagnostic's scoring bands against the null
 hypothesis.** (a) Compute the probability that a reader who answers every question
 by coin flip scores 10 or more, and 16 or more. (b) Report which scoring bands
 those probabilities fall inside, and state what fraction of pure guessers lands in
@@ -2192,7 +2193,8 @@ from about 1 in 169 to about 1 in 326.
 The trade is deliberate: a reader who misses ONE quantifier-negation
 question is told to revisit Part 01 even if they scored 20 overall. That
 is the right call here, because the lesson's own claim is that skipping
-Part 01 is the expensive mistake -- this rule makes it cheap to catch.```
+Part 01 is the expensive mistake -- this rule makes it cheap to catch.
+```
  A guesser's expected score is exactly 10, with a
 standard deviation of 2.24, and 10 is the *mode*. So the most likely outcome for
 someone who knows nothing is the first score in the "fast track" band, and the
@@ -2249,7 +2251,7 @@ information *per item*, which is what weighting and gating provide.
 
 </details>
 
-**[ ] Challenge 5 — Write a dependency checker for the real repository, and make
+**[ ] Challenge 7 — Write a dependency checker for the real repository, and make
 it fail on the real catalog.** Take the `CATALOG` from the lesson's Runnable Code
 and write four checks, each of which finds a *real* defect in the data rather than
 a synthetic one:
@@ -2486,7 +2488,8 @@ are the places that get hand-edited.
    different faults with different fixes, and study_order reports both as
    ValueError('blocked: [...]'). A reader who sees it will go looking for
    a circular dependency, will not find one, and will conclude the tool is
-   broken. The message misleads in the direction that costs most effort.```
+   broken. The message misleads in the direction that costs most effort.
+```
 
 Every unsorted list in check 2 is a **cross-part** lesson: 68 (`[64, 52]`),
 82 (`[81, 23]`), 91 (`[90, 31]`), 92 (`[91, 26]`), 101 (`[100, 36]`), 102
@@ -2683,23 +2686,19 @@ find when they write such a catalog by hand are how a real index goes stale.
 </details>
 
 ## Summary
-
-- Take the self-diagnostic before planning. Eight minutes of answers beats an
-  hour of guessing which lessons to skip.
 - Three tracks: **fast** (6 weeks, skim proofs), **thorough** (14 weeks, all
   exercises), **interview** (4 weeks, Parts 02 and 06 focused).
-- The prerequisite graph is transitive. The two prerequisites printed on a lesson
-  are not the list; the transitive closure is, and for Lesson 40 it is 29 lessons.
-- Total reading time for the whole course is 2,570 minutes, about 43 hours.
-  Reading is roughly 40% of the work.
+- The prerequisite graph is transitive. The two prerequisites printed on a
+  lesson are not the list; the transitive closure is, and for Lesson 40 it is
+  29 lessons.
 - Never skip Part 01. It is 6 lessons and every other part's proofs use its
   techniques. Everything else in the course is skippable; that is not.
 - A cycle in the prerequisite graph makes a topological sort fail rather than
   loop forever, and the failure is `ValueError`, not a hang.
 - Cost to reach a lesson is not value in reaching it. Lesson 113 is reachable
   fastest and is the narrowest; lesson 70 is the most reusable.
-- Define progress as a capability you can demonstrate, never as a page you have
-  read. The five-item checklist in Exercise 3 is a usable version.
+- Define progress as a capability you can demonstrate, never as a page you
+  have read. The five-item checklist in Exercise 3 is a usable version.
 - Watch the minutes-per-capability-point column. A lesson where that number is
   high is a lesson where you are re-reading instead of practising.
 - Budget 60 to 90 minutes per lesson, not the header's 25 to 50. The header is

@@ -2068,10 +2068,6 @@ Output:
 
 ```
 quadratic                         H                  det   eigenvalues  verdict
-Output:
-
-```
-quadratic                        H                       det            eigenvalues  verdict
 x^2 + y^2                        [[2, 0], [0, 2]]       4.00       (2.0000, 2.0000)  strictly convex
 x^2 + y^2 + 10x + 10y            [[2, 0], [0, 2]]       4.00       (2.0000, 2.0000)  strictly convex
 -x^2 - y^2                       [[-2, 0], [0, -2]]     4.00     (-2.0000, -2.0000)  strictly concave
