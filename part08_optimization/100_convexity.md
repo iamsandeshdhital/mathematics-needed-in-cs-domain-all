@@ -38,7 +38,7 @@ hope.
   sigmoid, because the log-likelihood curvature is positive. This surprises
   people and is worth memorising.
 - **Convex programs are solvable in polynomial time** (interior-point and
-  subgradient methods), and the [linear programming](../part02_discrete_combinotics/)
+  subgradient methods), and the [linear programming](../part02_discrete_combinatorics/)
   and [quadratic programming](../part03_linear_algebra/) problems inside them are
   handled by mature solvers. Non-convex equivalents are NP-hard in general.
 - **The Lagrangian dual** of a non-convex problem is often a convex problem, which
@@ -989,6 +989,569 @@ Hessian is singular the test is inconclusive, and the code must say so. Silently
 rounding a tiny eigenvalue to zero and reporting "not positive definite" turns
 an inconclusive result into a wrong one — often for a function that genuinely is
 convex but badly scaled.
+
+---
+
+## Formula Sheet
+
+| Symbol | Formula | In plain words | When you use it |
+| --- | --- | --- | --- |
+| convex set `$S\subseteq\mathbb{R}^n$` | `$(1-t)x+ty\in S$` for every `$x,y\in S$` and every `$t\in[0,1]$` | no dents: draw any two points of `S`, the whole segment between them is still in `S` | the first thing to check about any feasible region; the test must hold for **every** pair and **every** `$t\in[0,1]$`, not just for a sample |
+| convex combination | `$(1-t)x+ty$`, `$t\in[0,1]$` | a point on a line segment, obtained by mixing two points | the only kind of mixing the definition allows; `$t=0$` recovers `$x$` and `$t=1$` recovers `$y$` |
+| convex hull `$\operatorname{conv}(S)$` | `$\bigcap\{C : C\supseteq S,\ C$ convex`$`$`, equivalently the set of all convex combinations of points of `S` | the smallest dent-free set that still contains `S` | when you only care about the shape up to its boundary; computed in [Lesson 92](../part07_geometry_graphics/92_geometric_algorithms.md) |
+| extreme points `$H\subseteq S$` | `$\operatorname{conv}(S)=\operatorname{conv}(H)$` | throw away every interior point and the hull does not move | why hull algorithms can discard so aggressively; valid when `S` is bounded |
+| convex function | `$f((1-t)x+ty)\le(1-t)f(x)+tf(y)$` | the straight chord between two points of the graph lies **above** the graph — a bowl | the base case for every convexity proof in the lesson |
+| Jensen's inequality | `$f(\sum_i w_ix_i)\le\sum_i w_if(x_i)$` where `$w_i\ge0$` and `$\sum_i w_i=1$` (`$w_i$` are the weights, `$x_i$` the points) | the value at a weighted average is at most the weighted average of the values | turning a hard bound on a sum of functions into an easy one; the single most useful inequality in optimisation |
+| strictly convex | strict `$<$` whenever `$x\ne y$` and `$0<t<1$` | no flat chords anywhere | deducing that the minimiser is **unique**; valid only when the domain has more than one point |
+| affine | equality holds for all `$x,y,t$` | a straight line, or a single point | a function that is convex but *not* strictly convex, so the minimiser may be a whole line segment |
+| monotone slopes | `$\frac{f(y)-f(x)}{y-x}\le\frac{f(z)-f(y)}{z-y}$` whenever `$x<y<z$` | the secant slope never decreases as you slide right | the discrete form of "the derivative never decreases"; valid on any convex set `C`, and the reason a convex function has at most one minimum |
+| local ⟹ global | `$x^*$` a local minimum of convex `$f$` ⟹ `$x^*$` is global; if `f` is strictly convex it is the **unique** global minimum | a bowl has one bottom, and there is nothing else to fall into | the guarantee that makes descent a correct algorithm; fails completely without convexity |
+| Hessian `$\nabla^2f$` | `$H_{ij}=\frac{\partial^2 f}{\partial x_i\partial x_j}$` | every second partial, collected into an `n×n` matrix | symmetric whenever the mixed partials exist; for `$f=\tfrac12x^{\mathsf T}Hx+b^{\mathsf T}x$` the Hessian **is** `H` |
+| second-order test | `$H\succ0\Rightarrow$` strict local min; `$H\prec0\Rightarrow$` strict local max; indefinite `$\Rightarrow$` saddle; `$H$` singular `$\Rightarrow$` **inconclusive** | read the curvature of the surface | valid **only** at a stationary point `$\nabla f(x^*)=0$`; a positive definite Hessian at a non-stationary point says nothing about minimisation |
+| positive / negative definite, PSD | `$x^{\mathsf T}Hx>0$`, `$x^{\mathsf T}Hx<0$`, `$x^{\mathsf T}Hx\ge0$` for every `x≠0` (`x` any direction) | the quadratic form is a bowl, a dome, or flat-or-bowl | the honest definition; requires `H` symmetric, and `$\succeq0$` (not `$\succ0$`) is what "convex but not strictly convex" means for a quadratic |
+| Sylvester's criterion | `$H\succ0\Leftrightarrow$` all leading principal minors positive; in `2×2`: `$H_{00}>0$` **and** `$\det H>0$` | a cheap arithmetic test on entries, no eigen-solver needed | both conditions are required: `$\det H>0$` alone only means "definite, sign unknown", and `$\det H<0$` means saddle |
+| eigenvalue test | `$H\succ0\Leftrightarrow\lambda_1>0,\dots,\lambda_n>0$` (`$\lambda_i$` the eigenvalues) | every direction of curvature points upward | the numerically preferred check (`np.linalg.eigvalsh`), because it never squares the condition number |
+| quadratic convexity | `$\tfrac12x^{\mathsf T}Hx+b^{\mathsf T}x$` is convex `$\Leftrightarrow H\succeq0$`, strictly convex `$\Leftrightarrow H\succ0$` | for a quadratic, the Hessian alone decides everything | the linear term `$b^{\mathsf T}x$` and any constant never affect the classification — they only move the optimum |
+| Jensen gap, quadratic | `$(1-t)f(x)+tf(y)-f((1-t)x+ty)=\tfrac12(1-t)t\,(x-y)^{\mathsf T}H(x-y)$` | the gap between chord and curve is a positive multiple of a quadratic form | an **exact identity** for any constant `H`, any `$t\in[0,1]$` and any `x, y`; use it to check a symbolic derivation against code |
+| Jensen gap, `$f(x)=x^2$` | `$\sum_i w_if(x_i)-f(\sum_i w_ix_i)=\sum_{i<j}w_iw_j(x_i-x_j)^2$` | a sum of non-negative terms | a proof that `$x^2$` is convex that uses no calculus at all |
+| composition rules | `$\alpha f+\beta g$` convex for `$\alpha,\beta\ge0$`; `$\max(f,g)` convex; `$\min(f,g)` **not** convex; `$f\circ g$` convex when `f` is convex and non-decreasing on the range of `g` | which combinations of convex pieces are safe | L2 regularisation preserves convexity, L1 destroys it — the max/min asymmetry is the whole reason |
+| two-variable quadratic | `$f=ax^2+bxy+cy^2\Rightarrow H=\begin{pmatrix}2a & b\\ b & 2c\end{pmatrix}$`, `$\det H=4ac-b^2$` | the Hessian of a quadratic is constant | classify any two-variable quadratic without searching over points |
+| eigenvalues of a symmetric `2×2` | for `$\begin{pmatrix}a&b\\b&a\end{pmatrix}$` they are `$a+b$` and `$a-b$` | build a matrix with a spectrum you chose on purpose | testing the learning-rate bound of [Lesson 101](101_gradient_descent.md) |
+| Rosenbrock curvature | `$\det\nabla^2f=80000(x^2-y)+400$`, so convex `$\Leftrightarrow y<x^2+0.005$` | Rosenbrock is a bowl only inside a thin valley | valid **only** for `$(1-x)^2+100(y-x^2)^2$`; the reason it is the standard non-convex benchmark |
+| finite-difference gradient | `$\frac{f(x+h)-f(x-h)}{2h}$` | the slope from two symmetric samples | error `O(h^2)`; take `$h\approx10^{-6}$`, and never sample across a kink |
+| finite-difference second derivative | `$\frac{f(x+\varepsilon)-2f(x)+f(x-\varepsilon)}{\varepsilon^2}$` | the curvature from three samples | error `O(\varepsilon^2)$`, but numerically far worse — differentiate the *exact gradient* instead, as the code does |
+
+---
+
+## Multiple Choice Questions
+
+**Q1.** A subset `S` of `R^n` is convex if and only if:
+
+- A) it contains the whole line through any two of its points, not just the segment
+- B) it contains the segment between any two of its points
+- C) it is closed
+- D) it is bounded
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) It contains the segment between any two of its points.**
+
+That is the definition, written out: `(1 − t)x + ty ∈ S` for every `x, y ∈ S` and every
+`t ∈ [0, 1]`. Note the quantifier — *every* pair and *every* `t`. The code in the lesson
+turns that into a search for a single **witness**: `find_convexity_violation` looks for
+one point on a segment between two sampled members that lies outside the set, and finding
+one settles the question immediately. The dumbbell is caught that way, with the witness
+`(-0.216, -0.333)` lying on the segment between two points inside it.
+
+Option A is the tempting over-statement: it is what a *line* contains. For the unit disc
+it is false — `(3, 0)` and `(-3, 0)` are both on the line through the disc's centre, and
+the disc contains neither. Options C and D are neither necessary nor sufficient. The
+closed interval `[0, 1]` is closed and bounded but not convex (`0` and `1` are in it,
+`1.5` is not); the open strip `0 < y < 1` is convex but not closed; and the bounded
+"dumbbell" is neither closed nor convex, since the segment joining its two caps leaves it.
+
+</details>
+
+**Q2.** For a symmetric `2×2` matrix `H`, what does `det H > 0` tell you?
+
+- A) `H` is positive definite
+- B) `H` is negative definite
+- C) `H` is definite, but you must look at the sign separately to know which kind
+- D) `H` is positive semidefinite, since all eigenvalues are then nonzero
+
+<details>
+<summary>Answer and explanation</summary>
+
+**C) `H` is definite, but you must look at the sign separately to know which kind.**
+
+`det H > 0` means the two eigenvalues share a sign, so `H` is either positive or negative
+definite — but it does not say which. The lesson's own table shows the trap: `[[1,2],
+[2,5]]` and `[[−1,0],[0,−1]]` both have `det = +1`, yet the first has eigenvalues
+`(0.172, 5.828)` (convex) and the second `(−1, −1)` (concave). Sylvester's criterion is
+the fix: check `H₀₀ > 0` **and** `det H > 0`.
+
+Option A is exactly the mistake the code prints warnings about, and the row
+`x^2 + y^2 + 10x + 10y` and `−x^2 − y^2` both sit at `det = 4.00` while being opposite in
+curvature. Option B inverts the sign test. Option D confuses *definite* with *positive
+semidefinite*: a positive determinant rules out a zero eigenvalue, but the matrix with
+eigenvalues `(−1, −1)` is not positive semidefinite at all, since `xᵀHx < 0` for every
+nonzero `x`.
+
+</details>
+
+**Q3.** The worked example takes `f(x, y) = x² + 3xy + 5y²`. What does the Hessian test
+give?
+
+- A) `H = [[2, 3], [3, 10]]` with leading principal minors `2` and `11`, both positive, so `H` is positive definite and `f` is strictly convex
+- B) `H = [[2, 3], [3, 10]]` with eigenvalues `1` and `11`; since one is larger than the other, `f` is convex but not strictly convex
+- C) `H = [[2, 3], [3, 10]]` with `det H = 11 > 0`, so `H` is positive definite and no further check is needed
+- D) `H = [[2, 3], [3, 2]]` with `det H = −5 < 0`, so `f` is a saddle
+
+<details>
+<summary>Answer and explanation</summary>
+
+**A) `H = [[2, 3], [3, 10]]` with leading principal minors `2` and `11`, both positive, so
+`H` is positive definite and `f` is strictly convex.**
+
+Differentiate twice: `fₓ = 2x + 3y`, `f_y = 3x + 10y`, so `fₓₓ = 2`, `fₓᵧ = 3`, `f_yy = 10`.
+The eigenvalues of that Hessian are exactly `1` and `11` (from `λ² − 12λ + 11 = 0`), which
+agrees with Sylvester — and both routes are printed in the lesson.
+
+Option B is a real confusion — it conflates *the eigenvalues being unequal* with *failure of
+strict convexity*. Strict convexity is about the quadratic form being positive on every
+nonzero direction, not about the eigenvalues agreeing. Option C drops the `H₀₀ > 0` half of
+Sylvester, which is precisely the error the challenge exercise exposes: `det = 4` is shared
+by `x² + y²` and `−x² − y²`. Option D uses the Hessian of a *different* quadratic; note
+`∂²/∂y²` of `5y²` is `10`, not `1`, so the `1` that produces `det = −5` is a
+differentiation slip, and it is also why that same row shows eigenvalues `(−1.541,
+4.541)` in the exercise rather than the `11` above.
+
+</details>
+
+**Q4.** For the quadratic `f(x) = x² + 3xy + 5y²` with `x = (1, 0)` and `y = (0, 1)` at
+`t = 1/2`, the closed-form Jensen gap `½(1−t)t(x−y)ᵀH(x−y)` evaluates to:
+
+- A) `0.75`
+- B) `0.25`
+- C) `1.5`
+- D) `0`
+
+<details>
+<summary>Answer and explanation</summary>
+
+**A) `0.75`.**
+
+`x − y = (1, −1)`, so `(x−y)ᵀH(x−y) = [1, −1]·[[2,3],[3,10]]·[1, −1]ᵀ = [1, −1]·[−1, −7]ᵀ =
+−1 + 7 = 6`. Then `½ · 0.5 · 0.5 · 6 = 0.75`. This is exactly the direct evaluation in
+Step 4 of the worked example: `f(1,0) = 1`, `f(0,1) = 5`, `f(0.5, 0.5) = 2.25`, so the gap
+is `(1 + 5)/2 − 2.25 = 0.75`. That the two agree to the last digit is the point of the
+formula.
+
+Option B comes from dropping the leading `½` and keeping only `t(1−t) = 0.25`. Option C
+doubles instead of halving. Option D is the answer for an **affine** function, where the
+chord and the curve coincide — the lesson prints exactly `0.000000000000` for `f(x) = 3x +
+2`. Since this gap is a positive multiple of the positive definite form `(x−y)ᵀH(x−y)`,
+it is strictly positive whenever `x ≠ y`, which is strict convexity proved without a
+single derivative argument.
+
+</details>
+
+**Q5.** Why is `max(f, g)` of two convex functions convex while `min(f, g)` generally is
+not?
+
+- A) Because `max` is continuous and `min` is not
+- B) Because `max` keeps a *concave* kink at the crossing while `min` keeps a *convex* one, and convexity forbids a decreasing slope
+- C) Because `max` is the one that produces a peak
+- D) Because `min` of convex functions is always concave
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) Because `max` keeps a *concave* kink at the crossing while `min` keeps a *convex* one,
+and convexity forbids a decreasing slope.**
+
+Exercise 1 prints the slopes, and they run opposite to intuition. For `f(x) = x²` and
+`g(x) = (x−2)²`, `max(f, g)` has slope `−2.5` before the crossing `x = 1` and `+2.5`
+after: the slope **increases**, which is the convex kink. `min(f, g)` has slope `+1.5`
+before and `−1.5` after: the slope **decreases**, which is a concave kink. The worst pair
+for `min` is `(0, 2)`, where both endpoints have value `0` and the midpoint `x = 1` has
+value `1`, giving a gap of exactly `−1`.
+
+Option A is false — both are continuous everywhere. Option C has it backwards: taking the
+max gives a **V-shaped valley**, taking the min a **Λ-shaped peak**. Option D over-claims
+in the other direction: `min` of convex functions is not convex, but it is not always
+concave either, and the code prints `min(x^2, 1) convex? False` rather than "concave".
+
+This is the structural reason L1 and L2 behave so differently. L1 is a minimum over
+candidate directions of a family of affine functions, and min of affine is concave; L2 is
+built from `max(0, ·)`, a max of convex terms, so convexity survives.
+
+</details>
+
+**Q6.** At `(2, 3)` the Hessian of Rosenbrock's function has eigenvalues `21.2657` and
+`3780.7343` — both positive. Is `(2, 3)` a minimum of `f`?
+
+- A) Yes: a positive definite Hessian means a bowl, and a bowl has a bottom
+- B) No: the second-order test is a test *at a stationary point*, and the gradient at `(2, 3)` is `(802, −200)`, not `0`
+- C) Yes, but only because the eigenvalues are unequal
+- D) The test is inconclusive because the Hessian is not exactly symmetric
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) No: the second-order test is a test *at a stationary point*, and the gradient at
+`(2, 3)` is `(802, −200)`, not `0`.**
+
+The Hessian there is `[[3602, −800], [−800, 200]]` with `det = 3602·200 − 800² = 720400 −
+640000 = 80400 > 0`, so it is positive definite and the curvature is upward. But `f(2,3) =
+101`, and one gradient-descent step of size `0.01` moves to `(2 − 8.02, 3 + 2) = (−6.02, 5)`
+with a *smaller* function value. Upward curvature in a place where the slope is steep does
+not make a minimum; it makes an "uphill in every direction" point, which is the definition
+of a local maximum of `−f`.
+
+Option A is Mistake 3 verbatim, and it is the most common way people misuse the test.
+Option C has no content — eigenvalue spread has nothing to do with minimality. Option D is
+impossible: a Hessian computed from `fₓᵧ` and `f_yx` of a `C²` function is symmetric, and
+the lesson's analytic and numerical Hessians agree to four decimals precisely because of
+that. The lesson's whole numerical section is the reminder: solve `∇f = 0` first, then
+apply the second-order test, or run an optimiser.
+
+</details>
+
+**Q7.** The grid search on Rastrigin's function finds **25** local minima on
+`[−2.6, 2.6]²` with step `0.4`, the lowest of them at value `2.0`, while the true global
+minimum is `0.0` at `(0, 0)`. What does that demonstrate?
+
+- A) That a finer grid would find `(0, 0)` and remove the problem
+- B) That the number of places a descent method can get stuck is a property of the landscape, and convexity is what reduces it to one
+- C) That the grid resolution is the practical bottleneck in optimisation
+- D) That Rastrigin's function is unbounded below
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) That the number of places a descent method can get stuck is a property of the
+landscape, and convexity is what reduces it to one.**
+
+On the same grid size, the convex quadratic `f(x,y) = x² + 2y²` yields **one** local minimum,
+and it is the global one. The difference is not the search — it is the shape. A descent
+method only ever sees the gradient, and near a local minimum the gradient points downhill
+exactly as it does near the global one, so there is no local signal that distinguishes
+them. This is why the lesson says "no learning rate fixes this; only convexity would", and
+why the count of local minima is the honest measure of the difficulty of a problem.
+
+Option A fails for the reason just given: a finer grid finds *more* of them, not the right
+one. Option C confuses grid search with gradient descent — the lesson's point is about
+algorithms that only query the gradient. Option D is false; Rastrigin is bounded below,
+with minimum `0`.
+
+</details>
+
+**Q8.** Rosenbrock's Hessian at `(0, 3)` is `[[−1198, 0], [0, 200]]`. What is `(0, 3)`?
+
+- A) A strict local maximum, because the smallest eigenvalue is large and negative
+- B) A saddle point: convex in one direction and concave in the other
+- C) Nothing can be said, because the Hessian is singular
+- D) A strict local minimum, because `det H < 0` makes the Hessian negative definite
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) A saddle point: convex in one direction and concave in the other.**
+
+The eigenvalues are `−1198` and `200`, so the quadratic form is negative along the `x`
+axis and positive along the `y` axis. `det H = −1198 · 200 = −239600 < 0`, which by
+Sylvester immediately rules out *both* definiteness and semi-definiteness, and forces one
+eigenvalue of each sign. That is the definition of an indefinite Hessian, hence a saddle.
+
+Option A confuses magnitude with sign — a very negative eigenvalue makes the surface fall
+steeply in one direction, which is exactly the *wrong* direction for a maximum when
+another direction rises. Option C mislabels indefiniteness as singularity: the matrix is
+diagonal with two nonzero entries and is as far from singular as possible. Option D
+invents a rule in the wrong direction; `det < 0` is the *saddle* test, never the negative
+definiteness test. The lesson states the trichotomy explicitly: positive definite,
+negative definite, indefinite, singular and inconclusive.
+
+</details>
+
+**Q9.** The code prints the Jensen gap at `t = 0.5` for `f(x) = |x|` and for
+`f(x) = x⁴` at the pair `a = −1`, `b = 0`. What are the two numbers, and what do they
+say?
+
+- A) `0.000000` for `|x|` and `0.437500` for `x⁴`; only `x⁴` is strictly convex
+- B) `0.437500` for `|x|` and `0.000000` for `x⁴`; only `|x|` is strictly convex
+- C) Both are `0.000000`; both functions are affine on `[−1, 0]`
+- D) Both are positive; both functions are strictly convex
+
+<details>
+<summary>Answer and explanation</summary>
+
+**A) `0.000000` for `|x|` and `0.437500` for `x⁴`; only `x⁴` is strictly convex.**
+
+For `|x|` the gap is `(1/2)|−1| + (1/2)|0| − |−1/2| = 0.5 + 0 − 0.5 = 0`. For `x⁴` it is
+`(1/2)(1) + (1/2)(0) − (1/2)⁴ = 0.5 − 0.0625 = 0.4375`. The whole `x⁴` row of the printed
+table is positive (`48.4375`, `112.0`, `0.4375`, `25.0`), whereas `|x|` and `relu` each
+show a string of exact zeros wherever the segment lies on a flat branch.
+
+Option B simply swaps the two functions. Option C is the trap that the strictness
+definition warns about: a zero gap means the function is **flat on that particular
+segment**, not affine everywhere — `|x|` is emphatically not affine. Option D misreads
+strict convexity, which requires the gap to be positive for *every* pair with `x ≠ y`; one
+positive value cannot establish that. This matters in practice: `relu` and
+`max(0, |x| − 1)` are convex but not strictly convex, which is why the minimiser of a
+convex ReLU model is often a whole family of equally good weight vectors.
+
+</details>
+
+**Q10.** Over the `121 × 121` grid on `[−3, 3]²`, how much of Rosenbrock's function is
+convex, and what analytic rule reproduces it?
+
+- A) None of it; Rosenbrock is non-convex everywhere because of the `100(y − x²)²` term
+- B) All of it; the `400(x² − y)` term dominates the whole plane
+- C) `0.8092` of the grid points, and the rule `y < x² + 0.005` agrees with the eigenvalue test at **100%** of the 14,641 points
+- D) `0.8092` of the grid points, but the eigenvalue test and the analytic rule agree only `80%` of the time
+
+<details>
+<summary>Answer and explanation</summary>
+
+**C) `0.8092` of the grid points, and the rule `y < x² + 0.005` agrees with the eigenvalue
+test at **100%** of the 14,641 points.**
+
+The analytic rule comes from `det ∇²f = 80000(x² − y) + 400 > 0` together with
+`∂²f/∂x² = 1200x² − 400y + 2 > 0`, which together reduce to `y < x² + 0.005`. The code
+computes both masks independently and prints `agreement between the two tests: 1.0`. That
+total agreement across 14,641 points is the real content of the example: two unrelated
+computations, one numerical and one symbolic, checking each other to the last point.
+
+Option A is the folk belief that "curved ⇒ non-convex", refuted by the smallest eigenvalue
+of `4.0` found on the grid with the coefficient dropped from `100` to `1`. Option B
+confuses the sign of one Hessian entry with definiteness. Option D is close to right and
+wrong in the one place that matters: `80%` sounds like the *fraction of the grid that is
+convex*, which is `0.8092`; the *agreement between two tests* is `1.0`, and mistaking one
+for the other is exactly the kind of thing the lesson's output comments were written to
+prevent.
+
+</details>
+
+---
+
+## Subjective Questions
+
+### Short Answer
+
+**Q1. Define a *convex set* and a *convex combination*.**
+
+<details>
+<summary>Answer</summary>
+
+A set `S ⊆ ℝⁿ` is **convex** if for every `x, y ∈ S` and every `t ∈ [0, 1]` the point
+`(1 − t)x + ty` also lies in `S`. A point of that form is a **convex combination** of `x`
+and `y` — a point on the line segment joining them, with `t` recording how far along.
+
+Both quantifiers are load-bearing: *every* pair of points and *every* `t`. The disc is
+convex; the two caps of a disc, joined by nothing, are not, and the lesson's
+`find_convexity_violation` produces the witness point `(−0.216, −0.333)` on the segment
+between two sampled members of that "dumbbell" that lies outside it.
+
+</details>
+
+**Q2. State Jensen's inequality, including the conditions on the weights.**
+
+<details>
+<summary>Answer</summary>
+
+If `f` is convex and `wᵢ ≥ 0` with `Σᵢ wᵢ = 1`, then
+
+  f(Σᵢ wᵢxᵢ) ≤ Σᵢ wᵢ f(xᵢ)
+
+for any points `xᵢ` in the domain.
+
+The non-negativity and the sum-to-one normalisation are exactly what make the left-hand
+side an argument of `f` at all: without them it is an affine extrapolation, and convexity
+says nothing there. The result is the two-point convexity inequality applied by induction.
+In the lesson's code, `check_jensen(x^2, [0,1,3], [1,2,1])` returns `1.1875`, and the same
+weighting on `−x²` returns `−1.1875`, which is the failure in one number.
+
+</details>
+
+**Q3. State Sylvester's criterion, and what the two-variable version says.**
+
+<details>
+<summary>Answer</summary>
+
+For a real symmetric matrix `H`, `H` is positive definite **if and only if** every leading
+principal minor of `H` is positive.
+
+For `2 × 2` this reduces to two conditions that must both hold: `H₀₀ > 0` **and**
+`det H > 0`. The `H₀₀ > 0` half is what the criterion adds to the determinant test, and it
+is the half people forget: `[[1,2],[2,5]]` and `[[−1,0],[0,−1]]` both have `det = +1` but
+opposite curvature. Equivalently, `H ≻ 0` iff every eigenvalue is positive, which is the
+version `np.linalg.eigvalsh` implements and the numerically safer one to compute.
+
+</details>
+
+**Q4. What does the second-order test decide, and what does "singular" mean in it?**
+
+<details>
+<summary>Answer</summary>
+
+At a stationary point `x*` with `∇f(x*) = 0`, a positive definite Hessian certifies a
+**strict local minimum**, a negative definite one a **strict local maximum**, and an
+indefinite one a **saddle**. If the Hessian is **singular** — some eigenvalue exactly zero —
+the test is *inconclusive*, and the code must say so rather than reporting a verdict.
+
+Two restrictions matter. It is a statement about *local* behaviour only, so it says nothing
+global unless `f` is also convex; and it is a statement about a *stationary point only*, so
+at `(2, 3)` for Rosenbrock the upward-curvature Hessian says nothing at all while the
+gradient is `(802, −200)`. Rounding a tiny eigenvalue to zero and reporting "not positive
+definite" converts an honest "inconclusive" into a wrong answer.
+
+</details>
+
+**Q5. Give the closed form for the Jensen gap of a quadratic and say what it proves.**
+
+<details>
+<summary>Answer</summary>
+
+For `f(x) = ½xᵀHx + bᵀx` with `H` constant,
+
+  (1−t)f(x) + tf(y) − f((1−t)x + ty) = ½(1−t)t · (x − y)ᵀH(x − y)
+
+The linear term `bᵀx` cancels exactly. Since `½(1−t)t > 0` for `t ∈ (0, 1)`, the gap has
+the sign of the quadratic form `(x − y)ᵀH(x − y)` — positive for every `x ≠ y` exactly when
+`H` is positive definite. So this identity *is* strict convexity, proved with no derivative
+argument at all. For `f(x,y) = x² + 3xy + 5y²` at `(1,0)`, `(0,1)`, `t = ½` it gives `0.75`,
+matching the direct midpoint evaluation exactly.
+
+</details>
+
+**Q6. Which composition rules preserve convexity, and which one destroys it?**
+
+<details>
+<summary>Answer</summary>
+
+Preserved: a non-negative affine combination (`αf + βg` with `α, β ≥ 0`); the `max` of
+convex functions; an affine function of a convex function; a convex non-decreasing outer
+function composed with a convex inner function. Also, convex on an open set implies
+continuous there.
+
+Destroyed: the `min` of convex functions. The code prints `max(x^2, 1) convex? True` and
+`min(x^2, 1) convex? False` side by side. The mechanism is the kink: `max` produces an
+*increasing* jump in slope (a convex kink), `min` a *decreasing* one. Composition rule 4
+also fails if the outer function is decreasing — the code's `-(x²)(x²)` line prints
+`False` for exactly that reason.
+
+</details>
+
+### Long Answer
+
+**Q1. Why does convexity let you treat "keep walking downhill" as a correct algorithm
+rather than a hope, and what breaks without it?**
+
+<details>
+<summary>Model answer</summary>
+
+A convex function has non-decreasing slopes: for `x < y < z`, the secant slope
+`(f(y) − f(x))/(y − x)` is at most `(f(z) − f(y))/(z − y)`. That single property gives
+"at most one minimum", because a curve whose slope can only increase cannot go down, then
+up, then down again. A local minimum is therefore a global one: if some `y` had
+`f(y) < f(x*)`, convexity would force the slope out of `x*` to the right to be positive, so
+moving slightly right would *decrease* `f`, contradicting local minimality. Strict
+convexity then forces the minimiser to be unique.
+
+Without that structure the guarantee evaporates. The lesson's grid search on Rastrigin
+returns 25 local minima, the best of them at value `2.0` while the true optimum is `0.0`
+at the origin — a gap of `2.0` that no amount of clever stepping removes. The reason is
+local, not algorithmic: near a local minimum the gradient points downhill in exactly the
+way it does near the global one, so the information a descent method has access to does not
+distinguish them. Every extra safeguard in practice — random restarts, multiple initial
+seeds, annealing, picking the best of several runs — exists to compensate for the loss of
+this guarantee.
+
+Note also the subtlety that convexity is not all-or-nothing. The lesson's Rosenbrock
+section finds that the function is convex on 80.92% of its grid. Many real objectives,
+including most deep networks, sit in that regime: convex in the basin around the answer and
+badly curved far from it. In that regime "local implies global" is not available as a
+theorem, but descent still works, because the basin is where the iterate actually spends
+its time. Convexity is a strong guarantee when you have it and a useful heuristic when you
+nearly have it.
+
+</details>
+
+**Q2. Why can a positive determinant not confirm positive definiteness, and what would
+break if you relied on it?**
+
+<details>
+<summary>Model answer</summary>
+
+For a symmetric matrix, the eigenvalues are real, and `det H` is their product. A positive
+product means the eigenvalues share a sign — so `H` is *definite* — but says nothing about
+which sign. `[[−1,0],[0,−1]]` has `det = +1` and is negative definite; `[[1,2],[2,5]]` has
+`det = +1` and is positive definite. Sylvester's criterion is the complete statement:
+`H ≻ 0` iff **both** `H₀₀ > 0` and `det H > 0`. Note the refined statement, which the
+lesson's challenge exercise spells out: `det H > 0` already *rules out* a saddle, so the
+damage is limited to confusing convex with concave — but that is exactly the confusion
+that turns "your problem is a bowl" into "your problem is unbounded above".
+
+What breaks without the extra condition is a sign error in a curvature classification,
+and sign errors propagate. An optimiser that trusts `det > 0` will happily treat a
+negative-definite quadratic as a minimisation problem, run a descent method on it, and
+diverge; a Hessian-based preconditioner will pick a wrong sign and inject curvature
+where none exists. In the lesson's own output this is the row `-x^2 - y^2` sitting at
+`det = 4.00` next to `x^2 + y^2` at `det = 4.00`.
+
+The eigenvalue formulation is the robust version, and it is the one to compute: `H ≻ 0` iff
+every eigenvalue is positive, and `np.linalg.eigvalsh` is the numerically preferred call
+because it never squares the condition number the way a determinant does. The lesson's
+saddle example, `[[1,2],[2,1]]`, is the complementary case: `det = −3 < 0` rules out
+positive definiteness immediately.
+
+</details>
+
+**Q3. Why does L2 regularisation preserve convexity while L1 regularisation destroys it,
+and what would break if you ignored the difference?**
+
+<details>
+<summary>Model answer</summary>
+
+Composition rule 2 says the **max** of convex functions is convex, and rule 3 says the
+**min** is not. The reason is the shape of the kink where the two pieces join. Taking the
+max keeps the *larger* of two bowls, whose slope jumps **upwards** at the crossing — a
+convex kink. Taking the min carves a valley between them, and the slope jumps
+**downwards** — a concave kink, which is a direct violation of the monotone-slope
+condition. Exercise 1 measures exactly this: `max(f, g)` has slope `−2.5` before the
+crossing and `+2.5` after (increasing), while `min(f, g)` has `+1.5` before and `−1.5`
+after (decreasing), with a worst-case Jensen gap of `−1`.
+
+L2 is built from `max(0, ·)`-type structure — a max of convex terms — so adding it to a
+convex loss leaves the sum convex, and plain gradient descent plus the local-implies-global
+guarantee is a complete correctness argument. That is why `scikit-learn`'s
+`LinearRegression` and ridge regression need no special care.
+
+L1 is structurally the minimum over candidate directions of a family of affine functions,
+and a minimum of affine functions is concave. The result is a genuinely non-convex
+objective: sparsity is bought with the loss of a guarantee. What breaks is the whole
+toolkit — "local implies global" no longer holds, the Hessian is no longer the decision
+procedure, and plain gradient descent on the smooth part is not solving the problem you
+think it is, because the L1 term has no gradient at zero. You need subgradients,
+coordinate descent, or proximal methods (soft-thresholding / ISTA) instead.
+
+Note that `max(0, |x| − 1)` — hinge loss — *is* convex and merely not strictly convex,
+which is why a convex model's minimiser is often a whole family of equally good solutions.
+The distinction between "convex but flat" and "not convex at all" is the one that decides
+which algorithm you can use.
+
+</details>
+
+**Q4. Why must the second-order test be applied at a stationary point, and what would break
+if you applied it anywhere?**
+
+<details>
+<summary>Model answer</summary>
+
+The test answers the question "is this a *critical* point, and of what kind?" — which is
+why its hypothesis is `∇f(x*) = 0`. Positive definite curvature means the surface bends
+upward at `x*`; it does not say whether `f` is increasing or decreasing there. At `(2, 3)`,
+Rosenbrock's Hessian is `[[3602, −800], [−800, 200]]`, positive definite with eigenvalues
+`21.2657` and `3780.7343`, and yet the gradient is `(802, −200)`. A single step of size
+`0.01` *reduces* the objective, from `101`. The point is uphill in every direction of
+`f` — it is a local maximum of `−f` — and upward curvature never told you otherwise.
+
+Applied away from a stationary point, the test becomes systematically misleading in the
+most dangerous direction: it reports "bowl-shaped" at points that are merely on a slope.
+A diagnostic that is right about curvature and silent about the slope reads as "this point
+is fine", and the solver keeps descending away from it. The practical consequence is that
+the order of operations is forced: solve `∇f = 0` (or run an optimiser to convergence),
+*then* classify. And the fourth case has to be honoured too: a **singular** Hessian makes
+the test inconclusive, and reporting a verdict there — typically by rounding a tiny
+eigenvalue to zero — converts an honest "I don't know" into a wrong answer. This is
+routine for badly scaled objectives, where a genuinely convex function has eigenvalues
+spanning many orders of magnitude.
+
+</details>
+
+---
 
 ## Exercises and Solutions
 

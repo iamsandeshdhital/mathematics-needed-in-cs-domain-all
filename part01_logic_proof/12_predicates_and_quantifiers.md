@@ -66,7 +66,7 @@ Automated theorem provers spend their time on exactly this.
 
 ## The Formal Version
 
-Notation follows [SYMBOLS.md](../../SYMBOLS.md). A variable in a formula is
+Notation follows [SYMBOLS.md](../SYMBOLS.md). A variable in a formula is
 written $x$; the domain is written $D$; a predicate is written $P$.
 
 **Definition.** A *domain* $D$ is a set of values. A variable ranging over $D$

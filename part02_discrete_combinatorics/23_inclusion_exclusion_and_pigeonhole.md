@@ -457,6 +457,620 @@ print("the only obstacle to degrees being 0,1,...,n is that 0 and n are "
 
 ---
 
+## Formula Sheet
+
+Every symbol and formula this lesson introduces. `A₁, …, A_n` are finite sets,
+`[n] = {1, …, n}` is the index set, `S ⊆ [n]` is a subset of the *indices*, and
+`U` is a finite universe of size `|U|`.
+
+| Symbol | Formula | In plain words | When you use it |
+| --- | --- | --- | --- |
+| Pairwise disjoint | `$A_i \cap A_j = \emptyset$ for every $i \ne j$` | no element sits in two of the sets | the hypothesis the plain sum rule needs |
+| Two-set inclusion–exclusion | `$\lvert A \cup B\rvert = \lvert A\rvert + \lvert B\rvert - \lvert A\cap B\rvert$` | add both, then remove one copy of each doubly-counted element | exactly two overlapping sets; valid always |
+| Finite inclusion–exclusion | `$\lvert \bigcup_{i} A_i\rvert = \sum_{\emptyset \ne S \subseteq [n]} (-1)^{\lvert S\rvert+1}\lvert \bigcap_{i\in S} A_i\rvert$` | add singles, subtract pairs, add triples, … | many overlapping sets; the sum runs over the **2ⁿ − 1 non-empty** index subsets |
+| Complement form | `$\lvert \bigcap_i \overline{A_i}\rvert = \sum_{S\subseteq[n]} (-1)^{\lvert S\rvert}\lvert \bigcap_{i\in S} A_i\rvert$` | count "none of them", with signs starting the other way | often easier; the empty `S` contributes `$\lvert U\rvert$` |
+| Per-element coefficient | `$\sum_{j=1}^{r} (-1)^{j+1} C(r,j) = 1` | an element in exactly `r` sets ends up counted once | **the proof** that the formula is correct; `r ≥ 1` |
+| Term count | `$2^{n} - 1$` | how many terms the formula has | 5 sets → 31 terms; 30 sets → 1,073,741,823 |
+| Surjections | `$\sum_{j=0}^{k} (-1)^{j} C(k,j)(k-j)^{n}$` | all `$k^n$` functions, minus those missing a target, plus back those missing two | `\|A\| = n`, `\|B\| = k`; `onto(4,3) = 81 − 48 + 3 = 36` |
+| Derangements | `$!n = \sum_{j=0}^{n} (-1)^{j} C(n,j)(n-j)! = n!\sum_{j=0}^{n}\dfrac{(-1)^{j}}{j!}$` | permutations with no fixed point | `!5 = 44`, `!6 = 265` |
+| Derangement approximation | `$!n \approx n!/e$ | about 36.8% of all permutations move every element | valid for large `n`; `!6/6! = 0.3681` vs `1/e = 0.3679` |
+| Pigeonhole (general form) | `n` objects into `k` boxes ⟹ some box holds at least `$\lceil n/k\rceil$` | crowded-box guarantee | the useful form; `⌈100/12⌉ = 9` |
+| Pigeonhole (classic form) | `$n+1$` objects into `n` boxes ⟹ some box holds at least 2 | collision guarantee | `366` items, `365` boxes |
+| Cap corollary | at most `nc` fit in `n` boxes of capacity `c`; so `n > nc ⟹ ` some box exceeds `c` | contrapositive of the general form | 1000 items, 100 boxes: some bucket holds ≥ 10, but ≥ 11 is **not** forced |
+| Load factor | `$n/m$` for `n` items in an `m`-slot table | how full the table is | 1,000,000 items in 2²⁰ slots is 0.954 — over-full, yet nothing bad is *forced* |
+| Existence via pigeonhole | for every `n ≥ 2` there is a prime `p > n` | `n! + 1 > 1` has a prime divisor, and every `p ≤ n` divides `n!` | valid for `n ≥ 2`; contains no primality computation |
+| Divisibility shortcut | `$A_d \cap A_e = A_{de}$` when `d` and `e` are coprime | intersections are just multiples of the product | worked example: `\|A₂ ∩ A₃\| = \|multiples of 6\| = 16` |
+| Worked triple | `$\lvert A_2 \cup A_3 \cup A_5\rvert = 103 - 32 + 3 = 74$` | 50 + 33 + 20 singles, 16 + 10 + 6 pairs, 3 triples | complement in `[1,100]` is `100 − 74 = 26` |
+| Symmetric-relation count | `$2^{C(n,2)}$` | each of the `C(n,2)` unordered pairs is an edge or is not | a pigeonhole argument in disguise: with `n+1` people two repeat a degree |
+| φ from the degree argument | `$\varphi \approx 1.618` | ratio such that `φ² = φ + 1` | the sizes that maximise how far apart successive turns sit |
+
+---
+
+## Multiple Choice Questions
+
+**Q1.** In `[1, 100]`, how many integers are divisible by 4 **or** by 5?
+
+- A) 45
+- B) 40
+- C) 25 + 20 = 45
+- D) 25 + 20 − 1 = 44
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) 40.**
+
+`|A ∪ B| = |A| + |B| − |A ∩ B|`. There are 25 multiples of 4 and 20 multiples
+of 5 up to 100, and their intersection is the multiples of 20, of which there
+are 5. So 25 + 20 − 5 = 40.
+
+- A) is the correct arithmetic applied to a wrong overlap: 100/20 = 5, not 1.
+- C) is the sum rule applied where the hypothesis fails. Multiples of 4 and 5
+  are *not* disjoint — 20, 40, 60, 80 and 100 are in both — which is exactly the
+  gap Lesson 20 warns about.
+- D) is the same mistake with the overlap counted as a single element instead of
+  five. Recognising that `|A ∩ B| = |A_{de}|` for coprime `d, e` is the shortcut
+  the worked example uses.
+
+</details>
+
+**Q2.** In `[1, 100]`, `|A₂ ∪ A₃ ∪ A₅|` is 74. What is the correct line of
+arithmetic, and why does the two-line version fail?
+
+- A) 103 − 32 = 71; two sets need no triple term
+- B) 103 − 32 + 3 = 74; 30 is in all three sets, so the pairs over-subtract it
+- C) 103 + 3 = 106; triple intersections are added, never subtracted
+- D) 50 + 33 + 20 − 16 − 10 − 6 = 71; pairwise overlaps are enough
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) 103 − 32 + 3 = 74; 30 is in all three sets, so the pairs over-subtract it.**
+
+Singles: 50 + 33 + 20 = 103. Pairs: 16 + 10 + 6 = 32. Triple: 3. The element 30
+(also 60 and 90) is counted three times by the singles, subtracted three times by
+the three pair terms — it appears in every pair intersection — and so nets
+`3 − 3 = 0` until the triple term brings it back to 1. Every element nets exactly
+one, which is the theorem.
+
+- A) and D) are the same arithmetic and the same failure: the moment a third set
+  is added the formula changes shape. This is Mistake 1 of this lesson. The
+  intuition that carries over is "with two sets there are no triples", which is
+  true and irrelevant once you have three.
+- C) gets the sign pattern backwards. Triple intersections are *added* in the
+  union formula and *subtracted* in the complement formula, and C uses the former
+  with the latter's signs.
+
+</details>
+
+**Q3.** An element `x` lies in exactly 3 of the sets being combined. What is its
+net coefficient in the inclusion–exclusion sum?
+
+- A) 0, because it was counted and subtracted equally often
+- B) 1, because `3 − 3 + 1 = 1`
+- C) 2, because it survives in two pair intersections
+- D) 3, because the singles counted it three times and nothing removed it
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) 1, because `3 − 3 + 1 = 1`.**
+
+The general statement is `Σ_{j=1}^{r} (−1)^{j+1} C(r, j) = 1` for `r ≥ 1`: an
+element in exactly `r` sets is counted in `C(r,1)` singles with `+`, in `C(r,2)`
+pairs with `−`, in `C(r,3)` triples with `+`, and so on. For `r = 3` the three
+coefficients are `C(3,1) = 3`, `−C(3,2) = −3`, `+C(3,3) = +1`, summing to 1.
+
+- A) describes the situation after the pair terms but before the triple term. It
+  is the correct diagnosis of *why* the triple term exists — the pairs subtract
+  the element once too often — but it is not the final answer.
+- C) misapplies `C(3,2) = 3`. The pair *terms* are intersected, so an element in
+  three sets appears in all `C(3,2) = 3` of them, and each contributes `−1`.
+- D) forgets all the subtraction. The alternating binomial sum equals 1 precisely
+  because `(1 − 1)ʳ = 0` kills everything from `j = 2` onwards, leaving the `j = 1`
+  term — which is the entire proof that each element nets exactly one.
+
+</details>
+
+**Q4.** How many terms does the finite inclusion–exclusion formula have for `n`
+sets, and what does that force?
+
+- A) `n + 1`, so it is practical for any number of sets
+- B) `C(n, 2)`, so it stays cheap for large `n`
+- C) `2ⁿ − 1`, so 30 sets would need 1,073,741,823 terms and the method is
+  unusable there
+- D) `2ⁿ`, and the extra term is the empty intersection, which must be dropped
+
+<details>
+<summary>Answer and explanation</summary>
+
+**C) `2ⁿ − 1`, so 30 sets would need 1,073,741,823 terms and the method is unusable
+there.**
+
+Each of the `n` sets is either in the index subset `S` or not, giving `2ⁿ`
+subsets, minus the empty one. For 5 sets that is 31 terms and the formula is
+perfectly comfortable; for 30 it is over a billion.
+
+- A) counts the singles and forgets that higher intersections exist. The formula
+  for two sets has 2 terms, which is why the mistake is invisible at small `n`.
+- B) counts only the pair terms — a formula that is wrong for every `n ≥ 3`,
+  because it omits the triple, quadruple and higher corrections that
+  [Lesson 23](../part02_discrete_combinatorics/23_inclusion_exclusion_and_pigeonhole.md)
+  Mistake 2 is about.
+- D) has the right base and the wrong constant. The empty subset *is* excluded
+  from the union formula, but it is *included* in the complement form, where it
+  contributes `|U|`. Both formulas are legitimate; they are different formulas.
+
+</details>
+
+**Q5.** How many functions from a 4-element set to a 3-element set hit every
+element of the codomain?
+
+- A) 3⁴ = 81
+- B) 81 − 3·2⁴ + 3·1⁴ = 36
+- C) 4! = 24
+- D) 4³ − 1 = 63
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) 81 − 3·2⁴ + 3·1⁴ = 36.**
+
+The surjection formula `Σ_{j=0..k} (−1)ʲ C(k,j)(k−j)ⁿ` with `n = 4, k = 3` gives
+3⁴ − 3·2⁴ + 3·1⁴ − 0⁴ = 81 − 48 + 3 = 36. Read it as: all 81 functions, minus
+the 3·16 = 48 that miss one specified target, plus back the 3·1 = 3 that miss two.
+The lesson's code checks this against exhaustive enumeration of all 3⁴ = 81
+functions and gets 36 both ways.
+
+- A) counts *all* functions, surjective or not. Of the 81, 45 miss at least one
+  target.
+- C) counts bijections on a 4-element set. A surjection onto 3 elements need not
+  be injective at all — the 36 include functions with image sizes 3, 2 and 1 in
+  the sense of "misses at most nothing".
+- D) subtracts a single function. "Misses at least one target" is a union of
+  three overlapping events, and the correction for that is what options B is
+  computing.
+
+</details>
+
+**Q6.** What is `!5`, and why is `!n` close to `n!/e`?
+
+- A) `!5 = 120 − 24 = 96`, close to `n!/e` because there are `n!` permutations
+- B) `!5 = 44`, close to `n!/e` because `!n = n!·Σ (−1)ʲ/j!` and the partial sum of
+  `Σ (−1)ʲ/j!` approaches `1/e`
+- C) `!5 = 60`, close to `n!/e` because half of all permutations move the first
+  element
+- D) `!5 = 44`, close to `n!/e` because `n!` is asymptotically `e^n`, so the
+  quotient is asymptotically 1
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) `!5 = 44`, close to `n!/e` because `!n = n!·Σ (−1)ʲ/j!` and the partial sum
+of `Σ (−1)ʲ/j!` approaches `1/e`.**
+
+`!5 = Σ_{j=0..5} (−1)ʲ C(5,j)(5−j)! = 120 − 120 + 60 − 20 + 5 − 1 = 44`. Dividing
+every term by `5!` collapses the sum to `Σ_{j=0..5} (−1)ʲ/j!`, which is a partial
+sum of the alternating series for `1/e`. The lesson's code prints `!6/6! = 0.3681`
+against `1/e = 0.3679`.
+
+- A) subtracts one factorial, which is what the *first* two terms do — and they
+  cancel. The formula has six terms; two of them is not the formula.
+- C) gives 60, which is the `j = 3` term alone. Half of all 5-permutations move
+  the first element, but "moves the first element" and "moves *every* element"
+  are different conditions, and the second implies the first.
+- D) reaches the right approximation for the wrong reason. The quotient
+  `!n/n!` tends to `1/e` because the *series* converges, not because `n!` is
+  `e^n` (it is not; Stirling's estimate involves `√(2πn)`).
+
+</details>
+
+**Q7.** 100 users sign up in one month, and birth month has 12 values. What does
+the pigeonhole principle force?
+
+- A) At least two users share a birth month
+- B) Some month holds at least `⌈100/12⌉ = 9` users
+- C) Some month holds at least 100/12 = 8.3 users, i.e. 9
+- D) Two users share the same birthday, day and month
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) Some month holds at least `⌈100/12⌉ = 9` users.**
+
+The general form — `n` objects in `k` boxes ⟹ some box has at least `⌈n/k⌉` — is
+the useful one, and it is the form the engineering statements use. `⌈100/12⌉ = 9`.
+
+- A) is true but is the frozen weak version, and it is Mistake 4 of this lesson:
+  the guarantee is about a *crowded* box, not merely a non-empty one. "Some month
+  has 9 signups" is actionable; "some month has 2" is not.
+- C) rounds 8.3 down to 8 and then says 9 in the same breath. The floor is *not*
+  what pigeonhole gives: if every month held at most 8 the total would be at most
+  96 < 100. So 9 is forced and 8 is not — the ceiling is exactly the point.
+- D) strengthens "month" to "day and month", which is a different and much
+  larger box structure. Pigeonhole says nothing about the 365 possible days here.
+
+</details>
+
+**Q8.** A table has 2⁶⁴ slots. What does pigeonhole guarantee?
+
+- A) A collision, because 2⁶⁴ is a large number of slots
+- B) Nothing, because items ≤ slots means some items may still be distinct
+- C) A collision, provided at least 2⁶⁴ + 1 items are inserted
+- D) A collision among any 366 items, as in the birthday argument
+
+<details>
+<summary>Answer and explanation</summary>
+
+**C) A collision, provided at least 2⁶⁴ + 1 items are inserted.**
+
+Pigeonhole forces a collision only when items exceed boxes. The lesson's code
+prints exactly this contrast: `2^64 slots, 2^64 + 1 items: collision guaranteed
+True` and `2^64 slots, 2^64 items: collision guaranteed False (nothing is forced
+yet)`.
+
+- A) is Mistake 5 of this lesson in its purest form: it upgrades an existence
+  theorem into a claim about the situation you happen to be in. The theorem's
+  hypothesis is about items versus boxes, not about how impressive either number
+  looks.
+- B) is the correct conclusion for `2⁶⁴` items, and it is the honest one. It is
+  not "64 bits is safe", though — it is "pigeonhole alone says nothing".
+- D) confuses the general form with the birthday argument. 366 items force a
+  collision among 365 *days*, not among 2⁶⁴ slots. Reaching 2⁶⁴ + 1 items is not
+  necessary in practice because collisions arrive far earlier *with high
+  probability* — which is a probability statement, from
+  [Lesson 70](../part05_probability_statistics/70_information_theory_entropy.md),
+  not a pigeonhole statement.
+
+</details>
+
+**Q9.** The lesson proves "for every `n ≥ 2` there is a prime `p > n`". Which
+ingredient does the work?
+
+- A) Computing `n! + 1` and testing divisibility by every prime up to `n`
+- B) The fact that every prime `p ≤ n` divides `n!`, so `p | n! + 1` would force
+  `p | 1`
+- C) The fact that `n! + 1` is itself prime for every `n ≥ 2`
+- D) Euclid's algorithm applied to `n!` and `n`
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) The fact that every prime `p ≤ n` divides `n!`, so `p | n! + 1` would force
+`p | 1`.**
+
+`n! + 1 > 1` so it has a prime divisor `p`. If `p ≤ n` then `p` is one of the
+factors of `n!`, so `p | n!` and `p | (n! + 1)`, hence `p | 1`, a contradiction.
+Therefore `p > n`. The proof contains **no computation of any primality** — it is
+pure existence, which is the pigeonhole principle's peculiar power.
+
+- A) is what a program would do, and it works; it is just not the proof. The
+  lesson's `prime_divisor_of_factorial_plus_one` does exactly that, and its value
+  is that it *finds* the prime, whereas the theorem only asserts one exists.
+- C) is false, and famously so: `n = 4` gives `4! + 1 = 25 = 5²`. Nothing here
+  requires `n! + 1` to be prime, only that some prime divides it — every integer
+  above 1 has a prime divisor.
+- D) applies a different theorem. Euclid's *algorithm* on a pair of integers
+  finds a gcd; the argument above is a divisibility contradiction and would still
+  work if `n! + 1` had a huge number of prime factors.
+
+</details>
+
+**Q10.** A cache has 100 buckets and receives 1,000 requests. Which statement does
+pigeonhole justify?
+
+- A) Some bucket receives at least 11 requests
+- B) Some bucket receives at least 10 requests, and nothing forces 11
+- C) Exactly 10 requests land in some bucket
+- D) Some bucket receives at most 10 requests
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) Some bucket receives at least 10 requests, and nothing forces 11.**
+
+`⌈1000/100⌉ = 10`, so some bucket holds at least 10. The cap form says more: if
+every bucket held at most 9, at most 900 would fit, and 1,000 > 900 — so 9 is
+exceeded. If every bucket held at most 10, at most 1,000 would fit, which does
+not contradict anything. The lesson's code makes both checks:
+`cap 9 -> must exceed: True` and `cap 10 -> must exceed: False`.
+
+- A) is the over-strong reading. To force 11 you would need more than 1,000
+  requests, since 100 buckets holding ≤ 10 each accommodate exactly 1,000.
+- C) confuses a lower bound with an equality. The guarantee is one crowded bucket;
+  the requests could be distributed 1,000, 0, 0, … and still satisfy it.
+- D) reverses the direction of the conclusion entirely. Pigeonhole forces
+  *crowding*; that a bucket receives at most 10 is false in general and true for
+  a different reason (the total is 1,000).
+
+</details>
+
+---
+
+## Subjective Questions
+
+### Short Answer
+
+**Q1. State the two-set inclusion–exclusion formula, and explain what the minus
+sign is doing.**
+
+<details>
+<summary>Answer</summary>
+
+$$\lvert A \cup B\rvert = \lvert A\rvert + \lvert B\rvert - \lvert A \cap B\rvert$$
+
+`|A| + |B|` counts every element of `A ∪ B` at least once and every element of
+`A ∩ B` exactly twice. Elements outside the union are not counted at all.
+Subtracting `|A ∩ B|` removes one spurious copy of each doubly-counted element
+and none of the correctly-counted ones. That is the whole reason for the minus
+sign: it is a correction for double counting, not an average or a probability.
+
+</details>
+
+**Q2. State the finite inclusion–exclusion formula and the complement form, and
+say where they differ.**
+
+<details>
+<summary>Answer</summary>
+
+Union form, for finite `A₁, …, A_n`:
+
+$$\lvert \bigcup_{i=1}^{n} A_i\rvert = \sum_{\emptyset \ne S \subseteq [n]} (-1)^{\lvert S\rvert+1}\, \lvert \bigcap_{i\in S} A_i\rvert$$
+
+Complement form, for the same sets inside a universe `U`:
+
+$$\lvert \bigcap_{i=1}^{n} \overline{A_i}\rvert = \sum_{S\subseteq[n]} (-1)^{\lvert S\rvert}\, \lvert \bigcap_{i\in S} A_i\rvert$$
+
+They differ in two ways. The complement form ranges over **all** subsets of
+`[n]` including the empty one, and the empty intersection is `U`, so the `j = 0`
+term is `|U|`; the union form omits it. And the signs are shifted by one, because
+one formula counts the bad ones and the other their complement.
+
+</details>
+
+**Q3. State the surjection formula and explain where each factor comes from.**
+
+<details>
+<summary>Answer</summary>
+
+For `|A| = n` and `|B| = k`, the number of functions hitting every element of `B`
+is
+
+$$\sum_{j=0}^{k} (-1)^{j} C(k,j)(k-j)^{n}$$
+
+Start with all `kⁿ` functions. Let `B_j` be the set of functions whose image misses
+element `j`; we want the complement of the union of the `B_j`. Applying the
+complement form of inclusion–exclusion gives `Σ (−1)ʲ Σ_{|S|=j} |∩ B_i|`. There
+are `C(k, j)` ways to choose `S`, and each intersection has `(k − j)ⁿ` members,
+because each input may map to any of the `k − j` allowed targets.
+
+</details>
+
+**Q4. State the derangement formula in both its forms, and say why the second
+form exists.**
+
+<details>
+<summary>Answer</summary>
+
+$$!n = \sum_{j=0}^{n} (-1)^{j} C(n,j)(n-j)! \qquad = \qquad n!\sum_{j=0}^{n}\frac{(-1)^{j}}{j!}$$
+
+The first is the complement form with `B_j` = permutations fixing `j`. The second
+exists because `C(n,j)(n−j)! = n!/j!`, so every term divided by `n!` collapses to
+`(−1)ʲ/j!` and the sum factors. That collapse is also the explanation of the
+approximation `!n ≈ n!/e`: the partial sum of the alternating series
+`Σ (−1)ʲ/j!` approaches `1/e`.
+
+</details>
+
+**Q5. State the pigeonhole principle in its general form, and state the cap
+corollary that follows from it.**
+
+<details>
+<summary>Answer</summary>
+
+**General form.** If `n` objects are placed into `k` boxes, some box contains at
+least `⌈n/k⌉` objects.
+
+**Cap corollary.** If each of `n` boxes holds at most `c` objects, then at most
+`nc` objects fit. So if you have more than `nc` objects, some box exceeds `c`.
+
+This is the contrapositive of the general form, and it is the form you alert on:
+"some bucket holds at least 10" is the load-factor guarantee, while "some bucket
+holds at least 11" needs more than `nc` items and is not available at exactly
+`nc`.
+
+</details>
+
+**Q6. Prove that for every `n ≥ 2` there is a prime `p > n`, without computing any
+primality test.**
+
+<details>
+<summary>Answer</summary>
+
+Consider `n! + 1`. It is larger than 1, so it has a prime divisor `p`. Now
+`n! = 1 · 2 · … · n`, so every prime `p ≤ n` divides `n!`. If `p` also divided
+`n! + 1`, then it would divide their difference, which is 1 — impossible. Hence
+`p > n`.
+
+The argument is pure existence. It never decides whether `n! + 1` is prime (for
+`n = 4` it is 25 = 5²), and it never tests a candidate: it only asserts that a
+prime factor exists and that it must be large.
+
+</details>
+
+### Long Answer
+
+**Q1. Why does inclusion–exclusion actually work? What would break if the signs
+did not alternate, and how does the per-element argument show they must?**
+
+<details>
+<summary>Model answer</summary>
+
+The whole theorem reduces to one claim: that an element belonging to exactly `r`
+of the sets has net coefficient 1 in the sum, and an element belonging to none has
+net coefficient 0. Because the formula is a sum of cardinalities of
+intersections, and an element contributes 1 to `|∩_{i∈S} A_i|` precisely when it
+lies in every set of `S`, you can compute each element's coefficient separately —
+and then check the whole theorem at once.
+
+For an element in exactly `r` sets, the total coefficient is
+`Σ_{j=1}^{r} (−1)^{j+1} C(r, j)`. The binomial theorem with `a = 1, b = −1` gives
+`Σ_{j=0}^{r} (−1)ʲ C(r,j) = (1−1)ʳ = 0` for `r ≥ 1`, so the terms from `j = 2`
+onward sum to `−C(r,0) = −1`, leaving `+1`. For `r = 0` no term includes the
+element at all, so its coefficient is 0. Done: every element of the union is
+counted once and every other element zero times, hence the formula equals the
+union's size.
+
+This also explains what breaks if the signs do not alternate. The correction
+process is self-defeating unless each term undoes exactly the error the previous
+one introduced. An element in 3 sets is over-counted by 2 by the singles, so the
+pair terms must remove 3 to overshoot by exactly 1, so the triple term must
+restore 1. Get the pattern wrong — all signs positive, say — and you get `2ʳ − 1`
+contributions for an element in `r` sets, which grows exponentially and is not a
+count of anything. Get the third sign wrong (subtract the triple) and every
+element in three sets nets `3 − 3 − 1 = −1`: you would be counting the union and
+subtracting a correction for it at the same time.
+
+The practical lesson is that "add singles, subtract pairs, add triples" is not a
+pattern to memorise from the first two cases. It is forced by the requirement
+that one term cancel the previous term's error, and the per-element argument is
+the proof. This is exactly the argument the lesson runs through by hand on the
+worked example, checking that 30 nets `3 − 3 + 1 = 1`, that 6 nets `2 − 1 = 1`,
+and that 100 nets `2 − 1 = 1`.
+
+</details>
+
+**Q2. When must you stop using inclusion–exclusion and switch to the complement?
+What exactly is the failure mode, and why does it fail silently?**
+
+<details>
+<summary>Model answer</summary>
+
+The failure mode is the term count: `2ⁿ − 1`. The formula is *correct* for any
+number of sets, so there is never a moment at which it is obviously wrong. It
+simply stops being finishable. Five sets cost 31 terms, which is nothing. Twelve
+sets cost 4,095. Twenty sets cost about a million. Thirty sets cost
+1,073,741,823, and the correct answer is sitting there in the formula while no
+program will produce it in your lifetime. This is Mistake 3 of the lesson, and its
+danger is precisely the correctness: there is no crash, no negative number, no
+sanity check that fires. The result is right in principle and absent in practice.
+
+The switch is to the complement. "How many satisfy at least one of these
+constraints" is often far harder than "how many satisfy none of them", because the
+"none" version frequently decomposes — it is exactly what you can count with a
+product rule, a bijection, or a recurrence. The lesson's worked example shows the
+extreme: the same 74 either way, but the complement `100 − 103 + 32 − 3 = 26`
+frames the count as "the integers coprime to 30 up to 100", which has an order of
+magnitude you can check against `φ(30)/30 × 100 ≈ 26.7`.
+
+Two more honest exits, and both are legitimate:
+
+- **Recognise the closed form.** Surjections have one; derangements have one and a
+  good approximation. So do onto-mappings with `!n`-style recurrences, and
+  bipartite graphs by the `C(m+n-2, n-1)` bijection of König's theorem. Finding
+  the bijection is the work, and the formula is then free.
+- **Change the question.** If the exact count is hopeless, sample. The lesson's
+  birthday-bound analysis is the model: exact inclusion–exclusion over the
+  `C(n,2)` pairwise collision events has `2^C(n,2)` terms, hopeless from `n = 6`
+  upwards, and a twenty-thousand-trial sample gives a usable number in a fixed
+  budget. Saying "I need an estimate, not a count" is a legitimate answer, not a
+  retreat.
+
+The habit worth forming is to compute the term count *before* you commit, and to
+state the scope of whatever number you end up with — an approximation labelled as
+an approximation is checkable by anyone, and an exact count you cannot compute is
+not a result at all.
+
+</details>
+
+**Q3. The pigeonhole principle proves things exist without telling you how to
+find them. Why is that limitation a feature rather than a defect, and what can and
+cannot be concluded from it?**
+
+<details>
+<summary>Model answer</summary>
+
+Because the questions it is used on are questions about *whether* something
+happens, not about which something. "Do two of these values collide?" is a yes/no
+question about the system. The engineer needs to know a collision is inevitable so
+they can budget for it; they do not need the colliding pair, and by the time they
+do need it, the table implementation has already found it. The theorem supplies
+exactly the half of the answer that a structural argument can supply, and leaves
+the other half to the data.
+
+It is a feature for a second reason. Its proof is a one-line contradiction — if
+every box held at most one object the boxes would hold at most `n`, contradicting
+`n + 1` — and that proof generalises to situations where no counting argument is
+available. The prime-existence theorem contains no primality test at all. It
+contains no computation of `n! + 1`'s factors, no sieve, no trial division; it
+only observes that `n!` is divisible by everything below `n` and that `n! + 1` is
+bigger than 1. That is a kind of statement arithmetic alone cannot make, and it is
+the reason the technique appears in proofs where computation is useless.
+
+What it cannot do is give probabilities, and the distinction is worth keeping
+sharp. With `2⁶⁴` slots, pigeonhole forces a collision only once `2⁶⁴ + 1` items
+are inserted. It says nothing at all about 366 items — yet in practice collisions
+are overwhelmingly likely long before that, because with many items and many
+boxes there are many chances for the pigeonhole to be the pair that lands
+together. That is the birthday argument, a probability statement needing
+[Lesson 70](../part05_probability_statistics/70_information_theory_entropy.md), and
+the lesson's Mistake 5 is exactly the error of reading it back out of this lesson.
+"The words 'there exists' sound stronger than 'with high probability', and it is
+easy to upgrade an existence theorem into a probability claim without noticing."
+
+The second thing it cannot do is *design*. `⌈n/k⌉` is a lower bound on the worst
+bucket, and a guarantee about the worst case says nothing about the typical case.
+A hash function that maps all `n` keys into one bucket satisfies pigeonhole
+exactly and is useless in production; a near-uniform one has the same worst case.
+The lesson makes this point in the opposite direction too: the table with load
+factor below 1 is *fine*, and the alert threshold should sit above what pigeonhole
+forces — 1,000 items in 100 buckets guarantees 10, but you page someone at 11, not
+at 10, because 10 is information rather than trouble.
+
+</details>
+
+**Q4. Why does a hash table with load factor below 1 still suffer collisions, and
+what does the load-factor bound actually buy you?**
+
+<details>
+<summary>Model answer</summary>
+
+Because pigeonhole constrains the *worst* bucket and almost nothing else. A table
+with `m` slots receiving `n < m` items admits a placement where one bucket holds
+`⌈n/m⌉ = 1` item and the rest hold zero — that satisfies the principle perfectly.
+But it also admits a placement where one bucket holds all `n`. Pigeonhole cannot
+rule that out, and it certainly cannot rule it out for a *particular* hash
+function: the theorem is about any placement whatsoever, so it is silent about
+the placement your hash function actually produces. Collisions in practice are
+decided by how close to uniform the function is, which is a statistical property
+and needs the birthday analysis, not this lesson.
+
+So what does the bound buy? Three things, and they are real.
+
+It certifies that the *average* bucket is not a catastrophe. `n/m` is the mean
+occupancy by construction — the total is `n` spread over `m` buckets — and a mean
+of 1 is a mean, not a worst case. Choosing `m` with `n/m` bounded by a small
+constant keeps the expected number of probes per lookup bounded, which is the
+entire basis of expected `O(1)` lookup.
+
+It tells you where the *forced* trouble starts, so you can separate information
+from alarm. Pigeonhole says some bucket holds at least `⌈n/m⌉`. At load factor
+0.954 — 1,000,000 items in 2²⁰ slots — that is 1, and it means nothing. But push
+past `n = m` and the guarantee jumps to 2, and past `2m` to 3: there is a genuine
+phase change at each integer multiple, and it is exactly at those multiples that
+resizing stops being optional. Sizing the table at `n = m` therefore buys you a
+factor of 2 in collision probability for free relative to `n = m/2`, and the
+arithmetic to see that is one line.
+
+And it bounds the worst case, which is not nothing. Even with a perfect hash
+function, some bucket holds `⌈n/m⌉` items, so a lookup must in the worst case scan
+that bucket's chain. The bound is what lets you write a worst-case bound at all:
+`O(⌈n/m⌉)` probes, which is `O(1)` exactly when the load factor is bounded and a
+constant. Without pigeonhole you would have no bound to write, because "the hash
+function is usually good" is not a complexity claim.
+
+</details>
+
 ## Exercises and Solutions
 
 **[ ] Exercise 1 — IE for a small universe.** Let the universe be {1, …, 20} and

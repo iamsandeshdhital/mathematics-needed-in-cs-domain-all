@@ -574,6 +574,675 @@ print(f"mean code length: {total_bits / 20000:.3f} bits "
 
 ---
 
+## Formula Sheet
+
+Every symbol and formula this lesson introduces. `aₙ` is the sequence, `c₁, …,
+c_k` the recurrence coefficients, `r` a candidate root, `n₀` the order of the
+recurrence, and `n` the input size. `T(n)` is runtime; `a, b, d` are the
+master-theorem parameters.
+
+| Symbol | Formula | In plain words | When you use it |
+| --- | --- | --- | --- |
+| Recurrence relation | `$a_n$` expressed in `$a_{n-1},\dots,a_{n-n_0}$ for `$n \ge n_0$ | a rule for the next term from earlier terms | always, together with the initial conditions |
+| Initial conditions | `$a_0, a_1, \dots, a_{n_0-1}$` | the starting values | required — a recurrence alone does not pin the sequence down |
+| Unrolling / iteration | `$a_n = c_1a_{n-1} + \cdots + c_k a_{n-k} + f(n)$` | compute one term from already-computed ones | `O(n)` time; the always-correct fallback |
+| Characteristic equation | `$r^{k} = c_1 r^{k-1} + c_2 r^{k-2} + \cdots + c_k$` | substitute `aₙ = rⁿ` into the homogeneous recurrence and divide by `rⁿ` | the linear method, for homogeneous linear recurrences |
+| Distinct-root solution | `$a_n = A_1 r_1^{n} + A_2 r_2^{n} + \cdots + A_k r_k^{n}$` | one term per root; constants from the `k` initial conditions | **valid only when the `k` roots are distinct** (over ℝ) |
+| Repeated root of multiplicity `m` | `$(A_1 + A_2 n + \cdots + A_m n^{m-1}) r^{n}$` | a root repeated `m` times contributes a degree-`m−1` polynomial in `n` | needed whenever the characteristic polynomial has a multiple root |
+| Particular solution | `$a_n = A p^{n}$` with `$A = K/\bigl(p^{k} - c_1 p^{k-1} - \cdots - c_k\bigr)$` | for a forcing term `f(n) = K·pⁿ` | denominator must be non-zero; if `p` is a root of multiplicity `m`, multiply the trial form by `nᵐ` |
+| Dominant-root rule | `$a_n = \Theta(\lvert r_1\rvert^{n})$` | the growth rate is the largest characteristic root in absolute value | **when the constants do not cancel that root**; you never need them to know the growth rate |
+| Master theorem, case 1 | `$T(n) = a\,T(n/b) + \Theta(n^{d})$` with `$a < b^{d}` ⟹ `$T(n) = \Theta(n^{d})$` | the top level dominates every level below | merge sort's `2·T(n/2) + n²` gives `Θ(n²)` |
+| Master theorem, case 2 | `$a = b^{d}` ⟹ `$T(n) = \Theta(n^{d}\log n)$` | top and recursion balance | merge sort: `2·T(n/2) + n` gives `Θ(n log n)` |
+| Master theorem, case 3 | `$a > b^{d}` ⟹ `$T(n) = \Theta(n^{\log_b a})$` | the `a` recursive calls dominate | `4·T(n/2) + n` gives `Θ(n²)`; `3·T(n/2) + n` gives `Θ(n^1.585)` |
+| Master theorem hypotheses | `$a \ge 1$, `$b > 1$, `$d \ge 0$`, `$n$ a power of `$b$ | the preconditions without which the table does not apply | `T(n) = T(n/2) + n` violates `a ≥ 1` (here `a = 0`) |
+| Fibonacci | `$F_n = F_{n-1} + F_{n-2}$, `$F_0 = 0$, `$F_1 = 1$` | each term is the sum of the two before | `F(25) = 75,025`; `F(200)` has 42 digits |
+| Golden ratio | `$\varphi = (1+\sqrt{5})/2 \approx 1.6180339887$` | the limit of `F(n+1)/F(n)` | `F(14)/F(13) = 1.618026` already, from the code's table |
+| Binet's formula | `$F_n = (\varphi^{n} - \psi^{n})/\sqrt{5}$` with `$\psi = (1-\sqrt5)/2$ | the closed form from the characteristic equation `r² − r − 1 = 0` | the exact answer when you want `F(n)` directly |
+| Fast doubling | `$F(2k) = F(k)\bigl(2F(k+1) - F(k)\bigr)$`, `$F(2k+1) = F(k)^{2} + F(k+1)^{2}$` | halve the index at every step | `O(log n)` instead of `O(φⁿ)` |
+| Matrix power | `$\begin{pmatrix}F(n+1) & F(n)\\ F(n) & F(n-1)\end{pmatrix} = \begin{pmatrix}1 & 1\\ 1 & 0\end{pmatrix}^{n}$` | Fibonacci as repeated squaring of a 2×2 matrix | `O(log n)` matrix multiplications |
+| Memoisation saving | `#distinct subproblems = n + 1` for Fibonacci | each `F(k)` is computed once instead of exponentially often | `fib(30)`: 31 subproblems against 1,346,268 calls without a cache |
+| Zeckendorf's theorem | every `n ≥ 1` is a **unique** sum of non-consecutive Fibonacci numbers from `1, 2, 3, 5, 8, 13, …` | one canonical form per integer | `100 = 89 + 8 + 3`; `55 + 34` is *not* allowed, they are consecutive |
+| Zeckendorf greedy | take the largest Fibonacci number not exceeding the remainder, repeat | terminates because `F_{k+1} − F_k = F_{k-1}` | the algorithm; uniqueness is the deeper half |
+| Fibonacci code | `'1'` at each Zeckendorf index, padded, then a terminating `'0'` | prefix-free, instantly decodable | mean length is within a constant factor of `log₂ φ ≈ 0.694` bits per unit of entropy |
+| Periodic coefficients → subsequence | `$a_n = 2a_{n-1} - [3\mid n]$ ⟹ `$b_k = a_{3k}` satisfies `$b_k = 8b_{k-1} - 1$ | look at every `p`-th term when the coefficients have period `p` | `b₀ = 1, b₁ = 7, b₂ = 55, b₃ = 439`; solved as `b_k = (6·8ᵏ + 1)/7` |
+| Recovering the other classes | `$a_{3k+1} = (12·8^{k}+2)/7$`, `$a_{3k+2} = (24·8^{k}+4)/7$ | multiply by 2 and by 4 | verifies against the tabulated values 1, 2, 4, 7, 14, 28, … |
+| Merge sort worst case | `$n\log_2 n - n + 1$ | comparisons for `n = 2^k` | measured 5 at `n = 4`, matching the closed form exactly |
+
+---
+
+## Multiple Choice Questions
+
+**Q1.** What does a recurrence relation together with its initial conditions give
+you that the recurrence alone does not?
+
+- A) A closed form for `aₙ`
+- B) A sequence that is determined uniquely
+- C) A bound on the growth rate of `aₙ`
+- D) The characteristic equation
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) A sequence that is determined uniquely.**
+
+Each step of the recurrence reads only values already computed, so starting from
+`a₀, …, a_{n₀−1}` there is exactly one possible `a_{n₀}`, then one possible
+`a_{n₀+1}`, and so on. That is the "unrolling" theorem: the sequence can be built
+in `O(n)` time by iterating.
+
+- A) is the *stronger* thing you may or may not get. `aₙ = 2·a_{n−1} − [3|n]`
+  has the closed form `(6·8ᵏ + 1)/7` only on the subsequence `a_{3k}`; the
+  recurrence exists whether or not you can solve it.
+- C) usually needs the characteristic roots, so it is available only for linear
+  recurrences. The phage recurrence is non-homogeneous with an indicator
+  function and has no constant-coefficient equation at all.
+- D) is obtained by a *substitution*, not by adding initial conditions. It is a
+  tool for finding a closed form, and it applies to the homogeneous linear case
+  only.
+
+</details>
+
+**Q2.** In the worked example, the subsequence `b_k = a_{3k}` satisfies
+`b_k = 8b_{k−1} − 1` with `b₀ = 1`. What is its closed form?
+
+- A) `b_k = (6·8ᵏ + 1)/7`
+- B) `b_k = (7·8ᵏ − 1)/7`
+- C) `b_k = 8ᵏ − 1`
+- D) `b_k = (6·8ᵏ − 1)/7`
+
+<details>
+<summary>Answer and explanation</summary>
+
+**A) `b_k = (6·8ᵏ + 1)/7`.**
+
+Homogeneous part: `b_k = 8b_{k−1}` has characteristic equation `r − 8 = 0`, root 8,
+contributing `A·8ᵏ`. Particular solution: try a constant `B`, giving
+`B = 8B − 1`, so `7B = 1` and `B = 1/7`. The initial condition `b₀ = 1` gives
+`A + 1/7 = 1`, so `A = 6/7`, and `b_k = (6·8ᵏ + 1)/7`. Checks: `k = 0, 1, 2, 3`
+give 1, 7, 55, 439, exactly the table.
+
+- B) has `A = 7/7 = 1` and `B = −1/7`, giving `b₀ = 6/7` instead of 1. It is the
+  right *shape* with the particular-solution sign flipped, which is the
+  characteristic error when you solve `B = 8B + 1` by mistake.
+- C) ignores the initial condition: it gives `b₀ = 0`. It is the answer to
+  `b_k = 8b_{k−1}` with `b₀ = 0`, not to this problem.
+- D) gives `b_k = 8ᵏ − 2/7`, so `b₀ = 5/7`. Same shape as A, wrong constant.
+
+</details>
+
+**Q3.** The dominant-root theorem says `aₙ = Θ(|r₁|ⁿ)`. Why is the phage
+recurrence from the worked example still `Θ(2ⁿ)` even though it doubles and
+subtracts?
+
+- A) Because the subtractions are constants, they do not change the growth rate
+- B) Because the characteristic root of `aₙ = 2a_{n−1} − [3|n]` is 2
+- C) Because `aₙ` is bounded above by `2ⁿ` and below by `2ⁿ − n`
+- D) Because a non-homogeneous recurrence has no characteristic equation, so the
+  theorem does not apply
+
+<details>
+<summary>Answer and explanation</summary>
+
+**A) Because the subtractions are constants, they do not change the growth rate.**
+
+The lesson's Step 6 makes exactly this point: the dominant root is 8 per *three*
+steps, which is 2 per step, so `aₙ = Θ(2ⁿ)` — the phage has no effect on the
+asymptotics at all. Note also that only one `−1` appears in three steps, so it is
+never scaled by 8: a constant per three doublings is `O(1)` per step against a
+doubling that is not.
+
+- B) is a formal answer that does not apply. `aₙ = 2a_{n−1} − [3|n]` is
+  non-homogeneous with a *periodic* coefficient structure, so no fixed polynomial
+  characteristic equation exists. The lesson gets at the root by passing to the
+  subsequence `b_k = a_{3k}`, where the answer really is 8 per 3 steps.
+- C) is a true bound and a useless one. `Θ` needs matching lower and upper bounds
+  of the same order, and `Θ(2ⁿ − n) = Θ(2ⁿ)` is the conclusion, not the argument.
+- D) is correct as a statement and does not answer the question, which asks about
+  the growth rate. The answer is obtainable without any characteristic equation,
+  from Step 3 alone — which is the lesson's actual point.
+
+</details>
+
+**Q4.** Consider `aₙ = 2a_{n−1} − a_{n−2}` with `a₀ = 1`, `a₁ = 2`. The
+characteristic polynomial is `r² − 2r + 1`, with a double root at `r = 1`. What
+is the sequence?
+
+- A) `aₙ = A + B`, a constant
+- B) `aₙ = (A + Bn)·1ⁿ = A + Bn`, and with these initial conditions `aₙ = n + 1`
+- C) `aₙ = A·1ⁿ` only, since there is just one root
+- D) `aₙ = A·2ⁿ`, since 2 appears in the recurrence
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) `aₙ = (A + Bn)·1ⁿ = A + Bn`, and with these initial conditions `aₙ = n + 1`.**
+
+A root of multiplicity `m` contributes `(A₁ + A₂n + ⋯ + A_m n^{m−1})·rⁿ`. With
+`m = 2` and `r = 1` that is `A + Bn`. The initial conditions give `A = 1` and
+`A + B = 2`, so `B = 1`, and `aₙ = n + 1`. This is Mistake 3 of the lesson: drop
+the `n` term and it becomes impossible to fit both initial conditions with one
+constant.
+
+- A) is what you get if you record the double root as a single root. Dropping
+  `Bn` leaves one free constant where you need two, and the recurrence then
+  cannot be satisfied by any sequence of that shape.
+- C) is the same error stated more starkly — "just one root, so one solution". A
+  quadratic with a double root is *one value* but a *two-dimensional* solution
+  space, exactly as `k` roots give a `k`-dimensional space.
+- D) reads the coefficient 2 off the recurrence. The characteristic roots of
+  `r² − 2r + 1 = 0` are 1 and 1, not 2; the `−1` coefficient is what makes the
+  root sit at 1.
+
+</details>
+
+**Q5.** Apply the master theorem to `T(n) = 2T(n/2) + n`.
+
+- A) `Θ(n)`, because the top-level work is `n`
+- B) `Θ(n log n)`, because `a = 2 = bᵈ` with `b = 2, d = 1`
+- C) `Θ(n²)`, because each level costs `n²` in total
+- D) The theorem does not apply, because `2` is not a power of `2`
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) `Θ(n log n)`, because `a = 2 = bᵈ` with `b = 2, d = 1`.**
+
+`a = 2`, `b = 2`, `d = 1`, so `bᵈ = 2` and `a = bᵈ` puts us in the balanced
+case: `Θ(nᵈ log n) = Θ(n log n)`. The exact expansion at `n = 32` gives
+`T(32) = 160`, and `32 log₂ 32 = 160`, which is the level-by-level reading: five
+levels each costing 32.
+
+- A) is case 1 applied with the comparison backwards. It would require
+  `a < bᵈ`, i.e. `2 < 2`, which is false. Getting `Θ(n)` here is Mistake 4's
+  cousin: accidentally right, and you have learned nothing.
+- C) is case 3 applied with the comparison backwards: `Θ(n^{log_b a}) =
+  Θ(n^{log_2 2}) = Θ(n)`, which again requires `a > bᵈ`. The formula you would
+  have applied, `Θ(n^{log_b a})`, evaluates to `Θ(n)` for this recurrence, so C is
+  internally inconsistent with itself.
+- D) confuses a hypothesis with a consequence. The theorem *does* require `n` to
+  be a power of `b`, and `32` is a power of `2`; the cost of honouring that
+  requirement is `⌈log_b n⌉` padding, not inapplicability.
+
+</details>
+
+**Q6.** A colleague writes `T(n) = T(n/2) + n` and asserts "the master theorem
+gives `Θ(n)`". What is wrong?
+
+- A) Nothing; `a = 1`, `b = 2`, `d = 1`, and case 2 gives `Θ(n log n)` — which is
+  the same as `Θ(n)` here
+- B) The theorem's hypothesis `a ≥ 1` fails, because this recurrence has `a = 0`;
+  the theorem says nothing, and `Θ(n)` must come from a different argument
+- C) The theorem requires `b ≥ 2` and here `b = 2` is on the boundary and
+  therefore excluded
+- D) `f(n) = n` is not of the form `Θ(nᵈ)` with `d ≥ 0`
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) The theorem's hypothesis `a ≥ 1` fails, because this recurrence has `a = 0`;
+the theorem says nothing, and `Θ(n)` must come from a different argument.**
+
+There is no recursive call at all, so the multiplier on `T(n/2)` is 0, not 1.
+The master theorem is stated for `a ≥ 1`, so it does not apply. The right tool is
+the recursion tree, where the levels cost `n + n/2 + n/4 + ⋯ < 2n` — and the
+recurrence theorem, not the master theorem, is what licenses the `Θ(n)`.
+
+- A) is Mistake 4 of the lesson, and the most dangerous version: the guess is
+  right. Being accidentally right means you have no way to notice the misuse
+  next time, on a recurrence where the theorem *is* applicable and the same
+  reasoning gives a wrong answer.
+- C) invents a strict inequality. The hypotheses are `a ≥ 1`, `b > 1`,
+  `d ≥ 0`; `b = 2` is comfortably interior, so this is not the boundary.
+- D) is true of `f(n) = n` (`n = n¹`, so `d = 1`) and false as an objection. The
+  problem with this recurrence is `a`, not `f`.
+
+</details>
+
+**Q7.** `T(n) = 2T(n/2) + n log n`. What does the master theorem say, and why?
+
+- A) `Θ(n log² n)` by case 2, since `f(n) = n log n` behaves like `n²`
+- B) It does not apply, because `f(n) = n log n` is not `Θ(nᵈ)` for any constant
+  `d`; the recursion-tree method gives `Θ(n log² n)`
+- C) It applies and gives `Θ(n log n)`, since `f(n)` *is* the top-level cost
+- D) It does not apply, because `a = 2` must be a power of `b = 2`
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) It does not apply, because `f(n) = n log n` is not `Θ(nᵈ)` for any constant
+`d`; the recursion-tree method gives `Θ(n log² n)`.**
+
+The master theorem requires `f(n) = Θ(nᵈ)` for a constant `d`. `n log n` grows
+slightly faster than every fixed power of `n`, so no `d` fits. The lesson's
+Mistake 5 is this exact case: `n log n` "feels like" a degree-2 polynomial, and
+the shape of the recurrence is otherwise perfect. Getting the right answer anyway
+is not a defence — it means you guessed correctly rather than derived.
+
+- A) reaches the right number via an inapplicable theorem. If you must use the
+  master theorem, you are deriving the answer from a statement that does not
+  hold for this input, so the next recurrence where it does not hold will go
+  wrong.
+- C) is simply not what `Θ(nᵈ log n)` says with `d = 1`. The recursion tree has
+  `log n` levels each costing `Θ(n log n)` at the top shrinking by half, which
+  sums to `Θ(n log² n)`, not `Θ(n log n)`.
+- D) misreads a hypothesis: `a` has no divisibility requirement in the master
+  theorem. `a = 2` is ordinary.
+
+</details>
+
+**Q8.** `T(n) = 3T(n/2) + n`. What does the master theorem give?
+
+- A) `Θ(n)`, since the non-recursive work is `n`
+- B) `Θ(n^{log₂ 3}) ≈ Θ(n^1.585)`
+- C) `Θ(n log n)`, since `a` and `bᵈ` are close
+- D) `Θ(n²)`
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) `Θ(n^{log₂ 3}) ≈ Θ(n^1.585)`.**
+
+`a = 3`, `b = 2`, `d = 1`, so `bᵈ = 2` and `a = 3 > 2`: case 3, giving
+`Θ(n^{log_b a}) = Θ(n^{log₂ 3}) ≈ Θ(n^1.585)`. The lesson's table prints
+`Theta(n^1.585)` and the exact expansion gives `T(32) = 422`, against
+`32^1.585 ≈ 422`. The exponent between 1 and 2 is the whole reason
+`3T(n/2) + n` beats `2T(n/2) + n log n`.
+
+- A) is case 1's answer. It needs `a < bᵈ = 2`, and `3 > 2`, so it is the wrong
+  case. This is the lesson's central warning: "adding a second recursive call per
+  level is catastrophic".
+- C) is case 2's answer, which requires exact equality `a = bᵈ`. `3 ≠ 2`, and the
+  excess is precisely what pushes the exponent above 1.
+- D) is case 3 with `a` misread as 4. `Θ(n²)` is the answer for
+  `4T(n/2) + n`; for `a = 3` the exponent is 1.585, which is genuinely between
+  1 and 2.
+
+</details>
+
+**Q9.** `fib(30)` is written naively as `fib(n-1) + fib(n-2)` and makes
+1,346,268 calls. The same function with a cache makes 31 distinct subproblems.
+What is the lesson's point?
+
+- A) Memoisation makes recursion logarithmic in `n`, so `fib` becomes fast for all
+  inputs
+- B) Memoisation removes the *repeated* computation; the recurrence still
+  describes the same `O(φⁿ)` work if you ignore the table, and the table is what
+  turns it into a memoised dynamic program with `n + 1` states
+- C) 1,346,268 is the number of distinct values computed, so the cache reduces it
+  by a factor of about 43,000
+- D) The cache changes the answer for large `n` because it truncates recursion
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) Memoisation removes the *repeated* computation; the recurrence still
+describes the same `O(φⁿ)` work if you ignore the table, and the table is what
+turns it into a memoised dynamic program with `n + 1` states.**
+
+The naive call tree is exponential because each `fib(k)` is recomputed once per
+path to it — `fib(30)` calls `fib(28)` millions of times. Caching makes each
+`fib(k)` happen once, so the work becomes the number of distinct `k`, namely
+31. The lesson points out that this is the same technique as bottom-up
+tabulation, as the Viterbi algorithm, and as the Bellman equation.
+
+- A) overclaims. Memoisation reduces the *distinct* subproblems to `n + 1`, each
+  computed in `O(1)` for this recurrence, so the total is `O(n)` with a cache
+  and `Θ(φⁿ)` without. The lesson uses fast doubling and matrix powers when it
+  wants `O(log n)`.
+- C) has the two numbers the wrong way round. 31 is the number of distinct
+  subproblems and 1,346,268 is the number of calls; the ratio is indeed about
+  43,000, but that ratio measures the *waste*, not the size of the computation.
+- D) is false. `fib` with a cache returns exactly the same value; caching stores
+  results, it does not change them.
+
+</details>
+
+**Q10.** Zeckendorf's theorem says every positive integer is a unique sum of
+non-consecutive Fibonacci numbers from `1, 2, 3, 5, 8, 13, …`. Which of these is
+a valid Zeckendorf representation of 100?
+
+- A) `100 = 89 + 8 + 3`
+- B) `100 = 55 + 34 + 8 + 3`
+- C) `100 = 34 + 34 + 21 + 8 + 3`
+- D) `100 = 89 + 11`
+
+<details>
+<summary>Answer and explanation</summary>
+
+**A) `100 = 89 + 8 + 3`.**
+
+The Fibonacci numbers used are 89 (`F₁₀`), 8 (`F₅`) and 3 (`F₃`). The index gaps
+are 5 and 2, both greater than 1, so no two terms are consecutive. The lesson's
+code prints exactly this decomposition for `v = 100`, and verifies for every
+`v` in `1..2999` that the returned indices satisfy `abs(idx[i] − idx[i+1]) > 1`.
+
+- B) uses 55 (`F₉`) and 34 (`F₈`) together, which are consecutive Fibonacci
+  numbers — the defining prohibition. It also sums to 100, which is what makes it
+  tempting: arithmetic is not the constraint, structure is.
+- C) repeats 34. Zeckendorf sums are sums of *distinct* Fibonacci numbers, so a
+  repeated term is already disqualifying, and 34 and 21 are consecutive as well.
+- D) sums to 100 but uses 11, which is not a Fibonacci number in this sequence —
+  the theorem's terms come from `1, 2, 3, 5, 8, 13, …`, and there is no 11.
+  (11 *is* a sum `8 + 3`, but you must write it that way.)
+
+</details>
+
+---
+
+## Subjective Questions
+
+### Short Answer
+
+**Q1. Define a *recurrence relation* and *initial conditions*. Why does the pair
+determine the sequence uniquely?**
+
+<details>
+<summary>Answer</summary>
+
+A **recurrence relation** for a sequence `a₀, a₁, a₂, …` expresses `aₙ` for
+`n ≥ n₀` in terms of earlier terms only. The fixed values `a₀, …, a_{n₀−1}` are
+the **initial conditions**.
+
+Uniqueness follows from the fact that each step reads only values already
+computed: given `a₀, …, a_{n₀−1}` there is exactly one value of `a_{n₀}`, then
+one of `a_{n₀+1}`, and inductively one of each. That is exactly what iterating in
+a `for` loop does, in `O(n)` time — the always-correct method whenever the closed
+form is unknown.
+
+</details>
+
+**Q2. State the characteristic-equation method. What is the general solution, and
+what changes when a root is repeated?**
+
+<details>
+<summary>Answer</summary>
+
+For the homogeneous linear recurrence `aₙ = c₁a_{n−1} + ⋯ + c_k a_{n−k}`, set
+`aₙ = rⁿ`. Every term then carries a factor `rⁿ`, and dividing by it gives the
+**characteristic equation**
+
+$$r^{k} = c_1 r^{k-1} + c_2 r^{k-2} + \cdots + c_k$$
+
+If it has `k` distinct real roots `r₁, …, r_k`, every solution is
+`aₙ = A₁r₁ⁿ + ⋯ + A_k r_kⁿ`, with the `k` constants fixed by the `k` initial
+conditions.
+
+If a root `r` has multiplicity `m`, its contribution is
+`(A₁ + A₂n + ⋯ + A_m n^{m−1})·rⁿ` — a degree-`m−1` polynomial in `n` times `rⁿ`.
+Dropping the polynomial term is Mistake 3 of the lesson, and it makes it impossible
+to fit all the initial conditions.
+
+</details>
+
+**Q3. State the dominant-root rule. Why does it hold, and when does it fail?**
+
+<details>
+<summary>Answer</summary>
+
+If `r₁` is the characteristic root of largest absolute value, then
+`aₙ = Θ(|r₁|ⁿ)` for any initial conditions that **do not cancel it**.
+
+It holds because the other terms satisfy `|rᵢ|ⁿ = o(|r₁|ⁿ)` for `|rᵢ| < |r₁|`,
+so they are eventually negligible whatever the constants are. This is the single
+most useful consequence of the method: **the growth rate of a linear recurrence is
+the largest root, and you never need the constants to know it.**
+
+It fails when the constants *do* cancel the dominant root — for example
+`aₙ = 3a_{n−1} − 2a_{n−2}` has roots 1 and 2, but with `a₀ = 1, a₁ = 3` the
+solution is `2^{n+1} − 1`, in which the `1ⁿ` term is present while the
+`2ⁿ`-root still dominates. A true cancellation looks like
+`aₙ = 2a_{n−1} − 2a_{n−2}` with `a₀ = 1, a₁ = 2`, whose sequence is all 1s: the
+root 2 is annihilated and the growth rate is `Θ(1)`.
+
+</details>
+
+**Q4. State the master theorem, including its hypotheses, and what decides which
+of the three cases applies.**
+
+<details>
+<summary>Answer</summary>
+
+Let `T(n) = a·T(n/b) + Θ(nᵈ)` with `a ≥ 1`, `b > 1`, `d ≥ 0`, and `n` a power of
+`b`. Then
+
+- `a < bᵈ` ⟹ `T(n) = Θ(nᵈ)`
+- `a = bᵈ` ⟹ `T(n) = Θ(nᵈ log n)`
+- `a > bᵈ` ⟹ `T(n) = Θ(n^{log_b a})`
+
+The deciding comparison is between the work done at the top level (`nᵈ`) and the
+total work of the `a` recursive calls (`a·nᵈ/bᵈ`). If the top dominates, each of
+the `log_b n` levels costs `nᵈ`, giving `nᵈ log n`. If the recursion dominates,
+work multiplies by `a` each level over `log_b n` levels, giving `n^{log_b a}`.
+
+All three hypotheses must hold. Violating `a ≥ 1` (as in `T(n) = T(n/2) + n`) or
+making `f(n)` non-polynomial (as in `2T(n/2) + n log n`) removes the theorem, and
+you need the recursion tree instead.
+
+</details>
+
+**Q5. State the Fibonacci recurrence and the golden ratio. Why does
+`F(n+1)/F(n)` converge to `φ`?**
+
+<details>
+<summary>Answer</summary>
+
+`F_n = F_{n−1} + F_{n−2}` with `F_0 = 0` and `F_1 = 1`; `F(25) = 75,025` and
+`F(200)` has 42 digits.
+
+The characteristic equation is `r² − r − 1 = 0`, whose roots are
+`φ = (1+√5)/2 ≈ 1.6180339887` and `ψ = (1−√5)/2 ≈ −0.618`. Binet's formula
+`F_n = (φⁿ − ψⁿ)/√5` shows the `ψⁿ` term vanishes as `n` grows, because
+`|ψ| < 1`. So `F(n+1)/F(n) → φ`. The lesson's code prints
+`F(14)/F(13) = 1.618026`, already within 8 × 10⁻⁶ of the limit after fourteen
+terms.
+
+</details>
+
+**Q6. What do fast doubling and matrix exponentiation compute, and why are they
+`O(log n)`?**
+
+<details>
+<summary>Answer</summary>
+
+Both compute `F(n)` in `O(log n)` operations instead of `O(φⁿ)`.
+
+**Fast doubling** uses the identities `F(2k) = F(k)(2F(k+1) − F(k))` and
+`F(2k+1) = F(k)² + F(k+1)²`: computing `F(2k)` and `F(2k+1)` needs only `F(k)` and
+`F(k+1)`, so the index is halved at every step and the recursion tree has depth
+`log n`.
+
+**Matrix exponentiation** uses
+`[[F(n+1), F(n)], [F(n), F(n−1)]] = [[1,1],[1,0]]ⁿ`, which is a single 2×2 matrix
+power computed by repeated squaring — also `O(log n)` matrix multiplications.
+
+The lesson checks the two agree on `F(200)`, and that fast doubling returns the
+same value as matrix powering.
+
+</details>
+
+### Long Answer
+
+**Q1. Why does substituting `aₙ = rⁿ` produce the characteristic equation, and
+why must the solution use `rⁿ` rather than `rⁿ⁻¹`?**
+
+<details>
+<summary>Model answer</summary>
+
+The substitution works because a geometric sequence is the one shape that scales
+predictably under the recurrence. Write `a_{n-j} = r^{n-j} = rⁿ · r^{−j}` and
+`a_{n-k} = r^{n-k} = rⁿ · r^{−k}`. Every term on both sides of
+
+$$a_n = c_1 a_{n-1} + c_2 a_{n-2} + \cdots + c_k a_{n-k}$$
+
+now carries the common factor `rⁿ`. Dividing by `rⁿ` (legitimate for `r ≠ 0`)
+leaves `1 = c₁r⁻¹ + c₂r⁻² + ⋯ + c_k r^{−k}`, and multiplying by `rᵏ` gives
+`rᵏ = c₁r^{k−1} + ⋯ + c_k`. So the roots of the characteristic polynomial are
+exactly the *rates* at which the recurrence admits a self-similar solution: each
+root `rᵢ` produces a genuine solution `rᵢⁿ`, and `k` independent solutions span
+the `k`-dimensional space of solutions, matching the `k` free initial conditions.
+
+That is also why `rⁿ` and not `r^{n−1}`. `r^{n−1}` is the *same sequence* as `rⁿ`
+up to the constant `1/r` — for a single root the error is harmless, which is
+exactly why it survives testing. It breaks as soon as you have two roots, because
+`A·r₁^{n−1} + B·r₂^{n−1}` cannot be separated into `A/r₁ · r₁ⁿ + B/r₂ · r₂ⁿ`
+without knowing the roots, and the resulting system for `A` and `B` is wrong in a
+way that no small test case reveals. The lesson's Mistake 2 names it precisely:
+using `2^{n−1}` for `aₙ = 2a_{n−1}` is "equivalent up to a rescaling of `A`, but it
+silently breaks when you have two roots and solve for two constants".
+
+There is a second reason to prefer the substitution form: it is the *definition*
+of the answer, not a guess. You are not proposing `rⁿ` and checking; you are
+rewriting the recurrence in the basis of the solutions it admits. That is what
+makes the method a method rather than a heuristic, and it is the same move as
+eigenvectors in [Lesson 36](../part03_linear_algebra/36_eigenvalues_and_eigenvectors.md):
+find the shapes that the operator maps to themselves.
+
+</details>
+
+**Q2. The master theorem is a lookup table, not a proof. Why is that a
+reasonable design, and exactly what breaks at each hypothesis boundary?**
+
+<details>
+<summary>Model answer</summary>
+
+A lookup table is the right tool when the input space is small, discrete and
+frequently queried. Divide-and-conquer recurrences in computer science are
+`T(n) = a·T(n/b) + Θ(nᵈ)` far more often than anything else, so the three cases
+cover the overwhelming majority of questions asked in practice, and answering each
+in one line beats re-deriving a recursion-tree argument every time. The table is
+also honest about being conditional: it states its hypotheses up front, so a
+reader can check applicability before trusting the answer. What it is not is a
+complete method — and the lesson is careful to say so, since
+[Lesson 80](../part06_algorithms_math/80_big_o_and_complexity.md) develops the
+general case.
+
+The boundaries are where the real teaching is, because each is a silent failure
+rather than a crash.
+
+**`a ≥ 1`.** Violated by `T(n) = T(n/2) + n`, where there is no recursive call at
+all and `a = 0`. The table's case 1 would compare `0 < 1` and give `Θ(n)` — which
+is right, by luck. Mistake 4 of the lesson calls this out as the most dangerous
+entry: *being accidentally right means you have learned nothing and will misapply
+the theorem somewhere it actually bites.* The correct tool is the recursion tree
+(or the recurrence theorem), and the habit to build is checking `a` first.
+
+**`f(n) = Θ(nᵈ)`.** Violated by `T(n) = 2T(n/2) + n log n`. Here the shape looks
+perfect — `a`, `b` and `d` are all presentable, `n log n` "feels like" a degree-2
+polynomial — and the answer `Θ(n log² n)` happens to be what the recursion tree
+gives. So again the failure is invisible: you get the right number from a theorem
+that does not apply, which means you have no idea *why* the number is right.
+
+**`n` a power of `b`.** The mildest of the three, and the one with a clean
+repair: pad to `n' = ⌈n⌉` with the right prime factors, costing at most a constant
+factor. But the repair has to be made deliberately; skipping it and writing
+`log_2 n` when you should write `⌈log_b n⌉` is how a `Θ(n^{log_b a})` bound quietly
+becomes a bound on a subsequence.
+
+**`b > 1` and `d ≥ 0`.** Rarely violated in practice, and when violated the
+recurrence is not of the standard shape at all (`b = 1` means no size reduction,
+`d < 0` means the non-recursive work shrinks).
+
+The unifying lesson is that a conditional theorem gives no diagnostic when the
+condition fails. You get an answer, not an error. So the real skill is not
+memorising the three cases but checking the four hypotheses in order — and when
+one fails, reaching for the recursion tree, which is slower to apply and correct
+far more often.
+
+</details>
+
+**Q3. Why is memoisation the same mathematics as the recurrence, and what does
+the gap between 1,346,268 calls and 31 subproblems actually measure?**
+
+<details>
+<summary>Model answer</summary>
+
+The recurrence and the memoised program describe the same sequence; they differ
+only in how many times each subproblem is evaluated. `fib(n) = fib(n−1) +
+fib(n−2)` with `F₀ = 0, F₁ = 1` computes each `F_k)` correctly by definition. But
+in the naive call tree `F(k)` is evaluated once for every path from the root to
+`k`, and the number of such paths grows like the Fibonacci numbers themselves —
+which is why `fib(30)` costs 1,346,268 calls rather than 30. The mathematics of
+the recurrence is untouched; the *cost model* is the problem.
+
+Memoisation attacks the cost model directly. Attach a table, and each `(k)`
+is evaluated once. The work becomes the number of distinct `k`, which is 31 for
+`n = 30` — `n + 1` states, each `O(1)`. Nothing about the answer changes: the
+lesson's memoised `fib` returns the same 75,025 for `F(25)` as the naive one.
+
+So the gap — about 43,000 to 1 — measures the *redundancy* of the naive
+evaluation, not the difficulty of the sequence. That distinction matters, because
+it says where the saving comes from. The saving is not "recursion is slow"; it is
+that a naively written recursion re-derives the same fact exponentially often.
+Two consequences follow.
+
+First, the count of distinct subproblems is the right thing to do complexity
+arithmetic on. That is the entire content of dynamic programming: the state count
+`2ⁿ · n` versus an enumeration count of `n!`, or `101 · 101` states versus
+`2¹⁰⁰` subsets. It is why a recurrence with a small state space becomes tractable
+and one with a large state space does not, and it is the count you should write
+down before writing the code.
+
+Second, memoisation and bottom-up tabulation are the same mathematics with
+different engineering, and so are the Viterbi algorithm and the Bellman equation.
+All four are "compute this value once, then reuse it", and all four are
+recurrences with a memo table. The lesson's phrasing is worth keeping straight:
+memoised Fibonacci is a specific implementation; dynamic programming is the
+technique; the recurrence is the mathematics underneath both. And when even `n + 1`
+states with constant work per state is too slow, the recurrence itself has to be
+solved rather than iterated — which is what fast doubling and matrix powers do,
+reducing `F(200)` from 42 digits' worth of linear steps to a few dozen operations
+in `O(log n)`.
+
+</details>
+
+**Q4. The worked example's coefficients are not constant, yet the lesson solves
+it. What is the general recipe when a recurrence has periodic or otherwise
+irregular structure?**
+
+<details>
+<summary>Model answer</summary>
+
+The general recipe is: **find a subsequence on which the recurrence becomes
+constant-coefficient, solve that, and recover the rest.** The worked example is
+the smallest possible instance of it.
+
+Step 1 is to *tabulate before you solve*. The lesson is emphatic about this —
+"never solve before computing; the table is ground truth" — and Step 6 of Mistake 1
+explains why: algebra that is internally consistent feels verified, and only
+comparison with computed values catches an indexing mistake. The table gives
+`1, 2, 4, 7, 14, 28, 55, 110, 220, 439`, and everything after is checked against
+it.
+
+Step 2 is to *look for the period*. `−[3 | n]` fires on every third step, so the
+rule is not constant but it is **periodic with period 3**. Reading the table at
+`n = 0, 3, 6, 9` gives `b₀ = 1, b₁ = 7, b₂ = 55, b₃ = 439`, and those grow by a
+factor of 8 each time — a constant ratio is itself a signal.
+
+Step 3 is to *derive the subsequence recurrence carefully*, which is where slips
+happen. Stepping forward from `a_{3k}`:
+
+$$a_{3k+1} = 2 a_{3k}, \qquad a_{3k+2} = 2 a_{3k+1}, \qquad a_{3k+3} = 2 a_{3k+2} - 1 = 8 a_{3k} - 1$$
+
+so `b_k = 8b_{k−1} − 1`. Two details the lesson flags: the `−1` applies *after*
+the third doubling, not before, and only one `−1` appears in three steps, so it
+is never multiplied by 8. Both errors give a numerically plausible sequence that
+disagrees with the table at the third or fourth entry.
+
+Step 4 is to *solve as usual and then recover the rest of the residue classes*:
+`a_{3k+1} = (12·8ᵏ + 2)/7` and `a_{3k+2} = (24·8ᵏ + 4)/7`, obtained by multiplying
+by 2 and by 4. Each is verified against the table.
+
+Two things generalise. The other direction of the recipe applies too: if a
+coefficient is *periodic*, either pass to a subsequence (as here) or solve the
+whole system as a coupled recurrence on `(a_{3k}, a_{3k+1}, a_{3k+2})`. And the
+lesson's closing observation is the practical payoff: the growth rate —
+dominant root 8 per three steps, i.e. 2 per step — was available from Step 3 with
+no algebra at all. A closed form is worth computing only when you need exact
+values; a growth rate is what a capacity plan needs, and it usually falls out
+earlier.
+
+</details>
+
 ## Exercises and Solutions
 
 **[ ] Exercise 1 — Iterate and verify.** Solve aₙ = 4aₙ₋₁ − 3aₙ₋₂ with a₀ = 3,

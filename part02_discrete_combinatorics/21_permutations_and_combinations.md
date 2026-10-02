@@ -414,6 +414,603 @@ for label, f in problems:
 
 ---
 
+## Formula Sheet
+
+Every symbol and formula this lesson introduces. `n` is the size of the pool, `r`
+is how many items are selected, `k₁, …, k_m` are multiplicities with
+`k₁ + ⋯ + k_m = n`, and `cᵢ` is the cap on copies of kind `i`. All counts are
+exact integers.
+
+| Symbol | Formula | In plain words | When you use it |
+| --- | --- | --- | --- |
+| `P(n, r)` | `$P(n,r) = n!/(n-r)! = n(n-1)\cdots(n-r+1)$` | order `r` **distinct** items from `n`: the choice set shrinks at every step | timetables, schedules, PINs from distinct digits |
+| `C(n, r)` | `$C(n,r) = n!/\bigl(r!\,(n-r)!\bigr)$` | `r`-element **subset** of an `n`-element set; order irrelevant | committees, handshakes, test selections |
+| P from C | `$P(n,r) = C(n,r)\cdot r!$` | every chosen set has exactly `r!` orderings | the cheapest self-check on any nCr/nPr pair |
+| Multiplicative `C(n,r)` | `$C(n,r) = n(n-1)\cdots(n-r+1)\,/\,r!$` | multiply the falling factorial, divide by `r!`; every intermediate is an integer | when you want the machinery visible, or `n!` is too big to build |
+| Shrinking the loop | `C(n,r) = C(n,r')` with `$r' = \min(r,\,n-r)$` | the shorter of the two loops, using the symmetry | turning an `O(n)` computation into `O(min(r, n−r))` |
+| Combination with repetition | `$C(n+r-1,\;r) = C(n+r-1,\;n-1)$` | unordered selection of `r` from `n` with repeats allowed | 3 scoops from 6 flavours: $C(8,3) = 56$ |
+| Stars and bars | `$r$ stars and $n-1$ bars` | each bar separates one kind from the next; the stars before a bar are that kind's multiplicity | the bijection proving the formula above |
+| Multiset permutation | `$n!/\bigl(k_1!\,k_2!\cdots k_m!\bigr)$` | orderings of `n` objects with multiplicities `k₁, …, k_m`; divide once per *distinct* item | MISSISSIPPI: $11!/(4!\,4!\,2!) = 34{,}650$ |
+| Pascal's recursion | `$C(n,r) = C(n-1,r-1) + C(n-1,r)$` | split the `r`-subsets of an `n`-set by whether they contain one fixed element | the dynamic-programming form of the same subsets |
+| Pascal base cases | `$C(n,0) = C(n,n) = 1$; `$C(n,r) = 0$ for `$r > n$` | the empty selection and the whole set are each unique; out-of-range is zero | stopping the recursion; keeps the DP table rectangular |
+| Symmetry | `$C(n,k) = C(n,k')` with `$k' = n-k$` | take the complement inside the `n`-set | explains why $C(20,7) = C(20,13) = 77{,}520$ |
+| `C(n, 1)` | `$C(n,1) = n$` | one item from `n` is just `n` choices | sanity checks |
+| `C(n, 2)` | `$C(n,2) = n(n-1)/2$` | unordered pairs = edges of a complete graph = pairwise comparisons | `C(9,2) = 36` handshakes; the cost of compare-everything |
+| Choosing with limits (unordered) | `$\bigl[x^{r}\bigr]\prod_{i=1}^{m}(1 + x + \cdots + x^{c_i})$` | expand the product and read off the coefficient of `x^r` | "at most 2 of each of 3 kinds, take 5 in total" gives 3 |
+| Choosing with limits (ordered) | `$\sum_{k_1+\cdots+k_m=r,\ 0\le k_i\le c_i} \dfrac{r!}{k_1!\cdots k_m!}$` | each admissible multiplicity vector contributes its multinomial count | the same problem with an order: `(2,2,2)`, `r = 5` gives 90 |
+| Admissible vectors | `$\lvert\{(k_1,\dots,k_m) : \sum k_i = r,\ 0 \le k_i \le c_i\}\rvert$ | the multiplicity vectors, one per unordered selection | the brute-force referee for the coefficient method |
+| Subtract a bad case (permutations) | `$P(n,r) - (n-1)(n-2)\cdots(n-r+1)$` | fix the offending item in a slot, then count the rest from the *remaining* pool | 4-long schedules of 6 tests with A not last: $360 - 60 = 300$ |
+| "At least one digit" subtraction | `$(26+10)^{5} - 26^{5}$` | all strings minus the all-letter ones | 5-character passwords: $36^5 - 26^5 = 48{,}584{,}800$ |
+| Same count as a binomial sum | `$\sum_{k=1}^{r} C(r,k)\,k^{\text{digits}}(26)^{r-k}$` | choose which `k` slots hold digits | must agree with the subtraction: also 48,584,800 |
+| Multiplications, when the object is a *pair* of choices | `C(12,3)\cdot 3` | choose the committee, then choose its chair | 12 people → 660 |
+
+---
+
+## Multiple Choice Questions
+
+**Q1.** "Choose Alice and Bob to review the patch." Which formula counts the
+outcomes, and why?
+
+- A) `P(2, 2) = 2`, because two people are being chosen in an order the
+  sentence fixes by naming Alice first
+- B) `C(n, 2) = n(n−1)/2`, because swapping the two reviewers gives the same
+  outcome
+- C) `n²`, because each of the two slots picks freely from `n` people
+- D) `n!/2`, because any pair can be ordered in two ways and both count
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) `C(n, 2) = n(n−1)/2`, because swapping the two reviewers gives the same
+outcome.**
+
+The decision rule is *if swapping two of the chosen items gives a different
+answer, order matters*. {Alice, Bob} and {Bob, Alice} are the same review team,
+so order does not matter and there are no repeats: `C(n, 2)`.
+
+- A) is the over-count in Mistake 1. `P(2,2) = 2` counts "Alice then Bob" and
+  "Bob then Alice" as different outcomes, which doubles the answer for every
+  team size.
+- C) is right only if repeats were allowed *and* order mattered — it is the
+  count of 2-letter passwords over `n` symbols, not of review teams.
+- D) confuses two corrections. The `2` in `C(n,2) = n(n−1)/2` comes from
+  dividing the ordered count by `2!`; `n!/2` is not a pair count at all for
+  `n > 2`.
+
+</details>
+
+**Q2.** A system issues 3-digit PINs with no repeated digit, chosen from 0
+through 9. How many PINs are there?
+
+- A) `C(10, 3) = 120`
+- B) `P(10, 3) = 720`
+- C) `10³ = 1,000`
+- D) `10³ − 1 = 999`
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) `P(10, 3) = 720`.**
+
+PIN 123 and PIN 321 are different PINs, so order matters. Digits must be
+distinct, so no repeats, so the choice set shrinks: 10 · 9 · 8 = 720. This is
+Mistake 2 of this lesson — "choosing digits" *sounds* like choosing, but PIN,
+rank, order, sequence, schedule and password all signal that swapping two
+choices changes the answer.
+
+- A) is the nCr answer. It is exactly a factor of 3! = 6 too small, and the gap
+  grows with `r`: at `r = 4` it would be a factor of 24.
+- C) is right for *any* 3-digit PIN, and wrong only because of the no-repeat
+  clause. The clause changes the second and third factors from 10 to 9 and 8.
+- D) subtracts a single string rather than the 10 · 10 = 100 strings that use a
+  repeated digit somewhere.
+
+</details>
+
+**Q3.** How many ways can you choose 3 scoops of ice cream from 6 flavours if
+the same flavour may be chosen twice?
+
+- A) `C(6, 3) = 20`
+- B) `P(6, 3) = 120`
+- C) `C(8, 3) = 56`
+- D) `C(6, 3) · 3! = 120`
+
+<details>
+<summary>Answer and explanation</summary>
+
+**C) `C(8, 3) = 56`.**
+
+Order does not matter and repeats are allowed, which is the box whose answer is
+the trick: `C(n + r − 1, r) = C(6 + 3 − 1, 3) = C(8, 3) = 56`. The
+correspondence is r stars and n − 1 bars: the stars before each bar are that
+flavour's multiplicity, and there are `n + r − 1` symbols of which `n − 1` are
+bars.
+
+- A) is the no-repeats answer and is Mistake 3 of this lesson. It is too small
+  because it omits every multiset containing a double or a triple.
+- B) also forgets the repeats, and additionally counts order — two separate
+  errors that happen to multiply out to the same number as D.
+- D) is `C(6,3) · 3!`, which equals option B. Both are wrong for the same reason:
+  order and repeats are each mis-handled, and the two factors cancel in
+  appearance without cancelling in fact.
+
+</details>
+
+**Q4.** `P(8, 4) = 1,680` and `C(8, 4) = 70`. What is the quotient, and what does
+the identity `P(n,r) = C(n,r)·r!` say?
+
+- A) 24, because each 4-element set has exactly 4! = 24 orderings
+- B) 12, because reversing an order is a factor of 2 and there are 4 rotations
+- C) 4, because the choice set shrinks four times
+- D) 24, but only because 8 − 4 = 4 and `2^4 = 16` rounds up
+
+<details>
+<summary>Answer and explanation</summary>
+
+**A) 24, because each 4-element set has exactly 4! = 24 orderings.**
+
+1,680 / 70 = 24 = 4!, exactly as the theorem predicts. The identity is the
+formal version of "order matters, so multiply by the rearrangements": fix a
+4-element subset, and all 4! of its orderings are valid 4-permutations using
+precisely those elements, so the combinations partition the permutations into
+classes of size 4!.
+
+- B) is the count of an *undirected cycle* on 5 vertices, not of orderings of 4
+  objects.
+- C) is a genuine factor in this example — the last factor of `P(8,4)` is
+  `8 − 3 = 5`, not 4 — but it is a factor of one term in the product, not the
+  ratio of the two counts.
+- D) reaches the right number for the wrong reason. `2^4 = 16 ≠ 24`, so the
+  parenthetical arithmetic does not even hold; the correct reading of the
+  identity is the one in A.
+
+</details>
+
+**Q5.** How many distinct arrangements are there of the letters in MISSISSIPPI?
+
+- A) `11! = 39,916,800`
+- B) `11!/4! = 1,663,200`
+- C) `11!/(4!·4!·2!) = 34,650`
+- D) `11!/(4! + 4! + 2!) = 39,916,800`
+
+<details>
+<summary>Answer and explanation</summary>
+
+**C) `11!/(4!·4!·2!) = 34,650`.**
+
+MISSISSIPPI has 11 letters with multiplicities 4 × S, 4 × I, 2 × P, so the
+multiset permutation formula divides 11! once per *distinct* letter:
+39,916,800 / (24 · 24 · 2) = 34,650. The lesson notes that this is small enough
+to search, which is exactly why it is a favourite interview question.
+
+- A) counts the arrangements of 11 *labelled* objects. It overcounts each
+  visible arrangement 4! · 4! · 2! = 1,152 times.
+- B) is Mistake 4 of this lesson: dividing once captures only the first group of
+  repeats. It is a factor of 48 too big.
+- D) adds the factorials instead of multiplying them. `(4! + 4! + 2!) = 72`
+  against a true divisor of 1,152 — a factor of 16 off, and the formula is not
+  even the right shape.
+
+</details>
+
+**Q6.** The lesson gives Pascal's recursion as `C(n, r) = C(n − 1, r − 1) +
+C(n − 1, r)`. Which pair of sets do the two terms count?
+
+- A) The `r`-subsets that contain a fixed element, and those that do not
+- B) The `r`-subsets of the first `n − 1` elements, and the `r`-subsets of the
+  last `n − 1` elements
+- C) The `r`-subsets of an `r`-set, and the `r`-subsets of an `(n − r)`-set
+- D) The subsets containing the first element, and the subsets containing the
+  last element
+
+<details>
+<summary>Answer and explanation</summary>
+
+**A) The `r`-subsets that contain a fixed element, and those that do not.**
+
+Fix one element of the `n`-set. A subset either contains it — delete it and you
+get an `(r − 1)`-subset of the other `n − 1`, giving `C(n − 1, r − 1)` — or does
+not, giving an `r`-subset of the other `n − 1`, counted by `C(n − 1, r)`. The two
+cases are disjoint and exhaustive, so the sum rule applies. This is precisely the
+theorem [Lesson 22](../part02_discrete_combinatorics/22_binomial_theorem.md)
+re-derives from the binomial expansion.
+
+- B) counts subsets that mostly agree, and the two families are *not* disjoint —
+  a subset avoiding the first element and one avoiding the last can both be
+  present in the intersection. Adding would overcount.
+- C) uses the wrong sizes. The pieces have sizes `n − 1` with `r − 1` and `r`
+  selections, not `r` and `n − r`.
+- D) splits on two different elements, so a subset containing both is in both
+  families. That is a classic double-count, and the reason a correct partition
+  must fix *one* element.
+
+</details>
+
+**Q7.** The symmetry `C(n, k) = C(n, n − k)` — what bijection proves it, and
+what does it predict about the two numbers below?
+
+- A) It has no combinatorial proof; it is an algebraic accident. So `C(20,7)` and
+  `C(20,13)` need not agree
+- B) Take the complement inside the `n`-set: `C(20,7) = C(20,13) = 77,520`
+- C) It is proved by induction on `n` using Pascal's recursion, and predicts
+  `C(20,7) = C(20,20) = 1`
+- D) It comes from `P(n,r) = C(n,r)·r!` and predicts `C(20,7) = C(20,7!)`
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) Take the complement inside the `n`-set: `C(20,7) = C(20,13) = 77,520`.**
+
+Sending a `k`-subset to its complement is a bijection from the `k`-subsets onto
+the `(n − k)`-subsets — so it is proved combinatorially, and being able to say
+*why* two unrelated-looking counts coincide is the difference between having
+computed a number and having understood it.
+
+- A) is the memorise-instead-of-understand view. The identity is also true
+  algebraically, but the point of the bijection is that it explains the equality
+  rather than asserting it.
+- C) offers a real proof route but draws a false conclusion: `n − k = 20 − 7 = 13`,
+  not 20. `C(20,20) = 1` because the only 20-subset is the whole set.
+- D) does not follow from `P = C·r!` at all. `C(20, 20!)` is undefined; the
+  symmetry replaces `k` by `n − k`, which for `n = 20, k = 7` is 13.
+
+</details>
+
+**Q8.** A manifest takes at most 2 tests from each of 3 groups, 5 tests in total.
+How many manifests are there?
+
+- A) 3 — the multiplicity pattern must be `(2, 2, 1)`, and there are 3 choices
+  for the group contributing 1
+- B) 6 — one for each ordering of `(2, 2, 1)`
+- C) 30 — the multinomial count `5!/(2!2!1!)` for one pattern
+- D) 90 — six times the unordered count
+
+<details>
+<summary>Answer and explanation</summary>
+
+**A) 3 — the multiplicity pattern must be `(2, 2, 1)`, and there are 3 choices for
+the group contributing 1.**
+
+This is the coefficient of `x⁵` in `(1 + x + x²)(1 + x + x²)(1 + x + x²)`. Each
+group contributes `x^kᵢ` with `kᵢ ≤ 2`; landing on `x⁵` forces a permutation of
+`(2, 2, 1)`, and there are three. The lesson's `bounded_selections([2,2,2], 5)`
+returns 3, refereed by enumerating every multiplicity vector.
+
+- B) counts orderings of the pattern. In an unordered manifest the pattern
+  `(2, 2, 1)` with the *third* group contributing 1 is the same manifest as the
+  pattern with the first group contributing 1 — only the identity of the groups
+  differs, and there are 3 groups, so 3, not 6.
+- C) is the number of *ordered* schedules for one fixed multiplicity vector.
+  It is the right per-vector weight, applied to one vector instead of all three.
+- D) is the total ordered count: 3 · 30 = 90. That answers "how many 5-long
+  schedules of 5 distinct tests drawn at most twice per group", which is a
+  different object from the manifest the question asks for.
+
+</details>
+
+**Q9.** From the worked example: how many 4-long schedules of the 6 tests have
+test A *not* in the last slot?
+
+- A) 300
+- B) 360
+- C) 240
+- D) 120
+
+<details>
+<summary>Answer and explanation</summary>
+
+**A) 300.**
+
+All 4-long schedules: `P(6,4) = 6 · 5 · 4 · 3 = 360`. Those with A last: fix A
+there, then fill the first three slots with distinct tests from the *remaining*
+five, giving 5 · 4 · 3 = 60. So 360 − 60 = 300.
+
+- B) is the count before applying the constraint — the classic answer you get by
+  reading "how many schedules" and stopping.
+- C) counts schedules with A in the *first* slot as well as excluding some other
+  set of 120; 360 − 240 would be subtracting twice as many as the bad set holds.
+- D) is `C(6,4) · 4! = 15 · 24 = 360` halved, i.e. it treats the question as
+  unordered. Fixing A in one slot of a schedule makes the remaining slots
+  ordered, so the product rule applies to them, not `C(5,3)`.
+
+</details>
+
+**Q10.** A script builds `C(n, r)` as `factorial(n) // (factorial(r) *
+factorial(n-r))`. Calling it with `n = 1000, r = 500` is slow and memory-hungry.
+What breaks, and what is the fix?
+
+- A) Nothing breaks; the formula is exact, so the cost is only constant overhead
+- B) The arithmetic is exact but wasteful: 1000! has 2,568 digits, so the naive
+  form does `O(n)` big-integer work where `O(min(r, n−r))` suffices — use
+  `math.comb` or the multiplicative form with `r = min(r, n−r)`
+- C) Integer division truncates, so the result is wrong whenever the factorial
+  ratio is not an integer
+- D) It breaks only for `r > n`, and this call is fine
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) The arithmetic is exact but wasteful: 1000! has 2,568 digits, so the naive
+form does `O(n)` big-integer work where `O(min(r, n−r))` suffices.**
+
+This is Mistake 5 of this lesson. The factorial ratio *is* an exact integer, so
+there is no correctness bug — but you build three enormous factorials, do two
+huge multiplications, and throw most of the digits away in the division.
+`math.comb` is C-implemented and performs the divisions with more care.
+
+- A) is wrong because "exact" is not the same as "cheap". At `n = 20` the naive
+  version looks fine, which is what makes the wall invisible until it is hit.
+- C) is a real misconception about factorial ratios: `n!` is always divisible by
+  `r!(n−r)!` for `0 ≤ r ≤ n`, so truncation never corrupts the answer.
+- D) misreads the failure. `r > n` does force `C(n,r) = 0`, but that is a
+  different guard, and the lesson states the `0` convention explicitly. The cost
+  problem at `n = 1000` is real regardless.
+
+</details>
+
+---
+
+## Subjective Questions
+
+### Short Answer
+
+**Q1. State the four-box decision table: for each combination of "does order
+matter" and "are repeats allowed", give the formula and one example.**
+
+<details>
+<summary>Answer</summary>
+
+| | repeats allowed | no repeats |
+| --- | --- | --- |
+| **order matters** | `$n^{r}$` — strings, passwords, functions | `$P(n,r) = n!/(n-r)!$` — schedules, PINs from distinct digits |
+| **order irrelevant** | `$C(n+r-1, r)$` — 3 scoops from 6 flavours | `$C(n,r) = n!/(r!(n-r)!)$` — committees, handshakes |
+
+The one-sentence test: **if swapping two of the chosen items gives a different
+answer, order matters.** Choosing Alice and Bob for a review — swapping changes
+nothing, so `C`. Ranking Alice above Bob — swapping changes the answer, so `P`.
+Order matters and repeats are allowed gives $n^{r}$ because each of the `r` slots
+picks freely and independently from the whole pool.
+
+</details>
+
+**Q2. Write `C(n, r)` in its multiplicative form and say why you would prefer it
+to the factorial form.**
+
+<details>
+<summary>Answer</summary>
+
+$$C(n,r) = \frac{n(n-1)(n-2)\cdots(n-r+1)}{r!} = \frac{n(n-1)\cdots(n-r+1)}{1\cdot 2\cdot 3\cdots r}$$
+
+You prefer it for three reasons. It never constructs `n!`, so it stays usable at
+`n = 1000` where the factorial has thousands of digits. Every intermediate value
+in the numerator is smaller than `n!`, so the big-integer work is much cheaper.
+And combining it with the symmetry — `r = min(r, n−r)` — turns an `O(n)`
+computation into `O(min(r, n−r))`, which matters when `r` is small and `n` is
+large.
+
+</details>
+
+**Q3. Why is `P(n, r) = C(n, r) · r!`? Give the partition argument.**
+
+<details>
+<summary>Answer</summary>
+
+Fix an `r`-element subset `S`. Every ordering of `S` is a valid `r`-permutation
+using exactly the elements of `S`, and by the product rule there are `r!` of
+them. So each `r`-subset contributes exactly `r!` permutations, and the
+`r`-subsets partition `P(A, r)` into classes of equal size — a partition, because
+each permutation uses one specific set of elements and no two sets share a
+permutation.
+
+Dividing the total `P(n,r)` by the class size `r!` gives `C(n,r)`. This is the
+formal version of "order matters, so multiply by the rearrangements", and it is
+why your `nPr` answer should always be `r!` times your `nCr` answer — the
+cheapest available self-check.
+
+</details>
+
+**Q4. How many unordered selections of `r` items from `n` kinds are there when
+repeats are allowed? Describe the bijection you use to prove it.**
+
+<details>
+<summary>Answer</summary>
+
+$$C(n+r-1,\;r) = C(n+r-1,\;n-1)$$
+
+The bijection is stars and bars. Write `r` stars and `n − 1` bars in a row. Each
+bar separates one kind from the next, so the stars before the first bar are
+"how many of kind 1", between the first and second bar "how many of kind 2", and
+so on.
+
+A selection maps to exactly one bar pattern, and a bar pattern maps back to
+exactly one selection, so this is a bijection. The patterns are strings of length
+`n + r − 1` with `n − 1` distinguished positions for the bars, of which
+`C(n+r−1, n−1)` exist. Worked: 3 scoops from 6 flavours gives
+`C(6 + 3 − 1, 3) = C(8, 3) = 56`.
+
+</details>
+
+**Q5. State Pascal's recursion with its base cases, and say what the recursion
+tree computes.**
+
+<details>
+<summary>Answer</summary>
+
+$$C(n,r) = C(n-1,\,r-1) + C(n-1,\,r), \qquad C(n,0) = C(n,n) = 1, \quad C(n,r) = 0 \text{ for } r > n$$
+
+The recursion tree computes a whole row of Pascal's triangle from the row above:
+each entry is the sum of the two entries diagonally above it. Starting from the
+single row `[1]` and repeating `n` times yields row `n`, which is exactly the
+list `[C(n,0), C(n,1), …, C(n,n)]`.
+
+This is the dynamic-programming form: fill a table instead of recomputing shared
+subproblems. The lesson's `pascal_row(6)` gives
+`[1, 6, 15, 20, 15, 6, 1]`, which enumeration of the actual subsets confirms,
+and the sum of row 10 is `2¹⁰ = 1,024`.
+
+</details>
+
+### Long Answer
+
+**Q1. The lesson's decision rule is "if swapping two of the chosen items gives a
+different answer, order matters". Why is that rule reliable, and where does it
+stop being reliable?**
+
+<details>
+<summary>Model answer</summary>
+
+The rule is reliable because "order matters" is not a stylistic judgement about
+the sentence — it is a statement about the *object being counted*. If swapping
+two items produces a different object, then the counted objects are sequences
+and `nCr` merges distinct objects into one, undercounting by exactly `r!` per
+class. If swapping produces the same object, the counted objects are sets, and
+`nPr` invents distinctions that do not exist, overcounting by `r!`. The rule
+gets this right for both failure directions, which is why it beats the default
+of reaching for whichever formula is more familiar.
+
+It stops being reliable in two places, and both are about the *object* being
+ambiguous rather than the rule being wrong.
+
+The first is when the object is not fully described by the sentence. "Choose two
+servers" is ambiguous about order; "choose two servers and give them a failover
+priority" is not. Here the lesson's answer is to look for the signalling words —
+rank, order, sequence, schedule, PIN, path, password, manifest — each of which
+tells you swapping changes the artifact. Absent such a signal, and absent an
+explicit statement, the honest move is to say which reading you are using, which
+is what the lesson does in Mistake 2.
+
+The second and more interesting failure is circular arrangement. Around a round
+table of `n` people, `(n − 1)!` arrangements are distinct, not `n!`, because
+rotating the whole table gives the same seating. The swap test says order
+matters, and it does — but the group that is "the same" is larger than the one
+the swap test detects, so the answer is `n!` divided by `n`, not by `r!`. This is
+exactly the structural point the lesson's own Exercise 1 makes: "divide by the
+rearrangements" is only as good as your identification of *which* rearrangements
+count as the same. And the identification itself is a modelling decision, which is
+why the lesson prefers the enumeration referee in Mistake 5: brute force builds
+the objects and therefore cannot get the equivalence wrong.
+
+</details>
+
+**Q2. Why is "at most two of each kind" solved by reading a coefficient out of a
+polynomial instead of by case analysis? Explain why the coefficient reading is
+exact and not merely suggestive.**
+
+<details>
+<summary>Model answer</summary>
+
+The case-analysis route is not wrong, it is just bad bookkeeping. With `m` kinds
+and `r` items you must enumerate every admissible multiplicity vector, and for
+caps like `(2, 2, 2)` at `r = 5` that means writing out the permutations of
+`(2, 2, 1)`. Change the numbers — `(3, 3, 3)` at `r = 6`, or eight kinds — and
+the case list grows while the polynomial does not.
+
+The polynomial works because of how a product behaves. Expanding
+`(1 + x + … + x^{c₁})(1 + x + … + x^{c₂})⋯(1 + x + … + x^{c_m})`, each of the 2ⁿ⁰
+terms is formed by taking one `x^{kᵢ}` from the `i`-th factor, and the product of
+those terms is `x^{k₁ + k₂ + ⋯ + k_m}`. Collecting every term of degree `r` is
+therefore *precisely* the set of admissible multiplicity vectors, each
+contributing `1` — no vector is counted twice, because the factors are
+distinguishable and a vector records one choice per factor.
+
+That is the sense in which the coefficient is exact rather than suggestive. It is
+not a numerical coincidence that the coefficient of `x⁵` in `(1+x+x²)³` is 3; it
+is a restatement of the fact that the expansion is a sum over all vectors, grouped
+by degree. The lemma's phrase — "collecting all terms of degree `r` counts each
+valid multiplicity vector once" — is the whole proof.
+
+The same mechanism handles the ordered version, and the two together show why the
+technique is worth having. Each unordered selection contributes its multinomial
+count `r!/(k₁!⋯k_m!)` as the number of orderings, so the ordered count is
+`Σ r!/(k₁!⋯k_m!)` over admissible vectors: `3 · 5!/(2!·2!·1!) = 3 · 30 = 90` for
+caps `(2,2,2)` at `r = 5`. Restricting a factor to `(1 + x + … + x^{cᵢ})` is
+precisely how the cap is imposed, and dropping it is how the "unlimited" version
+falls out as a special case. The lesson's `bounded_selections` builds the
+coefficient list with the schoolbook rule and checks every result against
+`brute_vectors`, which enumerates the vectors directly — the two agreeing is what
+turns the argument into a verified computation.
+
+</details>
+
+**Q3. Why does the factorial form of `C(n, r)` degrade so badly, and what would
+actually break if you ignored that in production code?**
+
+<details>
+<summary>Model answer</summary>
+
+The degradation is in the size of the integers involved, not in correctness.
+`n!/(r!(n−r)!)` is always an exact integer for `0 ≤ r ≤ n`, so the formula never
+produces a wrong answer. What it produces is *enormous intermediates*: at
+`n = 1000`, `1000!` has 2,568 decimal digits, and you build three such numbers,
+multiply two of them, and then divide — discarding nearly all the digits you just
+computed.
+
+What breaks in production is a stack of things. In fixed-width integer
+arithmetic the factorial overflows first: even `21!` exceeds a 64-bit unsigned
+integer, so at `n = 21` the "exact" formula silently wraps and returns a
+plausible wrong number. In exact big-integer arithmetic the cost is wall-clock
+and memory: the work is `O(n)` multiplications of numbers with `Θ(n log n)` bits,
+and it happens on every call if the function sits in a hot loop. And the
+asymptotic claim is wrong too — the multiplicative form with `r = min(r, n−r)`
+is `O(min(r, n−r))`, so with `r = 2` and `n = 10⁹` you do three steps rather
+than a billion.
+
+The fixes are all already in the lesson. Use `math.comb(n, r)`, which is
+C-implemented and does the division more carefully than a hand-rolled loop will.
+Or write the multiplicative form, keeping every intermediate an integer by
+dividing at each step. Or, when you only need the count as a feasibility
+number, keep it as `C(n, r)` symbolically and take `log₂` of it — which is the
+habit the lesson picks up in the sizing step of Worked Example 1, and which stays
+correct even when the count itself would not fit in a machine word.
+
+The wider point is that "exact" is not the property you want. Every formula in
+this lesson is exact. What differs between them is the resource profile, and
+exponential-time-but-correct is still wrong when it has to run on every request.
+
+</details>
+
+**Q4. Why is the check `P(n, r) = C(n, r) · r!` genuinely useful, and what does a
+violation of it tell you?**
+
+<details>
+<summary>Model answer</summary>
+
+It is useful because it tests two independent computations against each other.
+`P(n,r)` and `C(n,r)` are computed by different code paths — one is a falling
+product, the other a product followed by division — so agreement is evidence that
+both are right. It costs one multiplication and one exact division. A division
+that comes out integral is itself a check, since `C(n,r)·r!` is a count and
+counts are integers.
+
+A violation is diagnostic rather than merely "a bug is somewhere". Because the
+factor is exactly `r!`, a quotient that is not `r!` tells you the *ratio* between
+your ordered and unordered counts is wrong, which is a statement about the
+problem's shape, not about your arithmetic. The usual causes, in order of
+frequency:
+
+- You applied `nPr` to a problem whose objects are sets. The quotient then comes
+  out as something smaller than `r!` — for `n = 5, r = 3` you would see 20/10 = 2
+  instead of 6 — and the fix is to re-read the sentence for the words that signal
+  order.
+- You applied `nCr` to a problem whose objects are sequences. The quotient then
+  comes out larger than `r!`, and again the fix is the same reading, not the
+  arithmetic.
+- You miscounted the pool: a slot was supposed to be excluded (as when test A is
+  forbidden from the last position) and was not. The quotient is then not `r!` in
+  a way that does not match any factorial, which is a signal that the *set* being
+  drawn from was wrong.
+- The "repeats allowed" clause was handled inconsistently between the two
+  formulas, as in option D of Q3 above, where `C(6,3)·3!` and `P(6,3)` coincide
+  while both being wrong.
+
+What the check cannot do is tell you *which* of two correct-looking counts the
+problem wants. It certifies internal consistency, not interpretation. For that you
+still need to write the objects down — which is why the lesson's habit of
+refereeing against `itertools.permutations` or `itertools.combinations` is the
+step that catches an error the ratio test passes.
+
+</details>
+
 ## Exercises and Solutions
 
 **[ ] Exercise 1 — Handshakes.** In a room of 9 people, how many handshakes

@@ -3075,5 +3075,5 @@ other universal quantifier in this repository: "for every *set*", rather than
 "for every number". It assumes you can write a quantified claim and cover an
 infinite domain with a step, and it uses exactly that machinery to show that the
 integers and the pairs of integers are the same size. The notation it adds is
-in [SYMBOLS.md](../../SYMBOLS.md), and the counting results it leans on are
+in [SYMBOLS.md](../SYMBOLS.md), and the counting results it leans on are
 developed in [Part 02](../part02_discrete_combinatorics/20_counting_principles.md).

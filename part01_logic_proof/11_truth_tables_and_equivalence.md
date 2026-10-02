@@ -772,7 +772,7 @@ called the same you stop expecting them to look different.
 
 ## Formula Sheet
 
-Notation follows [SYMBOLS.md](../../SYMBOLS.md). The five connectives come from
+Notation follows [SYMBOLS.md](../SYMBOLS.md). The five connectives come from
 [Lesson 10](10_propositions_and_connectives.md); this lesson adds the truth
 table, equivalence, and the normal forms.
 

@@ -64,7 +64,7 @@ contrapositive is the form you can actually prove.
 
 ## The Formal Version
 
-Notation follows [SYMBOLS.md](../../SYMBOLS.md). $\Gamma$ is a set of
+Notation follows [SYMBOLS.md](../SYMBOLS.md). $\Gamma$ is a set of
 sentences; $P, Q, R$ are sentences; $\vdash$ is the turnstile.
 
 **Definition.** A *derivation* (or *formal proof*) of $S$ from premises $\Gamma$

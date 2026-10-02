@@ -55,7 +55,7 @@ are called KKT, and they are the standard test for whether a candidate is right.
 
 ## The Formal Version
 
-Notation follows [SYMBOLS.md](../../SYMBOLS.md).
+Notation follows [SYMBOLS.md](../SYMBOLS.md).
 
 **Definition.** For minimisation with m equality constraints cᵢ(x) = 0, the
 *Lagrangian* is the function of n + m variables
@@ -790,6 +790,635 @@ prevents an entire class of bug.
 **6. Using the primal when the dual is easier.** The dual often has fewer
 variables, is frequently convex when the primal is not, and gives a certified
 lower bound. Before hand-rolling a constrained solver, check the dual.
+
+---
+
+## Formula Sheet
+
+| Symbol | Formula | In plain words | When you use it |
+| --- | --- | --- | --- |
+| Lagrangian (equalities) | `$L(x,\lambda)=f(x)+\sum_i\lambda_ic_i(x)$` for `c_i(x)=0`, `i=1..m` | the objective plus a price on each constraint violation; `$n+m` variables instead of `$n$` | valid whenever the constraints are equalities, and `λ` is then **unconstrained in sign** |
+| regular point | `x` where `∇c_1(x),…,∇c_m(x)` are linearly independent | the constraints do not degenerate there | a **hypothesis** of the Lagrange condition; at a non-regular point a minimiser may exist with no `λ` at all |
+| Lagrange condition | `$\nabla f(x)+\sum_i\lambda_i\nabla c_i(x)=0$ together with `$c_i(x)=0$` | at the optimum, the objective's slope is made up entirely of the constraint slopes | **necessary, not sufficient**; it identifies *candidates* |
+| first-order stationarity | `$\nabla_xL=0` | the total has no slope in `x` | solve this jointly with feasibility; this is "the KKT system" for equalities |
+| second-order sufficient condition | `$\nabla^2_{xx}L(x,\lambda)=\nabla^2f(x)+\sum_i\lambda_i\nabla^2c_i(x)` positive definite **on the tangent space** `$\{v:\nabla c_i(x)\cdot v=0\ \forall i\}$` | curved upward in every direction you are allowed to move | valid only on the tangent space, since directions leaving the feasible set are not tested; when the constraints are affine, `∇²f` alone suffices there |
+| Lagrangian (inequalities) | `$L(x,\mu,\nu)=f(x)+\sum_i\mu_ig_i(x)+\sum_j\nu_jh_j(x)$` | as above, with `g_i(x) ≤ 0` inequalities added | valid for the standard form `g_i(x) ≤ 0`; write the constraint the other way round and the sign condition flips |
+| KKT, 1: primal feasibility | `$g_i(x)=0$` for active `i`; `$h_j(x)=0$` for all `j` | the point is actually allowed | a violation here is fatal — check it first, before reading any multiplier |
+| KKT, 2: dual feasibility | `$\mu_i\ge0$ for all `i` | no constraint carries a negative price | the single condition that makes an inequality problem different from an equality one; violates `μ ≥ 0` ⟹ wrong sign convention |
+| KKT, 3: complementary slackness | `$\mu_ig_i(x)=0$ for all `i$` | each constraint is either free (`μ_i = 0`) or exactly at its limit | omit it and a solver will happily report a point that breaks a constraint while assigning it a nonzero multiplier |
+| KKT, 4: stationarity | `$\nabla f(x)+\sum_i\mu_i\nabla g_i(x)+\sum_j\nu_j\nabla h_j(x)=0$ | the objective gradient lies in the cone spanned by the active constraint gradients | check it as an array: the lesson's residual is `[-0. -0.]` |
+| the four cases | `$g_i<0$` ⟹ slack, `$\mu_i=0$`; `$g_i=0,\ \mu_i>0$` ⟹ binding and valuable; `$\mu_i=0,\ g_i=0$` ⟹ degenerate; `$\mu_i>0,\ g_i<0$` ⟹ **impossible** | four situations to tell apart | valid only because `μ_i ≥ 0 ≥ g_i`; the fourth case is what a sign error looks like |
+| shadow price | `$\partial p^*/\partial b_i=-\mu_i` where `$b_i$` is the constant in `$g_i(x)\le b_i$` | one extra unit of resource `i` is worth `μ_i` profit, to first order | meaningful **only** for inequalities, and only locally; for the lesson's labour constraint `μ = 1.3333` |
+| multiplier from the geometry | `$\lambda=-\dfrac{g_x(x)}{{\partial c_i/\partial x}}$` where the two gradients are parallel | take the ratio componentwise; equal ratios confirm parallelism | valid only where `∂c_i/∂x ≠ 0`, i.e. at a regular point; the ratios agree exactly in the worked example |
+| strong duality | `$\min_x L(x,\mu,\nu)=d(\mu,\nu)\le p^*$, equality when `f` convex, `g_i` convex, `h_j` affine, and Slater's strict feasibility holds | the dual bound is tight, not just a bound | Slater's condition (a point with all inequalities **strict**) is the hypothesis; without it there can be a gap |
+| dual problem | `$d(\mu,\nu)=\inf_x L(x,\mu,\nu)$`, maximised over `$\mu\ge0$` | minimise the Lagrangian over `x`, then push the multipliers up | convex in `(μ, ν)` whenever the primal is; gives a certified lower bound on any candidate |
+| duality gap | at a candidate with `$\nabla_xL=0$` and `$h_j(x)=0$`: `$p-d=\sum_i\mu_ig_i(x)$` | the gap measures exactly how much the constraints are violated | valid only at a stationary, equality-feasible point; zero gap is a **certificate** of global optimality under strong duality |
+| active-set workflow | solve for an assumed active set, then read the signs | try a set, and the multipliers tell you if you guessed wrong | a **negative** multiplier means drop that constraint and re-solve; production active-set solvers are exactly this loop |
+| KKT Jacobian (Newton) | blocks `$\partial(\nabla_xL)/\partial x=\nabla^2f+\sum_i\lambda_i\nabla^2c_i$`, `$\partial(\nabla_xL)/\partial\lambda_i=(\nabla c_i)^{\mathsf T}$`, `$\partial c_i/\partial x=(\nabla c_i)^{\mathsf T}$`, `$\partial c_i/\partial\lambda_j=0$` | the linear system a Newton step solves | the bottom-right block is **zero**; when the objective is linear that block and the Hessian are both zero, so the system is singular and Levenberg–Marquardt damping is required |
+| hard-margin SVM | `$y_i(w\cdot x_i+b)\ge1$`, minimise `$\tfrac12\lVert w\rVert^2$ | keep every point outside the margin, as tightly as possible | the multipliers are `0` off the margin, `C` inside it, and in `(0, C)` exactly on it; the `λ_i > 0` points are the support vectors |
+| margin width | `$\text{width}=2/\lVert w\rVert$` | the total gap the classifier leaves, `1/‖w‖` on each side | minimising `‖w‖²` **is** maximising the margin; `w = (0.5, 0.5)`, `b = −0.5` give width `2.828427` here |
+
+---
+
+## Multiple Choice Questions
+
+**Q1.** Why must the objective gradient be a linear combination of the constraint
+gradients at a constrained optimum?
+
+- A) Because Lagrange multipliers are a convenience that happens to give the right answer
+- B) Because any feasible curve through `x` has direction orthogonal to every `∇c_i`, so `∇f` must be orthogonal to the same space — and the orthogonal complement of the span of the `∇c_i` **is** that span
+- C) Because a sum of two vectors is always at least as large as either one
+- D) Because `∇f` must be zero at an optimum
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) Because any feasible curve through `x` has direction orthogonal to every `∇c_i`, so
+`∇f` must be orthogonal to the same space — and the orthogonal complement of the span of
+the `∇c_i` **is** that span.**
+
+Differentiate `c_i(x(t)) = 0` along a feasible curve to get `∇c_i(x)·x′(0) = 0`, so `x′(0)`
+is orthogonal to every constraint gradient. Since `x` is a minimum *along* the curve,
+`∇f(x)·x′(0) = 0` too. So `∇f` is orthogonal to the same space, and in `ℝⁿ` the
+orthogonal complement of a subspace is spanned by any basis of it — giving
+`∇f(x) = −Σλᵢ∇cᵢ(x)`. The geometry is the one-sentence version: **at the optimum the
+objective gradient is perpendicular to the feasible set.**
+
+Option A is the "it just works" attitude; the proof is two lines and it is what tells you
+*when* the condition can fail — at a **non-regular** point, where the `∇c_i` are linearly
+dependent, the span is smaller and a minimiser may exist with no `λ` representing it.
+Option C inverts the orthogonality argument: nothing here is an inequality about magnitudes.
+Option D is the unconstrained stationarity condition; `∇f` is zero at an *unconstrained*
+optimum, but the whole point of the constrained case is that it need not be.
+
+</details>
+
+**Q2.** For an inequality constraint written `g(x) ≤ 0` with multiplier `μ`, what does
+complementary slackness `μ·g(x) = 0` combined with dual feasibility `μ ≥ 0` allow?
+
+- A) `μ > 0` with `g(x) < 0` — the constraint is active but not reached
+- B) `μ = g(x) = 0` only
+- C) `g(x) < 0` forces `μ = 0`; `g(x) = 0` with `μ > 0` is binding; `μ = 0` with `g(x) = 0` is the degenerate case; `μ > 0` with `g(x) < 0` is impossible
+- D) `μ = 0` whenever the constraint is not the only one
+
+<details>
+<summary>Answer and explanation</summary>
+
+**C) `g(x) < 0` forces `μ = 0`; `g(x) = 0` with `μ > 0` is binding; `μ = 0` with `g(x) = 0`
+is the degenerate case; `μ > 0` with `g(x) < 0` is impossible.**
+
+A product of a non-negative number and a non-positive number vanishes only when one of the
+factors is zero, and that single observation gives all four cases. The last one — a positive
+multiplier on a slack constraint — is exactly what a sign error looks like, which is why
+`μ ≥ 0` is written into the conditions rather than left implicit.
+
+Option A states the impossible case and is the classic symptom of solving stationarity
+without dual feasibility. Option B drops the genuinely binding case, which is the one that
+carries information — in the resource example `μ_labour = 1.3333` and
+`μ_machine = 9.3333` are both positive and both binding. Option D is a non sequitur;
+complementary slackness is per-constraint and says nothing about how many constraints are
+present. The lesson's QP verification prints all three inequality products as `0.000e+00`
+precisely because those constraints are slack and their multipliers are `0`.
+
+</details>
+
+**Q3.** The worked example minimises `f(x, y) = (x − 3)² + (y − 2)²` subject to
+`x + y = 4`. What are the answer and the multiplier?
+
+- A) `x = y = 2`, `λ = −1`
+- B) `x = 2.5`, `y = 1.5`, `λ = 1`, with `f = 0.5`
+- C) `x = 3`, `y = 2`, `λ = 0`
+- D) `x = 1.5`, `y = 2.5`, `λ = −1`
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) `x = 2.5`, `y = 1.5`, `λ = 1`, with `f = 0.5`.**
+
+`∂L/∂x = 2(x − 3) + λ = 0` gives `x = 3 − λ/2`, and `∂L/∂y = 2(y − 2) + λ = 0` gives
+`y = 2 − λ/2`. Adding: `(3 − λ/2) + (2 − λ/2) = 4`, so `5 − λ = 4` and `λ = 1`. Then
+`x = 2.5`, `y = 1.5`, and `f = 0.25 + 0.25 = 0.5`. The code prints
+`lambda = 1.0000000000` and `constraint x + y = 4.0000000000`.
+
+Option A is the arithmetic slip `3 − λ/2` read as `2 − λ/2`; it does not satisfy the
+constraint. Option C is the *unconstrained* optimum `(3, 2)`, which is infeasible here
+because `3 + 2 = 5`, not `4`. Option D swaps the coordinates, so it satisfies `x + y = 4`
+but not the stationarity equations — the asymmetric objective is not symmetric, and the
+answer is not symmetric either. Note also the geometric check the code performs: `∇f` at the
+solution is `(−1, −1)` and `∇c = (1, 1)`, which are parallel, and `−(−1)/1 = 1 = λ`.
+
+</details>
+
+**Q4.** In the same problem the constraint is relaxed to `x + y ≤ 5`. What changes?
+
+- A) Nothing: the stationarity equations are the same, so the answer is unchanged
+- B) The optimum moves to `(3, 2)` and complementary slackness forces `λ = 0`, since the constraint is slack there
+- C) The optimum moves to `(2.5, 1.5)` and `λ` doubles to `2`
+- D) The problem becomes infeasible
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) The optimum moves to `(3, 2)` and complementary slackness forces `λ = 0`, since the
+constraint is slack there.**
+
+`(3, 2)` now satisfies `3 + 2 = 5 ≤ 5`, and it is the unconstrained global minimum with
+`f = 0`, so it is the constrained one too. There is a single mechanism doing the work:
+`g(x) = x + y − 5 = 0` at the point, but the constraint is *not* the thing stopping you, so
+it should be worth nothing, and complementary slackness with `g = 0` forces `μ = 0`.
+
+Option A confuses *the equations* with *the answer*. It is true that the stationarity
+equations are unchanged — but at `λ = 0` they now solve to `(3, 2)`, not to `(2.5, 1.5)`;
+the equality version had no freedom to set `λ = 0` because `x + y = 4` had to be
+satisfied exactly. Option C keeps the old answer while changing the multiplier
+inconsistently: at `(2.5, 1.5)` the constraint has slack `5 − 4 = 1`, so any nonzero
+multiplier would violate complementary slackness. Option D is nonsense. This one
+mechanism — sign condition plus complementary slackness — is how a solver knows whether a
+constraint is worth anything.
+
+</details>
+
+**Q5.** `∇f(x) = 0` with all constraints satisfied is called *stationarity*. Why is that not
+enough to conclude optimality?
+
+- A) It is enough; the second-order test is only a refinement
+- B) It is necessary only. The constant function `f ≡ 0` is stationary everywhere, so the condition identifies candidates and a second-order test (on the tangent space) must choose among them
+- C) It fails because the constraints have not been checked
+- D) It fails because the multiplier may be negative
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) It is necessary only. The constant function `f ≡ 0` is stationary everywhere, so the
+condition identifies candidates and a second-order test (on the tangent space) must choose
+among them.**
+
+`∇f ≡ 0` makes every point of the feasible set satisfy stationarity, and almost none of
+them is "the" optimum in any interesting sense. The lesson's own counterexample is
+`f ≡ 0` subject to `x = 0`: it is trivially optimal at the single feasible point, yet the
+*same* condition is satisfied everywhere once the constraint is dropped. So the equations
+say "look here", not "stop here".
+
+Option A is the over-claim, and it is expensive in practice: it is how a Newton method
+happily walks into a saddle. Option C misdiagnoses — feasibility is a separate condition
+that a solver checks and the code prints first, and skipping it produces a different bug.
+Option D is about a different issue; for **equalities** `λ` is unconstrained in sign
+(the lesson's Exercise 1 gets `λ = −3` and `λ = −2` on two well-posed problems), and a
+negative `μ` on an inequality signals a wrong active set rather than non-stationarity.
+
+</details>
+
+**Q6.** Maximise `12a + 20b` subject to `2a + b ≤ 100` and `a + 2b ≤ 80`. The code reports
+`a = 40`, `b = 20`, profit `880`, and multipliers `1.3333` and `9.3333`. What do the
+multipliers mean?
+
+- A) They are the coordinates of the optimum expressed in the constraint basis
+- B) One extra labour hour is worth `1.3333` profit units and one extra machine hour is worth `9.3333`, to first order
+- C) They measure how far each constraint is from being met
+- D) They are the reciprocals of the profit coefficients `12` and `20`
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) One extra labour hour is worth `1.3333` profit units and one extra machine hour is
+worth `9.3333`, to first order.**
+
+The formal statement is `∂p*/∂bᵢ = −μᵢ` for the constant `bᵢ` in `gᵢ(x) ≤ bᵢ`. Verify with
+stationarity: `∇(−profit) + μ₁(2,1) + μ₂(1,2) = 0`, i.e.
+`2μ₁ + μ₂ = 12` and `μ₁ + 2μ₂ = 20`, which gives `μ₁ = 4/3` and `μ₂ = 28/3`. The capacity
+sweep then confirms the reading numerically: past the point where both constraints bind,
+profit rises by `400/3 ≈ 133.33` per unit of machine capacity, which is exactly `μ₂`.
+
+Option A is the direction of the condition, not the meaning of the numbers: stationarity
+says the objective gradient lies in the *cone spanned by* the active constraint gradients,
+with `μᵢ` as the weights in that combination. Option C describes the constraint *values*,
+which the code prints separately (`0.0000000000` for both — both bind exactly).
+Option D is numerically absurd: `1/12 ≈ 0.083`, not `1.3333`.
+
+</details>
+
+**Q7.** Exercise 3 guesses that both the budget and the floor `x ≥ 3` are active when
+maximising `xy` subject to `x + y ≤ 10`, `x ≥ 3`. The solver returns `(3, 7)` with
+`λ_budget = +3` and `λ_xmin = −4`. What has been learned?
+
+- A) The solver is wrong, since all multipliers must be non-negative
+- B) The assumed active set is wrong. A negative multiplier is the formal signal to drop that constraint and re-solve; the correct active set is budget alone, giving `(5, 5)` and product `25` against the guessed `21`
+- C) Both constraints are binding, and `λ_xmin` should have been `+4`
+- D) The problem has no solution, because a multiplier came out negative
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) The assumed active set is wrong. A negative multiplier is the formal signal to drop
+that constraint and re-solve; the correct active set is budget alone, giving `(5, 5)` and
+product `25` against the guessed `21`.**
+
+Forcing the floor active pins `x = 3` and `y = 7`, scoring `21` — *worse* than the
+part (a) answer of `25`, and `25` is still feasible because `x = 5` satisfies `x ≥ 3`. So
+the floor simply does nothing here. And notice that `λ_budget = +3` is positive even in the
+rejected candidate, which is exactly why you must read *all* the multipliers rather than
+stopping at the first positive one.
+
+Option A mistakes the symptom for the fault: `μ ≥ 0` is a *condition on a correct answer*,
+not a promise about an intermediate guess. Guessing an active set is a hypothesis, and the
+signs of the resulting multipliers are the test of the hypothesis. Option C is what you get
+by blindly imposing positivity instead of re-solving. Option D is contradicted by the
+printed brute force. The whole workflow — assume an active set, solve, read the signs,
+drop and re-solve — is how production active-set solvers work, and Exercise 3(c) falsifies
+a second expectation the same way (`λ_xmax = −1` for the cap `x ≤ 2`, which turns out to
+be irrelevant because the optimum is `(0, 10)`).
+
+</details>
+
+**Q8.** Maximise `xy` subject to `x + y ≤ 10`, `x, y ≥ 0`. What are the optimum and its
+multiplier, and what happens if the budget is raised to `11`?
+
+- A) `(5, 5)` with product `25` and `λ = 5`; a budget of `11` gives product `30.25`, an improvement of `5.25 = 5 + 0.25`
+- B) `(5, 5)` with product `25` and `λ = 0`; the budget of `11` gives product `30.25`
+- C) `(10, 0)` with product `0` and `λ = 5`
+- D) The problem is unbounded above
+
+<details>
+<summary>Answer and explanation</summary>
+
+**A) `(5, 5)` with product `25` and `λ = 5`; a budget of `11` gives product `30.25`, an
+improvement of `5.25 = 5 + 0.25`.**
+
+`∇(−xy) = (−y, −x)`, `∇c = (1,1)`, so stationarity `−y + λ = 0`, `−x + λ = 0` forces
+`x = y = λ`, and `x + y = 10` gives `λ = 5` and product `25`. The lesson prints
+`lambda = +5.000000` and `product xy = 25.0000000000`.
+
+The second half is the shadow price doing exactly what the theory promises. Raising the
+budget to `11` moves the optimum to `(5.5, 5.5)` with product `30.25`, so the gain is
+`5.25` for one extra unit of budget, against a multiplier of `5` at `x = y = 5`. The two
+agree to first order and differ by `0.25` because the objective is curved: the exact gain is
+`λ + ½·(second-order term)`. That gap between the linear prediction and the realised gain
+is what "to first order" means.
+
+Option B is the trap — `λ = 0` would say the budget is worthless, but the constraint is
+exactly active and the problem is unbounded without it. Option C sits on a vertex with
+product `0`, which is feasible but obviously not maximal. Option D is false because of the
+budget; remove it and the lesson's second block shows the whole segment `x + y = 20` is
+optimal, with the multiplier *undetermined* — which is exactly why the KKT sign condition
+permits `λ = 0` as well as `λ > 0`.
+
+</details>
+
+**Q9.** Maximising `xy` subject to `x + y ≤ 10` has a non-convex objective, yet its dual
+`g(λ) = λ² − 10λ` is a convex one-dimensional minimisation with the same answer. Why does
+that matter?
+
+- A) It does not; a dual with fewer variables but a different structure is useless
+- B) The dual is convex whenever the primal is convex, is often smaller, and gives a certified lower bound — so it is worth computing before hand-rolling a primal solver. Here its optimum is `λ = 5` with value `−25`, matching the primal exactly
+- C) Convexity of the dual implies the primal is convex too
+- D) Strong duality holds for every problem, convex or not
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) The dual is convex whenever the primal is convex, is often smaller, and gives a
+certified lower bound — so it is worth computing before hand-rolling a primal solver. Here
+its optimum is `λ = 5` with value `−25`, matching the primal exactly.**
+
+Minimise `L(x,y,λ) = −xy + λ(x + y − 10) − μx − νy` over `x, y ≥ 0`. Stationarity gives
+`−y + λ − μ = 0` and `−x + λ − ν = 0`; `μ ≥ 0` forces `y ≤ λ` and `ν ≥ 0` forces
+`x ≤ λ`, while finiteness of the infimum forces `y, x ≥ λ`. Together `x = y = λ` and the
+dual reduces to the single convex function `λ² − 10λ` with minimum `−25` at `λ = 5`. Its
+second derivative is `2.0 > 0`, which is what the code prints. The lesson calls this "the
+single most important practical fact in constrained optimisation", because the dual is
+concave in `(μ, ν)` for a convex primal, has far fewer variables than the primal in the
+useful cases, and yields a **bound**: any feasible `x` satisfies `f(x) ≥ d(μ, ν)` for every
+admissible `(μ, ν)`.
+
+Option A ignores that a bound plus a matching point is a certificate. Option C reverses the
+implication: the dual's convexity is a consequence of the primal's convexity, not a way to
+deduce it — and here the primal is *not* convex, which is the whole demonstration. Option D
+over-claims: strong duality needs convexity of `f` and `gᵢ`, affinity of `hⱼ`, and **Slater's
+condition**, a strictly feasible point. Without Slater's condition the gap can be positive,
+and the dual is only a bound.
+
+</details>
+
+**Q10.** In the lesson's two-point SVM, `w = (0.5, 0.5)` and `b = −0.5`, and the six
+sample points have margins `2.5, 1.0, −0.3, 3.5, 1.0, 0.7`. Which points are support
+vectors, and what is the total margin width?
+
+- A) All six, width `2/‖w‖ = 2.828427`
+- B) The two points with margin exactly `1.0`, width `1.414214`
+- C) The four points with margin at most `1` — `(1,2)`, `(0.2,0.2)`, `(−0.5,−0.5)` and `(−0.2,−0.2)` — width `2.828427`
+- D) None of them; the margin is a property of `w` alone
+
+<details>
+<summary>Answer and explanation</summary>
+
+**C) The four points with margin at most `1` — `(1,2)`, `(0.2,0.2)`, `(−0.5,−0.5)` and
+`(−0.2,−0.2)` — width `2.828427`.**
+
+In the soft-margin Lagrangian the multiplier is `0` when the margin exceeds `1`, `C` when
+it is below `1`, and strictly between when it is exactly `1`. The code prints
+`points with lambda > 0 are the support vectors` and lists exactly those four, with
+`Here 4 of 6 points are support vectors.` Every other point can be deleted without changing
+`w` — which is the whole reason a kernel SVM can use a handful of points out of millions.
+The width follows from `|w·x + b|/‖w‖ = 1/‖w‖ = 1.414214` on each side, and the code
+confirms `2 / |w| = 2.828427`.
+
+Option A ignores the multipliers entirely — support vectors are defined by `λᵢ > 0`, not by
+being in the dataset. Option B mistakes the *margin constraint being tight* for the
+*multiplier being positive*: only the points with margin `< 1` are strictly inside, while
+the two with margin exactly `1` have multipliers in `(0, C)`, which is why they count.
+Option D has the dependence backwards: `‖w‖` is the free variable being minimised, and the
+margin is a function of it — scaling `w` by `8` gives objective `16.0` and width `0.353553`,
+so minimising `‖w‖²` *is* maximising the margin.
+
+</details>
+
+**Q11.** The lesson's QP — minimise `(x−1)² + (y−2)² + 0.5x` subject to `x + y = 4`,
+`1 ≤ x ≤ 3`, `y ≥ 0` — returns `(1.375, 2.625)` with `objective = 1.21875`, an **empty**
+active set, and a duality gap of exactly `0`. What does the empty active set mean?
+
+- A) The solver failed to solve the KKT system
+- B) All three inequalities are strictly slack, so every inequality multiplier is `0`; the only nonzero multiplier is the equality's `ν = −1.25`. The exhaustive search over all 8 active sets — not an assumption — is what established this
+- C) The inequalities were dropped because they are linearly dependent
+- D) A gap of zero means the problem was infeasible
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) All three inequalities are strictly slack, so every inequality multiplier is `0`; the
+only nonzero multiplier is the equality's `ν = −1.25`. The exhaustive search over all 8
+active sets — not an assumption — is what established this.**
+
+The verifier prints `g(x) = −0.375`, `−2.625` and `−1.625` for `x ≥ 1`, `y ≥ 0` and
+`x ≤ 3`: all strictly negative, hence slack, hence `μ = 0` by complementary slackness. The
+`x ≥ 1` floor was designed to be interesting and does nothing, because the
+unconstrained-on-the-line optimum at `x = 1.375` already clears it. Stationarity then
+reduces to `∇f = (1.25, 1.25)` cancelled exactly by `ν(1,1) = (−1.25, −1.25)` — the
+statement that the objective gradient is parallel to the equality's gradient, i.e.
+perpendicular to the feasible line.
+
+Option A is what the `active inequalities: []` line superficially suggests, and the code
+guards against it by trying all `2³ = 8` combinations and *keeping only* those that pass
+primal feasibility, dual feasibility and slackness. Option C is not what happens: the
+inequality gradients are `[(−1,0), (0,−1), (1,0)]`, and the reported `singular Jacobian`
+path is for a different failure (redundant constraints). Option D inverts the meaning of a
+certificate: a zero gap means the dual bound meets the primal value, which *proves* global
+optimality for this convex QP with affine constraints under Slater's condition — and with
+Hessian eigenvalues `2.0, 2.0 > 0` the minimiser is unique.
+
+</details>
+
+---
+
+## Subjective Questions
+
+### Short Answer
+
+**Q1. Define the *Lagrangian* of a minimisation problem with equality constraints.**
+
+<details>
+<summary>Answer</summary>
+
+For `min f(x)` subject to `cᵢ(x) = 0` for `i = 1, …, m`, the Lagrangian is
+
+  L(x, λ) = f(x) + Σᵢ λᵢcᵢ(x)
+
+a function of `n + m` variables rather than `n`. When the constraints hold, `cᵢ(x) = 0` and
+the extra terms contribute nothing, so `L` agrees with `f` on the feasible set. Off the
+feasible set they push `L` in a direction **you** control through `λ`.
+
+Note that for equalities `λ` is unconstrained in sign — the sign condition `μ ≥ 0`
+appears only for inequalities.
+
+</details>
+
+**Q2. State the four KKT conditions.**
+
+<details>
+<summary>Answer</summary>
+
+For `min f(x)` s.t. `gᵢ(x) ≤ 0` and `hⱼ(x) = 0`, with `L(x, μ, ν) = f + Σμᵢgᵢ + Σνⱼhⱼ`:
+
+1. **Primal feasibility:** `gᵢ(x) = 0` for active `i`, `hⱼ(x) = 0` for all `j`.
+2. **Dual feasibility:** `μᵢ ≥ 0` for all `i`.
+3. **Complementary slackness:** `μᵢgᵢ(x) = 0` for all `i`.
+4. **Stationarity:** `∇f(x) + Σμᵢ∇gᵢ(x) + Σνⱼ∇hⱼ(x) = 0`.
+
+They are necessary under a constraint qualification. For convex `f`, convex `gᵢ`, affine
+`hⱼ` and a strictly feasible point (Slater's condition), they are **sufficient** as well —
+that is the whole reason to prefer them over stationarity alone.
+
+</details>
+
+**Q3. What is a *regular point*, and why does the definition exist?**
+
+<details>
+<summary>Answer</summary>
+
+`x` is a **regular point** for the constraints if the gradients `∇c₁(x), …, ∇c_m(x)` are
+linearly independent there.
+
+The definition is there because the Lagrange condition is proved by identifying the
+orthogonal complement of the span of the `∇cᵢ`, and that argument needs the span to have
+dimension `m`. At a non-regular point the span is smaller, and a minimiser can exist there
+with **no** multiplier `λ` representing it — so the search for `λ` would come back empty
+even though the point is optimal. Production solvers either assume regularity or use
+perturbation and duality theory to handle the rest.
+
+</details>
+
+**Q4. State the *second-order sufficient condition* and say where it must be tested.**
+
+<details>
+<summary>Answer</summary>
+
+`∇²_xx L(x, λ) = ∇²f(x) + Σᵢλᵢ∇²cᵢ(x)` must be positive definite **restricted to the
+tangent space** `{v : ∇cᵢ(x)·v = 0 for all i}` — the directions that keep you feasible.
+
+Testing on all of `ℝⁿ` is the wrong question: directions that leave the feasible set are
+irrelevant, and demanding positive curvature there would reject correct answers. When the
+constraints are affine their Hessians vanish, so `∇²f` alone must be positive definite on
+that space. In the worked example `∇²L = [[2,0],[0,2]]` is positive definite outright, and
+since `f` is strictly convex on a convex feasible line, the point is the unique global
+minimum.
+
+</details>
+
+**Q5. What are *shadow prices*, and for which constraints is the reading valid?**
+
+<details>
+<summary>Answer</summary>
+
+At a KKT point, `μᵢ` is the rate at which the optimal value improves per unit of relaxing
+constraint `i`: formally `∂p*/∂bᵢ = −μᵢ`, where `bᵢ` is the constant in `gᵢ(x) ≤ bᵢ`. In
+the resource example `λ = 1.3333` really does mean one extra labour hour is worth
+`1.3333` profit units to first order.
+
+The reading is valid **only for inequalities**, because only they carry `μ ≥ 0` and hence
+the monotone direction of variation. For equalities `λ` is unconstrained in sign and
+depends on how you *write* the constraint: Exercise 1 gets `λ = −3` for `x + y = 3` and
+`λ = −2` for `xy = 4`, and the second is smaller only because `∇c = (y, x) = (2,2)` is the
+same direction scaled by `2`.
+
+</details>
+
+**Q6. Define the *dual problem* and state what the duality gap measures.**
+
+<details>
+<summary>Answer</summary>
+
+The dual minimises the Lagrangian over `x`: `d(μ, ν) = inf_x L(x, μ, ν)`, and then one
+maximises `d` over `μ, ν ≥ 0`. Since `d ≤ f` at every feasible point, the dual optimum is a
+certified **lower bound** on the primal optimum, and under strong duality it is the exact
+value.
+
+At a candidate satisfying `∇ₓL = 0` and `hⱼ(x) = 0`, the gap is
+
+  p − d = Σᵢ μᵢ gᵢ(x)
+
+so it measures exactly how much the constraints are violated, and it vanishes precisely when
+complementary slackness holds. A zero gap is therefore a certificate, not a check — for the
+lesson's QP it certifies global optimality outright.
+
+</details>
+
+### Long Answer
+
+**Q1. Why do constraints need multipliers at all, and what breaks if you solve them by
+elimination instead?**
+
+<details>
+<summary>Model answer</summary>
+
+At an optimum with `x + y = 4` as the only constraint, the feasible set is a *line*, and
+you cannot "walk downhill" on it — the gradient of `f` has a component along the line, and
+following it takes you off the constraint. Two things must fail to hold at once: the
+objective cannot improve by sliding along the boundary, and it cannot improve by leaving.
+Both failures are exactly the statement that `∇f` is orthogonal to the boundary, and being
+orthogonal to a subspace is the same as being in the span of that subspace's basis. Hence
+`∇f = −Σλᵢ∇cᵢ` — one scalar per constraint, "how much of the objective's slope this
+constraint is soaking up".
+
+The multiplier is then doing double duty, and this is why it is useful. First it is the
+*solve mechanism*: `n + m` equations replace the geometric requirement. Second it is the
+*interpretation*: `μᵢ ≥ 0` tells you the constraint is pushing in the direction that lowers
+the objective, and complementary slackness separates the four cases — comfortably inside
+(`μ = 0`), exactly on the boundary (`μ > 0`, binding), or the degenerate middle. A binding
+constraint with a strictly positive multiplier is one you would pay real money to relax,
+which is the entire content of `∂p*/∂bᵢ = −μᵢ`.
+
+Elimination works exactly when the constraints are equations you can solve for a variable,
+and it works well. Exercise 3 of Lesson 100 substitutes `y = 1 − x` into `x² + y²` and
+recovers the optimum `(0.5, 0.5)` in four lines. It stops working at the first genuine
+generalisation: **inequalities** such as `x + y ≤ 1` do not let you eliminate a variable,
+because the feasible set is two-dimensional, and **several constraints at once** do not
+either, because you cannot solve `m` equations for one unknown. The multipliers are the
+uniform answer to both. They also buy the second-order test: once you have the Lagrangian
+you can differentiate it twice, which the eliminated form does not naturally support.
+
+</details>
+
+**Q2. Why is a *negative* multiplier the useful signal, and what would break if you
+ignored the sign and just solved the stationarity equations?**
+
+<details>
+<summary>Model answer</summary>
+
+Solving stationarity plus feasibility for an *assumed* active set is a hypothesis, not an
+answer. You have decided in advance which constraints are holding you, and you have solved
+the resulting square system — but a square system always has a solution, whether or not it
+sits inside the region you assumed. The sign of the resulting multipliers is the test of
+the assumption, and this is why they are called **shadow prices** and why `μ ≥ 0` is
+written into the KKT conditions at all.
+
+Exercise 3 shows the failure twice. Maximising `xy` with `x + y ≤ 10` and `x ≥ 3`: guess
+both active and the solver returns `(3, 7)`, product `21` — *worse* than the part (a)
+answer of `25`, which is still feasible because `x = 5` clears the floor. The multiplier on
+the floor comes out `−4`. Maximising `x + 2y` with `x + y ≤ 10` and `x ≤ 2`: guess the cap
+active and you get `(2, 8)`, objective `18`, against the true optimum `(0, 10)` with `20`;
+`λ_xmax = −1`. The cap is not merely slack, it is *irrelevant*, because the optimiser wants
+everything in `y`. Note in the first case that `λ_budget = +3` is positive even in the
+rejected candidate, so you must read **all** the multipliers, not stop at the first positive
+one.
+
+Ignoring the sign is dangerous in a specific way: it produces a point that satisfies your
+equations, respects no sign constraint, and is silently worse. Production solvers never
+guess and accept — they run the loop the exercise describes: assume an active set, solve,
+verify primal feasibility, read the signs, drop and re-solve. The Challenge exercise makes
+the loop exhaustive by trying all `2³ = 8` active sets for its three inequalities and
+keeping only those passing primal feasibility, dual feasibility and slackness. That search
+returns an **empty** active set for a problem where two of the three inequalities were
+built to be interesting, which is the honest answer and exactly the kind of thing an
+assumed active set would have hidden.
+
+</details>
+
+**Q3. Why can the dual of a non-convex problem be convex, and what practical advantage
+does that give you?**
+
+<details>
+<summary>Model answer</summary>
+
+Take the genuinely non-convex problem `min −xy` subject to `x + y ≤ 10`, `x, y ≥ 0`. Its
+objective has an indefinite Hessian `[[0,−1],[−1,0]]` with eigenvalues `1` and `−1`, so no
+convex argument applies to the primal. Yet form the Lagrangian,
+`L(x,y,λ) = −xy + λ(x + y − 10) − μx − νy`, and minimise over `x, y`. Stationarity gives
+`−y + λ − μ = 0` and `−x + λ − ν = 0`. The conditions `μ, ν ≥ 0` say `y ≤ λ` and `x ≤ λ`,
+while finiteness of the infimum says `y, x ≥ λ`. Pinched together, `x = y = λ`, and the
+dual collapses to the **one-dimensional convex** function `g(λ) = λ² − 10λ` with minimum
+`−25` at `λ = 5` — matching the primal objective and the primal multiplier exactly.
+
+Three advantages follow. First, the dual is a **certified lower bound** for any admissible
+`(μ, ν)`, so any point you propose can be immediately checked against it; if a candidate's
+value equals the dual value, it is optimal and no further search is needed. Second, when
+the primal is convex the dual is concave in `(μ, ν)`, so the dual inherits convex solvers
+even when the primal does not have them. Third, the dual often has far fewer variables:
+the SVM's dual is over the data points rather than the weight vector, which is what makes
+kernel methods possible at all, and the lesson notes that the multipliers identify the
+support vectors — the only points that affect the classifier.
+
+The limitations are equally important. The equivalence to the primal requires **strong
+duality**: convex `f`, convex `gᵢ`, affine `hⱼ`, and Slater's condition, a strictly feasible
+point. Without Slater's condition there can be a genuine gap, and the dual is then only a
+bound. And the lesson's formula `p − d = Σᵢμᵢgᵢ(x)` makes the diagnosis precise: at a
+stationary candidate the gap measures exactly how much the constraints are violated, so a
+nonzero gap says "your active set is wrong", not "the dual method failed".
+
+</details>
+
+**Q4. Why do penalties and constraints give the same answer, and why is it nevertheless
+dangerous to treat them as interchangeable?**
+
+<details>
+<summary>Model answer</summary>
+
+Minimise `‖Ax − b‖² + λ‖x‖²` with `‖x‖² ≤ t` and minimise `‖Ax − b‖² + λ‖x‖²` directly.
+The two are linked because the quadratic is convex and the constraint is affine: a strictly
+feasible point exists, so Slater's condition holds, strong duality applies, and the penalty
+coefficient and the multiplier on `‖x‖² ≤ t` coincide. That is why ridge regression can be
+written either way, and it is a genuinely useful fact — the penalised form has no
+feasibility bookkeeping at all, while the constrained form has a clean interpretation.
+
+But the correspondence breaks in both directions as soon as the problem stops being
+ideal, and the failure modes are worth knowing. The penalty form needs an outer loop:
+solve the unconstrained problem for a trial `λ`, check whether the resulting `x` satisfies
+`‖x‖² ≤ t`, and adjust. If the unconstrained minimiser already satisfies the constraint,
+the correct `λ` is `0` and the answer is the unconstrained one — exactly what the worked
+example shows when the budget is relaxed from `4` to `5`. If no `λ` ever produces a feasible
+`x`, the penalty diverges and the problem is infeasible. A fixed penalty also fails to
+certify anything: it returns a point, not a bound, so you cannot tell how close it is to
+optimal without additional work.
+
+The constrained form carries the information that penalties throw away. The **multiplier**
+tells you the marginal value of the constraint — `∂p*/∂bᵢ = −μᵢ`, which is how a manager
+decides whether to buy another machine hour — and the four KKT conditions are a *test* you
+can run on any candidate: feasibility, dual feasibility, slackness and stationarity. That is
+why interior-point methods, the production default, are Newton iterations on the KKT system
+with barrier terms keeping iterates strictly feasible: they keep the constraint structure
+visible, so the shadow prices come out as a by-product instead of being discarded.
+
+</details>
+
+---
 
 ## Exercises and Solutions
 
@@ -1843,6 +2472,6 @@ that is why production solvers carry named multiplier arrays — and why
 
 [Part 09 — Number Theory and Cryptography](../part09_number_theory_crypto/)
 starts at
-[110 — Number Theory](part09_number_theory_crypto/110_number_theory.md). This
+[110 — Number Theory](../part09_number_theory_crypto/110_number_theory.md). This
 part was about optimisation; the next is about arithmetic on integers, where the
 goal is exactness rather than an approximation.

@@ -416,6 +416,662 @@ for n, k, p in ((50, 20, 13), (1000, 437, 101), (100, 30, 7), (64, 17, 7)):
 
 ---
 
+## Formula Sheet
+
+Every symbol and formula this lesson introduces. `n, k` are integers with
+`0 ≤ k ≤ n`, `a, b` are any numbers, `x` is the polynomial variable, and `p` is a
+prime. `k!` means `1 · 2 · … · k`, with `0! = 1`.
+
+| Symbol | Formula | In plain words | When you use it |
+| --- | --- | --- | --- |
+| Binomial coefficient | `$C(n,k) = n!/\bigl(k!\,(n-k)!\bigr)$` | the number of `k`-element subsets of an `n`-element set | valid only for `0 ≤ k ≤ n`; define `C(n,k) = 0` for `k > n` |
+| Symmetry | `$C(n,k) = C(n,n-k)$` | complement inside the `n`-set | `C(20,7) = C(20,13) = 77,520`; halves the work of building a row |
+| Binomial theorem | `$(a+b)^{n} = \sum_{k=0}^{n} C(n,k)\,a^{\,n-k}b^{k}$` | expand the `n`-fold product without multiplying it out | the coefficient of `$a^{n-k}b^k$` is `$C(n,k)$` |
+| Pascal's recursion | `$C(n,k) = C(n-1,k-1) + C(n-1,k)$` | split `k`-subsets by whether they contain one fixed element | the dynamic-programming route to a row; no factorials |
+| Pascal base cases | `$C(n,0) = C(n,n) = 1$; `$C(n,k) = 0$` for `$k > n$` | the empty and whole selections are unique | valid for all `n ≥ 0`; keeps the recursion terminating |
+| Row sum | `$\sum_{k=0}^{n} C(n,k) = 2^{n}$` | the whole row adds to the power-set count | substitute `a = b = 1`; `Σ_k C(8,k) = 256` |
+| Alternating row sum | `$\sum_{k=0}^{n} (-1)^{k} C(n,k) = 0$` | even and odd terms cancel exactly | substitute `a = 1, b = −1`; **valid only for `n ≥ 1`** — for `n = 0` the sum is 1 |
+| Partial binomial sum | `$\sum_{k=0}^{n} C(n,k)\,a^{\,n-k} = (a+1)^{n}$` | set `b = 1` in the theorem | "at least one of a kind" counts by complement |
+| First moment | `$\sum_{k=0}^{n} k\,C(n,k) = n\cdot 2^{\,n-1}$` | the weighted row in one step | **valid only for `n ≥ 1`**; `Σ_k k C(8,k) = 1,024` |
+| Falling factorial | `$\sum_{k=0}^{n} k(k-1)\,C(n,k) = n(n-1)\cdot 2^{\,n-2}$` | differentiate twice, then substitute | **valid only for `n ≥ 2`**; for `n = 8` it is 3,584 |
+| Second moment | `$\sum_{k=0}^{n} k^{2}C(n,k) = n(n+1)\cdot 2^{\,n-2}$` | use `$k^2 = k(k-1) + k$` on the two above | **valid only for `n ≥ 2`**; for `n = 8` it is 4,608 |
+| Vandermonde's identity | `$\sum_{k} C(m,k)\,C(n,r-k) = C(m+n,r)$` | choose `r` items from a union of an `m`-set and an `n`-set, two ways | the template for coefficient matching; `m=4, n=6, r=3` gives 120 |
+| Hockey-stick identity | `$\sum_{j=r}^{N} C(j,r) = C(N+1,\,r+1)$` | sum a diagonal of Pascal's triangle | `Σ_{j=2..5} C(j,2) = 20 = C(6,3)` |
+| Coefficient of a product | `$[x^{k}]\,f(x)g(x) = \sum_{i+j=k} f_i\,g_j$` | multiply out, group by total degree | the workhorse for "choosing with limits" and pattern-avoidance counts |
+| Binomial (error) distribution | `$P(k) = C(n,k)\,p^{k}(1-p)^{\,n-k}$` | `k` successes out of `n` independent trials | the theorem *is* the binomial law: `C(8,k)·0.1ᵏ·0.9^(8−k)` |
+| Expectation of that law | `$E[K] = np$` | `n` trials each succeeding with probability `p` | `8 · 0.1 = 0.8` for the worked example |
+| Total Hamming weight | `$\sum_{x=0}^{2^{n}-1} \mathrm{popcount}(x) = n\cdot 2^{\,n-1}$` | each of the `n` bit positions is set in exactly half the words | `n = 8` gives 1,024; the `n·2^(n−1)` identity read as a count |
+| Thue–Morse | `$t(x) = \mathrm{popcount}(x) \bmod 2$` | parity of the number of 1 bits | a hash that looks random and is not: `t(0..15) = 0,1,1,0,1,0,0,1,…` |
+| Strings with no adjacent 1s | `$q_n = q_{n-1} + q_{n-2}$, `$q_0 = 1$, `$q_1 = 2$` | split on the last bit: a `0`, or a `01` | `$q_n = F(n+2)$`, so `q₁₂ = 377` of the 4,096 twelve-bit words |
+| Generating function for those strings | `$Q(x) = (1+x)/(1 - x - x^{2})$` | the denominator is the recurrence, read as a polynomial | `[x^n] Q(x) = F(n+2)`; the algebraic form of the DP |
+| Lucas' theorem | `$C(n,k) \bmod p = \prod_i C(n_i, k_i) \bmod p$` | with `n = Σ n_i p^i`, `k = Σ k_i p^i` the base-`p` digits | `p` prime; `O(log_p n)` instead of `O(k)` |
+| Lucas zero condition | `$\exists i$ with `$k_i > n_i$$ | if a digit of `k` exceeds the matching digit of `n`, the whole coefficient is `0 mod p` | `C(100,30) mod 7 = 0` because `30 = (42)_7`, `100 = (202)_7`, and `4 > 0` |
+| Expansion of a power | `$\sum_k C(n,k)\,a^{\,n-k}b^{k}$` with `(a+b)^n` known in closed form | evaluate an expansion instead of expanding it | `(2+3)^10 = 9,765,625` without 2¹⁰ = 1,024 terms |
+
+---
+
+## Multiple Choice Questions
+
+**Q1.** In `(a + b)ⁿ = Σ_{k=0}^{n} C(n, k) · aⁿ⁻ᵏ · bᵏ`, what is the coefficient of
+the monomial `aᵏ · bⁿ⁻ᵏ`?
+
+- A) `C(n, k)`
+- B) `C(n, n − k)`
+- C) `C(n, n − k)` — but only when `n` is even
+- D) `n!`
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) `C(n, n − k)`.**
+
+Read the index off the theorem: the general term is `C(n,k) · a^(n−k) · b^k`, so
+a term has exponent `n − k` on `a` exactly when `k` is the exponent on `b`. The
+coefficient of `aᵏbⁿ⁻ᵏ` therefore carries `k` as the exponent of `b` in the
+*other* reading, giving `C(n, n − k)`.
+
+- A) is Mistake 2 of this lesson. `C(n,k)` and `C(n,n−k)` are equal by the
+  symmetry, so this looks harmless — but the *symmetric list hides a reversed
+  indexing bug*, and the error surfaces when you extract a specific power of `x`
+  and the row has odd length, where there is no centre to absorb it.
+- C) is a distractor with no content: the symmetry holds for every `n`, not just
+  even ones. It is one extra word of wrongness attached to a correct formula.
+- D) is the numerator of the factorial form. It is never the coefficient on its
+  own; `C(n,k)` is `n!` divided by `k!(n−k)!`.
+
+</details>
+
+**Q2.** In the worked example, an 8-bit message arrives with corrupted bits.
+Out of the 256 possible messages, how many arrive with **exactly three** corrupted
+bits?
+
+- A) 8
+- B) 56
+- C) 28
+- D) 256
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) 56.**
+
+An 8-bit message with exactly three corrupted bits is determined by choosing
+which 3 of the 8 bit positions flipped: `C(8,3) = 56`, the fourth number in row 8
+of Pascal's triangle, `1, 8, 28, 56, 70, 56, 28, 8, 1`.
+
+- A) is `C(8,1) = 8`, the count for **exactly one** corrupted bit. The whole
+  point of Step 2 of the worked example is that you do not derive 28 or 70
+  separately — you read them off the row the theorem guarantees.
+- C) is `C(8,2) = 28`, the count for exactly two. Reading a palindromic row
+  carelessly is how the wrong column gets picked; the row is symmetric about
+  `k = 4`, so entries 2 and 6 are the same number and nothing tells you from the
+  row alone which side you meant.
+- D) is the size of the message space, i.e. the total over all `k` from 0 to 8.
+  That is `Σ_k C(8,k) = 2⁸ = 256`.
+
+</details>
+
+**Q3.** What does the specialisation `Σ_{k=0}^{n} C(n, k) = 2ⁿ` count, and what
+substitution produces it?
+
+- A) The even entries of row `n`; substitute `a = b = 1`
+- B) All subsets of an `n`-element set; substitute `a = b = 1` in the binomial
+  theorem
+- C) The subsets of even size; substitute `a = 1, b = 0`
+- D) The strings of length `n` over a 2-symbol alphabet; substitute `a = 2, b = 0`
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) All subsets of an `n`-element set; substitute `a = b = 1` in the binomial
+theorem.**
+
+With `a = b = 1` every monomial `a^(n−k)b^k` collapses to 1, so the expansion
+becomes `2ⁿ = Σ_k C(n,k)`. The lesson reads this as the count of subsets — the
+`k`-subsets are the `k`-th column and together they are all 2ⁿ subsets.
+
+- A) is half the row. `Σ_{k even} C(n,k) = 2^(n−1)` for `n ≥ 1`, and that is the
+  `a = 1, b = −1` identity applied to the even terms, not the `a = b = 1` one.
+- C) is nonsense arithmetically: `a = 1, b = 0` leaves only the `k = 0` term, so
+  it gives `1`, which is the number of *empty* selections.
+- D) has the right answer for the wrong reason — there are indeed 2ⁿ binary
+  strings of length `n` — but the derivation is wrong: `a = 2, b = 0` gives
+  `(2+0)^n = 2^n` with a single surviving term `2ⁿ`, not a sum over `k`. The
+  count coincides; the formula does not produce it.
+
+</details>
+
+**Q4.** What is `Σ_{k=0}^{n} (−1)ᵏ C(n, k)`?
+
+- A) 0 for every `n ≥ 0`
+- B) 0 for every `n ≥ 1`, and 1 when `n = 0`
+- C) 1 for every `n`
+- D) `(1 − 1)ⁿ`, which equals 0 for `n = 0` as well
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) 0 for every `n ≥ 1`, and 1 when `n = 0`.**
+
+Substitute `a = 1, b = −1` in the binomial theorem: `(1 + (−1))ⁿ = 0ⁿ`, which is 0
+for `n ≥ 1` and, by the empty-product convention, `0⁰ = 1`. The lesson's code
+prints `alt sum = 0 for n>0` at `n = 8`, and the domain restriction is real.
+
+- A) drops the `n = 0` case. It matters: `C(0,0) = 1` and the empty string is a
+  genuine object counted by every identity in the lesson, so an identity stated
+  for `n ≥ 0` without the exception is wrong at exactly one input.
+- C) is the `n = 0` answer promoted to a universal claim.
+- D) repeats the mistake and makes it worse: it asserts `0⁰ = 0`, which is
+  undefined. The subtlety is precisely that the empty product is 1.
+
+</details>
+
+**Q5.** Compute `Σ_{k=0}^{8} k · C(8, k)` using the lesson's identity.
+
+- A) 1,024
+- B) 512
+- C) 4,608
+- D) 2,048
+
+<details>
+<summary>Answer and explanation</summary>
+
+**A) 1,024.**
+
+The first-moment identity is `Σ_k k·C(n,k) = n·2^(n−1)`, valid for `n ≥ 1`. With
+`n = 8` that is 8 · 2⁷ = 1,024. The lesson's code computes the sum by brute force
+over the row and prints the same number, which is the check that the identity
+says what it says.
+
+- B) is `n·2^(n−2) = 8 · 64 = 512`, i.e. the falling-factorial identity with the
+  wrong `n(n−1)` replaced by `n`. A factor of 2 low.
+- C) is `n(n+1)·2^(n−2) = 8 · 9 · 64 = 4,608`, which is the `k²` identity, not the
+  `k` one. It is strictly larger, which is the direction you would expect if you
+  accidentally weighted by `k²`.
+- D) is `n · 2ⁿ = 2,048`, forgetting that the exponent drops by one. The `−1`
+  is the whole content of the identity: total population over all `n`-bit words
+  is `n·2^(n−1)`, because each of the `n` bit positions is set in exactly half of
+  the `2ⁿ` words.
+
+</details>
+
+**Q6.** Compute `Σ_{k=0}^{8} k² · C(8, k)` using the lesson's identities.
+
+- A) 1,024
+- B) 3,584
+- C) 4,608
+- D) 4,096
+
+<details>
+<summary>Answer and explanation</summary>
+
+**C) 4,608.**
+
+Since `k² = k(k−1) + k`, the second moment is the sum of the falling-factorial
+identity and the first moment:
+`8·7·2⁶ + 8·2⁷ = 3,584 + 1,024 = 4,608`, which is `n(n+1)·2^(n−2)`. This is
+Mistake 3 of the lesson, written out: the two identities look similar, and
+carrying the `n·2^(n−1)` pattern into the `k²` case is the error.
+
+- A) is the `k`-weighted sum. It is too small by a factor of 4.5, which is the
+  factor you would expect, since `k²` weights large `k` far more heavily than
+  `k` does.
+- B) is `Σ k(k−1)·C(8,k)`, the falling-factorial value. It is missing the `+ k`
+  term, so it is short by exactly 1,024.
+- D) is `2¹²`, the total number of 12-bit strings — an unrelated number that
+  looks plausible because it is also a power of two.
+
+</details>
+
+**Q7.** Evaluate `Σ_{k=0}^{3} C(4, k) · C(6, 3 − k)`. Which identity is this an
+instance of, and what is the value?
+
+- A) Pascal's recursion; 20
+- B) Vandermonde's identity; `C(10, 3) = 120`
+- C) The hockey-stick identity; `C(6, 3) = 20`
+- D) The binomial theorem with `a = 4, b = 6`; 1,000
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) Vandermonde's identity; `C(10, 3) = 120`.**
+
+Vandermonde states `Σ_k C(m,k)·C(n, r−k) = C(m+n, r)`. Here `m = 4`, `n = 6`,
+`r = 3`, so the sum is `C(10, 3) = 120`. The counting story: count 3-subsets of a
+disjoint union of a 4-set and a 6-set, either directly or by how many elements the
+subset takes from the 4-set. The lesson's code verifies both routes give 120.
+
+- A) is Pascal's recursion, which relates `C(n,k)` to two entries of row `n−1` of
+  the *same* triangle — it has no product of two different coefficients in it.
+- C) is the hockey-stick identity, which sums `C(j, 2)` over `j`; it has no
+  product.
+- D) applies the binomial theorem with numeric bases where the identity's `a` and
+  `b` are *variables* being counted over. `4` and `6` here are sizes, not
+  summands, and `(4+6)^10 = 10¹⁰` has nothing to do with the sum.
+
+</details>
+
+**Q8.** Evaluate `Σ_{j=2}^{5} C(j, 2)`. Which identity explains the result?
+
+- A) Vandermonde; the answer is `C(10, 3) = 120`
+- B) The hockey-stick identity; the answer is `C(6, 3) = 20`
+- C) The row-sum identity; the answer is `2⁵ = 32`
+- D) Pascal's recursion; the answer is `C(5, 2) = 10`
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) The hockey-stick identity; the answer is `C(6, 3) = 20`.**
+
+Sum a diagonal of Pascal's triangle and you get one binomial coefficient:
+`Σ_{j=r}^{N} C(j,r) = C(N+1, r+1)`. With `r = 2`, `N = 5` that is `C(6,3) = 20`,
+which you can check by hand: `1 + 3 + 6 + 10 = 20`.
+
+- A) applies Vandermonde, whose summand is a *product* of two coefficients from
+  different triangles. This sum has one coefficient per term.
+- C) sums a whole row and gives `Σ_{k=0}^{5} C(5,k) = 32`. Here the top index
+  moves and the bottom index is fixed, which is the diagonal, not the row.
+- D) misreads the sum as one term. `C(5,2) = 10` is the largest single summand,
+  not the total.
+
+</details>
+
+**Q9.** How many 12-bit strings contain no two adjacent 1s?
+
+- A) 4,096
+- B) 1,728
+- C) 377
+- D) 3,828
+
+<details>
+<summary>Answer and explanation</summary>
+
+**C) 377.**
+
+Split on the last bit: a string ending in `0` is any valid length-11 string
+(`q₁₁` of them), and one ending in `1` must end in `01`, so it is any valid
+length-10 string (`q₁₀`). Hence `q_n = q_{n−1} + q_{n−2}` with `q₀ = 1`, `q₁ = 2`,
+which is `q_n = F(n+2)`, so `q₁₂ = F₁₄ = 377`. The lesson prints the two-state
+DP, the generating function, and brute force in three columns and they agree.
+That is `377/4096 = 0.092`, so about 9.2% of 12-bit words qualify.
+
+- A) is the whole space. Every string is either valid or not, so 4,096 is the
+  denominator of the fraction, not the count.
+- B) is `F₁₂ = 144`, off by one Fibonacci index. With `q₀ = 1, q₁ = 2`, `q_n = F(n+2)`,
+  so `n = 12` needs `F(14) = 377`; `F(12) = 144` is `q₁₀`.
+- D) is 4,096 − 377 = 3,719 rounded up by a different path, and it is not a
+  meaningful quantity: it is the count of *strings containing* an adjacent pair,
+  which is a different object from the count avoiding one.
+
+</details>
+
+**Q10.** In the worked example, bits flip independently with probability 0.1.
+What is the expected number of corrupted bits in an 8-bit message?
+
+- A) 0.8
+- B) 8
+- C) 0.1
+- D) 0.9
+
+<details>
+<summary>Answer and explanation</summary>
+
+**A) 0.8.**
+
+`E[K] = Σ_k k·C(8,k)·0.1ᵏ·0.9^(8−k)`, which the weighted-sums theorem collapses
+to `n·p·(0.9 + 0.1)⁷ = 8 · 0.1 · 1 = 0.8`. The step 4 comment makes the point
+that the closed form and the intuition agree: 8 bits, each wrong with
+probability 0.1.
+
+- B) is `n`, the maximum. It ignores the probability entirely and is what you
+  would get if every bit flipped.
+- C) is `p`, the per-bit probability. It forgets the 8 independent trials, and it
+  is the answer to "how likely is one given bit to be wrong".
+- D) is `1 − p`, the probability a given bit is *correct*. Multiplying by `n`
+  would give 7.2, which is not any of the quantities here.
+
+</details>
+
+**Q11.** What does Lucas' theorem say about `C(100, 30) mod 7`?
+
+- A) You must compute `C(100, 30)` exactly and then reduce, which is why the
+  lesson provides it
+- B) Writing `100 = (202)_7` and `30 = (42)_7`, a digit of `k` exceeds the matching
+  digit of `n`, so `C(100, 30) ≡ 0 mod 7`
+- C) It equals `C(4, 2) · C(0, 4) · C(2, 0) mod 7 = 12 mod 7 = 5`
+- D) It equals `30! / (100! · 70!) mod 7`, which reduces to 1
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) Writing `100 = (202)_7` and `30 = (42)_7`, a digit of `k` exceeds the matching
+digit of `n`, so `C(100, 30) ≡ 0 mod 7`.**
+
+Lucas says `C(n,k) ≡ Π_i C(n_i, k_i) mod p`. Reading digits from the
+least significant end: `k` has digits `2, 4` and `n` has `2, 0, 2`. The factor
+`C(0, 4) = 0` forces the product to 0. The lesson's code confirms it, printing
+`C(100,30) mod 7: Lucas 0, exact 0, agree True`.
+
+- A) is Mistake 5 of this lesson. Building `C(100,30)` exactly means a number
+  with about 63 digits — feasible — but `C(10⁶, 5·10⁵)` has a million digits and
+  is not. Lucas touches only the base-`p` digits, so it is `O(log_p n)`.
+- C) is a genuine Lucas computation with the digits read backwards. The correct
+  product is `C(2,2)·C(0,4)·C(2,0) = 0`; writing `C(4,2)` puts `k`'s digit where
+  `n`'s belongs and then hits the zero anyway, arriving at 5 by accident.
+- D) is not an integer — `30!/(100!·70!)` is `1/(...)`, a fraction far below 1 —
+  and it reverses the roles of `n` and `k`.
+
+</details>
+
+---
+
+## Subjective Questions
+
+### Short Answer
+
+**Q1. State the binomial theorem. Why is `C(n, k)` a *count* rather than a
+coefficient that happens to appear?**
+
+<details>
+<summary>Answer</summary>
+
+For any numbers `a, b` and any non-negative integer `n`:
+
+$$(a+b)^{n} = \sum_{k=0}^{n} C(n,k)\,a^{\,n-k}b^{k}$$
+
+The counting reading: expanding the product of `n` copies of `(a + b)` produces
+2ⁿ terms, one per independent choice of `a` or `b` in each position. Group them
+by how many positions chose `b`. A group with `k` copies of `b` and `n − k`
+copies of `a` has `C(n, k)` members, because you choose which `k` of the `n`
+positions hold `b`. So each group contributes `C(n,k) · a^(n−k)b^k`, and summing
+over `k` gives the formula.
+
+The coefficient is a count because it is the number of ways of doing the
+choosing — not because the algebra produced a number that happens to be
+interpretable.
+
+</details>
+
+**Q2. State the three specialisations of the binomial theorem and the
+substitution that produces each.**
+
+<details>
+<summary>Answer</summary>
+
+- `Σ_{k=0}^{n} C(n,k) = 2ⁿ` — set `a = b = 1`. Valid for all `n ≥ 0`.
+- `Σ_{k=0}^{n} (−1)ᵏ C(n,k) = 0` — set `a = 1, b = −1`. Valid only for `n ≥ 1`;
+  for `n = 0` the sum is 1.
+- `Σ_{k=0}^{n} C(n,k) a^(n−k) = (a+1)ⁿ` — set `b = 1`. Valid for all `n ≥ 0`.
+
+None of them is a separate theorem. Each is the binomial theorem with different
+values plugged in, which is the point: choosing `a` and `b` is choosing which
+combinatorial question to ask. `a = b = 1` asks "how many subsets"; `a = 1,
+b = −1` asks "how do even and odd subset sizes balance".
+
+</details>
+
+**Q3. State the three weighted-sum identities, their domain restrictions, and the
+algebra that derives the third from the first two.**
+
+<details>
+<summary>Answer</summary>
+
+For `n ≥ 1`:
+
+$$\sum_{k} k\,C(n,k) = n\cdot 2^{\,n-1}$$
+
+For `n ≥ 2`:
+
+$$\sum_{k} k(k-1)\,C(n,k) = n(n-1)\cdot 2^{\,n-2} \qquad \sum_{k} k^{2}C(n,k) = n(n+1)\cdot 2^{\,n-2}$$
+
+The third follows from the algebraic identity `k² = k(k − 1) + k`:
+`n(n−1)·2^(n−2) + n·2^(n−1) = n(n−1 + 2)·2^(n−2) = n(n+1)·2^(n−2)`.
+
+The derivation is "differentiate, then substitute". Multiplying the theorem by
+`x` and setting `b = x`, `a = 1` gives `Σ_k C(n,k) x^k = (1+x)^n`; differentiating
+once gives `Σ_k k·C(n,k) x^(k−1) = n(1+x)^(n−1)`, and setting `x = 1` gives the
+first identity. Differentiate twice for the falling factorial, then apply
+`k² = k(k−1) + k`.
+
+</details>
+
+**Q4. State Vandermonde's identity and describe the double count that proves
+it.**
+
+<details>
+<summary>Answer</summary>
+
+For non-negative `m, n, r`:
+
+$$\sum_{k} C(m,k)\,C(n,r-k) = C(m+n,r)$$
+
+Count `r`-subsets of a disjoint union of an `m`-element set `X` and an
+`n`-element set `Y`. Directly: `C(m+n, r)`. By how many elements the subset
+draws from `X`: choose `k` from `X` and `r − k` from `Y`, then sum over `k`.
+
+This is the template behind the coefficient-matching technique used throughout
+this part — two ways of partitioning the same set of objects, one of them a sum
+over a splitting variable.
+
+</details>
+
+**Q5. Why does Lucas' theorem help with large coefficients, and why is
+`C(100, 30) ≡ 0 mod 7`?**
+
+<details>
+<summary>Answer</summary>
+
+Computing `C(n, k)` exactly and then reducing means building a number with
+`Θ(n)` bits — for `n = 10⁶` that is a million-digit integer, and you only wanted
+a residue. Lucas' theorem says, for prime `p`:
+
+$$C(n,k) \equiv \prod_i C(n_i, k_i) \pmod p$$
+
+with `n = Σ n_i p^i` and `k = Σ k_i p^i` the base-`p` digits. Each factor is a
+single-digit binomial coefficient, so the work is `O(log_p n)`.
+
+For `n = 100, k = 30, p = 7`: `100 = (202)_7` and `30 = (42)_7`. Reading from the
+least significant digit, `k`'s digit 4 sits above `n`'s digit 0, so
+`C(0, 4) = 0` and the whole product vanishes. The lesson's code checks all four
+of its examples against `comb(n,k) % p` and they agree.
+
+</details>
+
+**Q6. Sum the number of 1-bits over all `2ⁿ` `n`-bit words. Why is the answer
+`n · 2^(n−1)`?**
+
+<details>
+<summary>Answer</summary>
+
+$$\sum_{x=0}^{2^{n}-1} \mathrm{popcount}(x) = n \cdot 2^{\,n-1}$$
+
+Count differently: fix one of the `n` bit positions and ask how many words have
+that bit set. Writing that bit gives a free choice of the remaining `n − 1`
+bits, so exactly `2^(n−1)` words have it set. Summing over the `n` positions
+counts every (word, set bit) pair exactly once, and each pair is one unit of
+popcount.
+
+This is the `n·2^(n−1)` weighted-sum identity read as a combinatorial statement.
+The lesson checks `n = 4, 8, 12` against a brute-force total.
+
+</details>
+
+### Long Answer
+
+**Q1. Why does the binomial theorem *count* rather than merely compute? What work
+would you have to do without the counting reading?**
+
+<details>
+<summary>Model answer</summary>
+
+Without the counting reading, `(2 + 3)^10` is an exercise in expanding a product
+of ten binomials: 2¹⁰ = 1,024 raw terms, each needing multiplication and then
+addition, with nothing to look up. That is roughly 2,048 operations and a page of
+arithmetic to produce 9,765,625.
+
+With the counting reading, you never expand anything. You need one row of
+eleven numbers — `1, 10, 45, 120, 210, 252, 210, 120, 45, 10, 1` — and then you
+multiply each by one term. The saving is not constant-factor; it is that the
+coefficient *structure* is known in advance and is independent of `a` and `b`. The
+row is the same row whatever you are expanding, and it is the same row however
+large the power is. Step 2 of the worked example makes the operational point: "we
+did not derive 28 or 70 — we looked them up from the structure the theorem
+guarantees."
+
+The deeper reason the counting reading is load-bearing is that it transfers. Once
+you know the `k`-th coefficient is the number of `k`-subsets, the same eleven
+numbers answer questions that have nothing to do with algebra:
+
+- **Bit patterns.** `C(8, k)` is the number of 8-bit words with exactly `k` bits
+  set. That is a Hamming-weight enumerator, and it is the distribution the whole
+  lesson's error model rests on.
+- **Subset sums.** `Σ_k C(n,k) = 2ⁿ` evaluates a row in one step, and
+  `Σ_k k·C(n,k) = n·2^(n−1)` evaluates a weighted row in one step. Those are
+  second-moment calculations in birthday-paradox analysis.
+- **Hashes.** `t(x) = popcount(x) mod 2` is the Thue–Morse sequence: a hash that
+  looks random, is used in scatter tables and load balancing, and is completely
+  predictable. You can only build it once you connect "subsets" to "bit strings".
+- **Avoidance counts.** `Q(x) = (1+x)/(1 − x − x²)` gives the number of binary
+  strings with no adjacent 1s as a coefficient of a rational function. The
+  denominator is not algebra either — it is the recurrence `q_n = q_{n−1} + q_{n−2}`
+  written in a different notation.
+
+Algebra is the report of what the counting found. Treating the theorem as
+algebra to be memorised is Mistake 1 of this lesson, and it costs you every one of
+these applications, because none of them mentions `a` or `b`.
+
+</details>
+
+**Q2. Why does "differentiate, then substitute" work for weighted sums, and
+exactly which step fails if you differentiate the wrong thing?**
+
+<details>
+<summary>Model answer</summary>
+
+The trick works because the weight `k` and the power `k` of `x` are the same
+number, so differentiation can convert one into the other. Start from the
+generating form of the binomial theorem:
+
+$$\sum_{k=0}^{n} C(n,k)\,x^{k} = (1+x)^{n}$$
+
+Differentiate. The left side becomes `Σ_k k·C(n,k)·x^(k−1)` because the factor `k`
+comes from differentiating `x^k`, and the right side becomes `n(1+x)^(n−1)`. Now
+substitute `x = 1`, and every `x^(k−1)` becomes 1, leaving
+`Σ_k k·C(n,k) = n·2^(n−1)`.
+
+Differentiate twice instead and you get `Σ_k k(k−1)·C(n,k) = n(n−1)(1+x)^(n−2)`,
+hence `n(n−1)·2^(n−2)`. The factorials `k(k−1)` are the falling factorials, which
+is why the identity comes out in that shape rather than with a plain `k²`. To
+recover `k²` you use `k² = k(k−1) + k` — Mistake 3 of the lesson is carrying the
+`n·2^(n−1)` pattern into the `k²` case instead of doing this algebra explicitly,
+which for `n = 8` gives 1,024 rather than 4,608.
+
+The step that fails if you differentiate the wrong thing is the **substitution**.
+The weighted sum you want is the value at `x = 1`; the differentiated expression
+is `x^(k−1)` times something, so you must remove the powers of `x`, and only
+`x = 1` (or `x = 0` for some terms) removes them all at once. Two concrete
+failures:
+
+- Substituting `x = 2` gives `Σ_k k·C(n,k)·2^(k−1) = n·3^(n−1)`, which is true
+  and useless for your purpose — it is a different sum, weighted by `2^(k−1)`.
+- Forgetting to substitute at all leaves an identity about a polynomial, not
+  about a number, and it is tempting to stop there because the algebra "checked
+  out".
+
+There is a second failure mode, about the base form. The identity
+`Σ_k C(n,k) x^k = (1+x)^n` is *not* the binomial theorem — it is the binomial
+theorem with `a = 1` and `b = x`, which is legitimate only because you are now
+treating `x` as a variable to be specialised afterwards. If you start from
+`(a+b)^n = Σ_k C(n,k) a^(n−k) b^k` and differentiate with respect to `a`, you get
+`(n−k)` factors rather than `k` ones, and you have to set `b = 1` as well as
+`x = 1` before the powers disappear. Getting the base form wrong is why some
+people conclude "you cannot differentiate this" — you can, but the clean version
+requires `a = 1` first.
+
+</details>
+
+**Q3. The lesson counts strings avoiding "11" both with a two-state dynamic
+program and with a generating function. What does the generating-function route
+add, and what would break if you used only the dynamic program?**
+
+<details>
+<summary>Model answer</summary>
+
+The generating function route adds a *closed, algebraic* description. From the
+recurrence `q_n = q_{n−1} + q_{n−2}` with `q₀ = 1, q₁ = 2` one gets
+`Q(x) = Σ_n q_n x^n` and solves `(1 − x − x²)Q(x) = 1 + x`, so
+`Q(x) = (1+x)/(1 − x − x²)`. From here `q_n = F(n+2)`, the coefficient is a
+*named sequence* rather than an entry in a table, and the answer becomes an
+expression you can reason about: the growth rate is the golden ratio φ to the
+power `n`, `φ ≈ 1.618`, so the fraction of valid strings tends to
+`(3/4)^n (1 + 1/√3)`, a closed form for a probability.
+
+What breaks with the dynamic program alone is everything you cannot do to a
+table. You cannot take an asymptotic limit of an entry. You cannot combine two
+problems by multiplying their polynomials and reading off coefficients, which is
+the "choosing with limits" technique from
+[Lesson 21](../part02_discrete_combinatorics/21_permutations_and_combinations.md)
+and the general coefficient-extraction lemma
+`[x^k] f(x)g(x) = Σ_{i+j=k} f_i g_j`. You cannot state, let alone prove,
+`Vandermonde's identity`, whose proof *is* "count one thing two ways and match
+coefficients". And you cannot read off generating-function theorems — that a
+generating function is rational exactly when the sequence satisfies a linear
+recurrence with constant coefficients, which is why `(1 + x)/(1 − x − x²)`
+producing Fibonacci is not a coincidence but a mechanism.
+
+The reverse is also true, and that is the part the lesson is really teaching. A
+generating function does not tell you a coefficient without work. `Q(x)` above
+looks like an answer; to get `q₁₂ = 377` from it you still run the recursion, and
+that is why the lesson prints three columns — two-state DP, generating function,
+brute force — and checks they agree. The generating function buys structure and
+generality; the dynamic program buys speed and certainty. The mistake is treating
+either as sufficient alone, and treating "it looked like a rational function so
+the answer is φ^n" as a computation when φ is irrational and `q_n` is an integer.
+
+</details>
+
+**Q4. The lesson argues against computing a huge coefficient exactly when you
+only need it modulo a prime. What would actually break, and what is the argument
+for the modular route?**
+
+<details>
+<summary>Model answer</summary>
+
+The breakage is resource exhaustion, and it arrives earlier than intuition
+suggests. `C(100, 30)` has 63 digits — annoying but fine. `C(1000, 500)` has 300.
+`C(10⁶, 5·10⁵)` has about 300,000 digits, and you are about to multiply two
+numbers that large in order to divide them back down. The naive factorial form is
+worse still: it builds `n!`, which for `n = 10⁶` has about 5.5 million digits,
+before a single division happens. At that size `math.comb` is not "slow", it is
+allocating more memory than the process is allowed.
+
+The argument for the modular route is that it never builds the number at all.
+Lucas' theorem factors `C(n,k) mod p` into a product of single-digit binomial
+coefficients `C(n_i, k_i)`, each computable in constant time, so the work is
+`O(log_p n)` multiplications of residues below `p`. Nothing grows with `n`. The
+same is achievable without Lucas by multiplying numerator and denominator
+products modulo `p` and inverting the denominator with a modular inverse — the
+point is the modulus discipline, not the specific theorem.
+
+Why the objection "I only need the residue, but I still have to be *correct*"
+does not defeat it is worth stating, because it is the reason people do the
+expensive thing. Modular arithmetic is not approximate: reducing after each step
+is exactly equivalent to reducing at the end, because multiplication respects
+congruence. The one thing you must not do is divide by a multiple of `p`, which is
+why the denominator needs a modular inverse and why `p` must be prime — Fermat's
+little theorem gives `a^(p−2)` as the inverse. In a composite-modulus scheme (as in
+Chinese remainder reconstruction for NTT-based multiplications) you need the
+denominator to be coprime to the modulus, and you handle the rest of the primes
+separately.
+
+This matters in practice because Reed–Solomon codecs and CRC/checksum schemes
+evaluate `C(n, k) mod p` routinely with `n` in the thousands, on every block, as
+part of encoding. Nothing else in this part is used at that scale, which is why
+the lesson says the wall is real: `math.comb` is fast enough on small inputs that
+you never learn where the boundary is.
+
+</details>
+
 ## Exercises and Solutions
 
 **[ ] Exercise 1 — Row lookup.** Without computing any factorials, find C(20, 7),

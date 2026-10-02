@@ -916,6 +916,974 @@ straddle tests, it is wrong for concave input. Test with an L-shape, not a
 rectangle — a rectangle cannot distinguish a correct implementation from a
 broken one.
 
+## Formula Sheet
+
+Notation: $o, a, b \in \mathbb{R}^2$ are corner points; $(x_i, y_i)$ is a polygon
+vertex; $p, q$ are query points; $n$ is a point or vertex count; $s > 0$ is a
+cell size; $r > 0$ is a radius; $d$ is a candidate distance; $\varepsilon > 0$ is
+a tolerance. Vertex indices wrap, so $x_n = x_0$ and $y_n = y_0$.
+
+| Symbol | Formula | In plain words | When you use it |
+| --- | --- | --- | --- |
+| `cross(o, a, b)` | $(a_1-o_1)(b_2-o_2) - (a_2-o_2)(b_1-o_1)$ | twice the signed area of the triangle with corners $o$, $a$, $b$ | the 2D turn test: `> 0` counter-clockwise, `< 0` clockwise, `= 0` collinear |
+| Triangle area | $A_\triangle = \tfrac{1}{2}\,\mathrm{cross}(o,a,b)$ | positive when the corners are listed counter-clockwise | orienting a triangle; hull code needs only the **sign**, never the value |
+| Convexity | $p + t(q-p)$ for $t \in [0,1]$ | every point of the segment between two points | defining a convex set; the reason hulls are safe proxies |
+| Hull invariance | $\mathrm{conv}(S) = \mathrm{conv}(H)$ for $H \subseteq S$ the hull vertices | deleting interior points cannot change the hull | licensing aggressive point discard; making the hull conservative, not exact |
+| Point on a line | $h(t) = p + t\,\mathbf{d}$, $\mathbf{d} = q - p$ | the parameterisation the intersection solve works in | line–circle; **requires $p \ne q$**, else $\mathbf{d} = \mathbf{0}$ |
+| Shoelace | $A = \tfrac{1}{2}\sum_{i=0}^{n-1}\left(x_i y_{i+1} - x_{i+1} y_i\right)$ | the polygon's area, signed by winding direction | area of a simple polygon; **indices mod $n$** to close the loop; **requires a simple** (non-self-intersecting) polygon |
+| Distance | $\lVert a - b\rVert = \sqrt{(a_1-b_1)^2 + (a_2-b_2)^2}$ | how far apart two points are | the closest pair, and the constant-time narrow phase |
+| Straddle test | $(y_1 > y) \neq (y_2 > y)$ | the edge has exactly one endpoint above height $y$ | ray casting; the **half-open** test that makes a vertex count once, not twice |
+| Ray crossing abscissa | $x_{\text{cross}} = x_1 + \dfrac{(y - y_1)(x_2 - x_1)}{y_2 - y_1}$ | where the edge cuts the horizontal line at height $y$ | ray casting; evaluate **only when the straddle test holds**, which excludes horizontal edges and so never divides by $y_2 - y_1 = 0$ |
+| Parity rule | $\text{inside} \iff \text{crossings} \bmod 2 = 1$ | odd crossings means inside | point-in-polygon; **requires a simple polygon** |
+| Strict comparison | $x_{\text{cross}} > x$ | count only crossings to the right of the query point | ray casting; `>=` double-counts a ray through a vertex and flips the parity |
+| Line–circle coefficients | $a = \mathbf{d}\cdot\mathbf{d},\ b = 2\,\mathbf{f}\cdot\mathbf{d},\ c = \mathbf{f}\cdot\mathbf{f} - r^2$, with $\mathbf{f} = p - \mathrm{centre}$ | the quadratic $a t^2 + bt + c = 0$ whose roots are the points on the line that are also on the circle | the entire line–circle test; **requires $a > 0$**, i.e. $p \ne q$ |
+| Discriminant | $\Delta = b^2 - 4ac$ | its sign counts the crossings | $\Delta < 0 \Rightarrow 0$ hits; $\Delta = 0 \Rightarrow 1$ (tangent); $\Delta > 0 \Rightarrow 2$ |
+| Quadratic formula | $t = \dfrac{-b \pm \sqrt{\Delta}}{2a}$ | the two parameter values of the crossings | then $h = p + t\,\mathbf{d}$; **requires $a \ne 0$** |
+| Segment restriction | $t = \dfrac{(h - p)\cdot(q - p)}{\lVert q - p\rVert^2}$, keep iff $0 \le t \le 1$ | project the hit back onto the segment and check it lies between the endpoints | segment–circle rather than line–circle; **requires $p \ne q$** |
+| Point on a segment | $\lvert\mathrm{cross}(a,b,p)\rvert \le \varepsilon$ **and** $p$ inside the bounding box of $a, b$ | collinearity, plus extent | boundary cases in segment tests; needs $\varepsilon > 0$ to absorb rounding |
+| Proper segment–edge crossing | $(d_1 > 0) \neq (d_2 > 0)$ and $(d_3 > 0) \neq (d_4 > 0)$ | each segment straddles the other's supporting line | segment–polygon; misses touching and collinear cases, so add endpoint-on-boundary and inside-inside |
+| Graham angle key | $\theta_p = \operatorname{atan2}\big(p_y - y_{\text{pivot}},\ p_x - x_{\text{pivot}}\big)$ | the direction from the pivot to $p$ | Graham scan; **the pivot must be a hull vertex** — lowest $y$, then lowest $x$ |
+| Hull running time | $O(n \log n)$ | the sort dominates; the scan itself is $O(n)$ because every point is pushed once and popped at most once | monotone chain and Graham scan |
+| Closest-pair strip | $\lvert x - x_{\text{mid}}\rvert \le d$ | only points within the current best distance of the split can improve on it | after both halves have returned their answers |
+| Packing bound | $\le 4$ points in a square of side $d$ at mutual distance $\ge d$; so the $d$-neighbourhood spans $\le 8$ half-squares | | why the inner scan is constant-time; **requires** the strip to be $d$-separated apart from the pair being tested |
+| Inner scan window | $j \in \{i+1, \dots, i+7\}$ on the $y$-sorted strip | only the next few positions can matter | the code's `min(i + 8, len(strip))` |
+| Early `break` | $\mathrm{strip}[j]_y - \mathrm{strip}[i]_y \ge d$ | nothing further down can be closer | **valid only because the strip is $y$-sorted** |
+| All-pairs count | $\binom{n}{2} = \dfrac{n(n-1)}{2}$ | how many pairs a naive narrow phase tests | the 780 figure for 40 circles |
+| Broad vs narrow phase | $\Theta(n^2)$ for all-pairs, $\Theta(n)$ for a partition scheme | | the payoff of spatial indexing; **requires** the candidate set to stay $O(n)$, which needs cells holding a constant number of objects |
+| Grid cell | $\mathrm{cell\_key}(x,y,s) = \big(\lfloor x/s\rfloor,\ \lfloor y/s\rfloor\big)$ | which cell a point falls in | the uniform grid; $s > 0$, and floor — not truncation — so negative coordinates land in negative cells |
+| Circle–circle test | $\sqrt{(a_x-b_x)^2 + (a_y-b_y)^2} < r_a + r_b$ | centres closer than the sum of the radii | the narrow phase the broad phase filters down to |
+| Circle | $(x - c_x)^2 + (y - c_y)^2 = r^2$ | the points at distance exactly $r$ from the centre $c$ | the worked example's substitution; **requires $r > 0$** |
+
+---
+
+## Multiple Choice Questions
+
+**Q1.** In `cross(o, a, b)`, what does a strictly positive value tell you?
+
+- A) They are collinear, with $b$ lying between $o$ and $a$.
+- B) They are collinear, with $a$ lying between $o$ and $b$.
+- C) The turn from o→a to o→b is counter-clockwise.
+- D) The turn from o→a to o→b is clockwise.
+
+<details>
+<summary>Answer and explanation</summary>
+
+**C) The turn from o→a to o→b is counter-clockwise.**
+
+`cross` is twice the signed area of the triangle $o, a, b$, and the sign
+convention is that counter-clockwise order gives a positive value. The lesson's
+own numbers confirm it: `cross((0,0), (3,0), (4,3)) = 9 > 0`, and the hull is
+traversed $(0,0) \to (3,0) \to (4,3)$, which is a left turn — the same left turn
+the code asserts with `all turns left: True`.
+
+A) and B) are wrong because collinearity is the `= 0` case, not the `> 0` case.
+A positive value rules out collinearity outright, and it says nothing about
+which of $a$ or $b$ is in the middle: both readings collapse to $cross = 0$ when
+the middle-point condition holds.
+
+D) reverses the convention. The worked example's clockwise turn is
+`cross((0,0), (0,3), (1,1)) = (0-0)(1-0) - (3-0)(1-0) = 0 - 3 = -3`, and it is
+exactly that negative value that forces the chain to pop. Getting this sign
+backwards is not a cosmetic slip — it would make the monotone chain keep every
+right turn and produce a hull that is inside the true one.
+
+</details>
+
+**Q2.** The monotone chain pops the last point of the lower chain whenever
+`cross(lower[-2], lower[-1], p) <= 0`. Why is that pop *forced* rather than a
+heuristic that happens to work?
+
+- A) Because that point is necessarily closer to the origin than the other two.
+- B) Because the point is enclosed by its two neighbours, so it cannot be a hull
+  vertex, and keeping it would destroy the invariant that the chain so far is
+  convex.
+- C) Because the upper chain will contain the same point, so keeping it would
+  create a duplicate.
+- D) Because a non-left turn makes the accumulated shoelace sum negative.
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) Because the point is enclosed by its two neighbours, so it cannot be a hull
+vertex, and keeping it would destroy the invariant that the chain so far is
+convex.**
+
+The chain under construction is always convex. When a new point arrives and the
+last turn is a right turn or collinear, the middle point lies inside the
+triangle formed with its two neighbours, so no convex set containing those three
+can have the middle one on its boundary. Since every hull vertex must be on the
+boundary, the middle point is disqualified — the pop is forced by the definition
+of a hull vertex, not chosen for convenience. The worked example shows it twice
+in a row: pushing $(3,0)$ pops $(2,5)$ on `cross = -9`, then rechecks and pops
+$(1,1)$ on `cross = -3`.
+
+A) is wrong because distance from the origin is irrelevant to hull membership, and
+the hull need not even touch the origin. The example's hull *does* contain
+$(0,0)$ as a vertex, but that is a coincidence of the input, not the rule.
+
+C) is wrong because duplicates are not what the pop prevents — the code handles
+duplicates separately, at the splice (`lower[:-1] + upper[:-1]`, "the first and
+last points appear in both chains, so drop one copy"). And the popped points
+$(1,1)$ and $(2,5)$ are exactly the points that appear on *neither* chain, which
+is the opposite of what C claims.
+
+D) is wrong because the shoelace sum is computed on the finished hull, and its
+sign reflects the winding of the final counter-clockwise chain, not any local
+turn during construction. A right turn during the scan does not make the partial
+sum negative in any way the algorithm looks at.
+
+</details>
+
+**Q3.** The pop test is changed from `cross(...) <= 0` to `cross(...) < 0`, and
+nothing else is touched. What changes in the returned hull?
+
+- A) Extreme points are lost, so the hull no longer contains all the input points.
+- B) The hull comes out clockwise instead of counter-clockwise.
+- C) Collinear points lying on hull edges now survive, so the hull gains extra
+  vertices that are not extreme points.
+- D) Nothing measurable changes — both tests compute the same convex region.
+
+<details>
+<summary>Answer and explanation</summary>
+
+**C) Collinear points lying on hull edges now survive, so the hull gains extra
+vertices that are not extreme points.**
+
+With `< 0`, a `cross` of exactly 0 no longer triggers a pop, so a run of
+collinear points along an edge all stay on the chain. On the lesson's input that
+means $(1,0)$ and $(2,0)$ — the two points on the bottom edge — are kept, and
+the code's `points excluded from the hull` list drops from five entries to
+three. The region enclosed is genuinely the same convex set, which is exactly why
+D is tempting: the area would still come out 14.5 from the shoelace formula.
+
+A) is wrong and would be alarming if true, but it is the opposite of what
+happens. `< 0` is *more* permissive about which points to keep, not less: the
+middle point of a strict right turn is still popped. The lesson's
+`all input points inside or on hull: True` check passes either way.
+
+B) is wrong because the winding is set by the direction of the scan — lower chain
+left to right, upper chain right to left — not by the comparison operator. The
+code indexes `hull[(i + 1) % len(hull)]`, which walks the chain forward either
+way.
+
+D) is wrong for two reasons. The *region* is the same, but the *vertex list* is
+not, and downstream code cares: the extra points break hull-to-hull consistency
+between runs, and the `all turns left` assertion in the lesson would now fail,
+because a collinear triple gives `cross = 0`, which is not `> 0`. This is why the
+lesson's Common Mistakes section says to decide which behaviour you want and
+write it down.
+
+</details>
+
+**Q4.** In the worked example, the chain pops $(1,1)$ after evaluating
+`cross((0,0), (1,1), (3,0))`. What is that value?
+
+- A) 3
+- B) −3
+- C) 9
+- D) 0
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) −3.**
+
+Substituting directly: $(a_1-o_1)(b_2-o_2) - (a_2-o_2)(b_1-o_1)$ with
+$o = (0,0)$, $a = (1,1)$, $b = (3,0)$ gives $(1-0)(0-0) - (1-0)(3-0) = 0 - 3 = -3$.
+The lesson prints the same computation inline: "Recheck:
+cross((0,0), (1,1), (3,0)) = (1)(0) − (1)(3) = −3 < 0. Right turn again, so pop
+(1,1)." It is negative, which is exactly what authorises the second pop.
+
+A) is wrong because it is the magnitude with the sign dropped — the single most
+common arithmetic slip in this formula. The magnitude alone tells you the triangle
+has area 1.5, but the algorithm needs the direction, and 3 would send you down
+the left-turn branch instead.
+
+C) is wrong because 9 is a real number from this lesson but a different
+evaluation: `cross((0,0), (3,0), (4,3)) = 9`, the first turn of the finished hull.
+Reading 9 here would mean confusing the triple used in the recheck with the
+triple used at the end.
+
+D) is wrong because a value of 0 would mean $(0,0)$, $(1,1)$ and $(3,0)$ are
+collinear, and they plainly are not — the line from the origin through $(1,1)$ is
+$y = x$, and $(3,0)$ is nowhere near it. A 0 would still pop, but by the
+collinear branch, not by the right-turn branch the example is illustrating.
+
+</details>
+
+**Q5.** Why must the closest-pair strip be sorted by $y$ before the inner scan
+runs?
+
+- A) So that the filter `abs(x - mid_x) <= d` keeps the correct set of points.
+- B) So the inner loop can `break` as soon as the $y$-gap reaches $d$; without the
+  sort the `break` fires at an arbitrary point and the scan silently misses closer
+  pairs.
+- C) Because Euclidean distance is only well defined for $y$-sorted input.
+- D) Because the divide step actually splits on $y$ rather than on $x$.
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) So the inner loop can `break` as soon as the $y$-gap reaches $d$; without the
+sort the `break` fires at an arbitrary point and the scan silently misses closer
+pairs.**
+
+The code's inner condition is `if strip[j][1] - strip[i][1] >= d: break`, with
+the comment "sorted by y, so nothing below is closer". That argument is only
+available because the y-coordinates are non-decreasing down the strip: once the
+gap reaches $d$, every later point is at least $d$ away in $y$ alone, so no
+remaining comparison can beat $d$. Sorting is what converts an O(n) scan into an
+O(1) one.
+
+A) is wrong because the filter is a pure x test and the order of the list cannot
+change which points it selects — `strip = sorted([...], key=lambda p: p[1])`
+filters first, then sorts. A permutation of the same set is still the same set.
+
+C) is wrong because the distance function is order-free:
+`sqrt((a[0]-b[0])**2 + (a[1]-b[1])**2)` reads two coordinates and is done. This
+is also why Common Mistake 1 lists "forgetting to sort by x in the closest-pair
+algorithm" as a distinct failure: the input precondition and the strip sort are
+two different sorts, and the lesson's code does both.
+
+D) is wrong because the split is vertical. `mid = n // 2` and
+`mid_x = points[mid][0]` split on $x$, which is why the input must be x-sorted;
+the strip is then *chosen* by an x test and *sorted* by $y$ so that the scan can
+stop early. Confusing the two sorts is exactly the bug.
+
+</details>
+
+**Q6.** On what packing argument does the "next 7 points" window in the strip scan
+rest?
+
+- A) 7 is the empirically best constant found by tuning.
+- B) A square of side $d$ holds at most 4 points at mutual distance $\ge d$, so the
+  $d$-neighbourhood of a strip point spans at most 8 half-squares and only a
+  constant number of candidates can lie within distance $d$.
+- C) A uniform grid query with a 3×3 neighbourhood returns 8 neighbours.
+- D) A double-precision float carries about 7 significant digits.
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) A square of side $d$ holds at most 4 points at mutual distance $\ge d$, so the
+$d$-neighbourhood of a strip point spans at most 8 half-squares and only a
+constant number of candidates can lie within distance $d$.**
+
+The lesson states the packing argument in the Formal Version: subdivide a square
+of side $d$ into four squares of side $d/2$, each of which holds at most one
+point, so at most four in total; the neighbourhood therefore spans at most eight
+of those half-squares, and "that is where the constant '7 neighbours' comes
+from". The consequence is that the inner scan needs a fixed, input-independent
+number of steps, which is what keeps the whole algorithm $O(n \log n)$ rather than
+$O(n^2)$ after the recursion has already delivered its halves.
+
+A) is wrong because the constant is not a tuning parameter; it is a consequence
+of the packing bound. If it were empirical, enlarging it would never change the
+answer and shrinking it below the bound would give a wrong distance — and
+Common Mistake 1 describes exactly that failure mode, where the result is "wrong,
+with no error".
+
+C) is wrong because it confuses two different data structures. The 9-cell
+neighbourhood is the *broad phase*'s spatial hash query, where cells are a fixed
+size unrelated to $d$. The 7-neighbour bound lives in the closest-pair strip,
+where the relevant scale is the distance $d$ just discovered, not a grid
+resolution. The numbers coincide; the reasoning does not.
+
+D) is wrong because floating-point precision plays no part in the bound. If the
+argument were about representation, doubling the precision would change the
+complexity class, which it plainly does not.
+
+</details>
+
+**Q7.** In ray casting, a point's crossing number comes out even. What does that
+mean?
+
+- A) The point lies exactly on the polygon boundary.
+- B) The point is outside the polygon.
+- C) The point is inside the polygon.
+- D) The polygon is non-convex.
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) The point is outside the polygon.**
+
+The parity rule is "inside iff the crossing number is odd", which follows from the
+Jordan curve theorem: a ray from an interior point must leave the region, so it
+crosses the boundary an odd number of times; a ray from an exterior point crosses
+an even number of times. The worked example walks through it twice on the
+L-shaped polygon: $(4,4)$ gets zero counted crossings, even, so **outside**; and
+$(1,4)$ gets one, odd, so **inside**.
+
+A) is wrong because a boundary point is a separate case entirely, decided by the
+straddle and strict-comparison rules rather than by parity. The lesson's test
+list makes this concrete: $((2,2), False, "on the reflex vertex")$. A ray from a
+point exactly on an edge is degenerate, and the code's half-open test settles it
+by convention rather than by counting — the lesson says "boundary behaviour is
+genuinely ambiguous — decide and document it rather than hoping".
+
+C) is wrong because that is the odd case, and getting it backwards is the
+characteristic sign error. It is easy to make here because the test list contains
+four `True` and four `False` rows, so a reader who glances at the shape rather
+than the parity can rationalise either answer.
+
+D) is wrong because convexity of the polygon is irrelevant to the parity rule.
+Ray casting is valid for the non-convex L-shape precisely because the code
+brackets each edge with the straddle test; Common Mistake 5 names "assuming the
+polygon is convex" as an error and points at the wrong shortcut, not at ray
+casting itself.
+
+</details>
+
+**Q8.** The code tests `(y1 > y) != (y2 > y)` and then compares `x_cross > x`,
+rather than using `>=` in both places. What is the strict form buying?
+
+- A) Speed — the strict comparison is a micro-optimisation on the inner loop.
+- B) Together they settle the case where the ray passes exactly through a vertex
+  or along a horizontal edge: the half-open test counts such a crossing exactly
+  once, and the strict comparison keeps boundary points out. With `>=`, the
+  parity can flip and boundary points get misclassified.
+- C) Protection against division by zero on horizontal edges.
+- D) A way of counting crossings in both directions along the ray.
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) Together they settle the case where the ray passes exactly through a vertex
+or along a horizontal edge: the half-open test counts such a crossing exactly
+once, and the strict comparison keeps boundary points out. With `>=`, the parity
+can flip and boundary points get misclassified.**
+
+The lesson's Common Mistake 3 says this directly: using `x_cross >= x`
+double-counts the case where the ray passes exactly through a vertex, and points
+on the boundary get misclassified; "the strict comparison plus the
+`(y1 > y) != (y2 > y)` half-open test is the standard combination that handles
+vertices correctly". The code comment agrees: "Only count crossings strictly to
+the right of the point. The strict comparison also settles vertices that lie
+exactly at py."
+
+A) is wrong because the strictness changes the answer, not the runtime. There is
+no measurable speed difference between `>` and `>=` on a float comparison; both
+compile to the same instruction. If this were purely about speed there would be
+nothing to explain in a Common Mistakes section.
+
+C) is wrong because division by zero is prevented by the *straddle* test, not by
+the comparison. A horizontal edge has $y_1 = y_2$, so
+`$y_1 > y$ != $y_2 > y$` is False and `x_cross` is never evaluated — the code
+reaches the division only when $y_2 \ne y_1$. The vectorised numpy block says the
+same thing, relying on `nan` comparisons being False rather than on an epsilon.
+The `>` after the division is about parity, not about zeros.
+
+D) is wrong because the ray is cast in one direction only, towards $+x$, and
+only crossings to the right are counted. There is no second direction to count,
+and adding one would make every crossing count twice and flip every parity.
+
+</details>
+
+**Q9.** A circle sits at the origin with radius 5, and the line runs from
+$(−10, 6)$ to $(10, 6)$. How many intersections are there, and what in the
+quadratic says so?
+
+- A) 2, because the discriminant is positive.
+- B) 1, because the discriminant is exactly zero.
+- C) 0, because the line's height $y = 6$ already exceeds the radius 5, and the
+  discriminant comes out negative.
+- D) 0, because the leading coefficient $a = dx^2 + dy^2 = 400$ is too large.
+
+<details>
+<summary>Answer and explanation</summary>
+
+**C) 0, because the line's height $y = 6$ already exceeds the radius 5, and the
+discriminant comes out negative.**
+
+Worked through: $\mathbf{d} = (20, 0)$, $\mathbf{f} = (−10, 6)$, so
+$a = \mathbf{d}\cdot\mathbf{d} = 400$, $b = 2\,\mathbf{f}\cdot\mathbf{d} = −400$,
+and $c = \mathbf{f}\cdot\mathbf{f} − 25 = 136 − 25 = 111$. Then
+$\Delta = b^2 − 4ac = 160000 − 177600 = −17600 < 0$, and the code returns `[]`
+because of `if discriminant < 0.0: return []`. Geometrically, $y = 6 > 5$ means the
+whole line is outside the circle, and the tangent case in the lesson's own test
+list is the line $y = 5$, which returns exactly one hit at $(0, 5)$.
+
+A) is wrong because a positive discriminant requires $\Delta > 0$. The same
+coefficients with $y = 3$ instead of $y = 6$ give $c = 84$ and
+$\Delta = 160000 − 134400 = 25600 > 0$, which is the two-hit case the worked
+example computes by hand as $(−4, 3)$ and $(4, 3)$.
+
+B) is wrong because $\Delta = 0$ is the tangent case, and it is exactly the line
+$y = 5$ in the code's case list: `((-10, 5), (10, 5), 1, "tangent: touches once")`
+prints `1 hit(s) [(0.0, 5.0)]`. Reaching $\Delta = 0$ requires $y = 5$ exactly, not
+$y = 6$.
+
+D) is wrong because $a$ scales the parameter $t$ and says nothing about whether
+the line meets the circle; a positive $a$ is the only thing the quadratic needs
+for the formula $t = (−b \pm \sqrt\Delta)/(2a)$ to be defined. The lesson's
+`a == 0.0` guard exists only to catch $p = q$, a degenerate line. The same
+$a = 400$ appears for the $y = 3$ and $y = 5$ lines, which do intersect.
+
+</details>
+
+**Q10.** The lesson prints `segment (-10,0) to (0,0) : [(-5.0, 0.0)]`, even though
+running `line_circle_intersect` on the same two endpoints returns both
+$(−5, 0)$ and $(5, 0)$. Why the difference?
+
+- A) The segment version uses a smaller radius than the line version.
+- B) The second root is $t = 1.5$, which lies beyond the endpoint $q = (0,0)$, so
+  only the root $t = 0.5$ survives the test $0 \le t \le 1$.
+- C) The endpoint $(0,0)$ is the centre of the circle, so it is rejected.
+- D) There is no difference; the printout is a bug in the lesson.
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) The second root is $t = 1.5$, which lies beyond the endpoint $q = (0,0)$, so
+only the root $t = 0.5$ survives the test $0 \le t \le 1$.**
+
+Compute it: $\mathbf{d} = (10, 0)$, $\mathbf{f} = (−10, 0)$, $a = 100$,
+$b = −200$, $c = 75$, so $\Delta = 40000 − 30000 = 10000$ and
+$t = (200 \pm 100)/200$, which is $0.5$ or $1.5$. The line parameterises
+$h(t) = p + t\mathbf{d} = (−10 + 10t,\ 0)$, so $t = 0.5$ gives $(−5, 0)$ and
+$t = 1.5$ gives $(5, 0)$. The line contains both; the segment from $(−10,0)$ to
+$(0,0)$ contains only the first. The code's projection
+$t = (h − p)\cdot(q − p)/\lVert q − p\rVert^2$ recovers exactly that $t$ for each
+hit and keeps only those in $[0, 1]$.
+
+A) is wrong because both functions are called with the same arguments — `5.0` in
+both cases — and the line function is called *inside* the segment function, so
+it cannot be using a different radius. A radius discrepancy would also change the
+positions of the hits, not just their count.
+
+C) is wrong because $(0,0)$ is an endpoint, not a hit, and the endpoint is never
+filtered out. The projection for $h = (5, 0)$ gives $t = 1.5$, which is rejected
+for being *past* the endpoint, not for being the endpoint. And $(0,0)$ being the
+centre is irrelevant: a segment from the centre outwards still has a well-defined
+near intersection, which is the $(−5,0)$ the lesson keeps.
+
+D) is wrong because the printed output is consistent with the same code, run with
+the same circle. The lesson pairs the two prints deliberately, and the comment
+above them reads "a segment and a line give different answers against the same
+circle" — the contrast is the teaching point, not an oversight.
+
+</details>
+
+**Q11.** The cell-size sweep reports 1600 pair checks at cell size 10.0 for the
+40-circle scene, against 780 for plain brute force. What has gone wrong?
+
+- A) The grid is buggy at coarse cell sizes.
+- B) At cell size 10 the whole scene fits in 4 cells, so every query's 3×3
+  neighbourhood returns essentially everything — the cheap filter has become more
+  expensive than the exact test it was meant to avoid.
+- C) Coarse cells make the narrow-phase `collides` test less accurate.
+- D) Coarse cells overflow the memory of the cell dictionary.
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) At cell size 10 the whole scene fits in 4 cells, so every query's 3×3
+neighbourhood returns essentially everything — the cheap filter has become more
+expensive than the exact test it was meant to avoid.**
+
+The sweep is printed directly: `cell 10.0 -> 4 cells, 1600 checks`, against
+`cell 2.0 -> 32 cells, 168 checks` and `40 circles` all-pairs at 780. With only 4
+occupied cells, the 9 cells a query looks at are a superset of the entire scene,
+so `grid.query(circle)` returns all 40 circles and the "candidates" are 40 × 40
+= 1600 — more than the 780 unordered pairs brute force would even consider. The
+lesson states the rule: "A grid only pays off when cells hold a handful of
+objects", and at 10.0 they hold 10 each.
+
+A) is wrong because the same code is correct at cell size 2.0, finding the same 11
+colliding pairs as brute force (`same pairs? True`). A bug would not be
+size-dependent in exactly the way that tracks occupancy, and the brute-force
+count 780 is confirmed by $40 \times 39 / 2$, so the 1600 is real work, not a
+counting artefact.
+
+C) is wrong because the narrow phase is untouched by the grid — `collides` takes
+two circles and a radius and compares `sqrt(dx**2 + dy**2)` against `ar + br`. A
+coarse grid changes only *which pairs reach it*, never what it computes, which is
+why `broadphase found 11` equals `brute force found 11` at every cell size that is
+still correct.
+
+D) is wrong because 4 cells is the *smallest* occupancy in the sweep, not the
+largest — finer cells use more memory (`cell 1.0 -> 37 cells`, and in the
+challenge, 4464 cells at size 0.5). Memory pressure is the argument against small
+cells, never against large ones.
+
+</details>
+
+**Q12.** In the challenge, a broad phase that registers each circle only in the
+cell containing its centre finds 16 of the 42 colliding pairs at cell size 0.5.
+What is it missing?
+
+- A) Duplicate pairs, because the canonical `seen` key drops them.
+- B) Circles whose diameter (up to 1.8) exceeds the cell size, so they span a 2×2
+  block of 0.5-cells but are filed under one — two overlapping circles in
+  different cells are therefore never compared.
+- C) Circles whose coordinates are negative, because `int()` truncates towards
+  zero.
+- D) Circles within floating-point distance of a cell boundary.
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) Circles whose diameter (up to 1.8) exceeds the cell size, so they span a 2×2
+block of 0.5-cells but are filed under one — two overlapping circles in different
+cells are therefore never compared.**
+
+The lesson's own diagnosis: "a circle of radius 0.9 has diameter 1.8, so it covers
+a 2×2 block of 0.5-cells, but it is filed under one cell. Two overlapping circles
+in different cells never get compared." The printed table shows exactly where the
+error disappears — the `naive` column reads 16 at cell 0.5, 38 at 1.0, and 42 from
+1.5 upward, because only at 1.5 does the cell finally exceed the largest diameter.
+The fix is not a bigger cell: `multi-cell` is correct at *every* size, including
+0.5, because it registers each object in every cell its bounding box touches.
+
+A) is wrong because deduplication can only remove a pair that was already found
+once; it cannot suppress a pair that was never examined. And the
+`multi-cell` version uses the identical canonical key
+`min(id(c), id(other)), max(id(c), id(other))` and still finds all 42.
+
+C) is wrong because `cell_key` uses `int(cx // cell_size)`, which floors, and the
+lesson verifies it: `point (-0.5, -0.5) lands in cell (-1, -1)` and "negative
+cells differ from positive ones: True". Truncation towards zero would put −0.5 in
+cell 0, colliding with positives — a real bug, but a different one, and the scene
+here has no negative coordinates at all.
+
+D) is wrong because the failure is structural, not numerical. A circle near a cell
+boundary still gets registered in its own cell and is still found by the 3×3
+query of its neighbours; what is lost is any circle whose *extent*, not whose
+centre, reaches across the boundary. No epsilon fixes a missing registration.
+
+</details>
+
+**Q13.** Why is the convex hull called a *conservative* collision proxy rather
+than an exact one?
+
+- A) Because the hull's centroid can fall outside the shape it stands for.
+- B) Because hull vertices are a subset of the input points, so a hull can never
+  represent a curved mesh edge.
+- C) Because $\mathrm{conv}(S) = \mathrm{conv}(H)$ makes interior points
+  irrelevant and the hull contains the whole shape — so it never *misses* a
+  collision — but for the L-shape the hull area is 28.0 against the shape's 20.0,
+  so it also reports hits that are not real.
+- D) Because the shoelace formula only bounds the area from above.
+
+<details>
+<summary>Answer and explanation</summary>
+
+**C) Because $\mathrm{conv}(S) = \mathrm{conv}(H)$ makes interior points
+irrelevant and the hull contains the whole shape — so it never *misses* a
+collision — but for the L-shape the hull area is 28.0 against the shape's 20.0,
+so it also reports hits that are not real.**
+
+Exercise 2 supplies both halves of that claim with numbers. The hull of the
+L-shape is $(0,0), (6,0), (6,2), (2,6), (0,6)$: the reflex vertex $(2,2)$ has
+been swallowed and the edge now runs as a straight diagonal from $(6,2)$ to
+$(2,6)$ across the notch. The printed areas are `L-shape area : 20.0` and
+`hull area (fills in): 28.0`, and the notch point $(3,3)$ is reported as outside
+the real L but inside the hull. The lesson's judgement is explicit: "The hull is
+cheap, and it never *misses* a collision, so you get false positives instead of
+objects tunnelling through walls."
+
+A) is wrong because the centroid of a convex polygon is always inside it — the
+exercise prints `centroid: (1.8, 2.2)` and `centroid inside hull? True`, and the
+proof is that the centroid is a convex combination of the vertices and a convex
+set contains all convex combinations of its points. So the hull cannot be blamed
+for a centroid that escapes it.
+
+B) is wrong because being a subset of the input points is exactly the property
+that makes the hull *cheap*, not that makes it inaccurate. The inaccuracy comes
+from the hull adding area the shape never had, not from the vertices being input
+points. A mesh edge being curved is irrelevant: hulls are used precisely because
+they replace such meshes with a handful of straight edges.
+
+D) is wrong because the shoelace formula is exact. For the lesson's hull the
+signed double area is exactly 29, so the area is exactly 14.5 — and the code
+agrees with the hand computation to the digit. Nothing about it is a bound.
+
+</details>
+
+**Q14.** What does the identity $\mathrm{conv}(S) = \mathrm{conv}(H)$ license a hull
+algorithm to do?
+
+- A) Discard interior points and keep only the hull vertices, because removing them
+  cannot change the convex region returned.
+- B) Return the hull in either winding order, since convexity does not depend on
+  direction.
+- C) Skip the initial sort, since the hull does not depend on input order.
+- D) Use `<` instead of `<=` in the pop test without changing what is returned.
+
+<details>
+<summary>Answer and explanation</summary>
+
+**A) Discard interior points and keep only the hull vertices, because removing them
+cannot change the convex region returned.**
+
+This is the Formal Version theorem stated as "convexity is preserved when
+interior points are deleted, which is why hull algorithms can discard
+aggressively". Exercise 2 demonstrates it empirically: adding the noise points
+$(2,2), (2,3), (1,1), (3,1)$ to a convex pentagon leaves a byte-identical hull and
+an unchanged centroid (`hull unchanged? True`, `centroid unchanged? True`), and
+the code excludes five of the ten input points from the hull without the result
+changing. The identity is what makes an aggressive pop policy *sound* rather than
+merely fast.
+
+B) is wrong because winding is a separate property from convexity. The theorem
+says nothing about order, yet the code's own verification walks
+`hull[(i + 1) % len(hull)]` and asserts `all(t > 0 for t in turns)`, which only
+holds for the counter-clockwise hull. A clockwise hull is the same convex region
+and a different vertex list, and it fails that check.
+
+C) is wrong because the hull is order-independent as a *set*, but the algorithm is
+not. The monotone chain's correctness argument is local — "pop the last point
+while the last turn is not counter-clockwise" — and it presupposes a left-to-right
+scan. Fed unordered input, the chain pops points that are genuine extreme points
+relative to the wrong chain. The initial `sorted(set(points))` is load-bearing.
+
+D) is wrong because option C of the third question is the counterexample: with
+`<`, the collinear points $(1,0)$ and $(2,0)$ survive on the hull's bottom edge.
+The *region* is unchanged but the *vertex list* is not, which is what most
+callers consume.
+
+</details>
+
+---
+
+## Subjective Questions
+
+### Short Answer
+
+**Q1. Define the *crossing number* of a point with respect to a polygon, and
+state the parity rule that follows from it.**
+
+<details>
+<summary>Answer</summary>
+
+The crossing number of a point $p$ with respect to a polygon $P$ is the number of
+times a ray starting at $p$ crosses $P$'s boundary. By the Jordan curve theorem,
+$p$ is inside $P$ if and only if the crossing number is odd, and outside if and
+only if it is even.
+
+Two conditions come with the rule. The polygon must be *simple* — not
+self-intersecting — because a self-intersecting curve does not separate the plane
+into a single inside and outside. And the count must be taken with a half-open
+straddle test, $(y_1 > y) \neq (y_2 > y)$, plus a strict $x_{\text{cross}} > x$,
+so that a ray passing exactly through a vertex is counted once rather than twice.
+
+</details>
+
+**Q2. Write the shoelace formula for a polygon with vertices
+$(x_0, y_0), \dots, (x_{n-1}, y_{n-1})$, and say what the factor of $\tfrac{1}{2}$
+and the mod-$n$ indexing each accomplish.**
+
+<details>
+<summary>Answer</summary>
+
+$$
+A = \tfrac{1}{2}\sum_{i=0}^{n-1}\left(x_i y_{i+1} - x_{i+1} y_i\right)
+$$
+
+Indices are taken mod $n$, so $y_n = y_0$: that is what closes the polygon,
+turning the sum into a cycle over the edges $i \to (i+1) \bmod n$. Without it the
+last edge back to vertex 0 is simply absent and the shape is not the polygon.
+
+The $\tfrac{1}{2}$ is because the sum is the *signed doubled* area — every
+triangle in the triangulation is counted on both of its sides. In the lesson's
+worked example the five cross terms sum to 29 and the area is $29/2 = 14.5$, which
+is exactly what the code prints as `shoelace area = 14.5`. The formula requires a
+simple polygon; on a self-intersecting one it computes the winding-weighted
+algebraic area instead. The sign is positive for counter-clockwise winding.
+
+</details>
+
+**Q3. State the monotone-chain pop rule, and explain why the pop is forced by the
+definition of a hull vertex rather than chosen for convenience.**
+
+<details>
+<summary>Answer</summary>
+
+Sort $S$ by $x$ (ties by $y$); scanning left to right, push each point and then
+pop the last point of the chain while the last turn is not counter-clockwise, i.e.
+while $\mathrm{cross}(\text{chain}[-2], \text{chain}[-1], p) \le 0$.
+
+The pop is forced because the middle point of a non-left triple lies inside the
+triangle formed with its two neighbours. A hull vertex, by definition, is a point
+of $S$ that is not inside any segment between two other points of $S$ — and the
+whole chain must stay convex, since a convex set containing the three corners must
+contain their triangle. So the middle point cannot be a hull vertex of any
+convex set containing the input. Keeping it would either break the convexity
+invariant the algorithm relies on or put a non-extreme point on the reported hull.
+
+</details>
+
+**Q4. Write the quadratic that the line–circle test solves, and state what each of
+the three discriminant cases means geometrically.**
+
+<details>
+<summary>Answer</summary>
+
+With $\mathbf{d} = q - p$ and $\mathbf{f} = p - \mathrm{centre}$, substitute
+$h(t) = p + t\mathbf{d}$ into $(x - c_x)^2 + (y - c_y)^2 = r^2$ to get
+
+$$
+a = \mathbf{d}\cdot\mathbf{d}, \qquad b = 2\,\mathbf{f}\cdot\mathbf{d}, \qquad c = \mathbf{f}\cdot\mathbf{f} - r^2,
+$$
+$$a t^2 + bt + c = 0, \qquad \Delta = b^2 - 4ac, \qquad t = \tfrac{-b \pm \sqrt{\Delta}}{2a}.$$
+
+$\Delta < 0$ means the line passes beside the circle — 0 hits. $\Delta = 0$ means
+it grazes it — 1 hit, a tangent, computed as $t = -b/2a$. $\Delta > 0$ means it
+cuts through — 2 hits, the two roots.
+
+The restriction is $a > 0$, i.e. $p \ne q$: with $p = q$ there is no line and
+the formula divides by zero.
+
+</details>
+
+**Q5. What precondition does the closest-pair divide-and-conquer place on its
+input, and what exactly goes wrong if that precondition is violated?**
+
+<details>
+<summary>Answer</summary>
+
+The input must be sorted by $x$ on entry, and the strip built from it must
+separately be sorted by $y$.
+
+If the input is not x-sorted, `points[mid][0]` is not the dividing line, so
+`mid_x` is not the $x$-coordinate of the split. The halves then mix points from
+both sides of the true split, and the filter
+`|x - mid_x| <= d` no longer describes the strip "within $d$ of the dividing
+line" — it admits some cross-half candidates and excludes others. The recursive
+answers $d_L$ and $d_R$ are still correct for their own subsets, so the algorithm
+returns a distance that is too large with no error, no exception, and no failed
+assertion.
+
+If the strip is not y-sorted, the `break` on
+`strip[j][1] - strip[i][1] >= d` fires at an arbitrary position and discards
+candidates that were still worth comparing. Both failures are silent, which is
+why the lesson's code sorts in two places and checks itself against brute force
+on eleven separate seeds.
+
+</details>
+
+**Q6. Define *broad phase* and *narrow phase*, and name one grid-based and one
+tree-based spatial partition.**
+
+<details>
+<summary>Answer</summary>
+
+The **broad phase** is the cheap, conservative filter: it decides which pairs
+*could* interact, using an approximation and never rejecting a pair that really
+does interact. The **narrow phase** is the exact test — centre distance against
+the sum of radii, SAT, GJK — run only on the survivors.
+
+A **uniform grid** is the grid-based partition: space is cut into equal cells and
+each object is registered in the cell(s) its bounding box touches; a query reads
+its own cell plus the 8 around it. A **bounding volume hierarchy** (BVH) is the
+tree-based partition: nested axis-aligned boxes, tested top-down with an
+early-out, which is what Box2D's dynamic tree and `btDbvtBroadphase` are. kd-trees
+(`scipy.spatial.cKDTree`) are a third structure of the same family.
+
+The dividing line between the phases is what makes the split worth doing: an
+all-pairs narrow phase is $\Theta(n^2)$, and a partition that keeps the candidate
+set at $\Theta(n)$ pairs makes the total $\Theta(n)$.
+
+</details>
+
+### Long Answer
+
+**Q1. Why does the divide-and-conquer closest-pair algorithm get away with only a
+constant number of comparisons per strip point — and what would actually break if
+you removed the y-sort, the `break`, or the 7-cap?**
+
+<details>
+<summary>Model answer</summary>
+
+The recursion hands back two correct answers, $d_L$ from the left half and $d_R$
+from the right, and takes $d = \min(d_L, d_R)$. Any cross-half pair that could
+beat $d$ must satisfy two constraints at once: its two points are within distance
+$d$ of each other, and their $x$-coordinates are within $d$ of the split
+$x_{\text{mid}}$. That is why the strip filter is $|\,x - x_{\text{mid}}\,| \le d$:
+it is not an approximation, it is a *necessary* condition, derived from
+$\lvert a_x - b_x\rvert \le \lVert a - b\rVert < d$.
+
+The strip is then sorted by $y$ so that a third fact becomes usable. If
+$\mathrm{strip}[j]_y - \mathrm{strip}[i]_y \ge d$, then for every $k > j$ the
+same inequality holds, so $\mathrm{strip}[k]$ is already at least $d$ away from
+$\mathrm{strip}[i]$ in the vertical direction alone and cannot beat $d$ whatever
+its $x$. That is the whole justification for the `break`, and it is a statement
+about the *suffix* of a sorted list — which is why the sort is not optional. Remove
+the y-sort and the break throws away real candidates: the answer comes back too
+large, silently.
+
+The 7-cap comes from packing. Every point in the strip other than the pair under
+test is at least $d$ from every other, so a square of side $d$ holds at most 4 of
+them (subdivide it into four squares of side $d/2$, each of which can hold at most
+one). The $d$-neighbourhood of a strip point therefore spans at most 8 such
+half-squares, and only a constant number of strip positions can be within distance
+$d$ of it. So the inner loop can look ahead a fixed 7 and stop.
+
+Now the failure modes, which are different in character. Remove the y-sort and
+you get the break described above — a wrong answer, no error. Remove the `break`
+and the algorithm is still correct, but the inner scan runs to the end of the
+strip for every strip point, which makes the combine step $O(n^2)$ and the whole
+algorithm $O(n^2)$ — a silently quadratic version of an intended $O(n \log n)$.
+Remove the 7-cap, or shrink it, and you get the first failure mode again: a pair
+that could beat $d$ sits beyond the window and is never compared.
+
+The asymmetry is the useful lesson. Two of the three pieces are *correctness*
+premises and one is a *performance* premise, and the code makes no distinction
+between them. Common Mistake 1 is about exactly this: the "distance too large —
+wrong, with no error" outcome. That is why the lesson's implementation verifies
+itself against brute force on eleven seeds rather than on one.
+
+</details>
+
+**Q2. Why is a convex hull a safe but not an exact collision proxy, and what would
+actually go wrong in a physics engine if you treated it as an exact one?**
+
+<details>
+<summary>Model answer</summary>
+
+"Safe" and "exact" fail in opposite directions, and only one of them is a bug.
+
+The hull contains the shape. Since $\mathrm{conv}(S)$ is a convex set containing
+$S$, and a segment between any two points of $S$ lies in it, every point of the
+shape — and every segment between two of its points — lies inside the hull. So a
+hull test never reports "no overlap" when there is one. That is the direction you
+cannot afford to get wrong: a missed collision in a physics engine is an object
+tunnelling through a wall, and tunnelling is silent and often unrecoverable.
+
+The hull is also *not much bigger* than the shape in the sense that matters,
+because $\mathrm{conv}(S) = \mathrm{conv}(H)$: interior points cannot change it,
+so a hull computed from a million sampled surface points is exactly the hull of
+the few hundred genuinely extreme ones. That is what makes it a cheap proxy —
+polygon intersection instead of triangle-versus-mesh intersection.
+
+But it is strictly larger. The lesson's L-shape is the counterexample: the hull
+$(0,0), (6,0), (6,2), (2,6), (0,6)$ has area 28.0 against the shape's 20.0,
+because the reflex vertex $(2,2)$ is swallowed and a straight edge runs diagonally
+from $(6,2)$ to $(2,6)$ across the notch. The point $(3,3)$ is outside the real
+L-shape and inside its hull. If you treated the hull as exact, an object sitting
+in that notch would be reported as colliding with the wall when it is standing in
+open space.
+
+Now put that in an engine and the consequences are specific rather than
+theoretical. Contacts would be created between objects that are not touching, so
+the solver would push them apart — an object would be shoved out of a notch it
+legally occupies, or jitter against a wall it is nowhere near. Worse, the error
+is *systematic and directional*: it only ever adds area, so the artefact is
+always a spurious push outward from the wall, which reads to a player as the
+level being broken rather than as a collision bug. And because the artefact is
+consistent, it does not average out over frames the way random numerical noise
+would; it becomes a permanent, reproducible force.
+
+This is why the lesson's judgement is that the hull is a *conservative* proxy, and
+why real engines keep it as a first-stage filter rather than a final answer —
+exactly the broad-phase/narrow-phase split: the hull rejects cheaply and safely,
+and the exact mesh test only ever runs on the handful of pairs that survive.
+
+</details>
+
+**Q3. Why does splitting collision detection into broad and narrow phase turn
+$\Theta(n^2)$ into $\Theta(n)$, and what does that depend on?**
+
+<details>
+<summary>Model answer</summary>
+
+Start with the count. An exact narrow-phase test — centre distance against the
+sum of radii, or a separating-axis test — is constant work per pair, but the
+number of pairs in a scene of $n$ objects is $\binom{n}{2} = n(n-1)/2$, which is
+$\Theta(n^2)$. For the lesson's 40 circles that is 780 pairs. At $n = 10^4$ it is
+about 50 million. Nothing about the exact test is slow; the problem is that you
+are asking it about pairs that were never close.
+
+The broad phase changes the *count*, not the cost. It is a cheap, conservative
+filter: it uses an approximation — which cells does this object's bounding box
+touch — and its only obligation is to never reject a pair that truly interacts.
+Everything that survives becomes a candidate, and the candidate set is what the
+exact test has to chew through.
+
+The $\Theta(n)$ result requires the candidate set to stay $O(n)$ in total, and
+that in turn requires each object to have a *constant* number of neighbours. The
+lesson's grid achieves it by looking at one cell plus its 8 neighbours: if two
+circles are within range of each other, their centres must be in the same or
+adjacent cells, which is why a 3×3 query cannot miss a collision. The measured
+numbers bear this out — 780 all-pairs checks become 168 candidate checks at cell
+size 2.0, a reduction of 4.64×, with the same 11 colliding pairs found. In the
+challenge the gap widens from 1,237× at $N = 100$ to 13,317× at $N = 800$, and
+the doubling ratios say why: all-pairs work multiplies by about 4.0 each time,
+while broad-phase work multiplies by 1.75, 2.43 and 1.41 — roughly 2, which is
+linear.
+
+Two dependencies are worth stating plainly. First, cell size must be chosen so
+cells hold a small constant number of objects. The sweep in the lesson shows both
+failure directions from one mechanism: at 4.0 there are only 22 occupied cells so
+each query returns a slab of the world (520 checks), and at 10.0 there are 4 and
+every query returns everything (1600 checks — *worse* than brute force's 780).
+The rule of thumb is to size cells from the average object radius or diameter,
+which is what real engines do.
+
+Second, measuring the scaling requires holding density constant. The lesson notes
+that an earlier version with a fixed 100×100 arena showed broad-phase checks
+growing by about 4× per doubling — the same as brute force — because rising
+density means every object's neighbourhood grows, so the linear behaviour never
+appears. Scaling experiments that fix the arena measure the wrong thing, and this
+one is a good example of a methodological error hiding inside a correct algorithm.
+
+</details>
+
+**Q4. Why must ray casting use a half-open straddle test together with a strict
+comparison, and what breaks at vertices and on the boundary if you do not?**
+
+<details>
+<summary>Model answer</summary>
+
+The parity rule counts how many times a ray from the query point crosses the
+polygon boundary. For an ordinary edge that number is unambiguous. The trouble is
+that the ray is a one-dimensional object in a two-dimensional plane, so it has a
+non-trivial intersection with the polygon only at isolated, degenerate
+configurations — and those are exactly the cases real input hits, because test
+data is full of lattice points, axis-aligned edges and shapes whose corners line
+up with query coordinates.
+
+The specific failure is a ray that passes exactly through a vertex. That vertex
+belongs to two edges, and both of them straddle the ray's height. A naive test
+that counts every edge whose endpoints lie on opposite sides of the ray's
+horizontal line counts that single geometric crossing *twice*. Two crossings are
+even, so the parity flips and a point inside the polygon is reported outside.
+One spurious count is enough — the rule does not tolerate a majority vote, only
+parity.
+
+The half-open straddle test $(y_1 > y) \neq (y_2 > y)$ is the fix. It is
+*half-open* because it uses a strict `>` on the query height against one endpoint
+and compares the two results for inequality, so an endpoint sitting exactly at
+height $y$ is treated as *not above* it. Exactly one of the two edges meeting at
+a vertex therefore straddles, and the crossing is counted once. The same test
+handles the ray lying *along* a horizontal edge: both endpoints have equal $y$,
+so $(y_1 > y) \neq (y_2 > y)$ is False and that edge contributes nothing.
+
+The strict comparison $x_{\text{cross}} > x$ is the second half. Where the ray
+meets a vertex, `x_cross` can come out exactly equal to $x$, and only counting
+crossings strictly to the right keeps a boundary hit from flipping the parity.
+The lesson is careful about what it claims here: boundary behaviour is genuinely
+ambiguous — is a point on an edge inside or outside is a convention, not a fact —
+and the lesson's own test list records the choice it made, `((2,2), False, "on the
+reflex vertex")`, alongside the sentence "decide and document it rather than
+hoping".
+
+Note that the two tests are not independent extras. The straddle test is also
+what makes the arithmetic safe: it is evaluated before the division, and a
+horizontal edge fails it, so $y_2 - y_1 \ne 0$ whenever
+$x_{\text{cross}} = x_1 + (y - y_1)(x_2 - x_1)/(y_2 - y_1)$ is actually
+evaluated. The vectorised numpy block relies on the same property from the other
+side: horizontal edges produce `nan` after division with floating-point
+arithmetic, and every comparison against `nan` is False, so they drop out
+harmlessly. Common Mistake 3's real content is that the *pair* of tests is the
+standard, and using `>=` in the second one gives you a plausible-looking
+implementation that is wrong exactly where the geometry is interesting.
+
+</details>
+
+---
+
 ## Exercises and Solutions
 
 **[ ] Exercise 1 — ** Implement Graham scan and compare it against the monotone
@@ -1526,6 +2494,6 @@ scaling requires holding density constant.
 ## Next
 
 [Part 08 — Optimisation](../part08_optimization/) starts at
-[100 — Convexity](part08_optimization/100_convexity.md). Convexity appeared in
+[100 — Convexity](../part08_optimization/100_convexity.md). Convexity appeared in
 this lesson as the property that makes the hull a valid proxy and the centroid
 safe; next it is the property that makes optimisation tractable.

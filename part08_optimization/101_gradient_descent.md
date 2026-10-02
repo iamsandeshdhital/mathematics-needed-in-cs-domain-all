@@ -638,6 +638,597 @@ recurrence is xₖ₊₁ = (1 + βη)xₖ − βηxₖ₋₁ − η∇f(xₖ), a
 the unit disc at learning rates where vanilla descent is perfectly stable. Adding
 momentum is not a free speed-up; the learning rate usually has to come down.
 
+---
+
+## Formula Sheet
+
+| Symbol | Formula | In plain words | When you use it |
+| --- | --- | --- | --- |
+| gradient `$\nabla f(x)$` | `$\left(\frac{\partial f}{\partial x_1},\dots,\frac{\partial f}{\partial x_n}\right)(x)$` | one slope per input, collected into an arrow | the only object the update rule consumes; exists only where `f` is differentiable |
+| directional derivative | `$\left.\frac{df}{dt}\right\vert_{t=0}=\nabla f(x)\cdot v$` for the curve `x(t)=x+tv` | how fast `f` changes when you walk along `v` | valid for any `v`; the word *steepest* additionally requires `$\lVert v\rVert=1$` |
+| steepest descent | `$v^*=-\nabla f/\lVert\nabla f\rVert$`, with rate of decrease `$\lVert\nabla f\rVert$` | the single best downhill direction, and how fast `f` falls along it | valid **only** where `$\nabla f(x)\ne0$`; at a critical point the gradient vanishes and every direction ties |
+| Cauchy–Schwarz | `$\nabla f\cdot v\le\lVert\nabla f\rVert\lVert v\rVert$` | no direction beats the gradient's own length | the one-line proof of the row above |
+| gradient descent | `$x_{k+1}=x_k-\eta\nabla f(x_k)$`, `$\eta>0$` | step downhill, by `η` times the slope | `η` is the learning rate; a *larger* `η` is **not** automatically better |
+| exact solution, quadratic | for `$f(x)=\tfrac12x^{\mathsf T}Hx$` with `H` SPD and `H=Q\Lambda Q^{\mathsf T}`: `$x_k=Q\,\operatorname{diag}\!\big((1-\eta\lambda_i)^k\big)Q^{\mathsf T}x_0$` | each eigen-direction is multiplied by a fixed scalar every step | exact, not asymptotic; the strongest single fact about learning rates |
+| per-direction factor | `$1-\eta\lambda_i$` for the eigen-direction `i` | how much that direction shrinks each step | the direction with the largest `$\lambda$` sets the constraint on `η` |
+| **stability condition** | `$\lvert1-\eta\lambda_i\rvert<1$ for every `i`, i.e. `$0<\eta<2/\lambda_{\max}$` | the step must make every direction shrink | exact for quadratics; for general smooth `f`, `$\eta<2/L$` with `L` a Lipschitz constant of `∇f` |
+| one-step choice | `$\eta=1/\lambda_{\max}$` makes the stiffest direction's factor exactly `0` | the hardest direction is solved in one step | worth testing deliberately; it is *not* the fastest overall |
+| oscillation boundary | `$\eta=2/\lambda_{\max}$` gives factor `-1` in the stiffest direction | amplitude preserved, sign flipped forever | a limit cycle, not convergence; `η` slightly above it **diverges** |
+| conditioning | `$\kappa=\lambda_{\max}/\lambda_{\min}`; best possible slow factor `$\ge 1-2/\kappa$` | how much stiffer the worst direction is than the softest | the reason iterative methods lose to direct solves when `κ` is large |
+| heavy-ball momentum | `$v_{k+1}=\beta v_k+\nabla f(x_k)$`, `$x_{k+1}=x_k-\eta v_{k+1}$`, `$\beta\in[0,1)$` | keep a memory of recent slopes and walk along *that* | `β = 0` recovers plain descent; conventionally `β = 0.9` |
+| unrolled velocity | `$v_k=\sum_j\beta^j\nabla f(x_{k-1-j})$` | the current step is a geometrically weighted average of the last gradients | an average window of length `1/(1−β)` — ten steps at `β = 0.9` |
+| effective step inflation | `$\eta_{\text{eff}}\approx\eta/(1-\beta)$` | momentum multiplies the step by `1/(1−β)` | valid for consistent gradients; it is why momentum **lowers** the stability limit rather than raising it |
+| heavy-ball recurrence | `$x_{k+1}=(1+\beta\eta)x_k-\beta\eta x_{k-1}-\eta\nabla f(x_k)$` | the same method written with no auxiliary variable | shows the extra term `-βηx_{k−1}`, whose eigenvalues can leave the unit disc at rates where plain descent is stable |
+| Nesterov lookahead | evaluate at `$y_k=x_k-\eta\beta v_k$`, then `$v_{k+1}=\beta v_k+\nabla f(y_k)$`, `$x_{k+1}=x_k-\eta v_{k+1}$` | measure the slope where you are *about to be*, then step from where you are | valid only if the sign on `ηβv` is minus; get it wrong and the method diverges immediately |
+| stochastic gradient | `$\hat g_k=\nabla f(x_k;z_k)$` from a random minibatch, `x_{k+1}=x_k-\eta\hat g_k$` | the same update, with an estimate of the slope | unbiased in expectation; the noise never fully vanishes |
+| general convex rates | gradient descent `O(1/k)` in function value; Nesterov `O(1/k^2)` | the gap to the optimum falls polynomially | valid for *smooth convex* problems with a well-tuned step; on a quadratic the rate is set by `η`, not by these bounds |
+| critical point | `$\nabla f(x)=0$` | every direction has zero slope | the set gradient descent provably converges to; for convex `f` each one is a global minimum |
+| central-difference gradient | `$\frac{f(x+h)-f(x-h)}{2h}$` | slope from two symmetric samples | error `O(h^2)`; use `h ≈ 10⁻⁶` and never straddle a kink |
+
+---
+
+## Multiple Choice Questions
+
+**Q1.** For a differentiable `f` with `∇f(x) ≠ 0`, which direction gives the most rapid
+decrease of `f`, and what is the rate?
+
+- A) `v = ∇f(x)/‖∇f(x)‖`, rate `‖∇f(x)‖`
+- B) `v = −∇f(x)/‖∇f(x)‖`, rate `−‖∇f(x)‖`
+- C) `v = −∇f(x)/‖∇f(x)‖`, rate `‖∇f(x)‖`
+- D) `v = −∇f(x)`, rate `‖∇f(x)‖²`
+
+<details>
+<summary>Answer and explanation</summary>
+
+**C) `v = −∇f(x)/‖∇f(x)‖`, rate `‖∇f(x)‖`.**
+
+The directional derivative along a unit `v` is `∇f(x)·v`, and Cauchy–Schwarz bounds it
+below by `−‖∇f‖` with equality exactly when `v = −∇f/‖∇f‖`. So the *direction* is the
+negated unit gradient and the *rate* (the positive quantity ‖∇f‖) is the norm. Note the
+update rule uses `−η∇f(x)` rather than the unit direction, so `η` and `‖∇f‖` are the same
+thing twice: the step actually taken is `η·‖∇f‖` in length.
+
+Option A is steepest *ascent* — the most common sign error, and one that produces a
+"unstable objective" where there is really a `+` instead of a `−`. Option B pairs the
+correct direction with a negative "rate", so it says `f` decreases at a negative rate,
+which is a category error: the rate of decrease is a non-negative magnitude, here `‖∇f‖`.
+Option D confuses a direction with a step: `−∇f` is a perfectly good *displacement*, but
+its length is the local gradient norm, so it is not a unit direction and its "rate"
+`‖∇f‖²` belongs to no statement in the theorem. All four are excluded at a critical point
+anyway, where every unit direction ties at rate `0`.
+
+</details>
+
+**Q2.** For `f(x, y) = x² + 2y²`, the Hessian is `diag(2, 4)`. What is the exact range of
+learning rates for which gradient descent converges from every starting point, and what
+happens at the upper endpoint?
+
+- A) `0 < η < 0.25`; at `η = 0.25` the `x` coordinate converges and `y` overshoots once
+- B) `0 < η < 0.5`; at `η = 0.5` the `x` coordinate reaches the minimum in one step while `y` oscillates between `5` and `−5` forever
+- C) `0 < η < 0.5`; at `η = 0.5` both coordinates oscillate
+- D) `0 < η < 2`; at `η = 2` the iterate diverges
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) `0 < η < 0.5`; at `η = 0.5` the `x` coordinate reaches the minimum in one step while
+`y` oscillates between `5` and `−5` forever.**
+
+`λ_max = 4`, so the bound is `η < 2/4 = 0.5`. At `η = 0.5` the two per-step factors are
+`1 − 0.5·2 = 0` and `1 − 0.5·4 = −1`. The first converges to the minimum in one step; the
+second flips sign every step with its magnitude unchanged, so `f = 2·25 = 50` forever. The
+code prints exactly that row.
+
+Option A uses `1/λ_max = 0.25`, which is the rate-*one-step* choice, not the stability
+boundary — the method still converges at `η = 0.3` and `η = 0.45`, which the plotting
+panels show as a tight spiral and a violent-but-bounded oscillation. Option C is the
+asymmetry misread: at `η = 0.5` the `x` factor is exactly `0`, not `−1`. Option D uses
+`2/λ_min`; the constraint always comes from the *largest* eigenvalue, since that is the
+direction amplified fastest.
+
+</details>
+
+**Q3.** A common rule of thumb is "the learning rate must satisfy `η < 1/λ_max`". What is
+wrong with it?
+
+- A) Nothing — it is exactly the stability bound
+- B) It is conservative but not sharp: the true bound is `η < 2/λ_max`, and `η = 1/λ_max` is the special value that solves the stiffest direction in a *single* step
+- C) It is wrong in the other direction: the bound is `η < 1/λ_min`
+- D) `λ_max` cannot be computed without already solving the problem
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) It is conservative but not sharp: the true bound is `η < 2/λ_max`, and
+`η = 1/λ_max` is the special value that solves the stiffest direction in a *single* step.**
+
+Convergence requires `|1 − ηλᵢ| < 1` for every `i`, i.e. `0 < ηλᵢ < 2` for every `i`, and
+the binding inequality comes from `λ_max`. Half of that interval — `η ∈ (1/λ_max,
+2/λ_max)` — is legal and oscillatory: the factors are negative, so the iterate crosses the
+minimum each step while still shrinking. The code's 1-D table shows this directly, with
+`lr = 0.9` giving factor `−0.8` and the "shrinks" label.
+
+Option A is the error: `η = 0.9` on `f(x) = x²` oscillates and still converges, and `η = 0.9`
+on Rosenbrock *diverges in five steps*, so the two rules genuinely disagree in both
+directions. Option C swaps the extreme eigenvalues, and `1/λ_min` is a step size so large
+that the stiffest direction always diverges. Option D is false: for a quadratic the
+eigenvalues come from the Hessian, which you compute long before you optimise —
+`λ_max ≈ 1506` for Rosenbrock at `(−1.2, 1)` gives the bound `η < 0.0013`, and the code's
+stability probe finds the divergence threshold at `lr = 0.01` and convergence at `0.002`.
+
+</details>
+
+**Q4.** With `η = 0.1` and `β = 0.9` on `f(x,y) = x² + 2y²` starting from `(5, 5)`,
+momentum's *second* step differs from plain descent. What is it?
+
+- A) `x₂ = (4, 3)`, identical to the first step
+- B) `x₂ = (2.3, 0)`; plain descent would only reach `y₂ = 1.8`
+- C) `x₂ = (2.3, 1.8)`
+- D) `x₂ = (3.02, 1.08)`
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) `x₂ = (2.3, 0)`; plain descent would only reach `y₂ = 1.8`.**
+
+Step 1 is identical to plain descent because `v` starts at zero: `v₁ = (0,0) + (10,20) =
+(10,20)` and `x₁ = (5,5) − 0.1·(10,20) = (4,3)`. At step 2 the gradients differ,
+`g₂ = (8,12)`, and momentum accumulates: `v₂ = 0.9·(10,20) + (8,12) = (17,30)`. Then
+`x₂ = (4,3) − 0.1·(17,30) = (4 − 1.7, 3 − 3) = (2.3, 0)`. Vanilla descent would give
+`y₂ = 0.6·3 = 1.8`, because `y` contracts by `1 − 0.1·4 = 0.6` per step.
+
+Option A describes step 1, which is the point the lesson makes about momentum: the two
+methods *must* agree on the first step, so any claimed difference there is a bug.
+Option C is the classic mix-up — the `x` update uses the accumulated velocity but the `y`
+update uses the raw gradient `g₂ = (8,12)`, giving `(4 − 1.7, 3 − 1.2)`. Option D discounts
+the *gradient* as well as the velocity (`v₂ = 0.9·(10,20) + 0.1·(8,12) = (9.8, 19.2)`),
+which is the residual-update convention used in some Nesterov variants, not in heavy ball;
+it leaves both coordinates moving far too slowly. The real lesson is in `y` going from `3`
+to `0` in two steps: the accumulated `y` gradients `(20, 12, 8)` were spent all at once.
+
+</details>
+
+**Q5.** On the narrow valley `f(x, y) = 100x² + y²` with `η = 0.001`, plain descent
+barely moves in `y`. Why does momentum fix that, and what is the mechanism?
+
+- A) Momentum rescales the gradient per coordinate, like Adam, so it removes the factor-100 asymmetry
+- B) The velocity is a geometrically weighted average of the last `1/(1−β)` gradients, so the small `y` gradients accumulate until they match the large `x` ones
+- C) Momentum increases the effective learning rate from `0.001` to `0.01`, so `y` simply gets ten times more travel
+- D) Momentum replaces the gradient with the Hessian's smallest eigenvector
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) The velocity is a geometrically weighted average of the last `1/(1−β)` gradients, so
+the small `y` gradients accumulate until they match the large `x` ones.**
+
+Unrolling the recurrence gives `v_k = Σⱼ βʲ ∇f(x_{k−1−ⱼ})` — with `β = 0.9` an average
+over roughly the last ten gradients. `y` only ever receives the small `2y` term, but ten of
+those in the same direction add up to something comparable, while the oscillating
+components of the `x` signal cancel. The lesson's table shows the consequence: `β = 0`
+leaves `y` stranded after 2,000 steps, while `β = 0.9` reaches the minimum.
+
+Option A describes a *different* method. Adam's per-coordinate adaptive step is the point
+of the lesson's last summary bullet, and it is precisely what momentum does **not** do —
+momentum's `β` multiplies the whole velocity vector by the same scalar, so a direction with
+a tiny gradient always takes a tiny step. Option C confuses the mechanism with a
+consequence: momentum at `β = 0.9` inflates the step by `1/(1−β) = 10`, but the `y`
+progress comes from *accumulating consistent signal*, and inflating `η` tenfold would
+immediately violate the stability bound `η < 2/λ_max ≈ 0.01`. Option D invents an
+eigenvector method; momentum has no Hessian access at all.
+
+</details>
+
+**Q6.** Take `H = [[50.5, 49.5], [49.5, 50.5]]`, whose eigenvalues are exactly `1` and
+`100`. The bound is therefore `η < 0.02`, yet raising `η` from `0.01` to `0.0199` only cuts
+the steps needed to reach `1e-6` from `1363` to `570`. Why?
+
+- A) The code is buggy: the counts should drop by roughly the same factor as the learning rate
+- B) The slow direction is constrained by `η < 2/λ_max` and contracts at `1 − ηλ_min ≈ 0.98` regardless, so the soft direction sets the pace and speeding up the stiff one buys almost nothing
+- C) `η = 0.0199` is past the boundary and the run is actually diverging
+- D) The `1e-6` target is on `f`, not on `x`, so the counts are not comparable across learning rates
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) The slow direction is constrained by `η < 2/λ_max` and contracts at `1 − ηλ_min ≈
+0.98` regardless, so the soft direction sets the pace and speeding up the stiff one buys
+almost nothing.**
+
+This is the condition-number argument. The bound has to hold for the *largest* eigenvalue,
+so `η` cannot grow to make the `λ = 100` direction finish faster — it already finishes in
+one step at `η = 0.01`. Meanwhile the `λ = 1` direction contracts at only
+`1 − 0.01 = 0.99` per step, so it takes `log(1e-6)/log(0.99) ≈ 1363` steps no matter
+what. This is the single most important practical fact in the lesson: it is why Cholesky and
+SVD beat iterative solvers on ill-conditioned systems, and why **preconditioning** — which
+rescales the eigenvalues towards `1` — is such a large win.
+
+Option A is the tempting inference and it is exactly backwards: the whole point is that
+progress is *not* proportional to `η`. Option C misreads the table — the `0.019` row gives
+factor `−0.9000`, which shrinks, and `0.021` gives `−1.1000`, which grows. Option D
+invents a units problem; the lesson converts the target to `|x|_∞ < 1e-6` consistently
+across all four rows.
+
+</details>
+
+**Q7.** Training loss plateaus well above zero. What does the lesson say you should check,
+and why?
+
+- A) The loss — a plateau *is* convergence
+- B) The gradient **norm**, because in a non-convex problem the saddle curvature sets a floor on `‖∇f‖` that the loss plateau conceals
+- C) The learning rate only — it is always too small on a plateau
+- D) Nothing can be concluded without re-running with a different seed
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) The gradient **norm**, because in a non-convex problem the saddle curvature sets a
+floor on `‖∇f‖` that the loss plateau conceals.**
+
+The lesson's convergence theorem distinguishes the two cases: for **convex** `f`, descent
+converges to a critical point and local means global, so a plateau really is the answer.
+For **non-convex** `f`, it converges to *some* critical point, possibly a saddle, and the
+gradient-norm sequence does not always fall to zero — it can hover above a floor set by the
+curvature near a saddle. That is exactly why real optimisers report training loss that
+never reaches zero, and why people add explicit regularisation to prefer flat, benign
+minima. The lesson also notes the reverse failure: with `β = 0.99` the effective step is
+`100η`, so a learning rate that looked safe may already be unstable.
+
+Option A is the mistake the lesson is written against — it is only safe for convex `f`.
+Option C asserts a direction the theory does not support; and with momentum the effective
+step is *larger* than `η`, so a plateau is at least as likely to mean "too big" as "too
+small". Option D is not a diagnostic but a shrug. The lesson's `tol` parameter is exactly
+the right test: stop on `‖∇f‖ < tol`, not on `f` stopping moving.
+
+</details>
+
+**Q8.** Four different starting points on Rastrigin's function, same algorithm, same
+learning rate `0.008`, produce four different endpoints — with the best at some value
+strictly above the global minimum `0.0`. What does that prove?
+
+- A) The learning rate was badly chosen for that function
+- B) A non-convex landscape makes the answer depend on the starting point, and no single choice of `η` removes that dependence
+- C) Rastrigin's function is unbounded below
+- D) The gradient implementation has a bug, since a correct solver must be start-independent
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) A non-convex landscape makes the answer depend on the starting point, and no single
+choice of `η` removes that dependence.**
+
+The code runs the *same* `gradient_descent` with the *same* `lr = 0.008` from
+`[−3,−3]`, `[−3,2]`, `[0.5,−2.5]` and `[2.5,1]` and prints a different destination each
+time, then reports the gap from the true optimum at `(0,0)`. It closes with the sentence
+that is the whole point: "the SAME landscape gives different answers from different
+starts. No learning rate fixes this; only convexity would." The contrast in the same
+output is plain — the convex quadratic returns to its single minimum from every start.
+
+Option A is the favourite wrong diagnosis, and it is untestable in principle: there is no
+`η` that makes a landscape with 25 local minima start-independent, because the basins, not
+the step size, decide where the iterate settles. Option C is false; the function is
+bounded below with minimum `0`. Option D blames the implementation for a property of the
+mathematics — the code's gradient is verified against the analytic form elsewhere, and the
+divergence thresholds it prints for other functions are all exactly where the theorem says
+they should be.
+
+</details>
+
+**Q9.** Adding momentum changes the recurrence to
+`x_{k+1} = (1 + βη)xₖ − βηx_{k₋₁} − η∇f(xₖ)`. What follows, and why does it matter in
+practice?
+
+- A) The extra `−βηx_{k₋₁}` term is a smoothing of the iterate, so the stability bound is unchanged
+- B) The recurrence has eigenvalues beyond `xₖ` and `x_{k₋₁}`, and they can leave the unit disc at learning rates where vanilla descent is perfectly stable — so momentum is not a free speed-up
+- C) Momentum removes the need to choose `β`, because any `β ∈ [0, 1)` works equally well
+- D) The recurrence shows momentum is exactly gradient descent in a rotated coordinate system, so the bound transfers unchanged
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) The recurrence has eigenvalues beyond `xₖ` and `x_{k₋₁}`, and they can leave the unit
+disc at learning rates where vanilla descent is perfectly stable — so momentum is not a
+free speed-up.**
+
+This is Mistake 5, and the lesson demonstrates it rather than asserting it. On the
+ill-conditioned quadratic with `η = 0.001`, momentum β = 0.9 and Nesterov are both stable
+and about 13× faster than plain descent; on Rosenbrock from `(−1.2, 1)` at `η = 0.002`,
+heavy ball converges in `1033` steps but **Nesterov diverges**, because the lookahead
+samples a point further out and therefore effectively higher curvature. The lesson's rule
+of thumb is blunt: tune Nesterov and Adam at a *smaller* learning rate than plain SGD.
+
+Option A is the intuition people start with and it is wrong: the damping is not a
+low-pass filter on the iterate, it is a genuine second-order recurrence whose stability is
+governed by its own spectrum. Option C is contradicted by the code — `β = 0.99` on
+Rosenbrock needs `η < 2/λ_max ≈ 0.0013`, and `β` changes where that line sits. Option D is
+a seductive half-truth: momentum *is* diagonalisable in the eigenbasis for a quadratic,
+but the two extra eigenvalues are what move, so the bound does not transfer.
+
+</details>
+
+**Q10.** On the `100x² + y²` quadratic the fitted rate `α` is `0.0077` for plain descent
+and `0.0642` for heavy ball with `β = 0.9`. What is the honest reading?
+
+- A) The theoretical O(1/k) versus O(1/k²) gap has been measured, and the ratio should be exactly 2
+- B) The ratio `≈ 8.3×` is the meaningful number — it says momentum is about eight times steeper per step — while both absolute values are set by the chosen `η`, not by the general-convex theory
+- C) Both values are far too small, so the run did not converge
+- D) `α` should be the same for both methods, since they share the same objective
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) The ratio `≈ 8.3×` is the meaningful number — it says momentum is about eight times
+steeper per step — while both absolute values are set by the chosen `η`, not by the
+general-convex theory.**
+
+`0.0642 / 0.0077 ≈ 8.3`. The lesson says so directly: "the useful signal is the *ratio*
+between methods, which is stable and which the table reports cleanly". The absolute values
+are tiny because both problems are quadratics, where the error falls geometrically at a
+rate set by the learning rate — `1 − ηλ = 0.9998` per step for the slow direction, which
+is what `α = 0.0077` measures. The `O(1/k)` versus `O(1/k²)` theorems are worst-case
+statements about *arbitrary* smooth convex functions and need a tuned schedule to reach;
+you should not expect to read those constants off a single experiment on a quadratic.
+
+Option A is the misreading the lesson pre-empts — the ratio for the theoretical pair would
+be 2, not 8.3, and no experiment on a quadratic is going to produce it. Option C
+contradicts the same output, which reaches `6.94e-69` at step 5,405. Option D assumes the
+method drops out of the rate, which is precisely what momentum is there to change.
+
+</details>
+
+---
+
+## Subjective Questions
+
+### Short Answer
+
+**Q1. Define the *gradient* of a function `f : ℝⁿ → ℝ` and state where it exists.**
+
+<details>
+<summary>Answer</summary>
+
+The gradient at `x` is the vector of partial derivatives,
+`∇f(x) = (∂f/∂x₁(x), …, ∂f/∂xₙ(x))` — one slope per input coordinate, collected into a
+single arrow.
+
+It exists wherever `f` is differentiable, which is stronger than "every partial exists":
+differentiability says there is one *single* linear map, `∇f(x)`, that approximates `f` to
+first order in **every** direction simultaneously. Every partial existing separately only
+controls the coordinate directions. A gradient can be a vector of zeros at a point where
+`f` still varies steeply along a diagonal, and the lesson's saddle example
+`x² + 3xy + y²` at the origin is built on exactly that gap.
+
+</details>
+
+**Q2. State the gradient-descent update rule and say what the learning rate controls.**
+
+<details>
+<summary>Answer</summary>
+
+  x_{k+1} = x_k − η ∇f(x_k)
+
+with learning rate `η > 0`. The *direction* is not a choice: `−∇f` is the steepest
+descent direction, so `η` alone decides the step *length*. Larger `η` is faster per step and
+*less* stable — for a quadratic with top eigenvalue `λ_max`, convergence holds exactly for
+`0 < η < 2/λ_max`, `η = 1/λ_max` solves the stiffest direction in one step, and
+`η = 2/λ_max` freezes it into an oscillation of amplitude `1`.
+
+</details>
+
+**Q3. State the exact stability condition for gradient descent on a quadratic.**
+
+<details>
+<summary>Answer</summary>
+
+For `f(x) = ½xᵀHx` with `H` symmetric positive definite, and
+`x_{k+1} = x_k − η∇f(x_k)`:
+
+  x_k = Q · diag((1 − ηλ₁)^k, …, (1 − ηλₙ)^k) · Qᵀ x₀,  H = QΛQᵀ
+
+and convergence to the minimum from **every** start happens **if and only if**
+
+  |1 − ηλᵢ| < 1 for every i,  equivalently  0 < η < 2/λ_max.
+
+This is exact, not asymptotic: it is an identity for the iterates, not a bound on their
+size. The hypothesis that `H` is positive definite is essential — with a negative or zero
+eigenvalue there is no minimum for the iteration to find.
+
+</details>
+
+**Q4. Write the heavy-ball momentum update and say what `β` does.**
+
+<details>
+<summary>Answer</summary>
+
+  v_{k+1} = β v_k + ∇f(x_k),   x_{k+1} = x_k − η v_{k+1},   β ∈ [0, 1)
+
+`β` is a geometric forgetting factor. Unrolling the velocity gives
+`v_k = Σⱼ βʲ ∇f(x_{k₋₁₋ⱼ})`, so the current step is a weighted average of the last
+`1/(1 − β)` gradients — ten of them at the conventional `β = 0.9`. Gradients that keep
+pointing the same way accumulate; gradients that oscillate cancel. `β = 0` recovers plain
+gradient descent exactly.
+
+</details>
+
+**Q5. What is a *critical point*, and what does the lesson guarantee about the one descent
+finds?**
+
+<details>
+<summary>Answer</summary>
+
+A critical point is any `x` with `∇f(x) = 0` — every direction has zero slope there.
+
+If `f` is convex and differentiable with bounded gradient, descent converges to a critical
+point, and convexity makes each one a **global** minimum. If `f` is non-convex it
+converges to *some* critical point, which may be a saddle; in that case the gradient norm
+need not go to zero, because the saddle's curvature sets a floor. That asymmetry is why you
+check `‖∇f‖` rather than the loss when you decide whether a run has converged.
+
+</details>
+
+**Q6. How does stochastic gradient descent differ from full-batch descent, and what does it
+converge to?**
+
+<details>
+<summary>Answer</summary>
+
+SGD replaces `∇f(x_k)` with a minibatch estimate `ĝ_k = ∇f(x_k; z_k)` built from a random
+sample, and changes nothing else — same direction rule, same learning rate.
+
+For convex `f` with a bounded-variance gradient estimate, it converges **in expectation to
+the set of minimisers**, not to a single point, because the noise never fully disappears
+and the iterate keeps bouncing around the optimum. That is not a defect: the residual noise
+acts as exploration and is frequently *why* SGD generalises better than full-batch descent
+on the same objective.
+
+</details>
+
+### Long Answer
+
+**Q1. Why does a single scalar learning rate fail on an ill-conditioned problem, and what
+would break if you chose `η` at the stability boundary?**
+
+<details>
+<summary>Model answer</summary>
+
+For a quadratic, gradient descent is diagonalisable: in the eigenbasis of `H` each
+coordinate is multiplied by the fixed factor `1 − ηλᵢ` at every step. Convergence requires
+`|1 − ηλᵢ| < 1` for **every** `i`, and the binding inequality comes from `λ_max`. So one
+`η` must serve two jobs: stay below `2/λ_max` so the stiffest direction does not blow up,
+and stay above `1/λ_max` if you want that direction finished immediately. When
+`λ_max/λ_min = 100`, as in the lesson's `[[50.5, 49.5], [49.5, 50.5]]`, the interval is
+`η ∈ (0, 0.02)` and the soft direction contracts at `1 − ηλ_min ≈ 0.98` at best. The
+lesson's table makes the consequence stark: pushing `η` from `0.01` to `0.0199` nearly
+doubles the step size yet only moves the step count from `1363` to `570`. The fast
+direction was already finished; the slow one cannot be hurried.
+
+That is the mathematical reason iterative solvers lose to direct methods on badly scaled
+linear systems. `np.linalg.solve` via LU or Cholesky, or an SVD, handles a spectrum of
+`1` to `100` in one factorisation and costs no extra iterations; gradient descent on the
+same system needs a number of steps that scales like the condition number. **Preconditioning**
+is the fix that keeps the iteration: multiply by an approximate inverse of `H` so the
+eigenvalues are all pushed towards `1`, at which point the condition number falls and the
+factors `1 − ηλᵢ` are all close to one. Momentum is a cruder, Hessian-free version of the
+same idea, averaging gradients to emphasise the consistent direction.
+
+Choosing `η` at the boundary is worse than choosing it too small, and the lesson proves it
+rather than asserting it. At `η = 2/λ_max` the stiffest factor is exactly `−1`: amplitude
+preserved, sign flipped, so the iterate is trapped in a two-cycle forever. On
+`f = x² + 2y²` from `(5,5)` at `η = 0.5`, `x` lands on the minimum instantly and `y`
+oscillates between `5` and `−5` with `f = 50` for all time — a run that reports a
+plausible-looking point, a zero gradient in one coordinate, and no progress at all.
+Adding momentum makes the trap tighter still, because the heavy-ball recurrence's extra
+eigenvalues can leave the unit disc at rates where vanilla descent is safe. The lesson's
+advice follows from all of this: use schedules and Adam rather than one global constant.
+
+</details>
+
+**Q2. Why does momentum accelerate consistent progress *and* damp oscillation at the same
+time, and why is it still not a free speed-up?**
+
+<details>
+<summary>Model answer</summary>
+
+Unroll the velocity recurrence and the two effects fall out of the same two lines.
+`v_k = Σⱼ βʲ ∇f(x_{k₋₁₋ⱼ})` is a geometrically weighted average of the last `1/(1−β)`
+gradients. A gradient sequence that repeats the same direction — consistent progress down
+a narrow valley — contributes terms of the same sign that add up. A sequence that
+alternates sign — oscillation in a stiff direction — contributes terms that cancel. The
+`β^j` weighting is what makes the window finite while keeping the accumulation geometric:
+a consistent signal of length `k` produces a velocity of order `1/(1−β)` times a single
+gradient, and that is exactly the lesson's observation that `β = 0.95` needs 637 steps
+where `β = 0.9` needs 1,386 and plain descent needs 15,068 — a factor close to
+`1/(1−β) = 20`.
+
+The catch is that the same accumulation inflates the step. A consistent gradient of size
+`g` produces a velocity of size `g/(1−β)`, so the effective step is `η/(1−β)` rather than
+`η`. Since the stability bound `η < 2/λ_max` is about the step that is actually taken,
+momentum lowers the usable learning rate by the same factor. This is why every practical
+recipe reduces `η` when it raises `β`.
+
+The second-order recurrence makes the point formally:
+`x_{k+1} = (1 + βη)x_k − βηx_{k₋₁} − η∇f(x_k)`. It is a genuine two-step system, and its
+spectrum is not the spectrum of `1 − ηH`; the extra eigenvalues are free to leave the unit
+disc. The lesson catches this happening: on Rosenbrock from `(−1.2, 1)` at `η = 0.002`,
+heavy ball converges in `1033` steps while Nesterov's lookahead **diverges**, because the
+lookahead evaluates the gradient at `y = x − ηβv`, a point further out than heavy ball
+ever visits and therefore one with effectively higher curvature. Acceleration buys
+iterations and charges for them in step size; that trade is the deal.
+
+</details>
+
+**Q3. Why does descent converge to a global minimum on a convex problem and to *some*
+critical point otherwise, and what does that mean for how you should read a training
+curve?**
+
+<details>
+<summary>Model answer</summary>
+
+The mechanism is the monotone-slope property. A convex function's secant slopes never
+decrease, so it cannot go down, then up, then down again: it has at most one minimum. Turn
+that into "a local minimum is a global minimum" and descent is not an approximation to the
+answer, it *is* the answer — whatever start you pick, wherever you stop, you get the same
+point. That is the formal content of the lesson's statement that "for a convex f, local
+means global".
+
+Without convexity the guarantee disappears in both directions at once. The function can
+have many minima, and descent reaches whichever basin it starts in; worse, it can stop at
+a **saddle**, which is a critical point with no minimality at all. The lesson's grid search
+on Rastrigin finds 25 local minima, the best of them at value `2.0` while the optimum is
+`0.0` at the origin. Nothing local distinguishes them: near a local minimum the gradient
+points downhill exactly as it does near the global one, so the information the algorithm
+has access to is genuinely insufficient. This is why random restarts, multi-start, and
+explicit global methods exist — they are compensating for the missing guarantee, not
+optimising the implementation.
+
+The consequence for reading a training curve is specific. On a convex objective a plateau
+*is* convergence. On a non-convex one it may not be: the gradient-norm sequence need not go
+to zero, because the curvature at a nearby saddle sets a floor, and the loss sits above
+zero indefinitely while `‖∇f‖` hovers. So the diagnostic to watch is the gradient norm,
+not the loss curve — and the stop condition should be `‖∇f‖ < tol`, exactly as the lesson's
+`tol` parameter does. Adding weight decay is the usual way people bias the search away
+from sharp saddles, and it is a statement about the geometry of the basin rather than about
+the optimiser.
+
+</details>
+
+**Q4. Why does Nesterov's method fail to beat heavy-ball momentum on the quadratic problems
+in this lesson, even though its theoretical rate is better?**
+
+<details>
+<summary>Model answer</summary>
+
+Because the `O(1/k)` versus `O(1/k²)` theorems are **worst-case** results over the entire
+class of smooth convex functions, not statements about quadratics. They say that for some
+adversarial `f` the accelerated method's exponent is twice as large; they say nothing about
+which method wins on a fixed quadratic with a fixed `η`. Reading the lesson's table, heavy
+ball needs `419` steps and Nesterov `433` on `100x² + y²`, and `1940` versus `1982` on
+Rosenbrock — Nesterov is very slightly *worse* in both, and both are about 11–13× better
+than plain descent. The gap to Nesterov is not noise in the code; it is a real property of
+these problems.
+
+The explanation is that on a quadratic the curvature is constant, so heavy ball's
+exponentially-weighted average of past gradients is already an *exact* estimate of the
+right quantity. There is no estimation error left for the lookahead to remove, so the
+extra mechanism has nothing to recover — and it pays for itself by sampling a point
+further out than heavy ball ever visits, which is strictly worse for stability. In the 1-D
+sanity check at the top of the challenge, where `f(x) = x²`, `η = 0.1`, `β = 0.9` is a
+regime in which momentum itself oscillates, Nesterov does win decisively: `8.7e-6` versus
+`1.9e-3` after 30 steps. The advantage appears exactly where the momentum estimate is
+poor, and disappears where it is exact.
+
+The practical lesson is about how to read convergence experiments. Do not expect to
+recover theoretical constants from a single run on a quadratic — the lesson's fitted `α`
+values are `0.0077` and `0.0642`, all far from `1` or `2`, because they are measuring the
+geometric factor `1 − ηλ` rather than the polynomial regime. Report the **ratio** between
+methods on the same problem, which is stable and reproducible; and remember that the
+theory's regime needs a tuned schedule, which is precisely why Nesterov and Adam are
+tuned at smaller learning rates than plain SGD in practice.
+
+</details>
+
+---
+
 ## Exercises and Solutions
 
 **[ ] Exercise 1 — ** Implement gradient descent for f(x) = x⁴ − 4x² + 3 from

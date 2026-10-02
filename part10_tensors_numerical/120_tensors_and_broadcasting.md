@@ -800,6 +800,633 @@ at offset `i*ncols + j`. When you are reading a raw buffer, reading a file, or
 writing a shader, getting this backwards transposes your data — which looks
 like a plausible image with the wrong orientation.
 
+---
+
+## Formula Sheet
+
+Notation follows [SYMBOLS.md](../SYMBOLS.md). `T` is an n-dimensional array,
+`F` is the field of entries (`ℝ`, `ℤ` or `ℂ`), and `sₖ` is a stride in elements.
+
+| Symbol | Formula | In plain words | When you use it |
+| --- | --- | --- | --- |
+| array as a function | `$T : I_0 \times I_1 \times \cdots \times I_{n-1} \to F$` | a rule from an n-fold index set to a number | the definition; note it says nothing about memory |
+| index set | `$I_k = \{0, 1, \ldots, d_k - 1\}$` | axis `k` runs from 0 to `dₖ−1` | reading any shape |
+| shape | `$(d_0, d_1, \ldots, d_{n-1})$` | the length of each axis | the first thing to check when a broadcast fails |
+| size (numel) | `$\lvert T\rvert = \prod_{k=0}^{n-1} d_k$` | how many entries there are in total | `numel`; `2 × 3 × 4` is 24, not 9 |
+| rank | `$n$`, the number of axes | how many dimensions, *not* how many entries | `ndim`; a `100 × 100` matrix has rank 2 |
+| slice | `$T[i_0, \ldots, i_{n-1}]$` | the entry at that index | the only way values are read |
+| axis 0 | the outermost axis | the slowest-varying index | it is *not* the axis a 1D array broadcasts over |
+| broadcast-compatible | after right-alignment every pair satisfies `$a_k = c_k$` or `$a_k = 1$` or `$c_k = 1$` | axes either match or one of them can stretch | the precondition for any elementwise op |
+| broadcast shape | `$b_k = \max(a_k, c_k)$` with 1 treated as "stretch me" | the output shape | `(3,) + (3,1) → (3,3)`; `(2,2) + (3,3)` raises |
+| stretch map | `$B(x)_i = x$` for every output index `i` | the length-1 axis replicates its single value | why `B` is order-independent and associative |
+| C-contiguous stride | `$s_k = \prod_{j>k} d_j$ | every dimension to the right of axis `k` | `(2,3,4)` has strides `(12,4,1)`; row-major |
+| F-contiguous stride | `$s_k = \prod_{j<k} d_j$ | every dimension to the left of axis `k` | `(2,3,4)` has strides `(1,2,6)`; column-major |
+| flat offset | `$\operatorname{off}(i) = \sum_k i_k s_k$ | where an entry physically sits in the buffer | why `A[1][0] = 3` on a `(2,3)` buffer holding `1 2 3 4 5 6` |
+| last stride is 1 | `$s_{n-1} = 1$` | moving along the last axis moves one element | C-contiguity is exactly this, for all axes |
+| transpose | shape `← (d₀, …, d_{n−1})`, strides `← (s_{n−1}, …, s₀)` | flip axes and reverse the stride tuple | always a **view**, never a copy |
+| reshape is free iff | the new axes come from splitting or merging **consecutive** old axes | no element has to move, so only metadata changes | `(2,3) → (6,)` and `(2,3) → (3,2)` are free; `(2,3,4) → (4,6)` copies |
+| einsum contraction | `$C[i,\ldots] = \sum\sum\cdots \prod_a A_a[\text{indices}]$` | multiply the operands entrywise and add over the contracted axes | the general form of every matmul-shaped op |
+| matrix product | `$[AB]_{ik} = \sum_j A_{ij}B_{jk}$` | contract the shared middle axis | `A @ B`, and `'ij,jk->ik'` |
+| summed letter | appears in **more than one operand** and is **absent from the output** | shared indices get added over | `'ij,jk->ik'` sums `j`; `'bij,bjk->bik'` sums only `j` |
+| free letter | appears exactly once, or appears in the output | a surviving axis of the result | `b` in `'bij,bjk->bik'` is kept, not summed |
+| implicit output | free letters sorted alphabetically | `'ij,jk'` means `'ij,jk->ik'` | same result as the explicit form |
+| Frobenius inner product | `$\sum_{i,j} A_{ij}B_{ij}$` | multiply entrywise and add everything up | `'ij,ij->'`; for `[[1,2],[3,4]]` that is `30.0` |
+| trace | `$\sum_i A_{ii}$` | add the diagonal | `'ii->'`; for `[[1,2],[3,4]]` that is `5.0` |
+| diagonal | `$(A_{11}, A_{22}, \ldots)$` | read the diagonal out | `'ii->i'`; for `[[1,2],[3,4]]` that is `[1.0, 4.0]` |
+| outer product | `$(x \otimes y)_{ij} = x_i y_j$` | every pair multiplied, making a table | `'i,j->ij'`; used by the rank-one update trick |
+| float addition is not associative | `$(1\!\times\!10^{16} + 1) - 10^{16} + 1 = 1.0$ but `(10^16 - 10^16) + (1 + 1) = 2.0` | summation order changes the answer | why layout and pairwise blocking affect the last digits |
+
+Three restrictions to carry. The C-contiguous stride formula
+`sₖ = ∏_{j>k} dⱼ` is an *element* count; numpy's `.strides` reports **bytes**,
+so a `(2,3)` float64 array reports `(24, 8)`, not `(3, 1)`. And the rule "a letter
+appearing twice is summed" is incomplete — it is summed only when it is also
+absent from the output, which is the whole difference between
+`'bij,bjk->bik'` and `'bij,bjk->ik'`.
+
+## Multiple Choice Questions
+
+**Q1.** In `np.einsum("bij,bjk->bik", A, B)` with `A` of shape `(4,2,3)` and `B`
+of shape `(4,3,2)`, what happens to the letter `b`?
+
+- A) It is summed over, because it appears in both operands
+- B) It is contracted, because it is indexed by the same axis in both
+- C) It is kept as a free axis, because it appears in the output
+- D) It is renamed to the next unused integer label
+
+<details>
+<summary>Answer and explanation</summary>
+
+**C) It is kept as a free axis, because it appears in the output.**
+
+The rule is not "appears twice ⇒ summed". It is **appears in more than one
+operand *and* is absent from the output ⇒ summed**. `b` appears twice but is
+named after `->`, so it survives and the result has shape `(4, 2, 2)`: four
+independent 2×3 by 3×2 products.
+
+Option A is the misconception the lesson warns about twice, and the code proves
+it wrong: the *same two operands* with output `'ik'` instead collapse to a
+single `(2,2)` array equal to `block0 + block1`.
+
+Option B is the same error in different words — being indexed by the same axis
+in both operands is exactly what makes it a candidate for summation, not an
+exemption from it. Only `j` is contracted here.
+
+Option D describes integer subscripts (`0, 1, 2, …`), which are an alternative
+*notation* for letters when the alphabet runs out. They are never substituted
+for a letter that is already present.
+
+</details>
+
+**Q2.** For `A = [[1.0, 2.0], [3.0, 4.0]]`, what does
+`np.einsum("ii->i", A)` return?
+
+- A) `[1.0, 4.0]`
+- B) `5.0`
+- C) `[1.0, 2.0, 3.0, 4.0]`
+- D) `[[1.0, 0.0], [0.0, 4.0]]`
+
+<details>
+<summary>Answer and explanation</summary>
+
+**A) `[1.0, 4.0]`.**
+
+`i` appears once in the operand and once in the output. Because it is in the
+output it is **not** summed: each output element reads the input at
+`(i, i)`, which is the diagonal. The code prints
+`einsum('ii->i', A) = [1. 4.]`.
+
+Option B is `'ii->'` — the trace, where `i` appears in the operand but nowhere
+in the output, so it *is* summed and you get the single number `5.0`. The
+difference between these two is one character on the right of the arrow.
+
+Option C is `'ij->'`, the total sum `10.0`: `i` and `j` are both absent from the
+output, so both are summed.
+
+Option D is nonsense as an einsum result — `A` is 2×2, so any output containing
+`j` and a `j`-index would need a second axis, and this expression names neither.
+
+</details>
+
+**Q3.** Which of these pairs raises a `ValueError` under numpy's broadcasting
+rules?
+
+- A) `(2, 3, 4)` with `(4,)`
+- B) `(2, 3, 4)` with `(3, 1)`
+- C) `(2, 2)` with `(3, 3)`
+- D) `(1, 3)` with `(3, 1)`
+
+<details>
+<summary>Answer and explanation</summary>
+
+**C) `(2, 2)` with `(3, 3)`.**
+
+Right-align the shapes and compare axis by axis. In option C the pair is
+`2` against `3`: neither matches the other and neither is 1, so there is no
+legal stretching and numpy raises rather than guessing. The lesson's hand-written
+`broadcast_shapes` prints
+`(2, 2) + (3, 3) -> ERROR: shapes (2, 2) and (3, 3) are not broadcastable`.
+
+Option A succeeds because the trailing `4` matches `(2,3,4)`'s last axis.
+Option B succeeds — and this is the instructive one — because alignment is from
+the **right**: the `3` lines up with the *middle* axis of `(2,3,4)`, and the
+`1` stretches. Option D succeeds by stretching both length-1 axes, giving
+`(3,3)`, which is the outer-sum trick the code demonstrates.
+
+</details>
+
+**Q4.** You have `x` of shape `(batch, features)` and a weight vector `w` of
+length `features`, and you write `x * w` intending to scale each feature. Which
+axis does `w` run along?
+
+- A) Axis 0, so it scales each row of `x`
+- B) Axis 1, the trailing axis, so it scales feature columns across the batch
+- C) Both, because a 1D array is stretched along every axis
+- D) Neither; a 1D array broadcasts over the first axis of a 2D array
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) Axis 1, the trailing axis, so it scales feature columns across the batch.**
+
+Shapes align from the right, so a `(features,)` vector lines up with the
+*last* axis of `(batch, features)`. That is what makes deep-learning code short:
+a bias added as a one-number tensor adds to every row, and `x * w` scales each
+feature column.
+
+Option A is the single most common broadcasting bug, and it is silent — no
+exception, just wrong numbers. The lesson's Exercise 1 prints both panels side
+by side: `M * w` (a `(3,)` vector) gives `[[10.0, 200.0, 3000.0], [40.0, 500.0,
+6000.0]]` while `M * b` (a `(2,1)` column) gives `[[1.0, 2.0, 3.0], [8.0, 10.0,
+12.0]]`. Both have shape `(2,3)`; the numbers are entirely different.
+
+Options C and D contradict the alignment rule. A size-1 axis stretches, but
+a length-`features` vector is not size 1 and cannot stretch across the batch
+axis. To scale per-row you must reshape it to `(batch, 1)` explicitly.
+
+</details>
+
+**Q5.** `buf = np.arange(6.0)`, then `a = buf.reshape(2, 3)`, `r = a.reshape(3, 2)`,
+`t = a.T`. Which statement about `r` and `t` is true?
+
+- A) They are equal, because both produce a `(3,2)` array from a 2×3 buffer
+- B) `r` equals `t` but `t` copies while `r` does not
+- C) They share memory but hold different numbers: `r` is row-major re-reading,
+  `t` is the transpose
+- D) `r` copies the buffer while `t` is a view with reversed strides
+
+<details>
+<summary>Answer and explanation</summary>
+
+**C) They share memory but hold different numbers: `r` is row-major re-reading,
+`t` is the transpose.**
+
+`a` is `[[0,1,2],[3,4,5]]`. Reshaping the buffer to `(3,2)` re-reads it
+row-major, giving `r = [[0,1],[2,3],[4,5]]`. Transposing reverses the stride
+tuple `(3,1)` to `(1,3)`, giving `t = [[0,3],[1,4],[2,5]]`. numpy reports
+`r equals the transpose? False` and both `shares memory with a? True`.
+
+Option A is the confusion the lesson names explicitly: "reshape is not
+transpose". Same shape, same buffer, different numbers.
+
+Option B is right about the copy but has it on the wrong operation. Neither one
+copies — `np.shares_memory` is `True` for both.
+
+Option D is right about `t` (it is a view, strides reversed) and wrong about
+`r`. Reading a `(2,3)` buffer as `(3,2)` row-major wants strides `(2,1)`, which
+is the buffer's natural layout, so `reshape` is a view too. A copy is forced
+only when the new axes cannot be built from consecutive old ones — `(2,3,4)` to
+`(4,6)` is the case in the table.
+
+</details>
+
+**Q6.** What are the strides of a **C-contiguous** array of shape `(2, 3, 4)`,
+measured in elements?
+
+- A) `(12, 4, 1)`
+- B) `(1, 2, 6)`
+- C) `(24, 8, 1)`
+- D) `(6, 2, 1)`
+
+<details>
+<summary>Answer and explanation</summary>
+
+**A) `(12, 4, 1)`.**
+
+Row-major means the last axis varies fastest, so `s₂ = 1`. To move one step
+along axis 1 you skip one whole length-4 row, so `s₁ = 4`. To move one step
+along axis 0 you skip everything to its right, `2 × 3 = 6` positions per layer
+of 3×4 = 12, so `s₀ = 12`. The general rule is `sₖ = ∏_{j>k} dⱼ`.
+
+Option B is the **F-contiguous** (column-major) answer: the strides of
+`(2,3,4)` in Fortran order are `(1, 2, 6)`, since there `sₖ = ∏_{j<k} dⱼ`.
+Both layouts hold the same numbers and differ only in traversal order.
+
+Option C mixes units. `(12, 4, 1)` is correct in **elements**; the byte strides
+numpy prints for a float64 array are `(96, 32, 8)`, because each element is 8
+bytes. The lesson's own numpy block shows a `(2,3)` float64 array reporting
+`(24, 8)` where the element strides are `(3, 1)` — a factor of 8, not a
+different layout.
+
+Option D is `(6, 2, 1)`, which would be right for shape `(2, 3)` — it is the
+stride tuple of a 2D array with one axis too few.
+
+</details>
+
+**Q7.** `view = np.broadcast_to(np.array([2.0]), (1000, 1000))`. What is true?
+
+- A) It copies the single value into 8 MB of new memory, so writes to `view` are
+  safe
+- B) It is a read-only view sharing memory with the 8-byte array, and writing to
+  it raises `ValueError`
+- C) It shares memory with the source but allows writes, which then update the
+  source
+- D) It is a 1000×1000 array of independent copies, so `view[0,0] = 5.0`
+  succeeds
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) It is a read-only view sharing memory with the 8-byte array, and writing to
+it raises `ValueError`.**
+
+The lesson's numpy block prints `view.base is small? True` and
+`shares_memory(view, small)? True`, and the write raises. Broadcasting
+eliminates *indexing* arithmetic, not the memory: the size-1 axis has stride 0,
+so every one of the million entries reads the same eight bytes.
+
+Option A is the belief that makes broadcasting look expensive. Nothing is
+copied; `small.nbytes` stays 8. Note the trap in the `nbytes` output: `view
+.nbytes` reports the **logical** size, 8,000,000, which describes the array you
+can index, not the memory you own.
+
+Option C is exactly the assumption that makes people use `broadcast_to` where
+they wanted `tile`. The write is refused precisely because it is a view.
+
+Option D describes `np.broadcast_to(np.full((1000,1000), 2.0), ...)`, which is
+materialising a copy — the opposite of the point.
+
+</details>
+
+**Q8.** Which statement about `reshape` is correct?
+
+- A) `reshape` always returns a view and never copies
+- B) `reshape` is a view exactly when the new axes can be obtained by splitting
+  or merging consecutive old axes; otherwise it copies
+- C) `reshape` is a view exactly when the new shape has the same number of axes
+- D) `reshape` is a view exactly when the new shape is a permutation of the old
+  one
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) `reshape` is a view exactly when the new axes can be obtained by splitting
+or merging consecutive old axes; otherwise it copies.**
+
+A view keeps the same buffer and only rewrites the strides, so no element may
+need to move. Splitting an axis (`(6,) → (2,3)`) or merging adjacent ones
+(`(2,3) → (6,)`, `(2,3,4) → (6,4)`) never moves anything. Everything else does,
+and the copy is often the dominant cost in a pipeline.
+
+Option A is the hope that turns into a slow profile. It is *nearly* true, which
+is what makes it dangerous: `(2,3,4) → (4,6)` reorders the factors and cannot be
+a view.
+
+Option C is nonsense as a criterion — `(2,3) → (6,)` goes from 2 axes to 1 and
+is still free.
+
+Option D has the logic exactly backwards. `(2,3) → (3,2)` is *not* a pure
+permutation of the factors in the sense that matters, and the lesson shows it
+produces different numbers than the transpose. Transposing is the free
+operation; reshaping to a permuted shape is the one that reads row-major.
+
+</details>
+
+**Q9.** The numpy block sums `np.array([1e16, 1.0, -1e16, 1.0])`. Left to right
+it gives `1.0`; summing as `(v[0]+v[2]) + (v[1]+v[3])` gives `2.0`. Why?
+
+- A) The second order is wrong because addition must be associative
+- B) `1e16 + 1.0` rounds back to `1e16`, so the first `1.0` is destroyed before
+  the `-1e16` ever cancels anything; float addition is not associative
+- C) numpy uses pairwise summation for the first order and left-to-right for the
+  second, and the two differ by design
+- D) `-1e16` is represented in extended precision, so the cancellation is
+  incomplete
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) `1e16 + 1.0` rounds back to `1e16`, so the first `1.0` is destroyed before
+the `-1e16` ever cancels anything; float addition is not associative.**
+
+The unit in the last place at `1e16` is about `2`, so adding `1.0` is smaller
+than half an ulp and rounds away entirely. Summing left to right, the `1.0` is
+lost at step one; pairing the terms keeps both `1.0`s. This is why layout and
+summation order — which [120's own numpy
+block](#runnable-code) shows can differ between an expression and a library
+call — affect the final digits.
+
+Option A is the myth. Associativity is what float addition lacks, and it is the
+*second* grouping that recovers the true value here.
+
+Option C reverses cause and effect. numpy's pairwise summation is a
+*consequence* of trying to reduce this error, not a divergence from it; the
+block prints `numpy's own answer: 1.0` for the left-to-right value.
+
+Option D is not what IEEE 754 binary64 does in CPython. All the arithmetic here
+is binary64, and the plain-order answer `1.0` confirms nothing extra was retained.
+
+</details>
+
+**Q10.** For `A = [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]` and
+`B = [[7.0, 8.0], [9.0, 10.0], [11.0, 12.0]]`, what is entry `[0][0]` of
+`np.einsum("ij,jk->ik", A, B)`?
+
+- A) `58.0`
+- B) `64.0`
+- C) `139.0`
+- D) `154.0`
+
+<details>
+<summary>Answer and explanation</summary>
+
+**A) `58.0`.**
+
+`[AB]₀₀ = Σⱼ A₀ⱼBⱼ₀ = 1·7 + 2·9 + 3·11 = 7 + 18 + 33 = 58`. This is the
+worked example in the lesson, computed by hand and then confirmed against a
+triple loop.
+
+Option B, `64.0`, is entry `[0][1]`: `1·8 + 2·10 + 3·12`. Option C, `139.0`, is
+`[1][0]`: `4·7 + 5·9 + 6·11`. Option D, `154.0`, is `[1][1]`. All four numbers
+in the `[[58, 64], [139, 154]]` result appear, which is what makes the question
+a test of the contraction rather than of arithmetic.
+
+</details>
+
+## Subjective Questions
+
+### Short Answer
+
+**Q1. State the broadcast-compatibility rule and the broadcast shape.**
+
+<details>
+<summary>Model answer</summary>
+
+Two shapes are **broadcast-compatible** if, after aligning them on the right,
+every pair of corresponding dimensions either matches or one of them is 1. The
+**broadcast shape** takes the larger of each pair, treating a 1 as "stretch me".
+
+So `(3,) + (3,1)` gives `(3,3)`: the `3` matches the `3`, and the two 1s stretch.
+`(2,3,4) + (4,)` gives `(2,3,4)`. `(2,2) + (3,3)` is *not* compatible — 2 and 3
+neither match nor is either 1 — so numpy raises rather than guessing.
+
+The stretch map is `B(x)ᵢ = x` for every output index `i`, which is why
+broadcasting is order-independent and associative, so `a + b + c` is unambiguous.
+
+</details>
+
+**Q2. State the stride formula for a C-contiguous array and use it to find the
+flat offset of element `[1, 2, 3]` of a `(2, 3, 4)` array.**
+
+<details>
+<summary>Model answer</summary>
+
+For a C-contiguous (row-major) array the strides are `sₖ = ∏_{j>k} dⱼ`, the
+product of every dimension to the right of axis `k`. In particular `s_{n−1} = 1`,
+because the last axis varies fastest.
+
+For shape `(2,3,4)`: `s₀ = 3·4 = 12`, `s₁ = 4`, `s₂ = 1`. So the strides are
+`(12, 4, 1)`.
+
+The flat offset of element `[i₀, i₁, i₂]` is `Σₖ iₖ sₖ`. For `[1,2,3]` that is
+`1·12 + 2·4 + 3·1 = 12 + 8 + 3 = 23`.
+
+Note the units: those are *element* counts. numpy's `.strides` reports **bytes**,
+so a float64 array with these element strides reports `(96, 32, 8)`.
+
+</details>
+
+**Q3. When is a reshape free? Give two free cases and one that copies.**
+
+<details>
+<summary>Model answer</summary>
+
+A reshape is a **view** — the same buffer, new metadata — exactly when the new
+axes can be obtained by **splitting or merging consecutive old axes**, so that
+no element has to move.
+
+Free: `(6,) → (2,3)` splits one axis into two, and `(2,3) → (6,)` merges two
+adjacent axes. `(2,3,4) → (6,4)` merges the *first* two axes and is also free,
+needing strides `(4,1)`.
+
+Copies: `(2,3,4) → (4,6)` reorders the factors, and `(2,3) → (3,2)` read
+row-major regroups the elements even though it too happens to be a view here —
+so the lesson's real distinction to remember is that `reshape(3,2)` is a view but
+is **not** the transpose.
+
+</details>
+
+**Q4. What does `np.einsum("ij,ij->", A, A)` compute for
+`A = [[1.0, 2.0], [3.0, 4.0]]`, and what is its name?**
+
+<details>
+<summary>Model answer</summary>
+
+It is the sum of the products of corresponding entries — the **Frobenius inner
+product** ⟨A, A⟩_F. Here `i` and `j` both appear twice and neither appears in the
+output, so both are contracted:
+
+`1·1 + 2·2 + 3·3 + 4·4 = 1 + 4 + 9 + 16 = 30.0`
+
+The code prints `einsum('ij,ij->', A, A) = 30.0`, matching the hand computation
+`sum(v * v for r in A for v in r)`.
+
+</details>
+
+**Q5. Why is `a[:, ::2]` non-contiguous, and what does that cost?**
+
+<details>
+<summary>Model answer</summary>
+
+The slice keeps every other column, so its stride along the last axis is
+`stride[1] * 2` instead of `1`. numpy reports
+`a[:, ::2] ... strides (24, 16)` and
+`C_CONTIGUOUS: False`.
+
+The cost is memory bandwidth, not correctness. Any operation that streams
+through the array sequentially touches roughly twice as many cache lines to read
+the same number of useful values. Calling `.copy()` restores contiguity, and that
+is the trade: memory now versus bandwidth for every downstream pass.
+
+</details>
+
+### Long Answer
+
+**Q1. Float addition is not associative. Why does that make summation order, and
+therefore memory layout, part of the mathematics rather than an implementation
+detail?**
+
+<details>
+<summary>Model answer</summary>
+
+Real addition is associative, so `Σᵢ vᵢ` is a well-defined quantity and any
+summation order computes it. Binary64 is not: `fl(x + y) = (x + y)(1 + δ)` with
+`|δ| ≤ u ≈ 1.1×10⁻¹⁶`, and the rounding is *not* compatible with associativity.
+
+The lesson's example makes the mechanism concrete. At `1e16` the ulp is `2.0`,
+so `1e16 + 1.0` is a perturbation of half an ulp and rounds straight back to
+`1e16`. The `1.0` is not merely inaccurate — it is *gone*. Now consider
+`[1e16, 1.0, -1e16, 1.0]`:
+
+- Left to right: `(1e16 + 1.0) = 1e16` (lost), then `1e16 - 1e16 = 0`, then
+  `0 + 1.0 = 1.0`.
+- Paired: `(1e16 - 1e16) + (1.0 + 1.0) = 0 + 2.0 = 2.0`.
+
+Both are legitimate float computations; one is simply wrong about the real
+number. And this is not a curiosity: the same information loss is catastrophic
+cancellation in a subtraction of nearby quantities, which is the subject of
+[121 — Numerical Methods and Floating Point](121_numerical_methods_and_floating_point.md).
+
+Layout matters because *layout decides the order*. A C-contiguous array read in
+memory order is summed left to right; a strided slice like `a[:, ::2]` is not,
+and a library that blocks a sum differently — numpy's pairwise summation, or a
+BLAS `dot` that accumulates in a different order per thread — will not
+reproduce your loop. That is why `vals.sum()` returning `1.0` in the numpy block
+is information, not a bug: the library's own order lost the first `1.0` too.
+
+The practical rules: never assume a sum's value is independent of how it was
+computed; check with an alternative ordering or `math.fsum` before trusting a
+result that involves cancellation; and when a sum must be reproducible across
+machines, fix the order deliberately rather than inheriting it from a stride
+pattern.
+
+</details>
+
+**Q2. Broadcasting aligns shapes from the right. What would break if it aligned
+from the left instead, and why is right-alignment the only choice that makes the
+short-hand useful?**
+
+<details>
+<summary>Model answer</summary>
+
+Right-alignment is what makes a short vector usable at all. `x * w` with `x` of
+shape `(batch, features)` and `w` of length `features` exists *because* the
+vector lines up with the trailing axis. Under left-alignment, `(features,)`
+would meet axis 0 — the batch — and the operation would either raise (when
+`features ≠ batch`) or scale whole *samples* instead of features. Every bias
+term, every normalisation, every per-channel scale in a convolutional network
+would have to be reshaped to an explicit full-size array. The code's `own_index`
+function shows the cost concretely: it projects each output index onto each
+operand's axes by counting from the right, and that projection *is* the rule.
+
+Alignment from the right also gives the rule a clean statement. Trailing axes
+are the ones that vary fastest in memory, so they are the ones you are most
+likely to want to hold a per-position quantity, and a size-1 axis means "no
+variation along this axis", which is what makes scalar and per-channel
+operations the same expression.
+
+What would break concretely, in this lesson's own code:
+
+- `(2,3,4) + (3,1)` would no longer be legal. Right-aligned, the `3` meets the
+  *middle* axis and the `1` stretches. Left-aligned, the `3` would meet axis 0
+  (length 2) and the `1` would meet axis 1 (length 3) — a different, and here
+  impossible, pairing.
+- `(1,3) + (3,1)` would stop producing the `(3,3)` outer sum. That expression
+  is only meaningful because each operand's length-1 axis sits at the opposite
+  end after alignment, which is the whole mechanism behind the outer product.
+- Every scalar would still work (a 0-d axis matches anything), so the breakage
+  would be subtle: the code would keep running on scalar cases and quietly fail
+  or misbehave on exactly the vector cases people rely on.
+
+The general statement is that right-alignment is what lets a shape be read as
+"…and here is the per-position part", with the leading axes implicitly batched.
+Any other convention would need that information stated explicitly.
+
+</details>
+
+**Q3. A pipeline reshapes and transposes repeatedly and is slower than expected.
+Using only what this lesson established, explain how you would diagnose it, and
+what would you change?**
+
+<details>
+<summary>Model answer</summary>
+
+**Diagnose.** The lesson gives three concrete things to check, and they are
+checkable without a profiler.
+
+1. *Which reshapes are views?* For every `reshape`, ask whether the new axes come
+   from splitting or merging **consecutive** old axes. `(2,3) → (6,)` is free;
+   `(2,3,4) → (4,6)` reorders the factors and copies. The lesson's table lists
+   both cases with the strides each needs. A single copy in a hot loop, repeated
+   per batch, can dominate everything else.
+2. *Is anything non-contiguous?* Any slice with a step — `a[:, ::2]` — is
+   non-contiguous by construction. Then every operation that streams the array
+   touches roughly twice the cache lines for the same useful values. The
+   `flags['C_CONTIGUOUS']` check tells you in one line whether you are in that
+   state, and `.copy()` at the point of slicing restores it once instead of
+   paying on every pass.
+3. *Are you copying something you did not need to?* Transposing is *never* a
+   copy — it reverses the stride tuple. Adding `.copy()` after `.T` "for speed"
+   is a real and common mistake, because the copy is what costs.
+
+**Change.** Make transposes free (delete the `.copy()`), materialise slices once
+rather than leaving them strided, and reorder the axes so that the reshapes you
+need are all splits and merges of consecutive axes. If a reshape genuinely needs
+a copy, do it once at the boundary — before a loop, not inside it — and be
+explicit that the cost is paid.
+
+**The part that actually breaks.** `reshape` and `transpose` are both free on
+`(2,3)` and both produce `(3,2)`, yet they give different numbers:
+`reshape` gives `[[0,1],[2,3],[4,5]]` and `.T` gives `[[0,3],[1,4],[2,5]]`, with
+`np.array_equal` returning `False`. So "replace this transpose with a reshape to
+make it contiguous" is not a safe micro-optimisation — it silently reinterprets
+the data. When you swap one for the other for performance, verify the values,
+not just the speed.
+
+</details>
+
+**Q4. Explain why the rule for einsum is "summed if in more than one operand and
+absent from the output", and what breaks if you use the simpler-sounding rule
+"appears twice ⇒ summed".**
+
+<details>
+<summary>Model answer</summary>
+
+**Why the correct rule is the longer one.** A letter carries two pieces of
+information at once: which operand indices must be *equal* (shared/contraction),
+and which are free to range (output). The rule has to answer "equal or free?",
+and the only thing that decides it is presence in the output. A letter in the
+output is free; a letter in two operands and nowhere else is shared. Each of
+those is unambiguous, and every tensor contraction reduces to one of them.
+
+**What the simpler rule gets wrong.** It conflates the two cases and makes
+"appears twice" mean "summed", which throws away the batch axis. The lesson
+demonstrates this with the *same two operands*:
+
+- `np.einsum("bij,bjk->bik", A, B)` keeps `b`, so `b` is a free axis and the
+  result is a stack of independent matrix products, shape `(4, 2, 2)`.
+- `np.einsum("bij,bjk->ik", A, B)` sums `b` as well, collapsing to one `(2,2)`
+  matrix equal to `block0 + block1`.
+
+Numerically: with scales 1 and 3 the batched form returns
+`[[[1,0],[0,1]], [[6,0],[0,6]]]`, while the summed form returns `[[7,0],[0,7]]`.
+Same inputs, different answer, and **no error is raised** — the shapes are both
+legitimate. That is what makes it dangerous: there is nothing for review to
+catch, exactly like the `(2,3)`-shaped row-scaling bug from
+[Mistake 1](#common-mistakes).
+
+**The related trap in the same family.** `'ii->'` gives the trace `5.0` for
+`[[1,2],[3,4]]` while `'ii->i'` gives the diagonal `[1.0, 4.0]`. The same
+double appearance, decided entirely by one letter on the right of the arrow. And
+`'ij,jk'` without an explicit `->` is not ambiguous either — the free letters
+are sorted alphabetically to `ik`, giving `[[19,22],[43,50]]`, identical to the
+explicit form.
+
+**The practical rule.** Write the output subscripts explicitly. Every time you
+write einsum, say out loud which letters you are contracting and why each one is
+absent from the output; if you cannot, the equation is not understood yet.
+
+</details>
+
 ## Exercises and Solutions
 
 **[ ] Exercise 1 — ** Implement the broadcasting rules for two operands, then use

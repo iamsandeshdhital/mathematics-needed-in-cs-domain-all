@@ -70,7 +70,7 @@ turns into deleting a number.
 
 Throughout, $N$ is the number of samples, $n$ and $k$ index time and frequency,
 $f_s$ is the sample rate in samples per second, and $\mathbb{C}$ is the complex
-numbers. See [SYMBOLS.md](../../SYMBOLS.md).
+numbers. See [SYMBOLS.md](../SYMBOLS.md).
 
 **Definition (Euler's formula).** For every real $\theta$,
 

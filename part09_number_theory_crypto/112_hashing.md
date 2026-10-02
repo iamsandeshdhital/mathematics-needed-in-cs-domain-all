@@ -1092,6 +1092,845 @@ compounds it, since Mersenne Twister output is recoverable from 624 values.
 
 ---
 
+## Formula Sheet
+
+Every formula, notation and definition this lesson uses. Symbols follow
+[SYMBOLS.md](../SYMBOLS.md). The "when you use it" column carries the domain
+restrictions, because dropping a condition here is how a hash table stops being
+`O(1)` and a signature stops being secure.
+
+| Symbol | Formula | In plain words | When you use it |
+| --- | --- | --- | --- |
+| hash function `$h$` | `$h : K \to \{0, 1, \dots, m-1\}$`, realised as `h(k) = F(k) mod m` | turns any key into one bucket index | every `put`, `get` and `remove`. **Restriction: `h` must be deterministic** — same key, same bucket, in every process, or `get` cannot find what `put` stored. It must also run in `O(len(key))` |
+| **collision** | `$x \ne y \wedge h(x) = h(y)$` | two different keys land in the same bucket | unavoidable whenever there are more keys than buckets, `n > m` (pigeonhole principle, [Lesson 23](../part02_discrete_combinatorics/23_inclusion_exclusion_and_pigeonhole.md)). In the worked example `97 mod 8 = 105 mod 8 = 1`, so `a` and `i` collide |
+| **load factor** `$\alpha$` | `$\alpha = n / m$` | keys per bucket | the single number that decides whether a table is fast. `n = 5`, `m = 8` gives `$\alpha = 0.625$`. **Restriction: `$\alpha < 1$` for open addressing** — at `$\alpha = 1$` there is no free slot and no probe sequence can succeed |
+| uniformity | `$\Pr[h(x) = h(y)] \approx 1/m$` | two random distinct keys collide only as often as pure chance makes them | the property that keeps chains short. **Restriction: over a *random* `y \ne x`** — an adversary who chooses keys deliberately gets no such guarantee, which is the whole hash-flooding story |
+| bucket index, `m` a power of two | `h(k) \& (m-1)` | keep the low bits; a mask is one machine instruction and a remainder is a division | only legal when `$m = 2^j$`. **Restriction: `F` must mix high bits down into low ones** — masking the keys `0, 2, …, 14` directly gives `0, 2, …, 14` back, and they all share one chain |
+| djb2 update | `$h \leftarrow (33h + c) \bmod m$`, `h` starting at `5381` | a polynomial hash: multiply, add, reduce | the classic cheap table hash. **Restriction: `$\gcd(33, m) = 1$`**. With `$m = 16$`, `33 \equiv 1` and it collapses to a *shifted* `sum` hash (the difference is the constant 5 for every key); with `$m = 33$` only the **last** character survives |
+| FNV-1a update | `$h \leftarrow ((h \oplus b) \cdot 0x100000001B3) \bmod 2^{64}$` | XOR the byte in, then multiply by the FNV prime | a good general-purpose table hash. **Restriction: `m` must be a power of two**, since the mask replaces the modulus. Not invertible-resistant, and does not need to be |
+| murmur3 finalizer | `$h \oplus{=} h \gg 33$`, `$h \leftarrow h \cdot 0xFF51AFD7ED558CCD \bmod 2^{64}$`, `$h \oplus{=} h \gg 33$ | push the high bits down so a low-bit mask can see them | any table that masks instead of dividing. On `"hello"`, FNV-1a alone masks to `1291`, and after the finalizer to `972` |
+| chaining cost | `$\Theta(1 + \alpha)$` expected | walk one chain whose expected length is `$\alpha$` | separate chaining. Bin loads have mean `$\alpha$` and standard deviation `$\sqrt{\alpha}$`, so a lookup is constant as long as `$\alpha$` is capped |
+| longest chain | `$\approx \ln \alpha / \ln(1 - \alpha)$` | the longest chain, not the average, is what a user actually waits on | checked against the measured value in Exercise 1 |
+| linear probing cost | `$\Theta(1/(1-\alpha))$` for an unsuccessful search | clusters, not independent slots, dominate the probe count | open addressing. **Restriction: `$\alpha < 1$`** — the bound diverges as `$\alpha \to 1$`. Measured on 4096 slots: `1.14` probes/insert at `$\alpha = 0.20`, `4.75` at `0.90`, `20.74` at `0.99$` |
+| amortised insert under doubling | each element is rehashed `O(\log n)$ times over the build, so the total is `$\Theta(n)$` | resizing is expensive but happens only `$\log n$` times | why a fixed resize threshold is fine; proved in [Lesson 81](../part06_algorithms_math/81_amortized_analysis.md) |
+| CPython `dict` thresholds | open addressing, resize at `$\alpha = 2/3$`, rehash every key on resize | a real implementation's choices | the lesson's concrete example of "cap `$\alpha$` and grow". `frozenset` works the same way |
+| **birthday collision probability** | `$1 - \Pi_{k=0}^{n-1}(1 - k/m) \;\approx\; 1 - \exp(-n^2/2m)$` | drop `n` keys into `m` buckets and ask how often two land together | the exact product is always right. **Restriction: the exponential form needs `$\ln(1-x) \approx -x$`, i.e. `n \ll \sqrt{m}$`.** For `m = 1000`: exact `0.5464` and approximate `0.5507` at `n = 40$` |
+| 50% collision point | `$n \approx \sqrt{2m \ln 2} \approx 1.177\sqrt{m}$` | half the keys have collided long before the table is even half full | `m = 2^{16}` ⟹ `n \approx 301`; `m = 366` ⟹ `$\sqrt{m} = 19.1$` |
+| preimage cost | `$2^{b}$` for a `b`-bit hash | work to find `m` from `H(m)` | SHA-256: `2^{256}`. **Restriction: this is exhaustive search**; a structural weakness can beat it |
+| **collision cost** | `$2^{b/2}$` | the birthday bound: the square root of the output space | SHA-256 ⟹ `2^{128}`; FNV-1a's 64 bits ⟹ `2^{32}`; a 32-bit CRC ⟹ `2^{16} = 65{,}536$` random items, probability 1/2 |
+| CRC-32 as a detector, not a control | one CRC collision in `2^{16}$ random items with probability 1/2 | cheap, public and invertible, so useless as an attack barrier | fine for a zip file, never for a token — the lesson's third `Common Mistakes` entry |
+| avalanche | `$\Pr[\text{bit } j \text{ of } H(x) \ne \text{bit } j \text{ of } H(x \oplus 2^i)] \approx 1/2$ | flip one input bit and about half the output bits move | measured over 500 random flips: SHA-256 moves `127.7` of `256`, FNV-1a `28.2` of `64`. **Restriction: necessary but nowhere near sufficient** — output *width*, not mixing, is what makes a hash cryptographic |
+| length extension (Rabin) | `$H(m \,\|\, e) = H(m)\cdot B^{\mathrm{len}(e)} + H(e) \bmod M$` | knowing one digest lets you compute the digest of any *longer* message | why a naive `H(m ‖ H(m))` MAC is forgeable, and why the lesson forges `admin=1` from the leaked digest of `user=bob;admin=0`. Fixed by HMAC (key hashed twice) or SHA-3 (sponge instead of chaining) |
+| **domain separation** | `H("transfer:" ‖ m)` vs `H("login:" ‖ m)` | label the message with what it is *for* | prevents a digest minted for one protocol role being replayed in another. **Restriction: the prefix is public** — it adds no secret; HMAC is what adds the key |
+| Python `hash()` | `hash(12345) = 12345`; `hash(str)` is randomised per process via `PYTHONHASHSEED` | small integers are their own hash; string hashes move between runs | never persist or log it. A dictionary keyed on `hash()` is garbage after a restart, and a table keyed on `0..n` degenerates into a plain array with guessable bucket indices |
+| Merkle root | `root = h^{2r}$ over the bottom-up pairing of leaf hashes | one value that changes completely if any leaf changes | git objects, IPFS, blockchain headers. Tampering one byte of one of 8 blocks changes the root entirely |
+| **Merkle proof** | `$\lceil \log_2 n \rceil$` sibling hashes, `O(\log n)$` total | the path from one leaf to the root | 8 blocks ⟹ a 3-hash proof and `verify = True`. If `verify` accepts, the leaf really is in the tree, because the verifier recomputed the same root |
+
+---
+
+## Multiple Choice Questions
+
+**Q1.** The lesson's worked example inserts `a`, `i`, `b`, `j`, `c` into a table
+of 8 buckets with `h(k) = ord(k)` and separate chaining. Which pair shares a
+bucket, and what is the load factor at that moment?
+
+- A) `a` and `b`, because they are consecutive characters; `α = 0.625`
+- B) `a` and `i`, because `97 mod 8 = 105 mod 8 = 1`; `α = 5/8 = 0.625`
+- C) `a` and `i`, but `α = 0.75`, since that is the resize threshold
+- D) `c` and `e`, because `99 mod 8 = 101 mod 8`; `α = 0.625`
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) `a` and `i`, because `97 mod 8 = 105 mod 8 = 1`; `α = 5/8 = 0.625`.**
+
+The lesson computes this out loud: `ord('a') = 97` and `ord('i') = 105`, and
+`105 − 97 = 8`, so both reduce to bucket 1. Bucket 2 gets `b` and `j` the same way
+(`98 mod 8 = 106 mod 8 = 2`), bucket 3 gets `c`. With five keys in eight buckets,
+`α = n/m = 5/8 = 0.625`, which is exactly what the code prints
+(`load factor = 0.62, longest chain = 2`).
+
+Option A is the off-by-one instinct: `a` and `b` differ by 1, and `98 mod 8 = 2`,
+not 1. Two keys collide when they differ by a multiple of `m`, not by 1. This is
+the "adjacent keys should be adjacent" intuition that a *good* hash function is
+built to destroy.
+
+Option C confuses the current load factor with the threshold. `0.75` is the point
+at which the table *decides* to grow; the load factor *now* is 0.625. Reading a
+threshold as a measurement is a common source of off-by-one table bugs.
+
+Option D asserts a collision that does not exist. `ord('c') = 99` and
+`ord('e') = 101`, and `101 mod 8 = 5`, so `c` sits in bucket 3 and `e` in bucket 5.
+A collision is a claim about a specific modulus, and it has to be checked.
+
+</details>
+
+**Q2.** Three more puts of `d`, `e`, `f` push the table past its 0.75 threshold, so
+it doubles to 16 buckets and every key is rehashed. Where does `i` end up, and what
+does the code report for the load factor afterwards?
+
+- A) Bucket 1, and `α = 0.50`, because `ord` did not change
+- B) Bucket 9, and `α = 0.50`, because `105 mod 16 = 9`
+- C) Bucket 9, and `α = 1.00`, because the table still holds 8 of the original keys
+- D) Bucket 1, and `α = 1.00`, because the resize only relabels slots
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) Bucket 9, and `α = 0.50`, because `105 mod 16 = 9`.**
+
+After the doubling the code prints `size = 8, capacity = 16, load factor = 0.50,
+longest chain = 1`, and `a` and `i` are in different buckets for the first time.
+This is the lesson's central point about resizing: `97 mod 16 = 1` but
+`105 mod 16 = 9`, so **a key's location is a property of the key *and the current
+table size*, never of the key alone.** That is why `hash()` values must never be
+persisted.
+
+Option A is the pre-resize answer and the single most important wrong intuition
+here. A table that stores `h(k) mod m` and forgets `m` is silently wrong the
+moment it grows, and it fails intermittently — right after a resize, with no
+error message.
+
+Option C keeps the pre-resize ratio. `α = 1.00` is the ratio at the moment the
+threshold was crossed (8 keys in 8 buckets), but after the doubling there are 16
+buckets, and the code prints 0.50. Reading `8/8` off the prose while ignoring
+that the table then changed size is exactly this trap.
+
+Option D combines the two halves wrongly: the resize does *not* merely relabel
+slots, it rehashes every key into the new modulus, and that is precisely why the
+locations change.
+
+</details>
+
+**Q3.** A 32-bit CRC guards a zip archive. Roughly how many *random* items collide
+with probability 1/2?
+
+- A) About `2^32 ≈ 4.29 × 10^9`, because that is the number of distinct CRC values
+- B) About `2^16 = 65,536`, because a collision search costs `2^(bits/2)`
+- C) About `2^16 = 65,536`, but only for adversarially chosen messages; random
+  messages need all `2^32`
+- D) About `2^31`, halfway to filling the 32-bit space
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) About `2^16 = 65,536`, because a collision search costs `2^(bits/2)`.**
+
+This is the birthday bound from the formula sheet: `n ≈ 1.177√m`, and with
+`m = 2^32` that is `1.177 · 2^16 ≈ 77,000` — a few hundred thousand, not a few
+billion. The lesson prints exactly this line:
+`a 32-bit CRC covers 2^32 values; 50% collision at n = 65536 items`. The lesson's
+consequence is blunt: "`2^16 = 65,536` random items collide with probability 1/2.
+That is why a 32-bit CRC is a corrupt-data detector and never a security
+control."
+
+Option A confuses the number of *possible values* with the number of *items
+needed to collide*. That the space has `2^32` points tells you a preimage search
+costs `2^32`; it says nothing about how fast pairs start repeating.
+
+Option C is a real and important subtlety, stated backwards. The birthday bound
+already *is* the random case, and it is the easy case for the attacker. Getting
+a *second preimage of a message you chose* is strictly harder and does need
+closer to `2^32`. But this option claims the random case needs `2^32`, which is
+false — the attacker here is allowed random inputs, and `2^16` suffices.
+
+Option D is a linear-space guess. Collisions are a *pairing* phenomenon, so the
+threshold is the square root of the space, not half of it. The lesson's own
+simulation makes the shape visible: with 366 buckets, 20 items already collide
+39% of the time while `√366 = 19.1`.
+
+</details>
+
+**Q4.** A developer builds a content cache by writing `cache[hash(path)] = data`
+and persisting the dictionary to disk. What actually goes wrong?
+
+- A) Nothing: `hash()` is deterministic for a given key, so the map is reproducible
+- B) Nothing for strings, but `hash(12345) ≠ 12345`, so integer-keyed caches are
+  also unstable across restarts
+- C) String hashes are randomised per process by `PYTHONHASHSEED`, so the
+  persisted keys are meaningless after a restart; separately, small integers hash
+  to themselves, so `hash(12345) = 12345`
+- D) `hash()` is not even deterministic *within* one process, so the dictionary
+  printed above cannot be read back at all
+
+<details>
+<summary>Answer and explanation</summary>
+
+**C) String hashes are randomised per process by `PYTHONHASHSEED`, so the
+persisted keys are meaningless after a restart; separately, small integers hash to
+themselves, so `hash(12345) = 12345`.**
+
+Both halves are in the lesson. The `Common Mistakes` section: "Python randomises
+string hashing per process by default (`PYTHONHASHSEED`), so the map is garbage
+after a restart; small integers hash to themselves; and resizing a table changes
+every index. A digest is stable." The runnable code makes the integer case
+concrete: `hash(12345) = 12345`, and a table keyed on `0..n` degenerates into a
+plain array — no collisions, but also no scrambling, so every bucket index is
+guessable. The fix is `hashlib.blake2b(path.encode(), digest_size=16)`, which is
+stable across processes, runs and Python versions.
+
+Option A is right about determinism and wrong about scope. Determinism is
+required *within* one process and one table — that is what lets `get` find what
+`put` stored. It is emphatically not a promise that the same key yields the same
+integer in a different process.
+
+Option B contains a false claim, which is the trap. `hash(12345)` **is** 12345.
+Small integers are the *stable* case, and they are stable in the worst possible
+way: no collisions at all, and no mixing either, so `hash` leaks the key.
+
+Option D is the opposite mistake. `hash()` is perfectly deterministic inside a
+process — the dictionary above reads back fine in the process that built it. The
+randomisation is *across* processes, which is why the failure is a delayed,
+restart-only bug rather than an immediate crash.
+
+</details>
+
+**Q5.** In open addressing with linear probing, why must deletion write a
+tombstone rather than an `EMPTY` marker?
+
+- A) Because a tombstone keeps the load factor from rising when keys are removed
+- B) Because `EMPTY` in the middle of a probe sequence makes every key behind the
+  hole unreachable — `get` stops at the hole and reports "absent" for a key that is
+  still stored
+- C) Because `EMPTY` cannot hold the deleted entry's value, which is now unknown
+- D) Because a tombstone lets the next insertion reuse the slot without probing
+  further
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) Because `EMPTY` in the middle of a probe sequence makes every key behind the
+hole unreachable — `get` stops at the hole and reports "absent" for a key that is
+still stored.**
+
+The lesson's worked example is exact: with 3, 11 and 19 all hashing to slot 3 and
+probing into 4 and 5, deleting `a` from a chaining table leaves `i` findable, but
+deleting 11 from slot 4 makes slot 5 look like the *end* of 19's probe sequence,
+so `get(19)` returns "not found" while 19 is sitting right there. The lesson's
+rule: a tombstone means *keep probing, never match*. The code's `remove` also
+tracks a `deleted` counter and rebuilds once it exceeds `capacity // 4`, so
+tombstones do not accumulate into a performance cliff.
+
+Option A is wrong about what each scheme does. In both schemes `size` decreases
+on a successful delete, so the load factor `size/capacity` behaves identically.
+Tombstones hurt performance, not the load factor — which is exactly why they need
+their own counter.
+
+Option C invents a problem. The value is right there in the slot; what cannot be
+recovered is *which position* was wrong. The issue is positional information, not
+a missing payload.
+
+Option D is a true property of the tombstone scheme and a genuine distraction —
+Exercise 2's backward-shift deletion reuses a hole immediately with no tombstone
+at all. Reuse is a bonus, not the reason. A hole that is reused immediately must
+still be skipped by unrelated probes, which is the requirement in B.
+
+</details>
+
+**Q6.** Consider `djb2(s, m)`: start `h = 5381`, then for each character
+`h = (h*33 + ord(ch)) % m`. With `m = 33`, what happens?
+
+- A) Nothing special — `m` is prime and the multiplier is a constant, so the hash
+  behaves normally
+- B) `33 mod 33 = 0`, so `h` becomes the last character's code modulo 33 and the
+  rest of the key is erased: `djb2("and", 33) = 1`, since `'d' = 100 ≡ 1 (mod 33)`
+- C) `gcd(33, 33) = 33 ≠ 1`, so the reduction raises an arithmetic error
+- D) `djb2(s, 33)` becomes a shifted version of `sum_hash(s, 33)`, a constant
+  offset for every key
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) `33 mod 33 = 0`, so `h` becomes the last character's code modulo 33 and the
+rest of the key is erased: `djb2("and", 33) = 1`, since `'d' = 100 ≡ 1 (mod 33)`.**
+
+Each step computes `(h*33 + c) mod 33 = c mod 33`, discarding `h` entirely. The
+lesson prints the collapse: `djb2(w, 33) = [31, 11, 1, 2, 16, 17]` for six words
+ending in `a, n, d, e, s, t` — those are just `97, 110, 100, 101, 115, 116`
+reduced mod 33. A hash that only sees the last character puts every key with the
+same last character in one chain, and the lesson's conclusion is the general rule:
+"A multiplier coprime to the table size is not optional."
+
+Option A is the "it is still a valid modular reduction" intuition. It is valid
+arithmetic and a useless hash function — nothing crashes, which is what makes
+this failure mode so quiet.
+
+Option C is a real misconception, borrowed from [Lesson 111](111_modular_arithmetic_and_crypto.md):
+coprimality is a condition for an *inverse* to exist, not for a hash function to
+be legal. `djb2(s, 33)` runs without complaint; it is just not mixing.
+
+Option D describes the *other* degeneracy, at `m = 16`, where `33 mod 16 = 1` so
+the multiplier vanishes and `h` collapses to a constant plus a character sum: the
+code shows the difference from `sum_hash` is the constant 5 for every key.
+Conflating the two is natural — both come from `gcd(33, m) > 1` — but they fail in
+opposite ways: `m = 16` keeps every character, `m = 33` keeps only one.
+
+</details>
+
+**Q7.** FNV-1a emits 64 bits and avalanches well: over 500 random single-bit input
+flips it changes 28.2 of its 64 output bits. Why is it still not a cryptographic
+hash?
+
+- A) Because 28.2 is noticeably below the ideal of 32, so its mixing is inadequate
+- B) Because 64 bits of output put collision work at `2^32`, findable in seconds,
+  while SHA-256's 128 bits of collision resistance put it at `2^128`
+- C) Because FNV-1a is a Merkle–Damgård construction and so is vulnerable to
+  length extension
+- D) Because SHA-256 avalanches better, changing 127.7 of 256 bits on the same
+  flips, and an attacker can tell the two apart
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) Because 64 bits of output put collision work at `2^32`, findable in seconds,
+while SHA-256's 128 bits of collision resistance put it at `2^128`.**
+
+The lesson is explicit that width, not mixing, is the whole difference: "The
+reason FNV-1a or Python's built-in `hash()` do not qualify is not their
+avalanche. It is the width of their output." Exercise 4 makes the measurement
+point directly — it runs a birthday search on SHA-256 truncated to 8, 12, 16 and
+20 bits, watches the trial count roughly square each time a bit is kept, and
+concludes "the output width is the whole difference; the avalanche numbers are a
+distraction."
+
+Option A misreads a correct number. 28.2 of 64 is 44%, and SHA-256's 127.7 of 256
+is 49.9% — both are "about half", which is what avalanche *means*. The lesson
+prints the verdict right underneath: "Avalanche is necessary but nowhere near
+sufficient."
+
+Option C imports the wrong weakness. The lesson attributes length extension to
+Merkle–Damgård constructions — "SHA-1 and SHA-256 share the weakness" — and its
+worked example of it is the Rabin polynomial hash from
+[Lesson 110](110_number_theory.md). FNV-1a is not one of the constructions the
+lesson blames for length extension.
+
+Option D compares two different digest widths, which is meaningless: 127.7 of 256
+and 28.2 of 64 are both about half. An attacker never gets to choose which hash
+you used; your choice has to be secure on its own.
+
+</details>
+
+**Q8.** Which implication between the three cryptographic requirements does the
+lesson state, and how does it read?
+
+- A) Second-preimage resistance implies collision resistance; the converse is not
+  known to hold
+- B) Collision resistance implies second-preimage resistance; the converse is not
+  known to hold
+- C) All three are equivalent, since each is a statement about two inputs with the
+  same hash
+- D) Preimage resistance implies both, and both are strictly stronger than `2^b`
+  work
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) Collision resistance implies second-preimage resistance; the converse is not
+known to hold.**
+
+The lesson's theorem: "Collision resistance implies second-preimage resistance;
+the converse is not known to hold. So collision resistance is the strong
+requirement and everything else is easier." The intuition is the quantifier.
+Collision resistance says *there exist no two inputs at all* with equal hashes —
+an unrestricted search over the whole domain. Second-preimage resistance asks for
+a partner for **one specific input you are handed**, which is a much more
+constrained problem. Anyone who breaks the harder property breaks the easier one.
+
+Option A reverses the arrow, which is the classic direction slip. It matters
+because it changes what you must implement: if you believed A, a hash could be
+collision-*attacking*-resistant while still letting an attacker substitute a
+second preimage for a document you signed.
+
+Option C collapses three different statements into one. Preimage resistance asks
+for `m` given `H(m) = y`; second-preimage asks for `m' ≠ m` given `m`; collision
+asks for any pair `m₁ ≠ m₂`. Different quantifiers over different data, and the
+costs differ: `2^b`, `2^b`, and `2^(b/2)`.
+
+Option D misassigns the meaning of `2^b`. For a `b`-bit hash that is the cost of
+exhaustive preimage search, and second-preimage resistance is *the same order*,
+not stronger. Collision resistance is the one that drops to `2^(b/2)` — the
+lesson calls that factor of two in the exponent "the most important number in
+hash security".
+
+</details>
+
+**Q9.** Eight blocks are hashed into a Merkle tree, and
+`verify(5, b'block 5', proof)` returns `True`. How many hashes are in the proof,
+and what does `verify(5, b'block 5!', proof)` return?
+
+- A) 3 hashes; `False`, because the recomputed root no longer matches the stored one
+- B) 3 hashes; `True`, because the sibling path did not include block 5 itself
+- C) 8 hashes; `False`, because every leaf must be rechecked
+- D) 8 hashes; `True`, because the proof is just a second copy of the tree
+
+<details>
+<summary>Answer and explanation</summary>
+
+**A) 3 hashes; `False`, because the recomputed root no longer matches the stored
+one.**
+
+With 8 leaves the tree has `⌈log₂ 8⌉ = 3` levels of siblings, and the code prints
+`proof size = 3 hashes = log2(8)`, so membership is proven in `O(log n)` hashes
+instead of `O(n)`. Changing one byte of one block changes that block's leaf hash,
+which changes every node above it; the code prints `roots equal: False` and then
+`verify(5, b'block 5!', old proof) = False`. The soundness argument is short: the
+verifier recomputes the same root from the same leaves and hashes, so an accepted
+proof means the leaf really is in the tree.
+
+Option B reverses the direction of the check. `verify` starts from
+`h(leaf)` — so the leaf *is* in the proof — and walks up through the three
+siblings. That is precisely why tampering with the leaf breaks verification
+instead of passing it.
+
+Option C is the naive alternative the lesson exists to reject. Rehashing all 8
+leaves to check one is `O(n)` work and `O(n)` bandwidth; the whole reason Merkle
+trees exist is that a single root hash detects a change *anywhere*, and one proof
+attests to one item.
+
+Option D is the misreading that turns a proof into a backup. The proof carries
+only the sibling hashes on one path — 3 values, not the tree. It proves inclusion
+of one leaf and nothing about the others; `verify(4, …)` with the same proof would
+fail.
+
+</details>
+
+**Q10.** An attacker sends 100,000 crafted HTTP header names to a server whose
+hash table uses a public, unseeded hash function. Request latency jumps from 2 ms
+to 4 s. What happened, and what prevents it?
+
+- A) The attacker found inputs with weak avalanche, so many keys hashed to nearby
+  values and clustered together
+- B) The attacker found many collisions at once and forced them into one bucket or
+  cluster, so lookups walk a list of length `n` instead of `α`; a secret
+  per-process seed or a keyed hash prevents it
+- C) The table hit its load-factor threshold and resized, and `O(log n)` resizes of
+  an `O(n)` table is `O(n)` work per request
+- D) The attacker's header names collided in the CRC used to authenticate the
+  request, so the server accepted forged values
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) The attacker found many collisions at once and forced them into one bucket or
+cluster, so lookups walk a list of length `n` instead of `α`; a secret per-process
+seed or a keyed hash prevents it.**
+
+This is hash flooding, and the lesson names it: "if your keys are consecutive
+integers, `k % m` is useless. This is the classic hash-flooding denial-of-service:
+PHP's `md5` bucket distribution was defeated for years by sending keys that all
+hashed to the same bucket." The lesson's `Common Mistakes` section adds the second
+ingredient — `crc32(b'admin=1')` is "32 bits, no key, no randomness", whereas
+`hmac.new(key, …)` uses `secrets.token_bytes(32)`. The Challenge solution states
+the mechanism: "an attacker who can construct keys hashing into it makes every
+operation `O(n)`, which is a denial of service."
+
+Option A is a real property that is being applied to the wrong question. Avalanche
+governs *how much one bit flip moves the output*; the attacker here is not flipping
+bits of your keys one at a time and hoping for local damage. They are *searching*
+for many inputs with one identical output, which is a birthday search and needs
+no weakness in the hash at all — only a public one.
+
+Option C is the amortised analysis misapplied to a single request. Doubling on
+overflow totals `Θ(n)` across the entire build, which is `O(1)` amortised per
+insert. The reported latency is 2000× on *individual* requests, and the lesson's
+measured table shows why that is a different regime: at `α = 0.99` linear probing
+needs 20.74 probes per insert versus 1.14 at `α = 0.20`.
+
+Option D misattributes the failure to the wrong primitive. A CRC is not how a
+server authenticates anything — the lesson's point about `crc32` is that it is a
+*corruption detector and never a security control*. The attack here succeeds
+before any authentication logic runs, by making lookups slow.
+
+</details>
+
+**Q11.** A protocol computes `sha256(msg)` for both a login message and a fund
+transfer, with no prefix. What does adding domain separation actually buy?
+
+- A) A longer digest, and therefore fewer collisions
+- B) Independence: a digest minted for one purpose cannot be replayed as a digest
+  for the other
+- C) Resistance to length extension
+- D) A keyed hash, so only the holder of a secret can compute it
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) Independence: a digest minted for one purpose cannot be replayed as a digest
+for the other.**
+
+The lesson's definition: "prefixing the message with a label identifying what it
+is for, so a digest for one purpose can never be replayed as a digest for
+another." The code shows the pair —
+`sha256('transfer:1000:alice->bob')` and `sha256('login:bob')` — and the
+consequence: "Without a prefix an attacker can move a message from one protocol
+into the other, which is a real attack on unversioned protocols." Without the
+labels, a blob that is a valid `login` digest might also be a valid `transfer`
+digest, and the server has no way to tell which was intended.
+
+Option A confuses input length with output length. SHA-256 emits 256 bits no
+matter what you feed it; a prefix changes the *message*, not the digest width, and
+collisions depend on the width alone.
+
+Option C is fixed by a different mechanism. Length extension is the
+Merkle–Damgård property `H(m ‖ glue ‖ m')` computable from `H(m)` alone, and the
+lesson's fixes are HMAC (key hashed twice, inner state never exposed) and SHA-3
+(a sponge rather than a chain). A prefix does nothing about it, because the
+attacker controls the appended bytes.
+
+Option D inverts the roles. A domain-separation prefix is *public* — it is written
+into the protocol for everyone to read — so it adds no secret whatsoever. HMAC is
+what adds the key; the prefix only adds the label.
+
+</details>
+
+---
+
+## Subjective Questions
+
+### Short Answer
+
+**Q1. Define the *load factor* of a hash table, and state the expected cost of one
+lookup under separate chaining and under open addressing with linear probing.**
+
+<details>
+<summary>Answer</summary>
+
+The load factor is `α = n/m`: the number of keys stored divided by the number of
+buckets. It is a measure of how full the table is, and it is the parameter every
+implementation caps.
+
+Under **separate chaining** a lookup walks exactly one chain, whose expected
+length is `α`, giving `Θ(1 + α)`. Under **linear probing** the expected number of
+probes for an unsuccessful search is `Θ(1/(1 − α))`, because clusters rather than
+independent slots dominate the probe count.
+
+Both require `α` to stay bounded — implementations cap it (the lesson's chaining
+table at 0.75, CPython's `dict` at 2/3) and resize when it is exceeded, which is
+why `Θ(1)` amortised is achievable at all. The linear-probing bound diverges as
+`α → 1`.
+
+</details>
+
+**Q2. Define a *collision*, and compute the colliding pairs in the lesson's
+worked example explicitly.**
+
+<details>
+<summary>Answer</summary>
+
+Two keys `x ≠ y` **collide** when `h(x) = h(y)`. Collisions are unavoidable
+whenever there are more keys than buckets, by the pigeonhole principle.
+
+In the worked example `h(k) = ord(k)` with `m = 8`:
+
+- `'a'`: `97 mod 8 = 1`; `'i'`: `105 mod 8 = 1` — collide in bucket 1
+- `'b'`: `98 mod 8 = 2`; `'j'`: `106 mod 8 = 2` — collide in bucket 2
+- `'c'`: `99 mod 8 = 3` — alone
+
+The pairs collide because they differ by exactly 8, a multiple of `m`. After
+`d`, `e`, `f` push the load factor past 0.75 the table doubles to 16 buckets,
+`97 mod 16 = 1` but `105 mod 16 = 9`, and the two finally separate. That is the
+lesson's point: a key's location depends on the key *and* the current table size.
+
+</details>
+
+**Q3. State the three requirements on a cryptographic hash function, and say which
+one implies which.**
+
+<details>
+<summary>Answer</summary>
+
+**Preimage resistance**: no algorithm finds `m` from `H(m) = y` faster than
+exhaustive search — `2^b` work for a `b`-bit hash.
+
+**Second-preimage resistance**: given a specific `m`, no algorithm finds `m' ≠ m`
+with `H(m') = H(m)`.
+
+**Collision resistance**: no algorithm finds *any* `m₁ ≠ m₂` with
+`H(m₁) = H(m₂)`.
+
+Collision resistance implies second-preimage resistance; the converse is not known
+to hold. The difference is the quantifier — a collision may be anywhere in the
+domain, a second preimage must match one given input. Collision resistance is the
+strongest requirement, and the most expensive, at `2^(b/2)` work by the birthday
+bound rather than `2^b`.
+
+</details>
+
+**Q4. State the birthday-paradox collision probability for `n` items dropped into
+`m` buckets, and explain where the constant 1.177 comes from.**
+
+<details>
+<summary>Answer</summary>
+
+The exact probability of at least one collision is
+`1 − Π_{k=0}^{n−1}(1 − k/m)`: the `k`-th draw must avoid all `k` buckets already
+used, and the steps are independent. Using `ln(1 − x) ≈ −x` (valid for
+`n ≪ √m`) this becomes `≈ 1 − exp(−n²/2m)`.
+
+Setting the approximation to 1/2 gives `n ≈ √(2m ln 2) ≈ 1.177 √m`. The constant
+is `√(2 ln 2) = √1.3863 ≈ 1.1774`.
+
+So collisions become likely at the *square root* of the table size, not near the
+table size: for `m = 366`, `√m = 19.1` and 20 items already collide 39% of the
+time. For a 32-bit CRC that puts the 50% point at about 65,536 items, against
+`2^32` for preimages.
+
+</details>
+
+**Q5. Define a *tombstone*, and say exactly what breaks if an open-addressing
+delete writes `EMPTY` instead.**
+
+<details>
+<summary>Answer</summary>
+
+A **tombstone** is a marker in a probed slot meaning *keep probing, never match*.
+`EMPTY` means *stop probing, the key is absent*.
+
+With linear probing, a key that collided may sit several slots past its home
+slot. Writing `EMPTY` on delete creates a hole in the middle of a probe
+sequence, so a later search for a key behind the hole stops at it and reports
+"absent" for a key that is still stored. In the lesson's example, deleting 11
+from slot 4 would make slot 5 look like the end of 19's probe sequence, so
+`get(19)` would return nothing.
+
+Tombstones cost a slot each, so implementations track a `deleted` counter and
+rehash when it grows (the lesson's table rebuilds once `deleted` exceeds
+`capacity // 4`). Quadratic probing avoids tombstones altogether by using
+backward-shift deletion.
+
+</details>
+
+**Q6. Define a *Merkle proof*, state its size, and say what it does and does not
+prove.**
+
+<details>
+<summary>Answer</summary>
+
+A **Merkle proof** for leaf `i` is the set of `⌈log₂ n⌉` sibling hashes on the
+path from that leaf to the root, together with which side the verifier's own node
+sits on. For 8 leaves that is 3 hashes, and the cost is `O(log n)` total.
+
+It proves *inclusion*: if `verify` accepts, the leaf really is in the tree,
+because the verifier recomputed the same root from the same leaves and hashes.
+It does **not** prove anything about the other leaves, and a proof for one index
+does not verify for another.
+
+That is the asymmetry the structure buys: one root hash detects a change anywhere
+in an `n`-item file, and one `O(log n)` proof shows one item is present — which is
+why git, IPFS and blockchain headers are all Merkle trees.
+
+</details>
+
+### Long Answer
+
+**Q1. Why is a hash-table lookup expected `O(1)` rather than guaranteed `O(1)`,
+and what specifically changes if the seed is public?**
+
+<details>
+<summary>Model answer</summary>
+
+**Why it is only an expectation.** A good hash function spreads keys nearly
+uniformly over the `m` buckets, so `Pr[h(x) = h(y)] ≈ 1/m` for random distinct
+`x`, `y`. Ball-in-bins reasoning then applies: `n` keys into `m` bins give bin
+loads with mean `α = n/m` and standard deviation `√α`, so a lookup — which walks
+the single bin its own key landed in — sees a chain of expected length `α`. With
+chaining that is `Θ(1 + α)`; with linear probing the cluster structure pushes it to
+`Θ(1/(1 − α))` for unsuccessful search. Neither is a guarantee.
+
+**Why no guarantee is possible.** Collisions are not an accident of a bad hash —
+they are forced by the pigeonhole principle whenever `|K| > m`. The worst case is
+then a question about who chooses the keys. If the keys are random, the worst case
+is a chain of length about `ln α / ln(1 − α)`, which grows with `ln n / ln ln n`, not
+with `n`. If the keys are *chosen adversarially* and the hash is public, the
+adversary can compute the bucket for any key they like and submit only keys that
+land in one bucket — giving a chain of length `n` and `O(n)` per lookup. The bound
+is an expectation over the key set or over the seed, never a per-operation promise.
+
+**What changes when the seed is public.** Everything above is conditional on the
+adversary not being able to predict `h`. `PYTHONHASHSEED` randomises string hashing
+per process precisely so that keys which collided in yesterday's process do not
+collide in today's; a keyed hash like `hmac-sha256` under a random 32-byte secret
+does the same for an attacker who can feed you chosen keys. Python's `hash()` gives
+you no such protection, and small integers give you none at all: `hash(12345) = 12345`,
+so a table keyed on `0..n` is a plain array with guessable indices.
+
+**The lesson's own measurements make the regime change visible.** With linear
+probing on 4096 slots the cost per insert is 1.14 probes at `α = 0.20`, 4.75 at
+`α = 0.90` and 20.74 at `α = 0.99`. Those are the numbers of a table that is
+merely unlucky; a flooding attack supplies them on demand, on request, forever.
+That is the difference between an expected bound and a denial of service.
+
+</details>
+
+**Q2. The lesson says avalanche is necessary but nowhere near sufficient for a
+cryptographic hash. Why? What measurement would decide whether a hash is fit for
+a table versus fit for a signature?**
+
+<details>
+<summary>Model answer</summary>
+
+**What avalanche says, and what it does not.** Avalanche is the claim that
+flipping one input bit flips about half the output bits: `Pr[bit j of H(x) ≠ bit
+j of H(x ⊕ 2^i)] ≈ 1/2`. That is a statement about *diffusion* — nearby inputs
+have unrelated outputs. It is genuinely necessary: without it, an attacker flips
+bits in an input and predicts which output bits move.
+
+But diffusion says nothing about *how hard it is to find two unrelated inputs
+with the same output*. That is a search question, and search cost is governed by
+output width. The lesson's numbers: over 500 random single-bit flips, SHA-256
+changes 127.7 of 256 bits and FNV-1a changes 28.2 of 64 — 49.9% and 44%, both
+"about half". Both are fine table hashes. Only one is usable for signatures.
+
+**The measurement that decides it.** The birthday bound: a `b`-bit hash needs
+`2^(b/2)` work to find any collision. Exercise 4 runs exactly this — SHA-256
+truncated to 8, 12, 16 and 20 bits — and watches the trial count roughly *square*
+each time one more bit is kept, which is `2^(b/2)` showing up in the timings.
+Extrapolated, 64 bits gives about `2^32` trials, seconds of work; 128 bits gives
+`2^64`; 256 bits gives `2^128`, which is out of reach. FNV-1a emits 64 bits, so
+its collision resistance is `2^32` — and Exercise 4 finds a 16-bit collision on it
+in well under a second.
+
+**So the decision procedure is two questions, not one.** *Is the diffusion good
+enough?* — measured as flipped output bits per flipped input bit; you need
+roughly half. *Is the output wide enough?* — measured as `b/2` effective
+collision bits; you need that to exceed your attacker's budget by a wide margin.
+FNV-1a passes the first and fails the second, and the lesson's summary says so
+directly: "FNV-1a and Python's `hash()` fail because their outputs are too narrow,
+not because their mixing is poor." The corollary matters just as much: making a
+hash *wider* is what buys security, and adding a finalizer — the murmur3 step that
+takes FNV-1a from 44% to the ideal — improves the diffusion without changing the
+width, so it improves table performance and buys nothing cryptographic at all.
+
+</details>
+
+**Q3. Why is `2^(b/2)` rather than `2^b` the number that governs hash security,
+and what goes wrong if you size an authentication token with a 32-bit CRC?**
+
+<details>
+<summary>Model answer</summary>
+
+**Where the two exponents come from.** `2^b` is the size of the *output space*:
+an `n`-bit digest takes `2^n` values, so exhausting it to invert a hash costs
+`2^n`. That is the preimage cost, and it is also the second-preimage cost.
+
+`2^(b/2)` comes from *pairing*. With `n` random items in `m` buckets the
+probability of at least one collision is `≈ 1 − exp(−n²/2m)`, which reaches 1/2 at
+`n ≈ √(2m ln 2) ≈ 1.177√m`. Note the square root: the attacker is looking for a
+*pair* among `n²/2` pairs, so the threshold is the square root of the space, not
+the space. For a 32-bit value that is `2^16 = 65,536` items — a few seconds of
+work, not centuries. The lesson's line is that this factor of two in the exponent
+is "the most important number in hash security", and it is why a 256-bit hash
+gives 256-bit preimage resistance but only 128-bit collision resistance.
+
+**What breaks with a CRC.** A 32-bit CRC is called a hash, is fast, is well
+tested and ships in `zlib`. It fails every requirement a security control needs:
+it is 32 bits wide, it is public, it has no key and no randomness, and it is
+linearly invertible. `crc32(b'admin=1')` is a token an attacker can simply
+recompute for `admin=0`. Worse, at `2^16` work a birthday search produces two
+*different* inputs with the same checksum, so the attacker can present a modified
+message that still verifies — and the lesson's simulation shows the search does
+not even need the CRC's structure.
+
+**The comparison that fixes the requirements.** Preimage resistance,
+`2^b`; second-preimage resistance, `2^b`; collision resistance, `2^(b/2)`.
+`hmac-sha256` under a random 32-byte `secrets` key clears all three, with
+`secrets` rather than `random` because Mersenne Twister output is recoverable from
+624 values. And `random` is not the only trap: the lesson's length-extension
+attack shows that even a perfect 256-bit hash fails if the construction is
+Merkle–Damgård and the MAC naively appends the digest, which is why HMAC hashes
+the key twice and SHA-3 uses a sponge.
+
+</details>
+
+**Q4. Why can an open-addressing table not delete by writing `EMPTY`, and how do
+quadratic probing and cuckoo hashing change the answer?**
+
+<details>
+<summary>Model answer</summary>
+
+**Why `EMPTY` is fatal.** In linear probing every key's probe sequence is
+`home, home+1, home+2, …`. A search stops at the first `EMPTY` it meets. So an
+`EMPTY` in the middle of a cluster *terminates* the probe sequences of every key
+behind it. In the lesson's example, 3, 11 and 19 all hash to slot 3 and occupy
+slots 3, 4, 5. Deleting 11 by writing `EMPTY` at slot 4 makes `get(19)` stop
+there and report "absent" while 19 is sitting in slot 5. A hole does not remove
+one key; it orphans everything after it. The reason is structural: with chaining
+each bucket is an independent list, so removing an element cannot affect another
+bucket's search. Open addressing has no such independence — the entries share
+probe sequences, and `EMPTY` is a claim about an entire sequence, not one slot.
+
+**Quadratic probing: no hole at all.** With probe offsets `0, +1, −1, +4, −4, +9,
+−9, …` the clusters disperse: Exercise 2's measurement shows linear probing forming
+one long run while quadratic probing's runs stay shorter even at comparable probe
+counts. That lets deletion use **backward-shift deletion** instead — leave no
+marker, and after removing a key, walk forward and pull back any later key whose
+home slot lies *behind* the hole, so no key's probe sequence is ever interrupted.
+The lesson's exercise asserts the result directly: backward-shift deletion "lost
+nothing and left no tombstones". The cost is that deletion becomes `O(cluster
+length)` rather than `O(1)`, and still assumes keys sit no further than one
+prime stride from home.
+
+**Cuckoo hashing: no single home, so no single sequence to break.** Two tables,
+two independent hash functions, and an insert that kicks out the occupant and
+retries. A key can live in either table, so a deletion makes at most one slot
+vacant and orphans nothing — the other location is still a legal home. The
+lesson's Challenge makes the sharper claim: cuckoo hashing has no degenerate
+configuration, "because a key lives in two tables and an attacker cannot force
+collisions in both at once". The price is paid at insert time instead. A closed
+kick cycle cannot be resolved, so the table is rehashed at twice the capacity and
+the displaced key is carried across — because a failed insert has already
+overwritten a slot and there is nothing to roll back to. Under flooding, linear
+probing gives `O(n)` per *operation* forever; cuckoo hashing gives a bounded
+worst-case probe count during construction and `O(1)` lookups after.
+
+</details>
+
+**Q5. Content addressing needs a hash that is hard to invert *and* hard to
+collide. Why is a merely good table hash — FNV-1a, say — not enough, and what
+concretely breaks?**
+
+<details>
+<summary>Model answer</summary>
+
+**What content addressing asks of the hash.** In git, IPFS and every blockchain
+the address of a block *is* its hash. That makes two guarantees load-bearing at
+once: the address must be *hard to produce for someone else's data* (preimage
+resistance, or the hash is a forgery machine), and *two different objects must not
+share an address* (collision resistance, or the address is ambiguous). A
+Merkle tree supplies the second guarantee structurally — one root over all leaves,
+so any change anywhere gives a completely different root — but the root is still
+just a hash, and it inherits the hash's weaknesses.
+
+**Why "good for tables" is the wrong criterion.** A table hash is judged on being
+deterministic, `O(len(key))`, uniform, cheap to fit, and unhurried by the key
+distribution. `h(k) & (m−1)` gives it away: the table needs only `m` distinct
+outputs, not an unguessable fingerprint, so a weak output is fine. FNV-1a
+succeeds at all of that — the lesson measures 28.2 of 64 bits flipping on a
+one-bit input change — and still fails here, because 64 bits of output means
+`2^32` work to find a collision.
+
+**What concretely breaks.** Two failures, and the second is the fatal one.
+*Forgery:* an address is easy to compute, so publishing one costs nothing and
+spoofing a content address costs nothing. *Collision:* at `2^32` work an attacker
+constructs two distinct files with the same digest. In git that is a
+second preimage against an already-existing blob — `git` trusts a matching object
+ID, so a colliding blob is silently accepted as the file you meant. In a
+blockchain it is worse, because the same digest is the *identity*: two different
+transactions would share an address, and the chain's own history is the
+tamper-evidence argument.
+
+**What the lesson's Merkle tree does and does not buy.** The tree does not make
+the hash stronger; it makes one hash cover many objects. Root change on any
+tampering — the lesson flips one byte of one of 8 blocks and the root changes
+completely, and the old proof stops verifying — and an `O(log n)` inclusion proof
+(3 hashes for 8 leaves). Both are only as trustworthy as the hash underneath. So
+the choice is not "Merkle tree or not" but "which digest": `hashlib.sha256` or
+better, with domain separation so a digest minted for one role cannot be replayed
+in another, and never `hash()` — which for strings is randomised per process by
+`PYTHONHASHSEED` and for small integers is the integer itself.
+
+</details>
+
 ## Exercises and Solutions
 
 **[ ] Exercise 1 —** Write a chaining hash table that counts how many insertions
