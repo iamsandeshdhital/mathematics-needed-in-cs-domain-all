@@ -898,6 +898,8 @@ omits the thing that matters.
 
 </details>
 
+---
+
 ## Exercises and Solutions
 
 **[ ] Exercise 1 — Build the truth table for eight propositions.** For each,
@@ -2650,7 +2652,7 @@ contradiction — it is true on every row where `p` is false, which is half the
 table. That is the row a casual reading skips.
 
 </details>
-**Challenge — Decide whether conditions are correct, using reachability as well
+**[ ] Challenge 7 — Decide whether conditions are correct, using reachability as well
 as equivalence.** Take three conditions and, for each: (1) enumerate every input
 combination, (2) mark which combinations are actually reachable, using invariants
 of the system rather than wishful thinking, (3) compare the code's value with the

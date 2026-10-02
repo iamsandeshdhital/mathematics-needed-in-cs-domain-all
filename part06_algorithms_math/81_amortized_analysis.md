@@ -282,7 +282,7 @@ aggregate bound. `$\epsilon$` is the heavy-operation fraction.
 | potential, binary counter | `$\Phi = $ number of 0 bits | each increment creates one 0 and clears some 1s | `$\hat T = 1 + \Delta\Phi \le 2$`; measured amortised `2.0000` at 20 bits |
 | binary counter total | `$(2^n - 1) + n$ flips over `2^n` increments | exact, not a bound | `2,097,130` for $2^{20}$ increments; amortised exactly 2 in the limit |
 | hash table worst case | `$\Theta(n)$ | all $n$ keys in one bucket | attainable by an adversary who knows the seed; `BadHash` measures `(n+1)/2` probes per lookup |
-| hash table expected | `$O(1)$ | one probe, on average | **needs** a random seed and a well-behaved key distribution; measured `1.22`–`1.33` probes |
+| hash table expected | `$O(1)$ | one probe, on average | **needs** a random seed and a well-behaved key distribution; measured `1.12`–`1.28` probes |
 | hash table amortised insert | rehash total `$\approx 2n$`, so `$\approx 2$ per insert | the resize is a geometric series | `0.9996` at $n = 16384$, a **guarantee** independent of the hash |
 | amortised fraction | `$T_i / (C/n)$ | how many times average cost this operation cost | finds the operations to protect; $\epsilon$-heavy sets give $O(1/\epsilon)$ |
 | $\epsilon$-heavy theorem | rare-but-expensive $\Rightarrow$ amortised `$O(1/\epsilon)$` | the expensive ones need not be rare *in time* | queue compaction: 8 of 4000, measured `0.331` moves per operation |
@@ -898,8 +898,8 @@ print("  BadHash/n is (n+1)/2 exactly: a full scan of a chain of length k costs"
 print("  1 + 2 + ... + k, because the keys were inserted in order.  It is")
 print("  Theta(n) PER LOOKUP -- worst case and average case both, and there is no")
 print("  sequence of operations to amortise, because each lookup stands alone.")
-print("  GoodHash/n sits between 1.22 and 1.33: about 1.25 probes per lookup, the")
-print("  signature of a chain of length 1.25 in a half-full table.")
+print("  GoodHash/n sits between 1.12 and 1.28: about 1.2 probes per lookup, the")
+print("  signature of a chain of length about 1.2 in a half-full table.")
 print()
 print("  A dynamic array is the mirror image: its per-operation worst case is")
 print("  Theta(n), it makes no probabilistic claim at all, and its amortised cost")
@@ -2329,7 +2329,7 @@ hash distribution; the worst case is $\Theta(n)$ when all $n$ keys land in one
 bucket, and an adversary who knows the seed can arrange exactly that. The
 lesson's `BadHash` — one bucket, no randomness — measures `512.50` probes per
 lookup at $n = 1024$ in both the average and the worst case, and `GoodHash` in a
-half-full table measures `1.24`. The gap between a guarantee and a hope is
+half-full table measures `1.27`. The gap between a guarantee and a hope is
 exactly the gap between those two numbers.
 
 **The asymmetry worth stating.** Resizing does not fix lookup, and it is not
@@ -2450,8 +2450,8 @@ what an adversary needs to know to construct it.
 `0.9961` copies per append at $n = 1024$ and the aggregate argument shows
 $\sum T_i < 2n$ for every sequence. The hash table's expected lookup is a
 **hope**: it averages over the hash distribution, and the code's `GoodHash`
-measures `1.24` probes per lookup in a half-full table — an average that an
-adversary destroys.
+measures `1.21` probes per lookup at $n = 4096$ in a half-full table — an average
+that an adversary destroys.
 
 Note the interesting asymmetry in the table: the dynamic array has an average
 cost too, and it equals the amortised cost, because the guarantee is so strong
@@ -3697,11 +3697,11 @@ itself, is an engineering decision that has to be measured.**
   with a worst case of $n$ bits. Having the exact count turns $O(1)$ into
   $\Theta(1)$ and shows no smaller constant works.
 - Hash tables show the whole distinction. `BadHash` costs `512.50` probes per
-  lookup in *both* the average and the worst case; `GoodHash` costs `1.24` on
-  average with a $\Theta(n)$ worst case. The resize policy, by contrast, is
-  genuinely amortised — `0.9996` rehash moves per insert at $n = 16384$ — and is
-  a **guarantee for every key sequence**, because the trigger depends only on
-  the sizes `17, 33, 65, 129, ...`, never on the keys.
+  lookup in *both* the average and the worst case; `GoodHash` costs `1.21` at
+  $n = 4096$ on average with a $\Theta(n)$ worst case. The resize policy, by
+  contrast, is genuinely amortised — `0.9996` rehash moves per insert at
+  $n = 16384$ — and is a **guarantee for every key sequence**, because the
+  trigger depends only on the sizes `17, 33, 65, 129, ...`, never on the keys.
 - The $\epsilon$-heavy theorem bounds a sequence whose expensive operations are
   merely *not too frequent*: $O(1/\epsilon)$, computable and degrading
   gracefully. Exercise 6's queue compacts 8 times in 4000 operations, giving

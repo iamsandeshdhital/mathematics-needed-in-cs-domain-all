@@ -454,25 +454,17 @@ subtracted.
 ```python
 """IEEE 754 and why 0.1 + 0.2 != 0.3.
 
-
-
 Binary floating point stores a sign, an exponent and a mantissa.  For a
 
 double-precision float the 64 bits are
 
-
-
     1 sign bit | 11 exponent bits | 52 fraction bits
-
-
 
 Normalised, the value is  (-1)^sign * 1.fraction * 2^(exponent - 1023), so the
 
 smallest amount you can add to 1.0 and get a different number is 2^-52, about
 
 2.22e-16.  That is machine epsilon for float64.
-
-
 
 Every non-negative float64 is a binary fraction k / 2^52, so "is 0.1 exactly
 
@@ -484,13 +476,12 @@ Exactly representable decimals are only the ones whose reduced denominator is a
 
 power of two -- 0.5, 0.25, 0.125, 0.0625.
 
-
-
 Use fractions.Fraction for the exact reasoning below.  A float64 is always
 
 exactly a rational, so Fraction(0.1) tells you what the machine actually holds.
 
 """
+
 import math
 import struct
 from fractions import Fraction
@@ -666,15 +657,11 @@ print("lesson.")
 ```python
 """Absolute versus relative error, and catastrophic cancellation.
 
-
-
 Absolute error answers "how far off, in these units".  Relative error answers
 
 "how far off, compared to what I was aiming at".  You need both, and when they
 
 disagree sharply you are looking at cancellation.
-
-
 
 Catastrophic cancellation is subtractive cancellation: you subtract two nearly
 
@@ -686,13 +673,12 @@ in the answer explodes.  No amount of care at the subtraction will help,
 
 because the information was already lost when the operands were rounded.
 
-
-
 The standard example is sqrt(x^2 + 1) - x for small x.  Mathematically it is
 
 1 / (sqrt(x^2 + 1) + x), and the two forms agree for large x but not for small.
 
 """
+
 import math
 import struct
 from fractions import Fraction
@@ -851,27 +837,17 @@ print("subtracting large ones.")
 ```python
 """Conditioning: how much a small input change can move the answer.
 
-
-
 A problem is WELL conditioned when a relative input change of size eps gives a
 
 relative output change of about the same size.  The amplification factor is the
 
 condition number
 
-
-
     kappa = (relative output change) / (relative input change)
-
-
 
 and for a scalar function it has the closed form
 
-
-
     kappa(x) = |x f'(x)| / |f(x)|
-
-
 
 kappa is a property of the PROBLEM, not of your code.  No extra precision, no
 
@@ -881,8 +857,6 @@ ill-conditioned problem is not a code failure -- and exactly why "buy more
 
 precision" is often the wrong response.
 
-
-
 The sharp distinction this block insists on: CANCELLATION is an instability in
 
 your ALGORITHM, and ILL-CONDITIONING is a property of the PROBLEM.  They look
@@ -890,6 +864,7 @@ your ALGORITHM, and ILL-CONDITIONING is a property of the PROBLEM.  They look
 identical in the output and they have opposite fixes.
 
 """
+
 import math
 
 
@@ -1128,8 +1103,6 @@ print("made unnecessary.")
 ```python
 """Bisection and Newton-Raphson, from scratch, with their error guarantees.
 
-
-
 BISECTION needs only continuity and a sign change.  It is unconditionally
 
 stable and its error bound is a theorem: after n iterations on an interval of
@@ -1137,8 +1110,6 @@ stable and its error bound is a theorem: after n iterations on an interval of
 width w, the error is at most w / 2^(n+1).  It converges slowly and linearly,
 
 but it cannot be made to fail by a bad starting point.
-
-
 
 NEWTON uses the derivative.  It converges quadratically -- the number of
 
@@ -1150,13 +1121,12 @@ is Newton's method with a bisection fallback, which keeps the speed and cannot
 
 lose the bracket.
 
-
-
 Both are below, both print their iterates, and both are checked against a
 
 correct reference.
 
 """
+
 import math
 
 
@@ -1170,8 +1140,6 @@ def rule(title):
 
 def bisection(f, a, b, tol=1e-12, max_iter=200):
     """Return (root, iterations, history).
-
-
 
     Precondition: f(a) and f(b) have opposite signs.  Each step halves the
 
@@ -1211,8 +1179,6 @@ def bisection_iterations(width, tol):
 def newton(f, df, x0, tol=1e-12, max_iter=100):
     """Return (root, iterations, history) using the plain Newton iteration.
 
-
-
     x_{n+1} = x_n - f(x_n) / f'(x_n)
 
     """
@@ -1230,8 +1196,6 @@ def newton(f, df, x0, tol=1e-12, max_iter=100):
 
 def newton_bisected(f, df, a, b, tol=1e-12, max_iter=200):
     """Newton when it behaves, bisection whenever it does not.
-
-
 
     Keep the bracket [a, b] invariant at all times.  Take a Newton step only
 
@@ -1482,13 +1446,9 @@ print("absolute constant.")
 ```python
 """Finite differences: measuring a derivative you cannot differentiate for.
 
-
-
 Two errors fight each other, and the step size h is where you choose which one
 
 wins.
-
-
 
   TRUNCATION error comes from the Taylor series.  For a forward difference the
 
@@ -1498,8 +1458,6 @@ wins.
 
   error is O(h^2) -- halving h quarters the error.
 
-
-
   ROUNDOFF error comes from the arithmetic.  f(x+h) and f(x) are each known to
 
   within about eps|f|, so their difference has an absolute error of about
@@ -1508,19 +1466,13 @@ wins.
 
   which GROWS as h shrinks.
 
-
-
 Total error is roughly  C1 * h        +  2 eps |f| / h     (forward)
 
                   roughly  C2 * h^2     +  2 eps |f| / h     (central)
 
-
-
 The truncation term wants h small; the roundoff term wants h LARGE.  The best
 
 h is where they balance:
-
-
 
   forward:   h* ~ sqrt(2 eps |f| / |f''|)
 
@@ -1530,13 +1482,7 @@ which is why the optimum for a central difference is about 6e-6 rather than
 measures exactly how much worse.
 """
 
-
-
 import math
-
-
-
-
 
 def rule(title):
 
@@ -1548,13 +1494,7 @@ def rule(title):
 
     print("=" * 68)
 
-
-
-
-
 EPS = 2.0**-52
-
-
 
 # A function with a known derivative, so the error can be measured exactly.
 
@@ -1566,13 +1506,7 @@ D2F = lambda x: -math.sin(x) + 0.6
 
 D3F = lambda x: -math.cos(x)
 
-
-
 X = 1.3
-
-
-
-
 
 def forward(x, h):
 
@@ -1580,19 +1514,11 @@ def forward(x, h):
 
     return (F(x + h) - F(x)) / h
 
-
-
-
-
 def backward(x, h):
 
     """(f(x) - f(x-h)) / h.  Also O(h), same constant."""
 
     return (F(x) - F(x - h)) / h
-
-
-
-
 
 def central(x, h):
 
@@ -1600,23 +1526,13 @@ def central(x, h):
 
     return (F(x + h) - F(x - h)) / (2.0 * h)
 
-
-
-
-
 def rel_err(approx):
 
     return abs(approx - DF(X)) / abs(DF(X))
 
-
-
-
-
 # ------------------------------------------------------------------- 1
 
 rule("1. Forward versus central, at the same step size")
-
-
 
 exact = DF(X)
 
@@ -1672,13 +1588,9 @@ print("function with a boundary or a domain edge, x-h may not be available.")
 
 print()
 
-
-
 # ------------------------------------------------------------------- 2
 
 rule("2. Where the optimum step size is, and why it is not 'as small as possible'")
-
-
 
 print("Halving h reduces truncation and increases roundoff, so the error curve")
 
@@ -1740,13 +1652,9 @@ print("   still runs, and nothing raises.")
 
 print()
 
-
-
 # ------------------------------------------------------------------- 3
 
 rule("3. The formulas for h*, and the order of magnitude they predict")
-
-
 
 f1 = abs(DF(X))
 
@@ -1820,41 +1728,21 @@ print("You do not know f''' but you can bound it, and that is enough.")
 
 print()
 
-
-
-
-
 def g(x):
 
     return x * math.exp(x)
-
-
-
-
 
 def dg(x):
 
     return (x + 1.0) * math.exp(x)
 
-
-
-
-
 def g_forward(x, h):
 
     return (g(x + h) - g(x)) / h
 
-
-
-
-
 def g_central(x, h):
 
     return (g(x + h) - g(x - h)) / (2.0 * h)
-
-
-
-
 
 XG = 2.0
 
@@ -1928,11 +1816,10 @@ not runnable
 ```python
 """The same facts, checked against numpy, mpmath and Python's own tools.
 
-
-
 Run with: python -c "import numpy, mpmath; print(numpy.__version__, mpmath.__version__)"
 
 """
+
 import math
 import struct
 from fractions import Fraction
@@ -3258,6 +3145,7 @@ direction of each rounding. (d) Give the three defensible responses.
 No floating point arithmetic in the derivation -- every claim about what the
 machine holds is made with exact integers and rationals.
 """
+
 import math
 import struct
 from fractions import Fraction
@@ -3437,6 +3325,7 @@ ulp, and show that a ridge term removes the sensitivity.
 The task: measure both kinds of error, find where conditioning actually bites,
 and separate the three things people call 'numerical error'.
 """
+
 import math
 
 
@@ -3669,6 +3558,7 @@ The task is to find a formula that looks catastrophically wrong and then
 repair it, twice, and to explain why the repair is a change of ALGORITHM rather
 than a change of precision.
 """
+
 import math
 from decimal import Decimal, getcontext
 getcontext().prec = 60
@@ -3843,6 +3733,7 @@ The task: build a derivative routine that picks its own step size, show that a
 naive tiny step is much worse, and show how to reach beyond the central
 difference's ~11-digit ceiling without changing language.
 """
+
 import cmath
 import math
 EPS = 2.0**-52
@@ -4039,6 +3930,7 @@ The task: write a root finder with a real tolerance policy, show that the
 tolerance is reachable rather than aspirational, and show what happens when a
 solver is asked for more digits than the arithmetic has.
 """
+
 import math
 EPS = 2.0**-52
 
@@ -4288,6 +4180,7 @@ tuned for smooth integrands is much worse than one tuned for arbitrary ones.
 The point is that "accurate to 1e-12" is meaningless without saying accurate
 FOR WHAT.
 """
+
 import math
 
 
@@ -4547,6 +4440,7 @@ The design rule the whole thing illustrates: a numerical routine that cannot
 tell you how much to trust it is not finished.  Every function below returns
 the value AND the evidence for that value.
 """
+
 import math
 import struct
 from fractions import Fraction
