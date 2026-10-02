@@ -1592,8 +1592,8 @@ for x, y in ((1.0, 1.0), (2.0, -1.0)):
 
 ```text
       point        df/dx num       df/dx exact      df/dy num      df/dy exact
-  (   1,    1)   5.000000000     5.000000    -1.000000000     -1.000000
-  (   2,   -1)  14.000000000    14.000000  -13.000000000   -13.000000
+  ( 1.0,  1.0)     5.000000000       5.000000    -1.000000000      -1.000000
+  ( 2.0, -1.0)    14.000000002      14.000000   -13.000000001     -13.000000
 ```
 
 (d) Solve $\nabla f = 0$: from $\frac{\partial f}{\partial y} = 0$ we get $4xy = 5$, so
@@ -1618,9 +1618,9 @@ print("  Lesson: no critical points does NOT mean 'nothing to find'.")
 
 ```text
   Is f bounded below?  Sample the direction y = 0, x -> -inf:
-    f(  -2.0, 0) =      -8.00
-    f(  -5.0, 0) =    -125.00
-    f( -10.0, 0) =   -1000.00
+    f(  -2.0, 0) =        -8.00
+    f(  -5.0, 0) =      -125.00
+    f( -10.0, 0) =     -1000.00
   It goes to -infinity, so there is no global minimum either.
   Lesson: no critical points does NOT mean 'nothing to find'.
 ```
@@ -1721,12 +1721,12 @@ for d in (1e-4, 1e-3, 1e-2, 1e-1, 0.3, 0.5):
 
 ```text
    distance   predicted df      actual df      error
-    1.0e-04    0.00106301    0.00106304    2.49e-08
-    1.0e-03    0.01063015    0.01063263    2.49e-06
-    1.0e-02    0.10630146    0.10655013    2.49e-04
-    1.0e-01    1.06301458    1.08788184    2.49e-02
-    3.0e-01    3.18904374    3.41284905    2.24e-01
-    5.0e-01    5.31507291    5.93675432    6.22e-01
+   1.0e-04      0.00106301      0.00106304    2.49e-08
+   1.0e-03      0.01063015      0.01063263    2.49e-06
+   1.0e-02      0.10630146      0.10655013    2.49e-04
+   1.0e-01      1.06301458      1.08788184    2.49e-02
+   3.0e-01      3.18904374      3.41284905    2.24e-01
+   5.0e-01      5.31507291      5.93675432    6.22e-01
 ```
 
 (d) The prediction is a *first-order* approximation: $f(x_0 + h) = f(x_0) + \nabla f
@@ -1855,8 +1855,8 @@ for x, y in ((1.0, 2.0), (-0.5, 3.0)):
 
 ```text
       x      y       direct d/dx     chain d/dx        d/dy     chain d/dy
-      1     2           45.000000     45.000000       25.000000    25.000000
-    -0.5     3           30.000000     30.000000       15.000000    15.000000
+    1.0    2.0       45.000000      45.000000      25.000000     25.000000
+   -0.5    3.0       30.000000      30.000000      15.000000     15.000000
 ```
 
 (d) **Reverse mode, written out.** For a chain of layers $h_0 = x$,
@@ -1919,7 +1919,7 @@ for i in range(len(x)):
            dL/dh1 = [1.65, 4.175]
            dL/dx  = [3.7375, 6.7]
     dL/dx[0]: analytic   3.73750000   numeric   3.73750000   agree True
-    dL/dx[1]: analytic    6.70000000   numeric    6.70000000   agree True
+    dL/dx[1]: analytic   6.70000000   numeric   6.70000000   agree True
 ```
 
 **The punchline of (d).** The backward pass for a linear layer is *literally one matrix
@@ -2348,26 +2348,26 @@ Output:
   f(1,2) = 11.0000000
 
        d       predicted df         actual df             error        error/d^2
-  1.0e-04    0.0010630146      0.0010630394         2.487e-08     2.486726
-  1.0e-03    0.0106301458      0.0106326325         2.487e-06     2.486726
-  1.0e-02    0.1063014581      0.1065501307         2.487e-04     2.486726
-  1.0e-01    1.0630145813      1.0878818379         2.487e-02     2.486726
-  2.0e-01    2.1260291625      2.2254981891         9.947e-02     2.486726
-  3.0e-01    3.1890437438      3.4128490536         2.238e-01     2.486726
-  5.0e-01    5.3150729064      5.9367543223         6.217e-01     2.486726
+  1.0e-04     0.0010630146       0.0010630394      2.487e-08      2.486726
+  1.0e-03     0.0106301458       0.0106326325      2.487e-06      2.486726
+  1.0e-02     0.1063014581       0.1065501307      2.487e-04      2.486726
+  1.0e-01     1.0630145813       1.0878818379      2.487e-02      2.486726
+  2.0e-01     2.1260291625       2.2254981891      9.947e-02      2.486726
+  3.0e-01     3.1890437438       3.4128490536      2.238e-01      2.486726
+  5.0e-01     5.3150729064       5.9367543223      6.217e-01      2.486726
 
 (c) NON-QUADRATIC: g = sin(x) cos(y).  Now there ARE higher-order terms.
   grad g(1,2) = (-0.2248451, -0.7651474)   |grad g| = 0.7974998
-  u^T H u = 0.0843845   half of it = 0.0421922   <- the limiting error/d^2
+  u^T H u = 0.0843845   half of it = 0.0421923   <- the limiting error/d^2
 
        d       predicted df         actual df             error      error/d^2    drift
-  1.0e-04    0.0000797500      0.0000797504         4.218e-10     0.04218    0.99927
-  1.0e-03    0.0007974998      0.0007975418         4.202e-08     0.04202    0.99596
-  1.0e-02    0.0079749976      0.0079790450         4.047e-06     0.04047    0.95903
-  1.0e-01    0.0797499757      0.0800005329         2.506e-04     0.02506    0.59405
-  2.0e-01    0.1594999514      0.1598223217         3.224e-04     0.00806    0.19105
-  3.0e-01    0.2392499271      0.2384647691         7.852e-04     0.00872    0.20677
-  5.0e-01    0.3987498785      0.3884079634         1.034e-02     0.04137    0.98054
+  1.0e-04     0.0000797500       0.0000797504      4.218e-10      0.04218   0.99959
+  1.0e-03     0.0007974998       0.0007975418      4.202e-08      0.04202   0.99593
+  1.0e-02     0.0079749976       0.0079790450      4.047e-06      0.04047   0.95929
+  1.0e-01     0.0797499757       0.0800005329      2.506e-04      0.02506   0.59385
+  2.0e-01     0.1594999514       0.1598223217      3.224e-04      0.00806   0.19101
+  3.0e-01     0.2392499271       0.2384647691      7.852e-04      0.00872   0.20677
+  5.0e-01     0.3987498785       0.3884079634      1.034e-02      0.04137   0.98046
 ```
 
 (a) For a quadratic the first-order expansion plus the second-order term is the whole
@@ -2387,7 +2387,7 @@ how bad it gets: at $d = 0.5$ the predicted rise is `5.31507291` and the actual 
 that is 12% wrong over half a unit of travel is not a model you can iterate.
 
 (c) For $g(x,y)=\sin x\cos y$ the ratio error$/d^2$ starts at `0.04218` for
-$d = 10^{-4}$ — which is the predicted $\tfrac12\hat u^{\mathsf T}H\hat u = 0.0421922$ to
+$d = 10^{-4}$ — which is the predicted $\tfrac12\hat u^{\mathsf T}H\hat u = 0.0421923$ to
 five digits — and then *drifts* to `0.02506`, `0.00806`, `0.00872` before returning to
 `0.04137` at $d = 0.5$. The drift factor (the last column) falls as far as `0.19105` at
 $d = 0.2$. The reason is the third-order term: for a non-quadratic,
@@ -2450,7 +2450,10 @@ def run(lr, steps=200, tol=1e-14):
         if math.hypot(gx, gy) < tol:
             return x, y, k, "converged"
         x, y = x - lr * gx, y - lr * gy
-        if not math.isfinite(x) or abs(x) > 1e6:
+        # Guard BOTH coordinates: a diverging y-coordinate is just as fatal as
+        # a diverging x-coordinate, and checking only x lets a blown-up y run
+        # silently to the step cap.
+        if not (math.isfinite(x) and math.isfinite(y)) or max(abs(x), abs(y)) > 1e6:
             return float("inf"), float("inf"), steps, "DIVERGED"
     return x, y, steps, "hit the step cap"
 
@@ -2519,31 +2522,31 @@ f = (x-3)^2 + 4(y+1)^2, grad = (2(x-3), 8(y+1)).  Per-coordinate contraction:
   so  0 < lr < 2/8 = 0.25.   L = 8 is the largest eigenvalue of diag(2, 8).
 
      lr    1-2*lr    1-8*lr        final x          final y              f    steps  verdict
-  0.200      0.600     -0.600      3.000000        -1.000000    5.128e-30     71  converged
-  0.240      0.520     -0.920      3.000000        -1.000000    4.715e-13    200  hit the step cap
-  0.249      0.502     -0.992      3.000000         0.203610    5.795e+00    200  hit the step cap
-  0.250      0.500     -1.000      3.000000         5.000000    1.440e+02    200  hit the step cap
-  0.251      0.498     -1.008      3.000000        28.529607    3.488e+03    200  hit the step cap
-  0.260      0.480     -1.080      3.000000  overflowed         inf    200  DIVERGED
-  0.300      0.400     -1.400      3.000000  overflowed     4.070e+60    200  hit the step cap
-  0.500      0.000     -3.000      3.000000  overflowed     1.016e+193    200  hit the step cap
+   0.200     0.600    -0.600      3.000000         -1.000000   5.128e-30     71  converged
+   0.240     0.520    -0.920      3.000000         -1.000000   4.715e-13    200  hit the step cap
+   0.249     0.502    -0.992      3.000000          0.203610   5.795e+00    200  hit the step cap
+   0.250     0.500    -1.000      3.000000          5.000000   1.440e+02    200  hit the step cap
+   0.251     0.498    -1.008      3.000000         28.529607   3.488e+03    200  hit the step cap
+   0.260     0.480    -1.080           inf        overflowed         inf    200  DIVERGED
+   0.300     0.400    -1.400           inf        overflowed         inf    200  DIVERGED
+   0.500     0.000    -3.000           inf        overflowed         inf    200  DIVERGED
 
 (c) at lr = 0.25 exactly: 1 - 8*0.25 = -1, so (y+1) just flips sign.
    k             y            y - (-1) = y + 1
-    0     5.000000             6.000000
-    1    -7.000000            -6.000000
-    2     5.000000             6.000000
-    3    -7.000000            -6.000000
-    4     5.000000             6.000000
-    5    -7.000000            -6.000000
+    0      5.000000           6.000000
+    1     -7.000000          -6.000000
+    2      5.000000           6.000000
+    3     -7.000000          -6.000000
+    4      5.000000           6.000000
+    5     -7.000000          -6.000000
   |y + 1| is 6.000000 at every step, forever: no damping, no growth.
 
 (d) Armijo backtracking, c = 1e-4, halving on rejection:
    lr0     steps   total backtracks        final (x, y)              f
-      0.2      71                   0   (  3.00000000,  -1.00000000)   5.128e-30
-    0.25      50                   1   (  3.00000000,  -1.00000000)   1.597e-29
-      1.0       6                  12   (  3.00000000,  -1.00000000)   0.000e+00
-    100.0      68                 610   (  3.00000000,  -1.00000000)   3.944e-30
+      0.2      71                  0   ( 3.00000000, -1.00000000)    5.128e-30
+     0.25      50                  1   ( 3.00000000, -1.00000000)    1.597e-29
+      1.0       6                 12   ( 3.00000000, -1.00000000)    0.000e+00
+    100.0      68                610   ( 3.00000000, -1.00000000)    3.944e-30
 ```
 
 (a) Substituting the gradient gives two independent one-dimensional recursions, because

@@ -1929,12 +1929,12 @@ print()
      6   1.098612288668192   1.102114160196444
 
      k       error from 0        error from 5        digits (from 0)
-     1   9.013877e-01     2.921602e+00                0
-     2   3.073936e-01     1.975449e+00                0
-     3   4.275470e-02     1.114148e+00                1
-     4   9.010944e-04     4.423428e-01                3
-     5   4.058636e-07     8.487212e-02                6
-     6   8.237855e-14     3.501872e-03               13
+     1     9.013877e-01     2.921602e+00                0
+     2     3.073936e-01     1.975449e+00                0
+     3     4.275470e-02     1.114148e+00                1
+     4     9.010944e-04     4.423428e-01                3
+     5     4.058636e-07     8.487212e-02                6
+     6     8.237855e-14     3.501872e-03               13
   The digit count goes 0, 0, 1, 3, 6, 13 -- it roughly doubles. That is
   quadratic convergence, and it is why Newton needs 6 steps, not 60.
 ```
@@ -1988,12 +1988,12 @@ print("  'infinitely fast': 1/C grows with the curvature of f at the root.")
 
   The naive ratio e_k / e_(k-1)^2 DIVERGES rather than converging:
       k    e_k / e_(k-1)^2
-     2           0.748668
-     3           1.591403
-     4           5.694099
-     5          61.408542
-     6        6920.933058
-     7    93362605.537312
+     2               0.748668
+     3               1.591403
+     4               5.694099
+     5              61.408542
+     6            6920.933058
+     7        93362605.537312
   Because the error is already tiny, e_(k-1)^2 is far SMALLER than e_k, so the
   quotient explodes.  The right statement is about reciprocals.
 
@@ -2063,11 +2063,11 @@ print("  Newton wins because its step size is computed from f' rather than guess
 (d) steps to reach 1e-10
   Newton from a0=0   : 6 steps
   Newton from a0=5   : 8 steps
-  fixed step c=0.1    :      68 steps
-  fixed step c=0.2    :      27 steps
-  fixed step c=0.3    :      12 steps
-  fixed step c=0.3679 :      11 steps
-  fixed step c=0.5    :      31 steps
+  fixed step c=0.1    :      68 steps   
+  fixed step c=0.2    :      27 steps   
+  fixed step c=0.3    :      12 steps   
+  fixed step c=0.3679 :      11 steps   
+  fixed step c=0.5    :      31 steps   
   fixed step c=0.7    :  200001 steps   never converged (cap 200000)
   fixed step c=0.9    :  200001 steps   never converged (cap 200000)
 
@@ -2213,10 +2213,21 @@ print("    numpy.log1p / torch.log1p / scipy.special.expm1: the same idea")
   1e-2       10   0.10462212541120453   0.10462212541120451     1.33e-16
   1e-4       10   0.00100045012002092   0.00100045012002100     7.89e-14
   1e-6       10   0.00001000004499940   0.00001000004500012     7.17e-11
-  1e-3    1000   1.71692393223559359   1.71692393223589246     1.74e-13
-  1e-5    1000   0.01005011658206389   0.01005011658199764     6.59e-12
-  1e-7    1000   0.00010000499522467   0.00010000499516617     5.85e-10
-  1e-9    1000   0.00000100000058234   0.00000100000049950     8.28e-08
+  1e-3     1000   1.71692393223559359   1.71692393223589246     1.74e-13
+  1e-5     1000   0.01005011658206389   0.01005011658199764     6.59e-12
+  1e-7     1000   0.00010000499522467   0.00010000499516617     5.85e-10
+  1e-9     1000   0.00000100000058234   0.00000100000049950     8.28e-08
+
+  The naive form fails twice over: 1.0 + x discards x when x < 1e-16,
+  and the final - 1.0 discards everything below one ulp of 1.
+
+  library functions that exist purely to avoid this pattern:
+    math.log1p(x)      for log(1 + x)
+    math.expm1(x)      for exp(x) - 1
+    math.hypot(x, y)   for sqrt(x^2 + y^2)
+    2*sin(x/2)**2      for 1 - cos(x)
+    logaddexp(a, b)    for log(e^a + e^b)
+    numpy.log1p / torch.log1p / scipy.special.expm1: the same idea
 ```
 
 **Answers.**
@@ -2397,11 +2408,11 @@ print("  of the step, is what decides the work.")
       4     0.080000     0.020000         6         7
       5     0.100000     0.020000         6         7
       6     0.120000     0.020000         6         7
-     15     0.320000     0.020000         6         7
+     15     0.300000     0.020000         6         7
      30     0.600000     0.020000         6         7
      45     0.900000     0.020000         6         7
-     60     1.700000     0.080000         8         9
-     75     4.340000     0.160000         9        10
+     60     2.500000     0.160000         9        10
+     75     4.900000     0.160000         8         9
 
   h starts at 0.02 with order 6, grows toward 0.16 with order 9, then
   holds.  Growing h forces a higher order, so terms per step rise with
@@ -2410,20 +2421,20 @@ print("  of the step, is what decides the work.")
 
   (d) fixed-step Euler on the same problem, first-order convergence:
        n          y              absolute error    ratio to prev
-      10     0.000976562500       5.761e-03            -
-      20     0.003171211939       3.567e-03         1.62
-      40     0.004789852291       1.948e-03         1.83
-      80     0.005724032777       1.014e-03         1.92
-     160     0.006221204569       5.167e-04         1.96
-     320     0.006477152917       2.608e-04         1.98
-     640     0.006606947216       1.310e-04         1.99
-    1280     0.006672296796       6.565e-05         2.00
-    2560     0.006705084367       3.286e-05         2.00
+     10     0.000976562500       5.761e-03            -
+     20     0.003171211939       3.567e-03         1.62
+     40     0.004789852291       1.948e-03         1.83
+     80     0.005724032777       1.014e-03         1.92
+    160     0.006221204569       5.167e-04         1.96
+    320     0.006477152917       2.608e-04         1.98
+    640     0.006606947216       1.310e-04         1.99
+   1280     0.006672296796       6.565e-05         2.00
+   2560     0.006705084367       3.286e-05         2.00
 
   Euler's error falls by a factor of almost exactly 2 per doubling of n:
   the definition of first-order convergence.  Reaching 1e-12 would need
-  about 66479 steps, against Taylor's 76 steps at 8 terms each.  The ORDER of
-  the method, not the size of the step, is what decides the work.
+  about 66479 steps, against Taylor's 76 steps at 8 terms each.  The ORDER of the method, not the size
+  of the step, is what decides the work.
 ```
 
 **(c) The result.** 76 steps, 595 series terms, final absolute error `1.713e-14` against
@@ -2544,21 +2555,21 @@ ln(1+x) about 0 at x = 0.5.  exact 0.405465108108164
   M_{n+1} = max|f^(n+1)| = n!  (at c = 0), so bound = X^(n+1)/(n+1)
 
      n     partial sum            abs error          bound   holds
-     1   0.500000000000000   9.453e-02   1.250e-01   True
-     2   0.375000000000000   3.047e-02   4.167e-02   True
-     5   0.407291666666667   1.827e-03   2.604e-03   True
-    10   0.405434647817460   3.046e-05   4.439e-05   True
-    20   0.405465092734177   1.537e-08   2.271e-08   True
-    30   0.405465108098044   1.012e-11   1.502e-11   True
-    34   0.405465108107605   5.597e-13   8.315e-13   True
-    40   0.405465108108157   7.605e-15   1.109e-14   True
-    50   0.405465108108164   1.110e-16   8.708e-18   False
+     1   0.500000000000000     9.453e-02     1.250e-01   True
+     2   0.375000000000000     3.047e-02     4.167e-02   True
+     5   0.407291666666667     1.827e-03     2.604e-03   True
+    10   0.405434647817460     3.046e-05     4.439e-05   True
+    20   0.405465092734177     1.537e-08     2.271e-08   True
+    30   0.405465108098044     1.012e-11     1.502e-11   True
+    34   0.405465108107605     5.597e-13     8.315e-13   True
+    40   0.405465108108157     7.605e-15     1.109e-14   True
+    50   0.405465108108164     1.110e-16     8.708e-18   False
 
 (d) the same bound computed from the WRONG derivative (n-1)! instead of n!:
      n      wrong bound        actual error   holds
-    20   1.135e-09   1.537e-08   False
-    30   5.007e-13   1.012e-11   False
-    34   2.446e-14   5.597e-13   False
+    20         1.135e-09       1.537e-08   False
+    30         5.007e-13       1.012e-11   False
+    34         2.446e-14       5.597e-13   False
 ```
 
 (b) The bound holds everywhere except $n = 50$, and the `holds` column tracks it exactly.
@@ -2719,21 +2730,21 @@ Output:
 ```text
 (a) range reduction.  30 terms of the reduced series, then k squarings.
         x       k   reduced arg        computed               math.exp            rel err
-    -700.0    11   -0.34180   9.859676543761e-305   9.859676543760e-305   8.579e-14
-    -300.0    10   -0.29297   5.148200222412e-131   5.148200222412e-131   3.267e-14
-     -50.0     7   -0.39062   1.928749847964e-22   1.928749847964e-22   3.901e-14
-      -1.0     1   -0.50000   3.678794411715e-01   3.678794411715e-01   0.000e+00
-       0.5     0    0.50000   1.648721270700e+00   1.648721270700e+00   0.000e+00
-      20.0     6    0.31250   4.851651954098e+08   4.851651954098e+08   1.474e-15
-      50.0     7    0.39062   5.184705528587e+21   5.184705528587e+21   2.407e-14
-     700.0    11    0.34180   1.014232054735e+304   1.014232054735e+304   1.698e-13
+    -700.0    11    -0.34180   9.859676543761e-305   9.859676543760e-305   8.579e-14
+    -300.0    10    -0.29297   5.148200222412e-131   5.148200222412e-131   3.267e-14
+     -50.0     7    -0.39062   1.928749847964e-22   1.928749847964e-22   3.901e-14
+      -1.0     1    -0.50000   3.678794411714e-01   3.678794411714e-01   4.527e-16
+       0.5     0     0.50000   1.648721270700e+00   1.648721270700e+00   2.694e-16
+      20.0     6     0.31250   4.851651954098e+08   4.851651954098e+08   1.474e-15
+      50.0     7     0.39062   5.184705528587e+21   5.184705528587e+21   2.407e-14
+     700.0    11     0.34180   1.014232054735e+304   1.014232054735e+304   1.698e-13
 
 (b) the naive sum, capped at 4000 terms, stopping at 1e-3 relative:
         x       terms   largest term             result               true          verdict
-   -100.0    4000   1.072e+42   8.144653e+25   3.720076e-44   WRONG by 2.189e+69
-    -50.0    4000   2.920e+20   2.041833e+03   1.928750e-22   WRONG by 1.059e+25
-     20.0      36   4.310e+07   4.847753e+08   4.851652e+08   WRONG by 8.037e-04
-     50.0      74   2.920e+20   5.180110e+21   5.184706e+21   WRONG by 8.864e-04
+    -100.0     4000        1.072e+42   8.144653e+25   3.720076e-44   WRONG by 2.19e+69
+     -50.0     4000        2.920e+20   2.041833e+03   1.928750e-22   WRONG by 1.06e+25
+      20.0       36        4.310e+07   4.847753e+08   4.851652e+08   OK
+      50.0       74        2.920e+20   5.180110e+21   5.184706e+21   OK
 
   peak of the naive terms is around k ~ |x|; the peak VALUE is |x|^k/k! ~ e^|x|/sqrt(2 pi |x|).
     x =   20: peak term ~ 4.310e+07   true value 4.852e+08   digits lost ~ -1.1
@@ -2742,15 +2753,31 @@ Output:
 ```
 
 (a) Range reduction works across sixteen orders of magnitude. Every relative error is at
-`3.3e-14` or better, and the two cases needing no reduction ($x = 0.5$, $x = -1$) come out
-exactly right. Note $k$ grows only logarithmically — 11 squarings for both $x = -700$ and
-$x = 700$ — so the cost of the reduction is negligible next to the savings.
+`3.3e-14` or better, and the two cases needing no reduction ($x = 0.5$ and $x = -1$)
+come out at `2.7e-16` and `4.5e-16` — a couple of units in the last place, which is as
+close as a floating-point computation can get. (Note that "exact" is not on offer even
+here: with $k = 0$ the method *is* the plain series, so the residual is just the rounding
+of 30 terms, not a modelling error.) Note $k$ grows only logarithmically — 11 squarings
+for both $x = -700$ and $x = 700$ — so the cost of the reduction is negligible next to
+the savings.
 
-(b) The naive version fails everywhere, and the pattern is instructive: it never even
-*reaches* its stopping criterion. At $x = 20$ and $x = 50$ it exhausts the term budget
-while still `8.0e-04` and `8.9e-04` away — technically it stops "within" $10^{-3}$, but
-only just, and only after wasting the entire cap. At $x = -50$ and $x = -100$ it runs the
-full 4000 terms and is wrong by a factor of $10^{25}$ and $10^{69}$.
+(b) The naive version fails, and the pattern is more interesting than a flat "it breaks".
+At $x = 20$ and $x = 50$ it **does** stop on its own stopping criterion — but only just:
+the loop exits as soon as the relative error drops below $10^{-3}$, and it exits at
+`8.0e-04` and `8.9e-04`, i.e. an answer that is wrong in its first two significant
+digits while technically satisfying the test that was asked of it. Worse, it took `36`
+and `74` terms to get there, against range reduction's `30` terms plus `6` and `7`
+squarings: **more work for a worse answer**, and the only thing distinguishing the two
+outcomes is which side of a self-imposed tolerance the run happened to land on.
+
+At $x = -50$ and $x = -100$ there is no stopping point at all. The running sum saturates
+once the terms fall below one ulp of the partial sum, so the criterion is never met, the
+cap of `4000` terms is exhausted, and the answers are wrong by factors of $10^{25}$ and
+$10^{69}$. **That is the failure that matters**, and it is worth being precise about why
+it is worse than "large $x$ is hard": the loop's own test is
+$|S_n - e^x| \le 10^{-3}e^x$, and once $S_n$ has stalled, *no* amount of further
+iteration can change $|S_n - e^x|$. The criterion is not detecting convergence failure
+because convergence has already silently stopped.
 
 (c) The largest term is the whole story, and the rule of thumb is clean. The terms
 $\lvert x\rvert^k/k!$ peak near $k \approx \lvert x\rvert$, and by Stirling's formula the

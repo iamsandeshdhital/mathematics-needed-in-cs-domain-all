@@ -1877,9 +1877,6 @@ every production solver runs a feasibility check and iterates when it fails.
 
 </details>
 
-
-</details>
-
 **[ ] Exercise 3 — ** Solve three budget-allocation problems with the same budget
 but different feasibility shapes, and show how the KKT conditions change:
 (a) maximise xy with x + y ≤ 10; (b) the same with x ≥ 3 added; (c) maximise

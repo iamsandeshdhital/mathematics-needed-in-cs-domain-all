@@ -395,29 +395,97 @@ append and `499` resizes. The total is $\Theta(n^2)$: **quadratic work for $n$
 appends, from an interface that is character-for-character identical.** The
 amortised cost is $\Theta(n)$, not $\Theta(1)$.
 
-### Step 6 — the worst single append, and why it coexists
+### Step 7 — union-find, and what $\alpha(n)$ actually buys
 
-Fill the array to capacity and then append once:
+The worked example for union-find is the ledger of *parent-pointer hops*, which
+is the only thing that costs anything. At $n = 4{,}000$ with `12,000` operations
+(one `union` followed by two `find`s, from a fixed deterministic sequence), the
+four implementations are:
 
-| capacity before | copies in that one append |
-| --- | --- |
-| 64 | 64 |
-| 256 | 256 |
-| 1024 | 1024 |
-| 4096 | 4096 |
-| 16384 | 16384 |
+| rank | compression | total hops | hops per op | max depth |
+| --- | --- | --- | --- | --- |
+| no | no | `774,496` | `64.5413` | 433 |
+| yes | no | `30,487` | `2.5406` | 5 |
+| no | yes | `49,109` | `4.0924` | 6 |
+| yes | yes | `28,276` | `2.3563` | 3 |
 
-Each row moves the whole live array in one operation, and it grows with $n$. No
-rearrangement of the analysis changes this: the data has to exist somewhere, and
-relocating $n$ elements is $\Theta(n)$. Meanwhile the amortised column of the same
-run reads `0.9375, 0.9688, 0.9844, 0.9922, 0.9961` at $n = 64, 128, 256, 512,
-1024$ — flat, converging to 1.
+Two things fall straight out. First, the `64.5413` row is the quadratic one: with
+neither heuristic the forests degenerate into chains, the total is $\Theta(n^2)$,
+and the ratio to the combined row is already $27\times$ at $n = 4{,}000$ — and it
+grows with $n$. Second, neither single heuristic reaches the combined bound, so
+they are not interchangeable: the theory says each alone gives amortised
+$O(\log N)$, and the measurement agrees in spirit (the compression-only column
+climbs from `3.6050` to `4.9703` as $n$ goes from 1,000 to 100,000 while the
+combined column does not move).
 
-**Both are true, simultaneously, of the same array.** The amortised cost is a
-statement about the total; the worst case is a statement about the peak. The
-conflict people expect does not exist, because they are statements about
-different things — and the run-time consequence is that the peak is what a
-latency budget is made of.
+**The amortised constant.** Now scale $n$ and watch the combined row:
+
+| $n$ | operations | total hops | hops per op | max depth | depth histogram |
+| --- | --- | --- | --- | --- | --- |
+| 1,000 | 3,000 | `7,084` | `2.3613` | 3 | `0:167, 1:665, 2:156, 3:12` |
+| 10,000 | 30,000 | `70,567` | `2.3522` | 3 | `0:1606, 1:6843, 2:1505, 3:46` |
+| 100,000 | 300,000 | `708,317` | `2.3611` | 3 | `0:16260, 1:68830, 2:14468, 3:442` |
+| 300,000 | 900,000 | `2,120,637` | `2.3563` | 3 | `0:48523, 1:206938, 2:43118, 3:1421` |
+
+$n$ grew by a factor of 300 and the amortised figure moved by less than `0.01`.
+That flat column **is** the $\alpha(n)$ claim as an empirical object: the total is
+$\Theta(n \cdot \alpha(N))$ and $\alpha$ grows too slowly to see. The lower
+bound is the trivial one — each `find` costs at least one hop, and each `union`
+costs two — so the combined figure cannot go below about 2, and it sits at 2.36.
+
+**Step 7b — the peak, which $\alpha$ does not bound.** Build a perfectly
+balanced forest by hand and find its deepest leaf:
+
+| $n$ | $\log_2 n$ | max depth | that one `find` | `find` it again |
+| --- | --- | --- | --- | --- |
+| 16 | 4 | 4 | 8 | 2 |
+| 256 | 8 | 8 | 16 | 2 |
+| 4,096 | 12 | 12 | 24 | 2 |
+| 65,536 | 16 | 16 | 32 | 2 |
+
+The first `find` at a cold leaf costs exactly $2\log_2 n$ hops and the second
+costs 2. So at $n = 65{,}536$ there is a single call costing `32` hops — eight
+times the $\alpha$ bound of 4, and growing as $\log_2 n$ while $\alpha$ does not
+move. This is Step 6 of the array all over again: **the amortised bound is a
+statement about the total and the peak is a statement about one call, and no
+amortisation relates them.** It is also why the honest answer to "how deep is the
+tree" is a measurement (`3`, on this workload, at $n = 300{,}000$) and never
+$\alpha(n)$.
+
+### Step 8 — the sliding window, counted
+
+$n = 100{,}000$ elements, $K = 500$, so there are $n - K + 1 = 99{,}501$ windows.
+The cost unit is one **element touch** — one read of one element into the
+statistic.
+
+**Naive.** Every window is summed from scratch, so every element of every window
+is read, and the total is exactly
+
+$$\underbrace{(n - K + 1) \times K}_{\text{one read per element per window}}
+\;=\; 99{,}501 \times 500 \;=\; 49{,}750{,}500 	ext{ touches},$$
+
+which is `500.00` per window.
+
+**Rolling.** The first window costs $K$ reads. Each shift costs exactly 2 — one
+subtraction for the element leaving, one addition for the element entering — so
+
+$$K + 2\,(n - K) \;=\; 500 + 199{,}000 \;=\; 199{,}500 	ext{ touches},$$
+
+which is `2.0050` per window. The two methods agree on the first and last window
+sums (`2484655` and `2475090`), so the saving is not bought with wrong answers.
+**Step 8b — the maximum, where subtract-and-add is unavailable.** A max cannot
+be un-added, so the fix is a monotonic deque, and the accounting is: every index
+is pushed once and popped at most once. Measured over the same array with the same
+$K = 500`: `100,000` pushes and `99,997` pops, `199,997` deque operations,
+`2.0000` per element, and a longest deque of `19`. The bound is $2n$ and it holds
+**for any window size at all** — change $K$ and the total does not grow.
+
+Note what the two steps have in common, since it is the whole lesson. In Step 7 the
+rare event is a deep tree and the bank is the path compression; in Step 8 there
+is no rare event at all and the bank is the element that has already been added
+and must be subtracted. **Amortisation is not a technique for tolerating spikes.
+It is a technique for noticing that the same work is being done twice.**
+
 
 ---
 
@@ -1086,217 +1154,999 @@ what pays for the expensive operations.
 
 ### Union-find and the inverse-Ackermann bound
 
-Union-find — also called disjoint-set union, or DSU — is the most important
-practical consumer of amortised analysis, and the only standard data structure
-whose amortised cost is a function that grows so slowly it is effectively a
-constant.
+Union-find — also called disjoint-set union, or DSU — is the single most
+important practical consumer of amortised analysis in computer science, and the
+only standard data structure whose amortised cost is a *named function*:
+$\alpha$.
 
-The interface is tiny. A universe of `N` labelled elements starts as `N` separate
-sets. You may `union(a, b)`, which merges the two sets containing `a` and `b`,
-and `find(x)`, which returns the representative of the set containing `x`. Two
-elements are in the same set exactly when their representatives are equal.
+**The interface.** A universe of `N` labelled elements starts as `N` separate
+sets. You may `union(a, b)`, which merges the two sets containing `a` and `b`, and
+`find(x)`, which returns the representative of the set containing `x`. Two
+elements are in the same set exactly when their representatives agree.
+`MAKE-SET` is implicit — one element per slot of `parent`.
 
-The implementation is a forest of rooted trees. `parent[x]` is `x`'s parent, a
-root is a node whose parent is itself, and `find` walks up to the root. The cost
-of `find` is the depth of the node it starts from, so the whole game is keeping
-trees shallow.
+**The representation.** A forest of rooted trees. `parent[x]` is `x`'s parent, a
+root is a node whose parent is itself, and `find` walks up to the root. So the
+cost of a `find` is the number of pointers it walks, and the entire game is
+keeping the trees shallow — and *flat*, which is a different property from
+shallow, and is the one compression buys.
 
-Merging two trees means attaching one root under the other, and the naive choice
-— always hang the smaller-indexed tree under the larger, say — lets an adversary
-build one long chain. Doing that for `N` elements gives a tree of depth `N - 1`,
-and then a single `find(0)` walks `N - 1` pointers.
+**Why two heuristics are needed.** Merging means attaching one root under the
+other, and the naive choice — always hang the lower-indexed root under the
+higher, say — lets an adversary build a single chain of depth `N - 1`. Two
+heuristics, used *together*, prevent it:
 
-Two heuristics, used together, prevent it.
+- **Union by rank.** Attach the shallower tree under the deeper one, promoting a
+  root's rank only when two trees of equal rank merge. Since merging two trees of
+  rank `r` yields a tree of rank `r + 1`, a rank of `r` requires at least $2^r$
+  elements, so depth is bounded by $\lfloor \log_2 N \rfloor$. That alone gives
+  amortised $O(\log N)$ — already good, and still logarithmic.
+- **Full path compression.** Every time a `find` walks past a node, rewrite that
+  node's parent to point straight at the root it reached. This bounds no
+  individual call, but it flattens the tree so later calls are cheap.
 
-**Union by rank.** Attach the shallower tree under the deeper one, and only
-promote a node's rank when trees of equal rank merge. Because merging two trees
-of rank `r` yields a tree of rank `r + 1`, rank `r` requires at least `2^r`
-elements, so depth is bounded by `⌊log₂ N⌋`. That alone caps `find` at `O(log N)`
-amortised — already good, but still logarithmic.
+Neither alone is enough, and they attack different failure modes, which is why
+the standard advice is "add path compression" rather than "pick one".
 
-**Path compression.** Every time `find` walks past a node, make that node point
-directly at the root it reached. This does not lower the worst case for a single
-call, but it flattens the tree so that later calls are cheaper, and the two
-heuristics together do far better than either alone.
+**The bound.** With both, *any* sequence of `m` operations on `N` elements costs
+at most $O(m \cdot \alpha(N))$ pointer traversals, where $\alpha$ is the
+**inverse Ackermann function**:
 
-The combined bound is $m \cdot \alpha(N)$, where `m` is the number of operations
-and `α` is the **inverse Ackermann function** — the function that grows so slowly
-that `α(N) ≤ 4` for every `N` that fits in 64 bits. Formally, `α` is the smallest
-`k` such that a tower of `k` threes, `$3^{3^{\cdot^{\cdot^3}}}$` with `k`
-threes, is at least `N`. The bound is not something to compute; it is a
-guarantee that the constant is never more than about 4.
+$$A(0) = 1, \qquad A(k+1) = 2^{A(k)}, \qquad
+\alpha(n) = \min\{\, k \ge 0 : A(k) \ge n \,\}.$$
 
-What matters practically is the contrast with everything else in this lesson.
-Growing a dynamic array is amortised `O(1)`, and so is a hash-table insert.
-Union-find is `O(α(N))` per operation, which is *better* than `O(log N)` and
-only an unmeasurable hair above `O(1)`. For `N = 200000`, `log₂ N` is 17 while
-`α(N)` is at most 4 — and in practice the measured depth is 1.
+Note carefully that this is a **tower of twos**. So $A(1) = 2$, $A(2) = 4$,
+$A(3) = 16$, $A(4) = 65{,}536$, and $A(5) = 2^{65536}$ — already far larger than
+the number of atoms in the observable universe. Hence $\alpha(n) \le 4$ for
+every $n \le 65{,}536$, and $\alpha(n) \le 5$ for every $n$ that exists, so for
+any input that fits in memory the honest summary is "at most 4 or 5, and no
+measurement can tell the difference". A tower of *threes* also defines a
+constantly-bounded function, but it is not $\alpha$, and quoting it would be
+quoting the wrong number.
 
-Note the shape of the argument, because it recurs. Neither heuristic gives a good
-worst case for a single operation: union by rank alone gives `O(log N)` and path
-compression alone still permits one expensive call. The *amortised* bound is what
-becomes tiny, and it only becomes tiny because the two heuristics attack
-different failure modes. This is why "add path compression" is the standard
-advice rather than "pick one".
+**What the code measures — and what it cannot.** It cannot measure $\alpha$,
+and the lesson will not pretend otherwise. $\alpha$ is a bound, not a figure you
+can print, so the honest measurement is a **flat column**. At $n = 1{,}000$ the
+combined implementation costs `2.3613` parent hops per operation; at
+$n = 300{,}000$ it costs `2.3563`. $n$ grew by a factor of 300 and the figure did
+not move by `0.01`. *That* is the $\alpha$ claim, observed. The depth histogram
+says the same thing in a second way: at $n = 300{,}000$, `206,938` elements sit
+one hop from a root, `43,118` sit two, `1,421` sit three, and **not one is
+deeper**.
 
 ```python
-N = 200_000
-
-# No heuristics: every new node becomes the parent of the whole tree.
-# Analytic depth, because walking a chain of 200000 nodes to measure it would
-# itself take O(N^2) -- which is the cost the heuristics exist to avoid.
-print(f"no heuristics      max depth = {N - 1}  (one chain of {N} nodes)")
-print(f"                    find(0) would need {N - 1} pointer hops")
-
-# Rank + path compression, same merge order.
-parent = list(range(N))
-rank = [0] * N
+def lcg(seed):
+    """A tiny deterministic generator, so every figure in this lesson is
+    reproducible on every machine and every Python version.  `random.seed()`
+    pins the Mersenne Twister but not the stream of `randrange`, and a lesson
+    whose numbers depend on that is a lesson that rots."""
+    x = seed
+    while True:
+        x = (1103515245 * x + 12345) % (1 << 31)
+        yield x >> 5
 
 
-def find(x):
-    root = x
-    while parent[root] != root:
-        root = parent[root]
-    while parent[x] != root:          # path compression: point at the root
-        parent[x], x = root, parent[x]
-    return root
+class DSU:
+    """Disjoint-set union, with each of the two standard optimisations behind a
+    flag so the cost of each can be measured separately.
+
+    `hops` counts PARENT-POINTER TRAVERSALS, which is the real cost.  Counting
+    rather than timing is the lesson's standing advice."""
+
+    def __init__(self, n, rank=True, compress=True):
+        self.parent = list(range(n))
+        self.rank = [0] * n
+        self.use_rank = rank
+        self.use_compress = compress
+        self.hops = 0
+
+    def find(self, x):
+        """Follow parent pointers to the root, optionally rewriting the whole
+        path to point at the root as we go (FULL PATH COMPRESSION)."""
+        parent = self.parent
+        hops = self.hops + 1
+        r = x
+        while parent[r] != r:
+            r = parent[r]
+            hops += 1
+        if self.use_compress:
+            while parent[x] != r:
+                nxt = parent[x]
+                parent[x] = r
+                x = nxt
+                hops += 1
+        self.hops = hops
+        return r
+
+    def union(self, a, b):
+        """UNION BY RANK: attach the shallower root under the deeper one, so a
+        set of size m never gets a root of depth worse than log2(m)."""
+        ra, rb = self.find(a), self.find(b)
+        if ra == rb:
+            return False
+        if self.use_rank:
+            if self.rank[ra] < self.rank[rb]:
+                ra, rb = rb, ra
+            self.parent[rb] = ra
+            if self.rank[ra] == self.rank[rb]:
+                self.rank[ra] += 1
+        else:
+            self.parent[rb] = ra
+        return True
+
+    def depths(self):
+        parent = self.parent
+        counts = {}
+        for i in range(len(parent)):
+            d = 0
+            while parent[i] != i:
+                i = parent[i]
+                d += 1
+            counts[d] = counts.get(d, 0) + 1
+        return counts
+
+    def histogram(self, counts):
+        return ", ".join(f"{d}:{counts[d]}" for d in sorted(counts))
 
 
-def union(a, b):
-    ra, rb = find(a), find(b)
-    if ra == rb:
-        return False
-    if rank[ra] < rank[rb]:
-        ra, rb = rb, ra                 # shallower tree hangs under deeper
-    parent[rb] = ra
-    if rank[ra] == rank[rb]:
-        rank[ra] += 1
-    return True
+def workload(n, seed, finds_per_op=2):
+    """n unions, each followed by `finds_per_op` finds -- a realistic mix."""
+    g = lcg(seed)
+    ops = []
+    add = ops.append
+    for _ in range(n):
+        add((0, next(g) % n, next(g) % n))
+        for _ in range(finds_per_op):
+            add((1, next(g) % n, 0))
+    return ops
 
 
-for i in range(1, N):
-    union(0, i)
+_CACHE = {}
 
-sample = range(0, N, N // 1000)
-for i in range(N):
-    find(i)                            # one compression pass over everything
-depths = []
-for i in sample:
-    d = 0
-    x = i
-    while parent[x] != x:
-        x = parent[x]
-        d += 1
-    depths.append(d)
 
-print(f"rank + compress    max sampled depth = {max(depths)}   "
-      f"components = {len({find(i) for i in range(N)})}")
-print(f"log2 N             = {N.bit_length() - 1}")
-print(f"alpha(N) <= 4 for any N with <= 64 bits; N needs {N.bit_length()} bits")
+def run(n, seed, rank, compress):
+    """Reuse one workload per n, so every variant sees the identical sequence."""
+    if (n, seed) not in _CACHE:
+        _CACHE[(n, seed)] = workload(n, seed)
+    ops = _CACHE[(n, seed)]
+    d = DSU(n, rank=rank, compress=compress)
+    find, union = d.find, d.union
+    for kind, a, b in ops:
+        union(a, b) if kind == 0 else find(a)
+    return d, ops
+
+
+print("=== Union-find: the cost of each optimisation, measured separately ===")
+print("  MAKE-SET is implicit (one element per parent slot).  FIND follows parent")
+print("  pointers to the root; UNION joins two sets.  Two optimisations, each")
+print("  behind a flag: PATH COMPRESSION rewrites the path a find walks, and")
+print("  UNION BY RANK attaches the shallower root under the deeper one.")
+print("  The cost unit is one parent-pointer traversal.")
+print()
+print("     n     ops   rank  compress   parent hops   hops/op   max depth")
+for n in (4000,):
+    for rank, comp in ((False, False), (True, False), (False, True), (True, True)):
+        d, ops = run(n, 20260902, rank, comp)
+        print(f"  {n:>5}  {len(ops):>7}   {str(rank):>5}  {str(comp):>9}   "
+              f"{d.hops:>12,}   {d.hops / len(ops):>7.4f}   {max(d.depths()):>9}")
+print("  With NEITHER optimisation the trees degenerate into long chains and the")
+print("  total is quadratic in n.  At n = 4,000 the hops/op column reads 64.5413")
+print("  with nothing and 2.3563 with both -- 27x -- and it is the nothing column")
+print("  that grows with n.  Either optimisation alone buys a logarithmic bound;")
+print("  together they buy alpha(n).")
+print()
+
+print("=== Scaling: the combined version is FLAT, and that IS the alpha(n) claim ===")
+print("     n       ops   parent hops   hops/op   max depth   depth histogram")
+for n in (1000, 10_000, 100_000, 300_000):
+    d, ops = run(n, 20260902, True, True)
+    c = d.depths()
+    print(f"  {n:>6,}   {len(ops):>8,}   {d.hops:>12,}   {d.hops / len(ops):>7.4f}"
+          f"   {max(c):>9}   {d.histogram(c)}")
+print("  n grows by a factor of 300 and hops/op moves by less than 0.01.  A")
+print("  logarithmic factor would show as a climbing column; it does not.  The")
+print("  trees stay shallow too: at n = 300,000, 1,421 of the 300,000 elements")
+print("  sit exactly 3 hops from a root and NOT ONE is deeper.  alpha(n) is the")
+print("  NAME of that flatness; the column is the measurement.")
+print()
+
+print("=== One ingredient alone is not enough ===")
+print("     n       ops   rank only: hops/op  depth   compress only: hops/op  depth")
+for n in (1000, 10_000, 100_000):
+    dr, ops = run(n, 20260902, True, False)
+    dc, _ = run(n, 20260902, False, True)
+    print(f"  {n:>6,}   {len(ops):>8,}   {dr.hops / len(ops):>18.4f}  "
+          f"{max(dr.depths()):>5}   {dc.hops / len(ops):>21.4f}  "
+          f"{max(dc.depths()):>5}")
+print("  Both are Theta(log n) amortised in theory, and neither reaches the")
+print("  combined bound -- the two optimisations are not interchangeable, and")
+print("  dropping either one costs you the whole point.  On this workload the")
+print("  compression-only column climbs from 3.6050 to 4.9703 while the combined")
+print("  column is flat, which is the log factor made visible.")
+print()
+
+print("=== The peak survives: the worst single find is still Theta(log n) ===")
+print("  Build a perfectly balanced forest by hand, then find its deepest leaf.")
+print("        n   log2 n   max depth   first find   second find")
+for k in (4, 8, 12, 16):
+    n = 1 << k
+    d = DSU(n)
+    s = 1
+    while s < n:
+        for j in range(0, n, 2 * s):
+            d.union(j, j + s)
+        s *= 2
+    deepest = max(d.depths())
+    before = d.hops
+    d.find(n - 1)
+    first = d.hops - before
+    before = d.hops
+    d.find(n - 1)
+    second = d.hops - before
+    print(f"  {n:>7,}   {k:>6}   {deepest:>9}   {first:>10}   {second:>11}")
+print("  The first find at the deepest leaf costs 2*log2(n) hops; the second costs")
+print("  2.  Exactly the dynamic array's shape: the amortised bound is about the")
+print("  total, the first call down a cold path is Theta(log n), and no amount of")
+print("  amortisation changes that.")
+print()
+
+print("=== The real use: Kruskal's minimum spanning tree ===")
+side = 40
+g = lcg(99)
+V = side * side
+edges = []
+for r in range(side):
+    for c in range(side):
+        if c + 1 < side:
+            edges.append((next(g) % 1000, r * side + c, r * side + c + 1))
+        if r + 1 < side:
+            edges.append((next(g) % 1000, r * side + c, (r + 1) * side + c))
+edges.sort()
+tree = DSU(V)
+kept = examined = 0
+for w, a, b in edges:
+    examined += 1
+    if tree.union(a, b):
+        kept += 1
+    if kept == V - 1:
+        break
+tc = tree.depths()
+print(f"  a {side}x{side} grid: {V:,} vertices, {len(edges):,} edges")
+print(f"    edges examined = {examined:,}, edges kept = {kept} (= V - 1)")
+print(f"    parent hops    = {tree.hops:,}   amortised = "
+      f"{tree.hops / examined:.4f} per edge examined")
+print(f"    max depth = {max(tc)}, histogram = {tree.histogram(tc)}")
+print("  Two finds and one pointer write per edge, 4.6171 hops per edge, on a")
+print("  graph whose components are found EXACTLY.  This is the algorithm inside")
+print("  Kruskal, inside NetworkX, inside every flood fill that labels")
+print("  components, and inside the 'connected pieces' button of a spreadsheet.")
+print()
 ```
 
+Output:
+
+```text
+=== Union-find: the cost of each optimisation, measured separately ===
+
+  MAKE-SET is implicit (one element per parent slot).  FIND follows parent
+
+  pointers to the root; UNION joins two sets.  Two optimisations, each
+
+  behind a flag: PATH COMPRESSION rewrites the path a find walks, and
+
+  UNION BY RANK attaches the shallower root under the deeper one.
+
+  The cost unit is one parent-pointer traversal.
+
+
+
+     n     ops   rank  compress   parent hops   hops/op   max depth
+
+   4000    12000   False      False        774,496   64.5413         433
+
+   4000    12000    True      False         30,487    2.5406           5
+
+   4000    12000   False       True         49,109    4.0924           6
+
+   4000    12000    True       True         28,276    2.3563           3
+
+  With NEITHER optimisation the trees degenerate into long chains and the
+
+  total is quadratic in n.  At n = 4,000 the hops/op column reads 64.5413
+
+  with nothing and 2.3563 with both -- 27x -- and it is the nothing column
+
+  that grows with n.  Either optimisation alone buys a logarithmic bound;
+
+  together they buy alpha(n).
+
+
+
+=== Scaling: the combined version is FLAT, and that IS the alpha(n) claim ===
+
+     n       ops   parent hops   hops/op   max depth   depth histogram
+
+   1,000      3,000          7,084    2.3613           3   0:167, 1:665, 2:156, 3:12
+
+  10,000     30,000         70,567    2.3522           3   0:1606, 1:6843, 2:1505, 3:46
+
+  100,000    300,000        708,317    2.3611           3   0:16260, 1:68830, 2:14468, 3:442
+
+  300,000    900,000      2,120,637    2.3563           3   0:48523, 1:206938, 2:43118, 3:1421
+
+  n grows by a factor of 300 and hops/op moves by less than 0.01.  A
+
+  logarithmic factor would show as a climbing column; it does not.  The
+
+  trees stay shallow too: at n = 300,000, 1,421 of the 300,000 elements
+
+  sit exactly 3 hops from a root and NOT ONE is deeper.  alpha(n) is the
+
+  NAME of that flatness; the column is the measurement.
+
+
+
+=== One ingredient alone is not enough ===
+
+     n       ops   rank only: hops/op  depth   compress only: hops/op  depth
+
+   1,000      3,000               2.5327      5                  3.6050      5
+
+  10,000     30,000               2.5720      6                  4.2359      7
+
+  100,000    300,000               2.6013      7                  4.9703      9
+
+  Both are Theta(log n) amortised in theory, and neither reaches the
+
+  combined bound -- the two optimisations are not interchangeable, and
+
+  dropping either one costs you the whole point.  On this workload the
+
+  compression-only column climbs from 3.6050 to 4.9703 while the combined
+
+  column is flat, which is the log factor made visible.
+
+
+
+=== The peak survives: the worst single find is still Theta(log n) ===
+
+  Build a perfectly balanced forest by hand, then find its deepest leaf.
+
+        n   log2 n   max depth   first find   second find
+
+       16        4           4            8             2
+
+      256        8           8           16             2
+
+    4,096       12          12           24             2
+
+   65,536       16          16           32             2
+
+  The first find at the deepest leaf costs 2*log2(n) hops; the second costs
+
+  2.  Exactly the dynamic array's shape: the amortised bound is about the
+
+  total, the first call down a cold path is Theta(log n), and no amount of
+
+  amortisation changes that.
+
+
+
+=== The real use: Kruskal's minimum spanning tree ===
+
+  a 40x40 grid: 1,600 vertices, 3,120 edges
+
+    edges examined = 2,596, edges kept = 1599 (= V - 1)
+
+    parent hops    = 11,986   amortised = 4.6171 per edge examined
+
+    max depth = 3, histogram = 0:1, 1:1262, 2:326, 3:11
+
+  Two finds and one pointer write per edge, 4.6171 hops per edge, on a
+
+  graph whose components are found EXACTLY.  This is the algorithm inside
+
+  Kruskal, inside NetworkX, inside every flood fill that labels
+
+  components, and inside the 'connected pieces' button of a spreadsheet.
 ```
-no heuristics      max depth = 199999  (one chain of 200000 nodes)
-                    find(0) would need 199999 pointer hops
-rank + compress    max sampled depth = 1   components = 1
-log2 N             = 17
-alpha(N) <= 4 for any N with <= 64 bits; N needs 18 bits
-```
+
+
+Note what the code is *not* claiming. It does not report a value of
+$\alpha(300{,}000)$, because no honest experiment can: $\alpha$ is the name of a
+guarantee, and the guarantee is "about 4", which is indistinguishable from the
+`2.3563` measured here and from the figure you would get on another machine. The
+claim that survives scrutiny is the *shape* of the column, not its height. Note
+too that `3` appears twice in this section and means two different things: in the
+variants table it is a **maximum depth**, and in the peak table below it is a
+**worst-case hop count**. Neither is $\alpha$, and neither is $\Theta(1)$ — see
+Mistake 6.
 
 Union-find is not an academic exercise. It is how Kruskal's and Prim's minimum
-spanning tree algorithms avoid re-checking whether an edge joins two
-already-connected vertices, how connected-component labelling works, how LeetCode
-684 "Redundant Connection" is solved, and how image segmentation and Kruskal's
-algorithm in Apache Spark and Hadoop avoid processing the same connected pair
-twice. Every one of those is a few lines calling `union` and `find`.
+spanning tree algorithms avoid re-testing whether an edge joins two vertices that
+are already connected — the grid run above finds the components of a
+$40 \times 40$ graph in `4.6171` parent hops per edge examined, exactly. It is how
+connected-component labelling works, how image segmentation groups pixels, how
+Apache Spark's and Hadoop's graph libraries avoid processing the same connected
+pair twice, and how the "group these rows by adjacency" button in a spreadsheet
+works. Every one of those is a few lines calling `union` and `find`.
 
 ### The sliding window as an amortised argument
 
 The other technique worth naming here is not about paying an occasional large
-cost, but about refusing to pay a large cost at all.
+cost. It is about **refusing to pay a large cost at all**, and it is the clearest
+amortised argument in the lesson, because the charging rule is so obvious that
+people reinvent it without noticing they have done mathematics.
 
-Finding the maximum sum of a window of `k` consecutive elements by brute force
-costs `O(nk)`: each of the `n - k + 1` windows is summed from scratch. But two
-neighbouring windows overlap in `k - 1` elements, so consecutive sums differ by
-exactly one term entering and one leaving. Keeping the running sum and updating
-it in place costs `O(1)` per step and `O(n)` overall.
+**The setup.** A window of width $K$ slides one position at a time over an array
+of $n$ elements, and you want a statistic of the window — its sum, its
+maximum, the number of distinct values in it. The naive method recomputes the
+statistic from scratch for each of the $n - K + 1$ windows, touching all $K$
+elements every time.
 
-The amortised framing is what makes this precise rather than merely clever. Per
-window, the naive method does `k` additions; the sliding window does two, once at
-the start and once per subsequent step. Amortised over all `n` windows that is
-`O(2n + k)`, which is `O(n)` whenever `k ≤ n`. No individual operation is
-expensive; the saving comes from *amortising the recomputation you would
-otherwise repeat*.
+**The observation.** Consecutive windows overlap in $K - 1$ elements, so for a
+*sum* the consecutive values differ by exactly one term entering and one term
+leaving:
 
-This is the pattern behind a large family of algorithms: minimum-size subarray
-with a sum threshold, longest substring without repeating characters, maximum sum
-of a subarray with at most `k` distinct values, minimum-window subsequences. In
-each case the state kept is small and the update is `O(1)`, and the trick is
-identifying what can be reused between adjacent windows.
+$$s_{i+1} \;=\; s_i \;-\; v_i \;+\; v_{i+K}.$$
+
+**The amortised accounting.** Count **element touches**. The first window costs
+$K$; each of the remaining $n - K$ shifts costs exactly 2. The total is therefore
+
+$$K + 2(n - K) \;=\; 2n - K \;<\; 2n \;=\; \Theta(n),$$
+
+independent of $K$. Per element that is **amortised $O(1)$, unconditionally** —
+no heuristic, no conditional, no threshold. The code measures `199,500` touches
+across `99,501` windows at $n = 100{,}000$, $K = 500$: `2.0050` per window against
+`500.00` for the naive version, a factor of `249.4`.
+
+**Where it stops being obvious: the maximum.** A maximum cannot be un-added, so
+subtract-and-add is unavailable and the naive rescan is $\Theta(K)$ per step. The
+fix is a **monotonic deque** of indices in decreasing value order: when a new
+value arrives, every index it dominates is popped, because that new value will
+outlive it. The amortised argument is one sentence — *every index is pushed
+once and popped at most once* — so the total is at most $2n$ deque operations
+**for any window size at all**. The code measures `199,997` for $n = 100{,}000$:
+`2.0000` per element, with a longest deque of `19` inside a window of `500`,
+because the deque does *not* hold the whole window. That last figure is the
+memory answer and the amortised bound is not: only measurement gives you the
+resident size.
+
+The family of algorithms this underwrites is large — maximum or minimum window
+sum, longest substring without repeating characters, minimum subarray with a sum
+threshold, maximum sum with at most $K$ distinct values, smallest covering
+subsequence. In every case the state kept is small and the update is $O(1)$; the
+hard part is always **identifying what can be reused between adjacent windows**,
+and "each element enters once and leaves once" is exactly the reusable part.
 
 ```python
-vals = [3, 1, 4, 1, 5, 9, 2, 6]
-k = 3
+def lcg(seed):
+    """A tiny deterministic generator, so every figure in this lesson is
+    reproducible on every machine and every Python version.  `random.seed()`
+    pins the Mersenne Twister but not the stream of `randrange`, and a lesson
+    whose numbers depend on that is a lesson that rots."""
+    x = seed
+    while True:
+        x = (1103515245 * x + 12345) % (1 << 31)
+        yield x >> 5
 
-# Brute force: rescan every window from scratch, O(nk).
-brute = max(sum(vals[i:i + k]) for i in range(len(vals) - k + 1))
 
-# Sliding window: reuse the previous sum, O(n).
-window = sum(vals[:k])       # k additions, once
-best = window
-for i in range(k, len(vals)):
-    window += vals[i] - vals[i - k]   # one in, one out
-    best = max(best, window)
 
-print(f"sliding window     best = {best}, brute force agrees = {best == brute}")
-print(f"work: {k} adds to start, then {len(vals) - k} add+subtract pairs")
+
+print("=== The sliding window, as an amortised argument ===")
+N, K = 100_000, 500
+g = lcg(31337)
+data = [next(g) % 10_000 for _ in range(N)]
+windows = N - K + 1
+
+touches_roll = 0
+total = 0
+for j in range(K):
+    total += data[j]
+    touches_roll += 1
+rolling_first = total
+for s in range(1, windows):
+    total -= data[s - 1]             # one element LEAVES the window
+    total += data[s + K - 1]         # one element ENTERS the window
+    touches_roll += 2
+rolling_last = total
+
+# The naive method touches every element of every window, so its total is
+# exactly windows * K.  Verify it really does produce the same answers by
+# running it for real on the two end windows.
+touches_naive = windows * K
+naive_first = sum(data[:K])
+naive_last = sum(data[-K:])
+
+print(f"  n = {N:,}, window = {K:,}, windows = {windows:,}")
+print(f"    recomputed from scratch : {touches_naive:>12,} touches, "
+      f"{touches_naive / windows:>8.2f} per window")
+print(f"    carried forward         : {touches_roll:>12,} touches, "
+      f"{touches_roll / windows:>8.4f} per window")
+print(f"    speed-up                = {touches_naive / touches_roll:>11.1f}x")
+print(f"    first window: rolling {rolling_first}, naive {naive_first}, "
+      f"agree {rolling_first == naive_first}")
+print(f"    last window:  rolling {rolling_last}, naive {naive_last}, "
+      f"agree {rolling_last == naive_last}")
+print("  Each element is ADDED once as it enters the window and SUBTRACTED once as")
+print("  it leaves -- two touches per window, and every element leaves at most")
+print("  once.  The total is therefore K + 2(n - K) = 2n - K touches, just under")
+print("  2n, Theta(n) no matter how big K is: amortised O(1) per element,")
+print("  unconditionally.")
+print()
+
+pushes = pops = 0
+stack = []
+longest = 0
+wmax = []
+for i, v in enumerate(data):
+    while stack and data[stack[-1]] <= v:   # v dominates these for good
+        stack.pop()
+        pops += 1
+    stack.append(i)
+    pushes += 1
+    if stack[0] <= i - K:
+        stack.pop(0)
+        pops += 1
+    if len(stack) > longest:
+        longest = len(stack)
+    if i >= K - 1:
+        wmax.append(data[stack[0]])
+ok = all(wmax[i] == max(data[i:i + K]) for i in range(2000))
+print("=== A window statistic that is not a sum: the rolling maximum ===")
+print("  A monotonic deque keeps indices in decreasing value order.  An index is")
+print("  pushed once and popped at most once, so the total is at most 2n.")
+print(f"    pushes = {pushes:,}, pops = {pops:,}, deque operations = "
+      f"{pushes + pops:,}")
+print(f"    per element = {(pushes + pops) / N:.4f}, longest deque = {longest} "
+      f"(window is {K})")
+print(f"    checked against a brute-force max on the first 2,000 windows: {ok}")
+print("  'Every element enters and leaves at most once' IS the amortised")
+print("  argument, and it has the same shape as the binary counter and the array:")
+print("  an expensive element is paid for by the cheap ones that follow it.")
 ```
 
-```
-sliding window     best = 17, brute force agrees = True
-work: 3 adds to start, then 5 add+subtract pairs
+Output:
+
+```text
+=== The sliding window, as an amortised argument ===
+
+  n = 100,000, window = 500, windows = 99,501
+
+    recomputed from scratch :   49,750,500 touches,   500.00 per window
+
+    carried forward         :      199,500 touches,   2.0050 per window
+
+    speed-up                =       249.4x
+
+    first window: rolling 2484655, naive 2484655, agree True
+
+    last window:  rolling 2475090, naive 2475090, agree True
+
+  Each element is ADDED once as it enters the window and SUBTRACTED once as
+
+  it leaves -- two touches per window, and every element leaves at most
+
+  once.  The total is therefore K + 2(n - K) = 2n - K touches, just under
+
+  2n, Theta(n) no matter how big K is: amortised O(1) per element,
+
+  unconditionally.
+
+
+
+=== A window statistic that is not a sum: the rolling maximum ===
+
+  A monotonic deque keeps indices in decreasing value order.  An index is
+
+  pushed once and popped at most once, so the total is at most 2n.
+
+    pushes = 100,000, pops = 99,997, deque operations = 199,997
+
+    per element = 2.0000, longest deque = 19 (window is 500)
+
+    checked against a brute-force max on the first 2,000 windows: True
+
+  'Every element enters and leaves at most once' IS the amortised
+
+  argument, and it has the same shape as the binary counter and the array:
+
+  an expensive element is paid for by the cheap ones that follow it.
 ```
 
 ### Accounting versus potential, side by side
 
-Both methods answer the same question — what is the total cost of `n` operations
-— and both reach the same bound by paying for expensive operations in advance
-using different bookkeeping. The choice between them is a matter of taste and of
-what you can compute.
+The two bookkeeping methods are usually taught one after the other and then never
+compared, which is a pity: they are **the same object with the constant moved**,
+and the only real difference is *what you are required to check*.
 
-**The accounting method** keeps a running account. Every operation is charged its
-actual cost, plus an extra surcharge if it does work that will save future
-operations — a deposit. When a later operation takes advantage of that
-preparation, it spends the deposit. The total of all charges is an upper bound on
-the real total cost, because deposits that are never spent only make the bound
-looser. This is the method used for the dynamic-array doubling analysis: an
-append into a half-full array is charged its cost plus a credit equal to the
-number of unused slots it just created.
+**Accounting** fixes a price $\hat T$ per operation, credits
+$c_i^{\text{cred}} = \hat T - T_i$ to a bank account, and tracks the balance
+$B_k = \sum_{i \le k} c_i^{\text{cred}}$. It is sound when $B_k \ge 0$ at
+**every** $k$, and then $\sum_{i=1}^{n} T_i = \hat T\, n - B_n \le \hat T\, n$.
 
-**The potential method** defines a single scalar `Φ` on the data structure's
-state, requires `Φ ≥ 0` at all times, and proves the identity
+**Potential** fixes a state function $\Phi$ with $0 \le \Phi \le \Phi_{\max}$
+and charges each operation $\hat T_i = T_i + \Phi_i - \Phi_{i-1}$, which
+telescopes to
 
-$$\sum_{i=1}^{n} c_i \;\le\; \Phi(s_n) - \Phi(s_0) + \sum_{i=1}^{n} \hat{c}_i$$
+$$\sum_{i=1}^{n} T_i \;=\; \sum_{i=1}^{n} \hat T_i - (\Phi_n - \Phi_0)
+\;\le\; \sum_{i=1}^{n} \hat T_i + \Phi_{\max}.$$
 
-where `cᵢ` is the real cost of step `i` and `ĉᵢ` is the amortised charge you
-prove bounds it. The potential is banked space that the structure carries: slack
-capacity in an array, unset bits in a binary counter, unmerged roots in a forest.
-Because `Φ ≥ 0`, the total banked amount is bounded by `Φ(s₀)`, so the aggregate
-cost is at most the sum of the amortised charges plus a constant.
+Note what is *not* required: $\Phi$ may dip below its starting value in between
+(the array's $\Phi = 2n - C$ reaches $-2$ on the first append), and it is the
+**upper** bound that pays, not the non-negativity.
 
-Concretely, for the doubling array the potential is `Φ = len(A) - size`, the
-number of unused slots. Appending into a full array costs `Θ(n)` in copying but
-only `ĉ = 3` amortised, because the potential rises by `Θ(n)` to pay for it.
-Appending into a half-full array costs `1` with no change in potential. Summing,
-`Σ ĉᵢ ≤ 3n + Φ(s₀)`, and `Φ(s₀) = 0` for an empty array, so the total is at most
-`3n` — linear over `n` appends, so `O(1)` each.
+**They are the same quantity.** Summing the accounting definition gives
+$B_k = \hat T\, k - \sum_{i \le k} T_i$. In the potential version with
+$\hat T_i = \hat T$ we have
+$\Phi_k - \Phi_0 = \sum_{i \le k}(T_i + \Delta\Phi_i) - \sum_{i \le k} T_i = \hat T\, k - \sum_{i \le k} T_i$,
+so rearranging:
 
-Choose accounting when the deposits and withdrawals are concrete and countable:
-a copy is paid for by the slot the append created. Choose potential when you want
-one clean invariant and a telescoping proof, or when the structure's state is hard
-to decompose into independent deposits — the union-find forest is the standard
-case, where no single operation's charge is obviously prepaid by a particular
-earlier one.
+$$B_k \;=\; \hat T\, k - \sum_{i \le k} T_i \;=\; \Phi_k - \Phi_0 .$$
+
+**$B_k \ge 0$ and $\Phi_k \ge \Phi_0$ are the same inequality.** With
+$\Phi = 2n - C$ and capacity starting at 4, $\Phi_0 = -4$ is literally the
+account's initial deficit. The code checks the identity numerically rather than
+asserting it: over `4,096` appends the number of steps at which
+$B_k \ne \Phi_k - \Phi_0$ is `0`, and both finish at `4,100`. Read the table above
+it together: the `T` column runs `1, 1, 1, 1, 5, 1, 1, 1, 9, ...`, a 9x spread with
+no ceiling, and the `T + dPhi` column is `3` on every row.
+
+**Which one to use, then? Accounting — for one reason: it is how you find the
+potential.** $\Phi = 2n - C$ does not come to you. What people actually do is
+guess a price, accumulate the balance, notice that the balance *is* a potential,
+raise the price until the balance never goes negative, and read off the smallest
+sound price. The code sweeps prices 1 to 6 and gets `-4092`, `-2043`, `2`, `3`,
+`4`, `5`: prices 1 and 2 are unsound and 3 is the smallest sound one.
+
+The second difference is the *shape* of the obligation, and it is what decides the
+choice on a large structure:
+
+| | accounting | potential |
+| --- | --- | --- |
+| you choose first | a price $\hat T$ per operation | a state function $\Phi$ |
+| you must then show | $B_k \ge 0$ at **every prefix** $k$ | $T + \Delta\Phi \le \hat c$ for **every kind** of operation |
+| the obligation ranges over | all *times* | all *operations* |
+| good for | heterogeneous operations with different prices | one clean constant across many operation types |
+| failure mode | a balance that dips negative at one prefix | a bounded $\Phi$ whose $\hat T$ is not constant (Mistake 4) |
+
+A prefix condition must hold at every $k$, which is exactly why price 2 is
+dangerous: it passes eight appends of hand-checking and then goes negative at
+append 9. The reason is that with $p$ credits per ordinary append, a round needs
+$pC \ge C + 1$; at $p = 3$ that is $2C \ge C + 1$ and it holds for every $C$, and
+at $p = 2$ it is $C \ge C + 1$, which is false, so the account bleeds 1 per round
+forever. A per-operation condition is a reusable formula instead, which is why the
+potential method composes across a structure with a dozen operations with no new
+bookkeeping — and why accounting is still what you reach for when different
+operations genuinely deserve different prices, since then "the balance" has to
+become "the balance for each kind of operation" and the elegance goes out of the
+window.
+
+```python
+CAP0 = 4
+N = 4096
+
+print("=== Accounting and potential, on ONE data structure, side by side ===")
+print("  The dynamic array, capacity starting at 4 and doubling when full.  An")
+print("  ordinary append costs T = 1 (one store).  A resize at size C costs")
+print("  T = C + 1 (C copies, then the store).")
+print()
+print("  ACCOUNTING says: charge 3 per append, credit c_i = 3 - T_i to a bank")
+print("  account, and require the balance B_k = sum of credits to stay >= 0.")
+print("  POTENTIAL says: take Phi = 2n - C, and compute the amortised cost of")
+print("  each operation as T_i + (Phi_after - Phi_before).")
+print()
+print("   n   capacity   size   T   credit 3-T   balance B   Phi = 2n-C   dPhi"
+      "   T + dPhi")
+capacity, size, balance = CAP0, 0, 0
+phi = 2 * size - capacity
+rows = []
+for i in range(1, 13):
+    actual = 1
+    if size == capacity:
+        capacity *= 2
+        actual += size
+    size += 1
+    balance += 3 - actual
+    prev_phi = phi
+    phi = 2 * size - capacity
+    rows.append((i, capacity, size, actual, 3 - actual, balance, phi,
+                 phi - prev_phi, actual + phi - prev_phi))
+for r in rows:
+    tag = "  <- resize" if r[3] > 1 else ""
+    print(f"  {r[0]:>2}   {r[1]:>8}   {r[2]:>4}   {r[3]:>1}   {r[4]:>10}   "
+          f"{r[5]:>10}   {r[6]:>11}   {r[7]:>4}   {r[8]:>8}{tag}")
+print("  Read the T column and the T + dPhi column together.  T is 1, 1, 1, 1,")
+print("  5, 1, 1, 1, 9 -- a dynamic range of 9x and no upper limit.  T + dPhi is")
+print("  3 on every row.  The dPhi column is the bridge: +2 when the append was")
+print("  cheap, and -(C-2) when it was not, so the expensive operation is paid")
+print("  for by the potential it consumes.")
+print()
+
+print("=== They are the same quantity: B_k = Phi_k - Phi_0, checked 4096 times ===")
+capacity, size, balance = CAP0, 0, 0
+phi0 = 2 * size - capacity
+phi = phi0
+mismatch = 0
+amortised = set()
+lo, hi = None, 0
+for _ in range(N):
+    actual = 1
+    if size == capacity:
+        capacity *= 2
+        actual += size
+    size += 1
+    balance += 3 - actual
+    prev_phi = phi
+    phi = 2 * size - capacity
+    amortised.add(actual + phi - prev_phi)
+    if balance != phi - phi0:
+        mismatch += 1
+    lo = balance if lo is None else min(lo, balance)
+    hi = max(hi, balance)
+print(f"  Phi_0 = 2*0 - {CAP0} = {phi0}   (the account's initial deficit)")
+print(f"  steps where B_k != Phi_k - Phi_0  :  {mismatch}")
+print(f"  final balance B_{N} = {balance}, final Phi_{N} - Phi_0 = "
+      f"{phi - phi0}")
+print(f"  balance over the run: min {lo}, max {hi}")
+print(f"  distinct amortised costs T + dPhi : {sorted(amortised)}")
+print(f"  final capacity {capacity}, final size {size}")
+print("  Zero mismatches out of 4096, and both finish at 4100.  That is not a")
+print("  coincidence to be checked once -- it is an identity.  Both sides equal")
+print("  3k - sum(T_i): the balance because that is its definition, and Phi_k")
+print("  because summing Phi_k = Phi_0 + sum(3 + dPhi_i) and rearranging gives")
+print("  the same thing.  So B_k = Phi_k - Phi_0 for every k, for ANY potential")
+print("  and ANY price.  Accounting and potential are one proof with the constant")
+print("  moved, and 'the balance never goes negative' is literally the same")
+print("  sentence as 'the potential never falls below where it started'.")
+print()
+
+print("=== So why teach both? Accounting is how you FIND the constant ===")
+print("  The potential Phi = 2n - C does not come to you; you have to invent it.")
+print("  The accounting method is the search procedure: guess a price, and the")
+print("  balance you accumulate IS a potential.  Raise the price until the")
+print("  balance never goes negative, and the smallest such price is the bound.")
+print()
+print("  price   min balance over 4096 appends   verdict")
+for c in (1, 2, 3, 4, 5, 6):
+    cap, sz, bal, lowest = CAP0, 0, 0, None
+    for _ in range(N):
+        actual = 1
+        if sz == cap:
+            cap *= 2
+            actual += sz
+        sz += 1
+        bal += c - actual
+        lowest = bal if lowest is None else min(lowest, bal)
+    if lowest >= 0:
+        verdict = "SOUND -- total cost <= " + str(c) + "n"
+    else:
+        verdict = "UNSOUND -- the account went into debt"
+    print(f"  {c:>5}   {lowest:>29}   {verdict}")
+print()
+print("  Price 1 and price 2 are unsound, and price 2 is the instructive one:")
+print("  it looks fine for a while and then fails.  With p credits per ordinary")
+print("  append the round has to satisfy p*C >= C + 1; at p = 3 that is 2C >=")
+print("  C + 1 and it holds for every C, and at p = 2 it is C >= C + 1, which is")
+print("  false.  Each round then deposits C and spends C + 1, so the account")
+print("  bleeds 1 per round, forever.")
+print()
+print("=== exactly where price 2 first goes negative ===")
+cap, sz, bal, trace = CAP0, 0, 0, []
+for i in range(1, N + 1):
+    actual = 1
+    if sz == cap:
+        cap *= 2
+        actual += sz
+    sz += 1
+    bal += 2 - actual
+    trace.append(bal)
+    if bal < 0:
+        print(f"  balances over appends 1-8 : {trace[:8]}")
+        print(f"  first negative balance at append {i}: {bal}")
+        print(f"    capacity was {cap // 2} and that append cost {actual} "
+              f"(= C + 1 with C = {cap // 2})")
+        print("  Eight appends of hand-checking would have passed this price.  The")
+        print("  prefix condition is the whole content of the accounting method,")
+        print("  and skipping it is how a wrong constant gets published.")
+        break
+print()
+
+print("=== The three methods, and which question each one answers ===")
+print("    method      you choose first     you must then show        best for")
+print("    aggregate   nothing              a bound on sum(T_i)       teaching")
+print("    accounting  a price per op       B_k >= 0 at EVERY k       finding Phi")
+print("    potential   a Phi of the state   T + dPhi <= c per op      one constant")
+print()
+print("  The accounting method's obligation is a PREFIX condition -- every")
+print("  intermediate balance, not just the final one.  The potential method's")
+print("  obligation is a PER-OPERATION condition -- every kind of operation, not")
+print("  just their sum.  The potential method therefore composes across a")
+print("  structure with a dozen operations with no new bookkeeping, while")
+print("  accounting is what you reach for when different operations genuinely")
+print("  deserve different prices -- because then 'the balance' has to become")
+print("  'the balance for each kind of operation', and the elegance goes out.")
+```
+
+Output:
+
+```text
+=== Accounting and potential, on ONE data structure, side by side ===
+
+  The dynamic array, capacity starting at 4 and doubling when full.  An
+
+  ordinary append costs T = 1 (one store).  A resize at size C costs
+
+  T = C + 1 (C copies, then the store).
+
+
+
+  ACCOUNTING says: charge 3 per append, credit c_i = 3 - T_i to a bank
+
+  account, and require the balance B_k = sum of credits to stay >= 0.
+
+  POTENTIAL says: take Phi = 2n - C, and compute the amortised cost of
+
+  each operation as T_i + (Phi_after - Phi_before).
+
+
+
+   n   capacity   size   T   credit 3-T   balance B   Phi = 2n-C   dPhi   T + dPhi
+
+   1          4      1   1            2            2            -2      2          3
+
+   2          4      2   1            2            4             0      2          3
+
+   3          4      3   1            2            6             2      2          3
+
+   4          4      4   1            2            8             4      2          3
+
+   5          8      5   5           -2            6             2     -2          3  <- resize
+
+   6          8      6   1            2            8             4      2          3
+
+   7          8      7   1            2           10             6      2          3
+
+   8          8      8   1            2           12             8      2          3
+
+   9         16      9   9           -6            6             2     -6          3  <- resize
+
+  10         16     10   1            2            8             4      2          3
+
+  11         16     11   1            2           10             6      2          3
+
+  12         16     12   1            2           12             8      2          3
+
+  Read the T column and the T + dPhi column together.  T is 1, 1, 1, 1,
+
+  5, 1, 1, 1, 9 -- a dynamic range of 9x and no upper limit.  T + dPhi is
+
+  3 on every row.  The dPhi column is the bridge: +2 when the append was
+
+  cheap, and -(C-2) when it was not, so the expensive operation is paid
+
+  for by the potential it consumes.
+
+
+
+=== They are the same quantity: B_k = Phi_k - Phi_0, checked 4096 times ===
+
+  Phi_0 = 2*0 - 4 = -4   (the account's initial deficit)
+
+  steps where B_k != Phi_k - Phi_0  :  0
+
+  final balance B_4096 = 4100, final Phi_4096 - Phi_0 = 4100
+
+  balance over the run: min 2, max 4100
+
+  distinct amortised costs T + dPhi : [3]
+
+  final capacity 4096, final size 4096
+
+  Zero mismatches out of 4096, and both finish at 4100.  That is not a
+
+  coincidence to be checked once -- it is an identity.  Both sides equal
+
+  3k - sum(T_i): the balance because that is its definition, and Phi_k
+
+  because summing Phi_k = Phi_0 + sum(3 + dPhi_i) and rearranging gives
+
+  the same thing.  So B_k = Phi_k - Phi_0 for every k, for ANY potential
+
+  and ANY price.  Accounting and potential are one proof with the constant
+
+  moved, and 'the balance never goes negative' is literally the same
+
+  sentence as 'the potential never falls below where it started'.
+
+
+
+=== So why teach both? Accounting is how you FIND the constant ===
+
+  The potential Phi = 2n - C does not come to you; you have to invent it.
+
+  The accounting method is the search procedure: guess a price, and the
+
+  balance you accumulate IS a potential.  Raise the price until the
+
+  balance never goes negative, and the smallest such price is the bound.
+
+
+
+  price   min balance over 4096 appends   verdict
+
+      1                           -4092   UNSOUND -- the account went into debt
+
+      2                           -2043   UNSOUND -- the account went into debt
+
+      3                               2   SOUND -- total cost <= 3n
+
+      4                               3   SOUND -- total cost <= 4n
+
+      5                               4   SOUND -- total cost <= 5n
+
+      6                               5   SOUND -- total cost <= 6n
+
+
+
+  Price 1 and price 2 are unsound, and price 2 is the instructive one:
+
+  it looks fine for a while and then fails.  With p credits per ordinary
+
+  append the round has to satisfy p*C >= C + 1; at p = 3 that is 2C >=
+
+  C + 1 and it holds for every C, and at p = 2 it is C >= C + 1, which is
+
+  false.  Each round then deposits C and spends C + 1, so the account
+
+  bleeds 1 per round, forever.
+
+
+
+=== exactly where price 2 first goes negative ===
+
+  balances over appends 1-8 : [1, 2, 3, 4, 1, 2, 3, 4]
+
+  first negative balance at append 9: -3
+
+    capacity was 8 and that append cost 9 (= C + 1 with C = 8)
+
+  Eight appends of hand-checking would have passed this price.  The
+
+  prefix condition is the whole content of the accounting method,
+
+  and skipping it is how a wrong constant gets published.
+
+
+
+=== The three methods, and which question each one answers ===
+
+    method      you choose first     you must then show        best for
+
+    aggregate   nothing              a bound on sum(T_i)       teaching
+
+    accounting  a price per op       B_k >= 0 at EVERY k       finding Phi
+
+    potential   a Phi of the state   T + dPhi <= c per op      one constant
+
+
+
+  The accounting method's obligation is a PREFIX condition -- every
+
+  intermediate balance, not just the final one.  The potential method's
+
+  obligation is a PER-OPERATION condition -- every kind of operation, not
+
+  just their sum.  The potential method therefore composes across a
+
+  structure with a dozen operations with no new bookkeeping, while
+
+  accounting is what you reach for when different operations genuinely
+
+  deserve different prices -- because then 'the balance' has to become
+
+  'the balance for each kind of operation', and the elegance goes out.
+```
 
 ### With Libraries
 

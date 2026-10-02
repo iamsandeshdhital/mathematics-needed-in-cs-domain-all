@@ -1688,6 +1688,8 @@ the stiff valley, which decay does nothing about.
 The final points are all within 1e-4 of (1, 1), which is the tolerance the target
 value f < 1e-6 implies — a further reminder that stopping on function value and
 stopping on parameter distance are different criteria.
+</details>
+
 **Challenge — ** Implement Nesterov's accelerated gradient and compare it against
 plain descent and heavy-ball momentum on Rosenbrock and on an ill-conditioned
 quadratic. Measure steps to a target tolerance, and fit `log(error)` against step

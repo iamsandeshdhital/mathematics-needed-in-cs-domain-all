@@ -1677,11 +1677,13 @@ print(f"  midpoint error n=40 = {abs(midpoint_sum(f, 0, 2, 40) - exact):.2e}")
 ```
 
 ```text
-  left  n=4 = 1.750000000  (hand calculation: 1.75)
-  mid   n=4 = 2.312500000
-  mid  n=40 = 2.666583333
+  left  n=4  = 1.750000000  (hand calculation: 1.75)
+  right n=4  = 3.750000000  (what the loop accumulates: 3.75)
+  mid   n=4  = 2.625000000
+  mid   n=40 = 2.666250000
   exact      = 2.666666667
-  midpoint n=40 error = 8.33e-05
+  midpoint error n=4  = 4.17e-02
+  midpoint error n=40 = 4.17e-04
 ```
 
 (d) Extra: the midpoint error at $n = 4$ is `0.354`, at $n = 40$ it is `8.3e-05`. The ratio
@@ -2004,7 +2006,7 @@ Output:
 ```text
 (a) smooth integrand: int_0^pi sin(x) dx = 2, tol 1e-10, M2 = M4 = 1
    trapezoid  n = 160744  promised 1.00e-10   measured 6.37e-11
-   Simpson    n = 362     promised 1.00e-10   measured 6.30e-11
+   Simpson    n = 362     promised 9.90e-11   measured 6.30e-11
    Simpson meets the same guarantee with 444x fewer evaluations.
 
 (b) kinked integrand: int_0^1 |x - 0.3| dx = 0.290000000000, tol 1e-10
@@ -2013,16 +2015,16 @@ Output:
 
 (d) put the kink ON a mesh node: n * 0.3 must be an integer (any multiple of 10)
       n     n*0.3       trapezoid err         Simpson err
-     50      15.0         1.110e-16          1.333e-04
-    100      30.0         5.551e-17          5.551e-17
-    200      60.0         0.000e+00          0.000e+00
-    400     120.0         0.000e+00          0.000e+00
-     88      26.4         3.099e-05          1.377e-05
-  16384   9830.4         5.960e-10          3.974e-10
+     50       15.0          1.110e-16         1.333e-04
+    100       30.0          5.551e-17         5.551e-17
+    200       60.0          0.000e+00         0.000e+00
+    400      120.0          0.000e+00         0.000e+00
+     88       26.4          3.099e-05         1.377e-05
+  16384     4915.2          5.960e-10         3.974e-10
 ```
 
 (a) Both certificates hold. Trapezoid at $n = 160744$ measures `6.37e-11` against a promise
-of `1.00e-10`; Simpson at $n = 362$ measures `6.30e-11` against `9.26e-11`. Both are
+of `1.00e-10`; Simpson at $n = 362$ measures `6.30e-11` against `9.90e-11`. Both are
 comfortably inside the guarantee and both land at about `0.6` of it — the bound is
 conservative rather than lucky, exactly as expected when $\max\lvert f''\rvert$ and
 $\max\lvert f^{(4)}\rvert$ stand in for the single value $f''(\xi)$ the error formula
@@ -2144,30 +2146,30 @@ Output:
 
 ```text
 Romberg table for int_0^pi sin(x) dx = 2.   Row k uses n = 2^k trapezoid slices.
-  k     n  R[k][0] order 2  R[k][1] order 4  R[k][2] order 6
-  0     1       0.000000000000         -               -
-  1     2       1.570796326795   2.094395102393               -
-  2     4       1.896118897937   2.004559754984     1.998570731824
-  3     8       1.974231601946   2.000269169948     1.999983130946
-  4    16       1.993570343772   2.000016591048     1.999999752455
-  5    32       1.998393360970   2.000001033369     1.999999996191
-  6    64       1.999598388640   2.000000064530     1.999999999941
+   k     n    R[k][0] order 2   R[k][1] order 4   R[k][2] order 6
+   0     1     0.000000000000                  -                  -
+   1     2     1.570796326795     2.094395102393                  -
+   2     4     1.896118897937     2.004559754984     1.998570731824
+   3     8     1.974231601946     2.000269169948     1.999983130946
+   4    16     1.993570343772     2.000016591048     1.999999752455
+   5    32     1.998393360970     2.000001033369     1.999999996191
+   6    64     1.999598388640     2.000000064530     1.999999999941
 
 errors:
-  k     n       order 2       order 4       order 6
-  2     4     1.039e-01     4.560e-03     1.429e-03
-  3     8     2.577e-02     2.692e-04     1.687e-05
-  4    16     6.430e-03     1.659e-05     2.475e-07
-  5    32     1.607e-03     1.033e-06     3.809e-09
-  6    64     4.016e-04     6.453e-08     5.929e-11
+   k     n        order 2       order 4       order 6
+   2     4      1.039e-01     4.560e-03     1.429e-03
+   3     8      2.577e-02     2.692e-04     1.687e-05
+   4    16      6.430e-03     1.659e-05     2.475e-07
+   5    32      1.607e-03     1.033e-06     3.809e-09
+   6    64      4.016e-04     6.453e-08     5.929e-11
 
 (b) column j=1 against Simpson's rule:
-   n=  2  R[k][1] = 2.094395102393   Simpson = 2.094395102393   identical = True
-   n=  4  R[k][1] = 2.004559754984   Simpson = 2.004559754984   identical = True
-   n=  8  R[k][1] = 2.000269169948   Simpson = 2.000269169948   identical = True
-   n= 16  R[k][1] = 2.000016591048   Simpson = 2.000016591048   identical = True
-   n= 32  R[k][1] = 2.000001033369   Simpson = 2.000001033369   identical = True
-   n= 64  R[k][1] = 2.000000064530   Simpson = 2.000000064530   identical = True
+   n=  2  R[k][1] =  2.094395102393195   Simpson =  2.094395102393195   bitwise equal = True   |diff| = 0.000e+00
+   n=  4  R[k][1] =  2.004559754984421   Simpson =  2.004559754984421   bitwise equal = True   |diff| = 0.000e+00
+   n=  8  R[k][1] =  2.000269169948388   Simpson =  2.000269169948388   bitwise equal = False   |diff| = 4.441e-16
+   n= 16  R[k][1] =  2.000016591047936   Simpson =  2.000016591047935   bitwise equal = False   |diff| = 4.441e-16
+   n= 32  R[k][1] =  2.000001033369412   Simpson =  2.000001033369413   bitwise equal = False   |diff| = 4.441e-16
+   n= 64  R[k][1] =  2.000000064530002   Simpson =  2.000000064530001   bitwise equal = False   |diff| = 4.441e-16
 
 (c) one more column, j=3 (order 8):
    k=3  R[3][3] = 2.000005549979671   err 5.550e-06
@@ -2181,15 +2183,19 @@ errors:
 absolute error than $T_2 = 1.570796326795$: extrapolating from a single coarse level is not
 yet an improvement, and you need at least two levels before Richardson pays.
 
-(b) **The equality is a theorem in exact arithmetic and it is *not* bit-for-bit in
-floating point — the code proves it, and the failure is the interesting part.** The
-printed `bitwise equal` column reads `False` at every $n$, even though the two numbers
-agree to all 15 displayed digits. The reason is that they are computed by
-*different arithmetic sequences*: $R_{k,1}$ reaches its value by differencing two
-trapezoid estimates and dividing by $3$, whereas `simpson` accumulates $1,4,2,4,\dots$
-weights directly. Rounding happens at every step of both, and the roundings do not
-cancel. So $|R_{k,1} - S_n|$ is a few units in the last place — visible in the
-`|diff|` column and invisible at 15 digits.
+(b) **The identity is a theorem in exact arithmetic, and the code shows it is
+*not* bit-for-bit in floating point.** Look at the two columns carefully: `bitwise
+equal` reads `True` at $n = 2$ and $n = 4$, then `False` from $n = 8$ onward — and
+`|diff|` sits at exactly `4.441e-16`, two units in the last place of $2.0$, and stays
+there for every larger $n$. So the two rules agree to all 15 displayed digits and
+still are not the same float.
+
+The reason is that they are computed by *different arithmetic sequences*. $R_{k,1}$
+reaches its value by differencing two trapezoid estimates and dividing by $3$,
+whereas `simpson` accumulates $1,4,2,4,\dots$ weights directly. Rounding happens at
+every step of both, and the roundings do not cancel. That they happen to agree at
+$n = 2$ and $n = 4$ is a coincidence of the evaluation order at those two sizes, not
+evidence of anything — which is exactly why a bit-for-bit test is the wrong tool.
 
 The identity itself is algebra, not numerology, and it does hold exactly over the
 reals. Write the trapezoid rule with its error expansion
@@ -2205,14 +2211,17 @@ exactly is uniquely determined by those three conditions, so the fourth-order ru
 *must* be Simpson's. The $1,4,1$ weights and the "error $\propto f^{(4)}$" property
 are two faces of one fact.
 
-**What would break if you tested with `==`.** A "bit-for-bit" test is the one check
-that cannot distinguish a correct implementation from a lucky one here, because it
-fails for the *right* reason and would also fail for a subtly wrong one. Compare
-magnitudes instead: `|diff|` is the number to watch, and it should sit at the rounding
-level — a handful of ulp — rather than at the integration error level, which is many
-orders of magnitude larger. If you ever see a program that claims two mathematically
-equal quantities are `==` identical in floating point, the thing to check first is
-whether the two sides were computed by the same sequence of operations.
+**What would break if you trusted `==`.** A bit-for-bit test cannot distinguish a
+correct implementation from a lucky one here, because it fails for the *right*
+reason — and it would also fail for a subtly wrong one, for a completely unrelated
+reason. Compare magnitudes instead. `|diff|` is the number to watch, and it should sit
+at the rounding level (a couple of ulp, `4.441e-16` here) rather than at the
+integration-error level, which is many orders of magnitude larger: at $n = 64` the
+column-1 error is `6.453e-08`, so the discrepancy between the two routes is **eight
+orders of magnitude smaller than the answer's own error**. Whenever a program claims
+two mathematically equal quantities are `==` identical in floating point, the first
+thing to check is whether the two sides were computed by the same sequence of
+operations.
 
 (c) Column 3 reaches order 8: `5.550e-06` at $k=3` and `1.629e-08` at $k=4` — a factor of
 about 340 for one doubling, consistent with $2^8 = 256$ plus a changing constant. Compare

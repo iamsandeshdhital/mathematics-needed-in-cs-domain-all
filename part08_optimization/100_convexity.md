@@ -1659,13 +1659,11 @@ convex kink. `min(f, g)` has slope +1.5 before and −1.5 after: the slope
 So the V-shape is the convex one. Take the max of two curves and you get a
 V-shaped valley; take the min and you get a Λ-shaped peak. That is worth
 internalising because it explains the L1/L2 asymmetry directly — L1's
-`max(0, ·)`-style structure introduces the *convext* kink and is fine, while
+`max(0, ·)`-style structure introduces the *convex* kink and is fine, while
 anything built from a min introduces a non-convex one.
 
 The worst pair is (0, 2), where both endpoints have value 0 but the midpoint
 (1, 1) has value 1. Gap = (0 + 0)/2 − 1 = −1.
-
-</details>
 
 </details>
 
