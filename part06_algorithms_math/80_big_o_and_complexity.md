@@ -938,7 +938,7 @@ Output:
      25          17                   25                    212              15          242,785
      32          22                   32                    348              18        7,049,155
      64          44                   64                  1,404              21   34,335,360,355,129
-    256         177                 256                 22,671              27           ~10^53
+    256         177                  256                 22,671              27           ~10^53
    1024         710                1024                363,663              33          ~10^214
    4096        2843                4096              5,822,439              39          ~10^856
   The call count at n = 25 is measured by actually running the recursion,
@@ -974,8 +974,8 @@ Output:
      25          242,785                           2,670,635
      32        7,049,155                         105,737,325
      64   34,335,360,355,129               1,030,060,810,653,870
-    128 ~10^25                                 ~10^37
-    256 ~10^53                                 ~10^55
+    128           ~10^26                              ~10^28
+    256           ~10^53                              ~10^55
   Theta(phi^n * n), and by n = 64 the bit cost is already 1.03e15, which at
   a billion bit-operations per second is twelve days of work.  Both models
   agree here, and they agree because the RECURSION -- not the recurrence --
@@ -1276,12 +1276,13 @@ Output:
   GEOMETRIC series in j with ratio a/b^d -- which is the entire master theorem.
 
    n    a   b   d   a/b^d   levels   recursion-tree total   n^d log_b(n)   n^(log_b a)
-  1024    2   2   1     1.00        11                   11,264          11,264             1,024
-  1024    2   2   0     2.00        11                    2,047              11             1,024
-  1024    2   2   2     0.50        11                2,096,128      11,534,336             1,024
-  1024    3   2   1     1.50        11                  175,099          11,264            59,049
-  1024    2   4   2     0.12         6                1,198,368       6,291,456                32
-  4096    2   2   1     1.00        13                   53,248          53,248             4,096
+   1024    2   2   1     1.00        11                   11,264          11,264             1,024
+   1024    2   2   0     2.00        11                    2,047              11             1,024
+   1024    2   2   2     0.50        11                2,096,128      11,534,336             1,024
+   1024    3   2   1     1.50        11                  175,099          11,264            59,049
+   1024    2   4   2     0.12         6                1,198,368       6,291,456                32
+   4096    2   2   1     1.00        13                   53,248          53,248             4,096
+
   Read the three cases off the a/b^d column:
     a/b^d < 1  (2,2,2 -> 0.50): levels SHRINK, the top dominates, Theta(n^d).
     a/b^d = 1  (2,2,1 -> 1.00): levels are EQUAL, Theta(n^d log n) -- and
@@ -1317,7 +1318,7 @@ Output:
     256           511       2048.0     1537.0       6.004     32768
    1024          2046      10240.0     8194.0       8.002    524288
    4096          8190      49152.0    40962.0      10.000   8388608
-  16384         32767     229376.0   196609.0      12.000  134217728
+  16384         32767     229376.0   196609.0      12.000   134217728
   The deficit per element tends to 1 (each merge wastes on average one
   comparison when one run empties first), so the count is n log2(n) - O(n).
   That is Theta(n log n) and NOT Theta(n log n - n) as a Theta claim -- the
@@ -1338,6 +1339,7 @@ Output:
    16777216   4   2   1   375,299,968,947,541   281,474,976,710,656.0                1.33   3: Theta(n^2.000)
    16777216   3   2   1   423,644,304,721   282,429,536,481.0                1.50   3: Theta(n^1.585)
    16777216   2   4   2          8,191           4,096.0                2.00   1: Theta(n^d)
+
   The ratio column is the proof, not a decoration.  For every row the value
   is 2.00, 1.33 or 1.50 at n = 2^20 AND the identical value at n = 2^24 --
   sixteen times larger.  A ratio that does not drift is a constant, and a
@@ -1367,12 +1369,14 @@ Output:
      1e-12       1.100e-04         1.003e-06        rounding          rounding    2.22e-04
      1e-14       1.321e-02         1.321e-02        rounding          rounding    2.22e-02
      1e-16       2.540e+00         1.430e+00        rounding          rounding    2.22e+00
+
   forward difference: best error 4.023e-09 at h = 1e-08
   central difference: best error 3.590e-12 at h = 1e-05
   central/forward best-error ratio = 1120.63x, bought with 2x the function calls
   Theory says h_opt ~ sqrt(eps/|f''|) = 1.4e-8 for forward and
   h_opt ~ (3*eps/|f'''|)^(1/3) = 1.1e-5 for central.  The measured optima
   are the nearest grid points, which is as good as a 10-point sweep gets.
+
   Two things to notice.  Both differences are O(1) in step count -- one
   loop, one subtraction -- so both are Theta(1) OPERATIONS, and the letter
   O cannot tell them apart.  The entire difference between them is a
@@ -2398,11 +2402,11 @@ Output:
 ```text
 === The early exit, counted ===
      n   with early exit (worst)   without early exit   without/n
-    16                        16                   16    1.00
-    64                        64                   64    1.00
-   256                       256                  256    1.00
-  1024                      1024                 1024    1.00
-  4096                      4096                 4096    1.00
+     16                         16                    16         1.00
+     64                         64                    64         1.00
+    256                        256                   256         1.00
+   1024                       1024                  1024         1.00
+   4096                       4096                  4096         1.00
   Both are Theta(n) in the worst case.  But WITHOUT the early exit the
   count is n for EVERY input -- including the best case -- so it is Theta(n)
   outright, which is a strictly stronger and much more useful claim.
@@ -2457,11 +2461,11 @@ Output:
 
 ```text
      n   target = a[n-1] (worst)   target absent   n   ratio
-    16                        16              16   16   1.00
-    64                        64              64   64   1.00
-   256                       256             256  256   1.00
-  1024                      1024            1024 1024   1.00
-  4096                      4096            4096 4096   1.00
+     16                         16                16     16    1.00
+     64                         64                64     64    1.00
+    256                        256               256    256    1.00
+   1024                       1024              1024   1024    1.00
+   4096                       4096              4096   4096    1.00
 
   The two columns are both exactly n, for every n, and the ratio is 1.00.
   The BEST case is a different story: with the target at index 0 the
@@ -2549,9 +2553,9 @@ Output:
       n   k=log2(n)   calls counted   3^(k+1)/2 - 1/2   ratio   n^log2(3)
       16           4              121               121.0    1.00            81.0
      256           8            9,841             9,841.0    1.00         6,561.0
-    4096          12          797,161           797,161.0    1.00        531,441.0
-   65536          16       64,570,081        64,570,081.0    1.00     43,046,721.0
- 1048576          20   5,230,176,601     5,230,176,601.0    1.00  3,486,784,401.0
+    4096          12          797,161           797,161.0    1.00       531,441.0
+   65536          16       64,570,081        64,570,081.0    1.00    43,046,721.0
+  1048576          20    5,230,176,601     5,230,176,601.0    1.00   3,486,784,401.0
   The closed form is exact: f(n) = 1 + 3 + 9 + ... + 3^k = (3^(k+1) - 1)/2,
   and with k = log2(n) that is Theta(n^log2 3) = Theta(n^1.585).
   The ratio column is 1.00 to the last digit at every size: that IS the
@@ -2828,8 +2832,22 @@ Output:
   n/1000                              0.0010         0.0010         0.0010      flat   Theta(n)
   n                                   1.0000         1.0000         1.0000      flat   Theta(n)
   n*log2(n)                           9.9658        19.9316        29.8974    rising   omega(n)
-  n^1.5                            31.6228     1000.0000     31622.7766    rising   omega(n)
+  n^1.5                              31.6228      1000.0000     31622.7766    rising   omega(n)
   n^2/1e6                             0.0010         1.0000      1000.0000    rising   omega(n)
+
+  Read the TREND, never the size.  n/1000 shows 0.001 in every column and
+  is Theta(n): a constant factor does not change the class.  1, log2(n) and
+  sqrt(n) have ratios that fall without bound, so they are o(n) -- strictly
+  faster than linear.  n*log2(n), n^1.5 and n^2/1e6 rise, so they are
+  omega(n), and n^2/1e6 shows why a constant matters in the other
+  direction: its ratio is 0.001 at n = 1e3 -- smaller than n's own noise --
+  and 1000 at n = 1e9.  'O(n^2) is a valid bound for n' and 'n^2 eventually
+  beats n' are both true, and only the second one is useful.
+  2^n is left out of the table on purpose: no float represents 2^1000, so
+  a measurement-driven classifier has nothing to look at.  It is the
+  extreme omega(n), and its ratio f(n)/n needs 2^n/n BITS to write down --
+  which is a reminder that the classifier itself is subject to the cost
+  model it is trying to measure.
 ```
 
 **Why the trend, not the value.** The three columns are $f(n)/n$ at
@@ -2926,8 +2944,8 @@ Output:
   better than the model.  Which is the normal relationship: the model is
   an upper bound on a real implementation, not a description of it.
 
-  digits in 2^18 - 1: 78,975   (CPython's default cap is 4300)
-  sys.getsizeof of a 262144-bit int: 32,796 bytes
+  digits in 2^18 - 1: 78,914   (CPython's default cap is 4300)
+  sys.getsizeof of a 262144-bit int: 34,980 bytes
   its payload alone: 32,768 bytes
 ```
 
@@ -3061,15 +3079,16 @@ Output:
 ```text
 === The list-concatenation trap, counted in ELEMENT COPIES ===
      n   s = s + [x]      s.append(x)      s = s + [x] then reversed
-        8               28               8                       36
-       64            2,016              64                    2,080
-      512          130,816             512                  131,328
-     4096        8,386,560           4,096                8,390,656
-    32768      536,854,528          32,768                536,887,296
+      8               28               8                       36
+     64            2,016              64                    2,080
+    512          130,816             512                  131,328
+   4096        8,386,560           4,096                8,390,656
+  32768      536,854,528          32,768              536,887,296
   s = s + [x] copies the whole accumulator every iteration: 1 + 2 + ... +
   (n-1) = n(n-1)/2 element copies, which is Theta(n^2) even though the loop
   runs n times.  Fix it with s.append(x), or with a list comprehension, or
   with itertools.accumulate -- all Theta(n).
+
   The same trap in other guises, all Theta(n^2) in disguise:
     del lst[0]                     shifts n-1 elements; use collections.deque
     lst.insert(0, x)               same; use append, or deque.appendleft
@@ -3080,7 +3099,8 @@ Output:
   The three Theta(n) rewrites, and what each actually does:
     build_append        explicit loop, append       the idiomatic imperative form
     build_comprehension one expression               the idiomatic Python form
-    build_preallocated  size once, then assign       for filling under a reader
+    build_preallocated  size once, then assign       the form to use if you must
+    write to the list while filling it (e.g. under a lock)
   All four produce the same 64-element list, and all four are Theta(n).
   The comprehension is usually fastest in CPython because the loop is in C.
 ```

@@ -101,6 +101,54 @@ determined by where it is false. So they are the same proposition. From this
 one identity, the rest follow: `¬(P → Q) ≡ P ∧ ¬Q`, and the contrapositive
 `P → Q ≡ ¬Q → ¬P`.
 
+## Formula Sheet
+
+Notation follows [SYMBOLS.md](../SYMBOLS.md). `P` and `Q` are propositions, `T`
+and `F` are the two truth values, and every truth column quoted below is taken
+over the fixed row order `(P, Q) = (F,F), (F,T), (T,F), (T,T)`. Two columns are
+comparable only when both were computed over the same rows in that same order.
+
+| Symbol | Formula | In plain words | When you use it |
+| --- | --- | --- | --- |
+| proposition | `$P \in \{T, F\}$` | a sentence with exactly one truth value | every `if` condition is one. A sentence with an *unbound* variable has none |
+| connective | `$\odot(P, Q) = P'$` | an operation that takes propositions and returns a proposition | the only way formulas grow. Python has `not`, `and`, `or`, and no arrow |
+| `$\neg P$` | `$\neg T = F$`, `$\neg F = T$` | flip the value | the only unary connective. Python `not`, **never** `~`: `~True` is `-2` |
+| `$P \wedge Q$` | true only when **both** are true; column `0001` | AND | Python `and`. Short-circuits at the first falsy operand, so operand order is behaviour |
+| `$P \vee Q$` | false only when **both** are false; column `0111` | OR, **inclusive** — at least one, not exactly one | Python `or`. Short-circuits at the first truthy operand |
+| `$P \to Q$` | `$\neg P \vee Q$`; column `1101` | false only when `P` is true and `Q` is false | guards, preconditions, specifications. In Python: `if not p or q` |
+| `$P \leftrightarrow Q$` | `$(P \to Q) \wedge (Q \to P) = (P \wedge Q) \vee (\neg P \wedge Q)$`; column `1001` | the two have the **same** truth value | Python `p == q` on booleans. **Not** `p and q`, whose column is `0001` |
+| `$P \equiv Q$` | `$\operatorname{col}(P) = \operatorname{col}(Q)$` | they agree under **every** assignment | a claim about behaviour, not about spelling. This is what makes a rewrite provable |
+| substitution for equivalence | `$P \equiv Q \;\Rightarrow\; C[P] \equiv C[Q]$` | you may swap `P` for `Q` inside any larger formula `C` | Leibniz's law: the licence behind every condition simplification anyone performs |
+| tautology | `$P \equiv T$`, written `$\top$` | true on every row | an `if` whose condition is a tautology is a branch that can never be false: dead code |
+| contradiction | `$P \equiv F$`, written `$\bot$` | false on every row | `p & ~p`. A `while` whose condition is a contradiction never runs its body |
+| contingent | neither `$T$ nor $F$` | true on some rows and false on others | almost every real condition. Being contingent is not a criticism |
+| exclusive-or | `$P \oplus Q = (P \wedge \neg Q) \vee (\neg P \wedge Q)$`; column `0110` | **exactly one** of them holds | Python `p != q` on booleans. Also equal to `$\neg(P \leftrightarrow Q)$` |
+| De Morgan | `$\neg(P \wedge Q) \equiv \neg P \vee \neg Q$`, `$\neg(P \vee Q) \equiv \neg P \wedge \neg Q$` | push a `$\neg$` through and **flip** AND to OR, or OR to AND | rewriting a negated condition. Getting the flip backwards is the worked example |
+| double negation | `$\neg\neg P \equiv P$` | two NOTs cancel | the step that leaves every literal a bare variable or its negation |
+| idempotence | `$P \wedge P \equiv P$`, `$P \vee P \equiv P$` | saying it twice says it once | first thing to try when a condition has grown long |
+| absorption | `$P \vee (P \wedge Q) \equiv P$`, `$P \wedge (P \vee Q) \equiv P$` | the wider term swallows the narrow one | the most common dead branch in real code |
+| commutativity | `$P \wedge Q \equiv Q \wedge P$`, `$P \vee Q \equiv Q \vee P$` | order does not matter | regrouping a condition so a reader can parse it |
+| associativity | `$(P \wedge Q) \wedge R \equiv P \wedge (Q \wedge R)$` | how a chain of one connective is bracketed | dropping redundant parentheses; `Exercise 3`'s grammar needs a choice here |
+| contrapositive | `$P \to Q \equiv \neg Q \to \neg P$` | swap both sides and negate both | always safe, and the form used to prove things by induction |
+| converse | `$\neg P \to \neg Q$, column `1011` against `1101` | the implication read backwards | **not** equivalent to `$P \to Q$`. [Lesson 13](13_proof_techniques.md) lives on that difference |
+| negation of implication | `$\neg(P \to Q) \equiv P \wedge \neg Q$`; column `0010` | the premise holds and the conclusion does not | never `$\neg(P \to \neg Q)$`, which is a different formula entirely |
+| negation of a biconditional | `$\neg(P \leftrightarrow Q) \equiv (P \wedge \neg Q) \vee (\neg P \wedge Q)$`; column `0110` | the two **differ** | exclusive-or. **Not** `$P \vee Q$`, whose column is `0111`; the two disagree only on `(T, T)` |
+| precedence | `$\neg \;>\; \wedge \;>\; \vee$`, and `$\to$` is right-associative: `$P \to (Q \to R)$` | NOT binds tightest, then AND, then OR | Python agrees, so `not p and q or r` means `(($\neg p \wedge q$) \vee r$)` and `not p or q` means `($\neg p$) \vee q$` |
+| truth column | `$0110$` for `$P \oplus Q$ over `(F,F), (F,T), (T,F), (T,T)` | the entire formula written as four bits | the unit of comparison for equivalence. Row order is part of the value |
+| assignments | `$2^n$` | 4 rows for `p` and `q`, 16 for four variables | the price of proving an equivalence by exhaustion, and the reason a proof is only as strong as the row count |
+| bound variable | every occurrence of `x` is bound by a quantifier | `x > 5` has no truth value; `every integer x greater than 5 is odd` has one | a proposition needs a definite truth value, not an absence of variables |
+
+Domain restrictions, which is where answers go wrong. **`$\vee$` and `$\to$`
+need the inclusive reading**: `p or q` is true when both hold, and `p → q` is
+true on *both* rows where `p` is false. **Precedence applies only to
+unparenthesised text**: `not a or b` is `(not a) or b`, so the grouping in the
+worked example below is correct and the bug lies elsewhere. **Associativity is a
+choice, not a fact** — `p → q → r` and `(p → q) → r` have different columns,
+`11111101` and `01011101` over three variables, so a parser that picks the wrong
+one is wrong in a way no test you happen to write will catch. And **a truth table
+is complete only for the variables that actually appear**: `p & q | p & ~r`
+mentions `r`, so a four-row table over `p` and `q` alone does not settle it.
+
 ## Worked Example
 
 The worked example is a security check, because that is where this material
@@ -446,53 +494,7 @@ Why tempting: the criterion "does it have a definite truth value" is correct, an
 people apply it to the presence of variables rather than to their being bound,
 which is a subtle and easy misreading.
 
-## Formula Sheet
-
-Notation follows [SYMBOLS.md](../SYMBOLS.md). `P` and `Q` are propositions, `T`
-and `F` are the two truth values, and every truth column quoted below is taken
-over the fixed row order `(P, Q) = (F,F), (F,T), (T,F), (T,T)`. Two columns are
-comparable only when both were computed over the same rows in that same order.
-
-| Symbol | Formula | In plain words | When you use it |
-| --- | --- | --- | --- |
-| proposition | `$P \in \{T, F\}$` | a sentence with exactly one truth value | every `if` condition is one. A sentence with an *unbound* variable has none |
-| connective | `$\odot(P, Q) = P'$` | an operation that takes propositions and returns a proposition | the only way formulas grow. Python has `not`, `and`, `or`, and no arrow |
-| `$\neg P$` | `$\neg T = F$`, `$\neg F = T$` | flip the value | the only unary connective. Python `not`, **never** `~`: `~True` is `-2` |
-| `$P \wedge Q$` | true only when **both** are true; column `0001` | AND | Python `and`. Short-circuits at the first falsy operand, so operand order is behaviour |
-| `$P \vee Q$` | false only when **both** are false; column `0111` | OR, **inclusive** — at least one, not exactly one | Python `or`. Short-circuits at the first truthy operand |
-| `$P \to Q$` | `$\neg P \vee Q$`; column `1101` | false only when `P` is true and `Q` is false | guards, preconditions, specifications. In Python: `if not p or q` |
-| `$P \leftrightarrow Q$` | `$(P \to Q) \wedge (Q \to P) = (P \wedge Q) \vee (\neg P \wedge Q)$`; column `1001` | the two have the **same** truth value | Python `p == q` on booleans. **Not** `p and q`, whose column is `0001` |
-| `$P \equiv Q$` | `$\operatorname{col}(P) = \operatorname{col}(Q)$` | they agree under **every** assignment | a claim about behaviour, not about spelling. This is what makes a rewrite provable |
-| substitution for equivalence | `$P \equiv Q \;\Rightarrow\; C[P] \equiv C[Q]$` | you may swap `P` for `Q` inside any larger formula `C` | Leibniz's law: the licence behind every condition simplification anyone performs |
-| tautology | `$P \equiv T$`, written `$\top$` | true on every row | an `if` whose condition is a tautology is a branch that can never be false: dead code |
-| contradiction | `$P \equiv F$`, written `$\bot$` | false on every row | `p & ~p`. A `while` whose condition is a contradiction never runs its body |
-| contingent | neither `$T$ nor $F$` | true on some rows and false on others | almost every real condition. Being contingent is not a criticism |
-| exclusive-or | `$P \oplus Q = (P \wedge \neg Q) \vee (\neg P \wedge Q)$`; column `0110` | **exactly one** of them holds | Python `p != q` on booleans. Also equal to `$\neg(P \leftrightarrow Q)$` |
-| De Morgan | `$\neg(P \wedge Q) \equiv \neg P \vee \neg Q$`, `$\neg(P \vee Q) \equiv \neg P \wedge \neg Q$` | push a `$\neg$` through and **flip** AND to OR, or OR to AND | rewriting a negated condition. Getting the flip backwards is the worked example |
-| double negation | `$\neg\neg P \equiv P$` | two NOTs cancel | the step that leaves every literal a bare variable or its negation |
-| idempotence | `$P \wedge P \equiv P$`, `$P \vee P \equiv P$` | saying it twice says it once | first thing to try when a condition has grown long |
-| absorption | `$P \vee (P \wedge Q) \equiv P$`, `$P \wedge (P \vee Q) \equiv P$` | the wider term swallows the narrow one | the most common dead branch in real code |
-| commutativity | `$P \wedge Q \equiv Q \wedge P$`, `$P \vee Q \equiv Q \vee P$` | order does not matter | regrouping a condition so a reader can parse it |
-| associativity | `$(P \wedge Q) \wedge R \equiv P \wedge (Q \wedge R)$` | how a chain of one connective is bracketed | dropping redundant parentheses; `Exercise 3`'s grammar needs a choice here |
-| contrapositive | `$P \to Q \equiv \neg Q \to \neg P$` | swap both sides and negate both | always safe, and the form used to prove things by induction |
-| converse | `$\neg P \to \neg Q$, column `1011` against `1101` | the implication read backwards | **not** equivalent to `$P \to Q$`. [Lesson 13](13_proof_techniques.md) lives on that difference |
-| negation of implication | `$\neg(P \to Q) \equiv P \wedge \neg Q$`; column `0010` | the premise holds and the conclusion does not | never `$\neg(P \to \neg Q)$`, which is a different formula entirely |
-| negation of a biconditional | `$\neg(P \leftrightarrow Q) \equiv (P \wedge \neg Q) \vee (\neg P \wedge Q)$`; column `0110` | the two **differ** | exclusive-or. **Not** `$P \vee Q$`, whose column is `0111`; the two disagree only on `(T, T)` |
-| precedence | `$\neg \;>\; \wedge \;>\; \vee$`, and `$\to$` is right-associative: `$P \to (Q \to R)$` | NOT binds tightest, then AND, then OR | Python agrees, so `not p and q or r` means `(($\neg p \wedge q$) \vee r$)` and `not p or q` means `($\neg p$) \vee q$` |
-| truth column | `$0110$` for `$P \oplus Q$ over `(F,F), (F,T), (T,F), (T,T)` | the entire formula written as four bits | the unit of comparison for equivalence. Row order is part of the value |
-| assignments | `$2^n$` | 4 rows for `p` and `q`, 16 for four variables | the price of proving an equivalence by exhaustion, and the reason a proof is only as strong as the row count |
-| bound variable | every occurrence of `x` is bound by a quantifier | `x > 5` has no truth value; `every integer x greater than 5 is odd` has one | a proposition needs a definite truth value, not an absence of variables |
-
-Domain restrictions, which is where answers go wrong. **`$\vee$` and `$\to$`
-need the inclusive reading**: `p or q` is true when both hold, and `p → q` is
-true on *both* rows where `p` is false. **Precedence applies only to
-unparenthesised text**: `not a or b` is `(not a) or b`, so the grouping in the
-worked example below is correct and the bug lies elsewhere. **Associativity is a
-choice, not a fact** — `p → q → r` and `(p → q) → r` have different columns,
-`11111101` and `01011101` over three variables, so a parser that picks the wrong
-one is wrong in a way no test you happen to write will catch. And **a truth table
-is complete only for the variables that actually appear**: `p & q | p & ~r`
-mentions `r`, so a four-row table over `p` and `q` alone does not settle it.
+---
 
 ## Multiple Choice Questions
 

@@ -2495,7 +2495,7 @@ bit to 0 and then the first 0 bit to 1.
 (a) Compute the *exact* total number of flips for $m = 2^n - 1$ increments, and
 hence the amortised cost.
 (b) Prove the amortised bound by the aggregate method.
-(c) Prove it by the potential method, with $\Phi$ = the number of 0 bits, and
+(c) Prove it by the potential method, with $\Phi$ = the number of 1 bits, and
 state the constant.
 (d) Find the worst-case single increment and explain why it does not contradict
 (a).
@@ -2504,57 +2504,371 @@ state the constant.
 <details>
 <summary>Solution</summary>
 
-**(a)** Over $2^n - 1$ increments the counter visits $1, 2, \dots, 2^n - 1$. Bit
-$i$ (counting from 0) is 1 exactly when the value is odd enough, and it is
-flipped once every $2^{i+1}$ increments, so exactly
-$\frac{2^n - 1}{2^{i+1}}$ times. Summing over $i$ and adding the $n$ bits that
-get created from nothing:
+**(a)** Bit $i$ is toggled once every $2^i$ increments, so over $m$ increments the
+total number of flips is
 
-$$\text{total} \;=\; \sum_{i=0}^{n-1}\frac{2^n-1}{2^{i+1}} \;+\; n \;=\; (2^n - 1)\left(1 - 2^{-n}\right) + n \;=\; 2^n - 1 + n.$$
+$$\textstyle\sum_{i \ge 0}\Big\lfloor \tfrac{m}{2^i}\Big\rfloor \;=\; 2m - \operatorname{popcount}(m),$$
 
-So the amortised cost is exactly
-$\frac{2^n - 1 + n}{2^n - 1} = 2 - 2^{1-n}$. The code measures `502` flips over
-`255` increments (`1.9686`) at $n = 8$, `131,054` over `65,535` (`1.9998`) at
-$n = 16$, and `2,097,130` over `1,048,575` (`2.0000`) at $n = 20$.
+a standard binary-digit identity. For $m = 2^n - 1$ the binary expansion is $n$
+ones, so $\operatorname{popcount}(m) = n$ and the total is **exactly**
 
-**(b) Aggregate.** Group the increments by how many trailing 1s they clear:
-$2^{n-1}$ increments clear 0 bits, $2^{n-2}$ clear 1, and so on. The total is
-$\sum_{t=0}^{n-1} 2^{n-1-t}(t+1) = 2^n - 1 + n$, i.e. a geometric sum evaluated
-in closed form, giving $O(m)$ total over $m = 2^n - 1$ increments, hence
-amortised $O(1)$. The grouping is what makes it an aggregate argument: it does
-not look at any individual increment, only at how many there are of each kind.
+$$2(2^n - 1) - n \;=\; 2^{n+1} - n - 2 .$$
 
-**(c) Potential.** Let $\Phi$ = the number of 0 bits, so $0 \le \Phi \le n$ (or
-$\le 2n$ allowing a fresh bit). An increment clears $t$ ones and sets one zero,
-so $\Delta\Phi = +t - 1$ and $\hat T = (t+1) + (t-1) = 2t$. Now $t$ can be at
-most $n-1$, and $t = n$ only when every bit was 1 — at which point a new bit is
-created and $n$ increases. So $\hat T \le 2$ for every increment, and
-$\sum T_i \le 2m + \Phi_{\max} = O(m)$. The constant is **2**, matching the exact
-answer from (a) to the limit.
+The amortised cost is $\frac{2^{n+1} - n - 2}{2^n - 1}$, which tends to **2 from
+below**: `1.7333` at $n = 4$, `1.9686` at $n = 8$, `2.0000` at $n = 20$. The
+constant is 2 rather than 1 because bit 0 is toggled on *every single* increment.
 
-**(d)** The worst single increment flips $n$ bits: incrementing from $2^n - 1$
-(all ones) to $2^n$ clears every bit. The code measures a worst increment of `8`,
-`16` and `20` at 8, 16 and 20 bits. This does not contradict (a) because (a) is
-about the total over $2^n - 1$ increments and (d) is about one of them; the
-worst increment is `2.0 / 1.9998` times the amortised cost, a bounded factor —
-which is *not* true of the dynamic array, where the factor is $n/2$. The
-counter is the friendlier example precisely because its peak is a constant
-multiple of its mean.
+**(b) Aggregate.** Group the increments by how many trailing 1s they clear.
+Exactly $2^{n-1-t}$ increments clear exactly $t$ of them and therefore cost $t+1$
+flips, so
 
-**(e)** Three reasons, in increasing order of rigour. First, the hardware does
-it: adding 1 to a machine integer modifies the low bits and *propagates the
-carry* in hardware, in one cycle for the whole word. The $n$ "flips" are $n/64$
-word-level operations, and a 64-bit word is a constant, so the machine-level
-cost is $O(1)$ with a small constant. Second, the sequence of *consecutive*
-increments is what makes the tail cheap: an expensive increment is always
-followed by many cheap ones, which is exactly the amortised statement. Third,
-and this is the honest caveat, the model matters: if you count **bit**
-operations, `i += 1` on a Python integer is $\Theta(\log n)$ per increment —
-and even that is the amortised figure, with a worst case of $O(\log n)$. The
-lesson's [Lesson 80](80_big_o_and_complexity.md) measures the growth: `1 + 2 +
-4 + 8 + ... ` in the bit model. So "increment is $O(1)$" is true of machine
-words, amortised, and "increment is $O(\log n)$" is true of bignums, also
-amortised. **The cost model decides, as always.**
+$$\textstyle\sum_{t=0}^{n-1} 2^{n-1-t}(t+1) \;=\; 2^{n+1} - n - 2,$$
+
+the same closed form, reached without inspecting any individual increment. That
+is what makes it an aggregate argument: it counts *how many* of each kind there
+are, not what any one of them does. $O(m)$ total over $m$ increments gives
+amortised $O(1)$, and the exact grouping pins the constant at 2.
+
+**(c) Potential.** Take $\Phi$ = the number of 1 bits. An increment clears $t$
+ones and sets one zero, so $\Delta\Phi = 1 - t$ and
+
+$$\hat T \;=\; T + \Delta\Phi \;=\; (t+1) + (1-t) \;=\; 2$$
+
+for **every** increment, with no case analysis at all. Summing,
+$\sum_i T_i \le 2m + \Phi_0 - \Phi_m \le 2m$, and since $\Phi_0 = 0$ the bound
+is tight in the limit. The accounting identity closes exactly:
+$2m = (2^{n+1} - n - 2) + n$.
+
+The choice of potential is the whole exercise. Taking $\Phi$ = the number of
+**0** bits instead gives $\Delta\Phi = t - 1$ and $\hat T = 2t$, which is *not*
+bounded by any constant — on the all-ones increment $t = n-1$ and
+$\hat T = 2n - 2$. Same counter, same recurrence, wrong potential, and the
+method silently fails to produce a bound. A potential method is only as
+informative as the sign it gives you for $\Delta\Phi$.
+
+**(d)** The worst single increment flips $n$ bits (from $2^n - 1$ up to $2^n$),
+and it happens exactly once in $2^n - 1$ increments. Its ratio to the amortised
+cost is asymptotic to $n/2$, which grows without bound — so the counter is
+**not** better behaved than the doubling array on this measure, whose
+worst/amortised ratio is also $n/2$.
+
+There is no contradiction with (a), because they constrain different things:
+(a) bounds a **sum** and (d) makes a claim about a **maximum**, and maxima are
+unconstrained by sums. This is the single most common misreading of amortised
+analysis, and the binary counter is a poor choice of example precisely because
+its peak-to-mean ratio *does* diverge.
+
+**(e)** The reason is the **cost model**, not the amortised bound. In the bit
+model, $i += 1$ costs the number of trailing ones it must clear, which is
+$\Theta(n)$ in the worst case. In the 64-bit machine-word model, the hardware
+adds with carry propagation across the whole register in **one operation** —
+so while the counter fits in a word, the worst case is exactly 1, not $n/2$, and
+the ratio is 1. Both models agree the amortised cost is $O(1)$; they disagree
+completely about the worst case.
+
+What makes the word model legitimate is that the word size is a **constant**, so
+$n/64$ is a constant. The moment the counter outgrows one register the
+worst-case figure becomes $\lceil (n+1)/64 \rceil$ word operations and the
+ratio starts growing again. CPython's integers are arbitrary precision, so
+Python's `i += 1` really does take $O(n/64)$ machine words — and nobody
+measures it, because the width of the register, not the algorithm, is the thing
+being chosen.
+
+```python
+"""Exercise 3 code block for lesson 81: the binary counter, instrumented."""
+
+
+class BinaryCounter:
+    """A binary counter with the cost of every increment measured.
+
+    `width` bits are allocated up front, so no new bits are ever created and
+    the 'a new bit appears' case cannot sneak in and change the accounting.
+    """
+
+    def __init__(self, width):
+        self.bits = [0] * width
+        self.flips = []          # flips charged to each increment
+        self.ones = []           # popcount after each increment
+
+    def increment(self):
+        i, charged = 0, 0
+        while self.bits[i] == 1:
+            self.bits[i] = 0
+            charged += 1
+            i += 1
+        self.bits[i] = 1
+        charged += 1
+        self.flips.append(charged)
+        self.ones.append(sum(self.bits))
+
+
+def run(n, m):
+    c = BinaryCounter(n)
+    for _ in range(m):
+        c.increment()
+    return c
+
+
+print("=== (a) exact total flips over 2^n - 1 increments ===")
+print()
+print(f"{'n':>3} {'m = 2^n - 1':>12} {'total flips':>13} {'2m - popcount(m)':>16} "
+      f"{'2^(n+1) - n - 2':>16} {'equal':>6} {'amortised':>11}")
+for n in (4, 6, 8, 12, 16, 20):
+    m = (1 << n) - 1
+    c = run(n, m)
+    total = sum(c.flips)
+    print(f"{n:3d} {m:12d} {total:13d} {2 * m - n:16d} {(1 << (n + 1)) - n - 2:16d} "
+          f"{str(total == 2 * m - n == (1 << (n + 1)) - n - 2):>6} {total / m:11.4f}")
+print()
+print("  Bit i is toggled once every 2^i increments, so over m increments the")
+print("  total is SUM_{i>=0} floor(m / 2^i) = 2m - popcount(m), a standard")
+print("  binary-digit identity.  popcount(2^n - 1) = n, so the exact total is")
+print("      total = 2^(n+1) - n - 2.")
+print("  The amortised cost is that over 2^n - 1, which tends to 2 from BELOW:")
+print("  1.7333 at n = 4, 1.9686 at n = 8, 2.0000 at n = 20.  The constant is")
+print("  2 and not 1 because bit 0 is toggled on every single increment.")
+print()
+print("  A handful of individual increments, n = 8, showing the sawtooth:")
+c8 = run(8, 12)
+print(f"      increments 1..12 cost {c8.flips}")
+print("      -> 1, 2, 1, 3, 1, 2, 1, 4, ...  The 2^k-th increment costs k+1.")
+print()
+print("=== (b) aggregate: group increments by how many trailing 1s they clear ===")
+print()
+n = 8
+m = (1 << n) - 1
+c = run(n, m)
+print(f"{'t = trailing 1s':>17} {'how many increments':>21} {'flips each':>12} {'subtotal':>12}")
+for t in range(n):
+    how_many = sum(1 for f in c.flips if f == t + 1)
+    print(f"{t:17d} {how_many:21d} {t + 1:12d} {how_many * (t + 1):12d}")
+print(f"{'total':>17} {m:21d} {'':>12} {sum(c.flips):12d}")
+print()
+print("  Exactly 2^(n-1-t) increments clear exactly t trailing ones, so the")
+print("  total is SUM_t 2^(n-1-t)(t+1) = 2^(n+1) - n - 2 -- the same number as")
+print("  (a), reached without looking at any single increment.  That is what")
+print("  makes it an aggregate argument: it counts HOW MANY of each kind.")
+print()
+print("=== (c) potential: Phi = the number of 1 bits ===")
+print()
+print("  An increment clears t ones and sets one zero, so dPhi = 1 - t, and")
+print("      T_hat = (t + 1) + (1 - t) = 2      for EVERY increment.")
+print()
+print(f"  {'n':>3} {'m':>10} {'SUM T':>12} {'SUM T_hat':>11} {'= 2m ?':>8} "
+      f"{'Phi_final':>11} {'Phi_initial':>13} {'check':>7}")
+for n in (4, 6, 8, 12, 16):
+    m = (1 << n) - 1
+    c = run(n, m)
+    sT = sum(c.flips)
+    sThat = sum(f + (1 - (f - 1)) for f in c.flips)
+    phi_f = c.ones[-1]
+    check = sT + phi_f - 0
+    print(f"  {n:3d} {m:10d} {sT:12d} {sThat:11d} {str(sThat == 2 * m):>8} "
+          f"{phi_f:11d} {0:13d} {str(check == sThat):>7}")
+print()
+print("  SUM T_hat = 2m EXACTLY, not merely at most 2m.  The accounting identity")
+print("      SUM T_hat = SUM T + Phi(final) - Phi(initial)")
+print("  reads 2m = (2^(n+1) - n - 2) + n, which is 2^(n+1) - 2 = 2m.  Nothing")
+print("  is left over and nothing is missing.")
+print()
+print("  Using Phi = the number of 0 bits instead gives dPhi = t - 1 and")
+print("  T_hat = 2t, which is NOT bounded by any constant: on the all-ones")
+print("  increment t = n - 1, so T_hat = 2n - 2.  Same counter, wrong")
+print("  potential, and the method silently fails to produce a bound.  A")
+print("  potential method is only as good as the sign you get for dPhi.")
+print()
+print("=== (d) worst single increment ===")
+print()
+print(f"  {'n':>3} {'worst increment':>18} {'amortised':>11} {'ratio':>8} "
+      f"{'times it occurs':>17} {'array ratio n/2':>17}")
+for n in (8, 12, 16, 20):
+    m = (1 << n) - 1
+    c = run(n, m)
+    worst = max(c.flips)
+    amort = sum(c.flips) / m
+    freq = sum(1 for f in c.flips if f == worst)
+    print(f"  {n:3d} {worst:18d} {amort:11.4f} {worst / amort:8.2f} "
+          f"{freq:17d} {n / 2:17.1f}")
+print()
+print("  The worst increment flips n bits, and it happens ONCE in 2^n - 1")
+print("  increments.  Its ratio to the amortised cost is asymptotic to n/2,")
+print("  which GROWS WITHOUT BOUND -- so on this measure the counter is no")
+print("  better behaved than the doubling array, whose worst/amortised ratio")
+print("  is also n/2.  (a) and (d) do not conflict: one is a bound on a SUM,")
+print("  the other a statement about a MAXIMUM, and maxima are unconstrained")
+print("  by sums.  What rescues i += 1 is not the ratio but the model.")
+print()
+print("=== (e) the same counter in the model it is normally argued in ===")
+print()
+print(f"  {'bits':>6} {'increments':>12} {'bit flips':>12} {'amortised':>10} "
+      f"{'word ops':>12} {'amortised':>10}")
+for n in (8, 10, 12, 14, 16, 18, 20):
+    m = (1 << n) - 1
+    c = run(n, m)
+    flips = sum(c.flips)
+    words = sum((f + 63) // 64 for f in c.flips)
+    print(f"  {n:6d} {m:12d} {flips:12d} {flips / m:10.4f} {words:12d} {words / m:10.4f}")
+print()
+print("  Widths too large to simulate, but both columns have closed forms:")
+print("      bit-model amortised  = (2^(n+1) - n - 2) / (2^n - 1)")
+print("      word-model amortised = SUM_t 2^(n-1-t) ceil((t+2)/64) / (2^n - 1)")
+print("  (the second reuses the distribution already counted in part (b)):")
+print()
+print(f"       {'bits':>8} {'bit amortised':>16} {'word amortised':>17} {'worst words':>13} "
+      f"{'ratio':>8}")
+for n in (8, 16, 32, 63, 64, 65, 128, 256, 1024):
+    m = (1 << n) - 1
+    bit_amort = ((1 << (n + 1)) - n - 2) / m
+    w_amort = sum((1 << (n - 1 - t)) * (-(-(t + 2) // 64))
+                  for t in range(n)) / m
+    worst_w = -(-(n + 1) // 64)
+    print(f"       {n:8d} {bit_amort:16.8f} {w_amort:17.8f} {worst_w:13d} "
+          f"{worst_w / w_amort:8.2f}")
+print()
+print("  In the BIT model the amortised cost is 2 and the worst case is n/2.")
+print("  In the 64-bit WORD model the amortised cost is 1 -- exactly 1, because")
+print("  the distribution of trailing-ones counts is concentrated so hard on")
+print("  small values that nearly every increment touches one word.  So the")
+print("  word model does not rescue the counter, it divides everything by 64:")
+print("  the worst case becomes ceil((n+1)/64) = n/64 + O(1) word operations,")
+print("  and the worst/amortised ratio is still unbounded.")
+print()
+print("  So the correct sentence is NOT 'the amortised bound is tight'.  It is:")
+print("  i += 1 is O(1) because the word size is a CONSTANT, which makes n/64 a")
+print("  constant.  Change the model -- unbounded integers -- and the same")
+print("  increment becomes Theta(n) in the worst case.  Nothing about the")
+print("  algorithm changed; only the width of the register did.")
+print()
+print("  Python integers are arbitrary precision, so CPython's i += 1 really")
+print("  does take O(n/64) machine words.  Nobody measures it, because the")
+print("  interesting question was never the bit count.")
+```
+
+```text
+=== (a) exact total flips over 2^n - 1 increments ===
+
+  n  m = 2^n - 1   total flips 2m - popcount(m)  2^(n+1) - n - 2  equal   amortised
+  4           15            26               26               26   True      1.7333
+  6           63           120              120              120   True      1.9048
+  8          255           502              502              502   True      1.9686
+ 12         4095          8178             8178             8178   True      1.9971
+ 16        65535        131054           131054           131054   True      1.9998
+ 20      1048575       2097130          2097130          2097130   True      2.0000
+
+  Bit i is toggled once every 2^i increments, so over m increments the
+  total is SUM_{i>=0} floor(m / 2^i) = 2m - popcount(m), a standard
+  binary-digit identity.  popcount(2^n - 1) = n, so the exact total is
+      total = 2^(n+1) - n - 2.
+  The amortised cost is that over 2^n - 1, which tends to 2 from BELOW:
+  1.7333 at n = 4, 1.9686 at n = 8, 2.0000 at n = 20.  The constant is
+  2 and not 1 because bit 0 is toggled on every single increment.
+
+  A handful of individual increments, n = 8, showing the sawtooth:
+      increments 1..12 cost [1, 2, 1, 3, 1, 2, 1, 4, 1, 2, 1, 3]
+      -> 1, 2, 1, 3, 1, 2, 1, 4, ...  The 2^k-th increment costs k+1.
+
+=== (b) aggregate: group increments by how many trailing 1s they clear ===
+
+  t = trailing 1s   how many increments   flips each     subtotal
+                0                   128            1          128
+                1                    64            2          128
+                2                    32            3           96
+                3                    16            4           64
+                4                     8            5           40
+                5                     4            6           24
+                6                     2            7           14
+                7                     1            8            8
+            total                   255                       502
+
+  Exactly 2^(n-1-t) increments clear exactly t trailing ones, so the
+  total is SUM_t 2^(n-1-t)(t+1) = 2^(n+1) - n - 2 -- the same number as
+  (a), reached without looking at any single increment.  That is what
+  makes it an aggregate argument: it counts HOW MANY of each kind.
+
+=== (c) potential: Phi = the number of 1 bits ===
+
+  An increment clears t ones and sets one zero, so dPhi = 1 - t, and
+      T_hat = (t + 1) + (1 - t) = 2      for EVERY increment.
+
+    n          m        SUM T   SUM T_hat   = 2m ?   Phi_final   Phi_initial   check
+    4         15           26          30     True           4             0    True
+    6         63          120         126     True           6             0    True
+    8        255          502         510     True           8             0    True
+   12       4095         8178        8190     True          12             0    True
+   16      65535       131054      131070     True          16             0    True
+
+  SUM T_hat = 2m EXACTLY, not merely at most 2m.  The accounting identity
+      SUM T_hat = SUM T + Phi(final) - Phi(initial)
+  reads 2m = (2^(n+1) - n - 2) + n, which is 2^(n+1) - 2 = 2m.  Nothing
+  is left over and nothing is missing.
+
+  Using Phi = the number of 0 bits instead gives dPhi = t - 1 and
+  T_hat = 2t, which is NOT bounded by any constant: on the all-ones
+  increment t = n - 1, so T_hat = 2n - 2.  Same counter, wrong
+  potential, and the method silently fails to produce a bound.  A
+  potential method is only as good as the sign you get for dPhi.
+
+=== (d) worst single increment ===
+
+    n    worst increment   amortised    ratio   times it occurs   array ratio n/2
+    8                  8      1.9686     4.06                 1               4.0
+   12                 12      1.9971     6.01                 1               6.0
+   16                 16      1.9998     8.00                 1               8.0
+   20                 20      2.0000    10.00                 1              10.0
+
+  The worst increment flips n bits, and it happens ONCE in 2^n - 1
+  increments.  Its ratio to the amortised cost is asymptotic to n/2,
+  which GROWS WITHOUT BOUND -- so on this measure the counter is no
+  better behaved than the doubling array, whose worst/amortised ratio
+  is also n/2.  (a) and (d) do not conflict: one is a bound on a SUM,
+  the other a statement about a MAXIMUM, and maxima are unconstrained
+  by sums.  What rescues i += 1 is not the ratio but the model.
+
+=== (e) the same counter in the model it is normally argued in ===
+
+    bits   increments    bit flips  amortised     word ops  amortised
+       8          255          502     1.9686          255     1.0000
+      10         1023         2036     1.9902         1023     1.0000
+      12         4095         8178     1.9971         4095     1.0000
+      14        16383        32752     1.9991        16383     1.0000
+      16        65535       131054     1.9998        65535     1.0000
+      18       262143       524268     1.9999       262143     1.0000
+      20      1048575      2097130     2.0000      1048575     1.0000
+
+  Widths too large to simulate, but both columns have closed forms:
+      bit-model amortised  = (2^(n+1) - n - 2) / (2^n - 1)
+      word-model amortised = SUM_t 2^(n-1-t) ceil((t+2)/64) / (2^n - 1)
+  (the second reuses the distribution already counted in part (b)):
+
+           bits    bit amortised    word amortised   worst words    ratio
+              8       1.96862745        1.00000000             1     1.00
+             16       1.99975586        1.00000000             1     1.00
+             32       1.99999999        1.00000000             1     1.00
+             63       2.00000000        1.00000000             1     1.00
+             64       2.00000000        1.00000000             2     2.00
+             65       2.00000000        1.00000000             2     2.00
+            128       2.00000000        1.00000000             3     3.00
+            256       2.00000000        1.00000000             5     5.00
+           1024       2.00000000        1.00000000            17    17.00
+
+  In the BIT model the amortised cost is 2 and the worst case is n/2.
+  In the 64-bit WORD model the amortised cost is 1 -- exactly 1, because
+  the distribution of trailing-ones counts is concentrated so hard on
+  small values that nearly every increment touches one word.  So the
+  word model does not rescue the counter, it divides everything by 64:
+  the worst case becomes ceil((n+1)/64) = n/64 + O(1) word operations,
+  and the worst/amortised ratio is still unbounded.
+
+  So the correct sentence is NOT 'the amortised bound is tight'.  It is:
+  i += 1 is O(1) because the word size is a CONSTANT, which makes n/64 a
+  constant.  Change the model -- unbounded integers -- and the same
+  increment becomes Theta(n) in the worst case.  Nothing about the
+  algorithm changed; only the width of the register did.
+
+  Python integers are arbitrary precision, so CPython's i += 1 really
+  does take O(n/64) machine words.  Nobody measures it, because the
+  interesting question was never the bit count.
+```
 
 </details>
 
@@ -2588,32 +2902,382 @@ O(n)$ — so the amortised cost is genuinely $\Theta(n)$, not a proof gap. **The
 difference from `push_back` is entirely the direction of the shift: one of them
 uses a gap at the end, the other has to walk the whole array.**
 
-**(c)** The trick is to use the free slots *anywhere*, not just at the end. With
-$n$ elements in a capacity-$C$ array there are $C - n$ free slots distributed in
-$n+1$ gaps. To insert at position $p$: if there is a free slot at or to the left
-of $p$, shift only the segment between them (cost = the distance, at most $p$);
-otherwise shift everything from $p$ to the end (cost $n - p$), which requires a
-free slot after the last element.
+**(c)** **The conclusion is right but the rule in the question is not, and
+that is the interesting part.** Growing whenever every gap is empty does give
+$O(1)$ amortised — but not for the reason the question suggests, and certainly
+not under the "use whatever free slots exist" rule.
 
-The potential that pays for it counts each free slot by **how useful it is**:
-$\Phi = \sum$ over free slots $f$ of (number of elements to the left of $f$) +
-(free slots after the last element). Shifting the segment after an insertion at
-$p$ consumes, for each free slot to the right of $p$, one unit of the "elements
-to its left" count — so $\Delta\Phi = -(n - p)$ on that path, and
-$\hat T = (n - p) - (n - p) = 0$. When every gap is empty, $\Phi = 0$, and the
-array grows, restoring all the slack at a cost of $n$; the growth sizes are
-geometric, so the total growth cost is $O(n)$ and $\hat T = O(1)$ amortised.
-When every gap is empty, $C = n$, so doubling gives $C = 2n$ and $\Phi$ jumps to
-$n = \Theta(n)$, which is exactly the $O(n)$ that pays for the $n$ copies.
+Take the rule literally on a *linear* array whose live elements sit in
+`arr[lo:hi]`, so free slots exist at `arr[:lo]` and `arr[hi:]`. To `push_front`:
+if `lo > 0`, decrement `lo` and write — cost $O(1)$, no moves at all. If `lo == 0`,
+the only way to open a slot at the front is to slide the whole run right by one,
+which costs $n$ moves and buys **exactly one** usable slot. One $n$-move per slot
+is $\Theta(n)$ amortised, not $\Theta(1)$.
 
-**(d)** The verification is Exercise 6's queue: 4000 random operations, 8
-compactions, `1,323` total element moves, **amortised `0.331` per operation**,
-with the structure asserted equal to a Python `list` at every one of the 4000
-steps. Compare with (a): `0.9990` copies per append for a pure-`push_back`
-workload. The queue is *cheaper* per operation despite doing strictly more work
-per operation, because its expensive events are 8-in-4000 rather than
-1-in-1000 — and the amortised bound is a statement about the total, so a rarer
-expensive event wins.
+The trap is that the $O(1)$ branch *does* exist and *does* fire — it simply
+cannot fire on the workload that needs it. Under a pure-`push_front` workload `lo`
+is 0 forever, so the expensive branch is taken on every single operation and the
+cheap branch is dead code. Measured over 2000 `push_front`s: `1000.52` element
+moves per operation for the gap rule, against `1.02` for the ring buffer.
+
+**The construction that works is the ring buffer**, and it works by giving up
+"linear array with scattered gaps": keep the live elements in one contiguous run
+taken *modulo* the capacity, so the free slots are precisely the $C - n$
+positions the run does not cover. Then
+
+- `push_front`, `push_back`: one store, one index update, one modulo — $O(1)$
+  **worst case**.
+- `pop_front`, `pop_back`: one load, one clear, one index update — $O(1)$
+  **worst case**.
+- The array is full exactly when every gap is empty, i.e. when $n = C$, and then
+  it doubles.
+
+**The potential is $\Phi = 0$ for all four operations**, because they need no
+amortisation at all: $\hat T = T = 1$. That is the real difference between the two
+designs. In Exercise 1 the doubling array's cheap operation is $O(1)$ only
+*amortised*, and the potential $2n - C$ is what pays for the resizes; here the
+cheap operations are $O(1)$ outright and only *growth* needs an argument.
+
+Growth is Exercise 1's argument verbatim: it fires at $n = 8, 16, 32, … and
+copies $n$ elements, so the total copies are $8 + 16 + 32 + \cdots < n$, under one
+copy per push. Adding the one store per push, the amortised cost is at most 2 —
+and the measured figure is `1.0220`. Note that the two halves of the analysis use
+different methods: a **worst case** bound for the operations, an **amortised**
+bound for growth. Conflating them is how "it is $O(1)$, worst case" claims get
+made about structures that are not.
+
+```python
+"""Exercise 4 code block for lesson 81: a deque on a plain array."""
+
+
+class RingDeque:
+    """A deque on a plain array, both ends O(1) worst case.
+
+    head and n describe a CONTIGUOUS RUN of live elements taken modulo the
+    capacity.  Every slot outside that run is free, so 'use whatever free
+    slots exist' is satisfied -- but they are all reachable in one step,
+    because the run is a run.
+    """
+
+    def __init__(self, cap=8):
+        self.arr = [None] * cap
+        self.head = 0
+        self.n = 0
+        self.moves = 0          # element copies, the only cost we charge
+        self.grows = 0
+
+    def push_front(self, x):
+        if self.n == len(self.arr):
+            self._grow()
+        self.head = (self.head - 1) % len(self.arr)
+        self.arr[self.head] = x
+        self.n += 1
+
+    def push_back(self, x):
+        if self.n == len(self.arr):
+            self._grow()
+        self.arr[(self.head + self.n) % len(self.arr)] = x
+        self.n += 1
+
+    def pop_front(self):
+        x = self.arr[self.head]
+        self.arr[self.head] = None
+        self.head = (self.head + 1) % len(self.arr)
+        self.n -= 1
+        return x
+
+    def pop_back(self):
+        i = (self.head + self.n - 1) % len(self.arr)
+        x = self.arr[i]
+        self.arr[i] = None
+        self.n -= 1
+        return x
+
+    def as_list(self):
+        return [self.arr[(self.head + i) % len(self.arr)] for i in range(self.n)]
+
+    def _grow(self):
+        self.grows += 1
+        self.moves += self.n
+        self.arr = self.as_list() + [None] * len(self.arr)
+        self.head = 0
+
+
+class LinearGapDeque:
+    """The rule the exercise (c) proposes: a LINEAR array whose elements need
+    not be contiguous, using whatever free slots exist at either end.
+
+    The live elements occupy arr[lo:hi].  Free slots are arr[:lo] and arr[hi:].
+
+        push_front:  if lo > 0, just decrement lo -- the slot is already free,
+                     so the cost is O(1).  Otherwise the only way to open a slot
+                     at the front is to shift the whole run right by one, and
+                     that costs n moves to gain exactly ONE usable slot.
+
+    That asymmetry is the whole story: the operation is free when slack has
+    accumulated on its own side, and costs n when it has not.
+    """
+
+    def __init__(self, cap=8):
+        self.arr = [None] * cap
+        self.lo = 0
+        self.hi = 0
+        self.moves = 0
+        self.grows = 0
+
+    def push_front(self, x):
+        if self.lo > 0:
+            self.lo -= 1
+            self.arr[self.lo] = x
+            return
+        if self.hi == len(self.arr):
+            self._grow()
+        for j in range(self.hi, self.lo, -1):
+            self.arr[j] = self.arr[j - 1]
+            self.moves += 1
+        self.arr[self.lo] = x
+        self.hi += 1
+
+    def push_back(self, x):
+        if self.hi < len(self.arr):
+            self.arr[self.hi] = x
+            self.hi += 1
+            return
+        if self.lo == 0:
+            self._grow()
+            # Growth has already put slack at the back, so this one is free.
+            self.arr[self.hi] = x
+            self.hi += 1
+            return
+        # No slack at the back.  Slide the whole run left by one, which costs
+        # n moves to buy exactly ONE usable slot -- the mirror of push_front.
+        for j in range(self.lo, self.hi):
+            self.arr[j] = self.arr[j + 1]
+            self.moves += 1
+        self.arr[self.hi - 1] = x
+        self.lo -= 1
+
+    def as_list(self):
+        return self.arr[self.lo:self.hi]
+
+    def _grow(self):
+        self.grows += 1
+        self.moves += self.hi - self.lo
+        live = self.arr[self.lo:self.hi]
+        self.arr = live + [None] * len(self.arr)
+        self.lo = 0
+        self.hi = len(live)
+
+
+import random
+
+print("=== (c) the proposed rule does NOT give O(1) amortised ===")
+print()
+print("  On a linear array, when the run has no free slot to its left, the")
+print("  nearest free slot is on the RIGHT, so push_front must shift the whole")
+print("  run right by one -- n moves -- to create exactly ONE usable slot.")
+print("  One n-move buys one slot, so the amortised cost is Theta(n), not")
+print("  Theta(1).  Growing whenever every gap is empty does not change that:")
+print("  growth adds slack in bulk, but the rule then spends it one slot at a")
+print("  time, each time at the price of shifting the whole run.")
+print()
+print("  Pure push_front workloads, 2000 operations:")
+print(f"     {'structure':<18} {'element moves':>15} {'amortised':>11}")
+for name, D in (("LinearGapDeque", LinearGapDeque), ("RingDeque", RingDeque)):
+    d = D()
+    for i in range(2000):
+        d.push_front(i)
+    print(f"     {name:<18} {d.moves:15,d} {d.moves / 2000:11.4f}")
+print()
+print("  A 50/50 random workload, 4000 operations, both structures checked")
+print("  against a Python list after every single step:")
+print(f"     {'structure':<18} {'element moves':>15} {'grows':>7} {'amortised':>11}")
+random.seed(5)
+for name, D in (("LinearGapDeque", LinearGapDeque), ("RingDeque", RingDeque)):
+    d = D()
+    ref = []
+    for step in range(4000):
+        if not ref or random.random() < 0.5:
+            d.push_front(step)
+            ref.insert(0, step)
+        else:
+            d.push_back(step)
+            ref.append(step)
+        assert d.as_list() == ref, f"{name} diverged at step {step}"
+    print(f"     {name:<18} {d.moves:15,d} {d.grows:7d} {d.moves / 4000:11.4f}")
+print()
+print("  The gap-filling rule costs three orders of magnitude more per")
+print("  operation than the ring buffer, and the difference is not a constant:")
+print("  985.43 versus 1.02 on the random workload, and the gap-filling figure")
+print("  tracks n/2 while the ring figure sits at 1.02 regardless of size.")
+print("  Only the ring buffer is O(1) amortised, so (c)'s conclusion is true --")
+print("  but for the ring buffer, and the 'use whatever free slots exist' rule")
+print("  is exactly what has to be given up.")
+print()
+print("=== the potential that pays for the ring buffer's growth ===")
+print()
+print("  Every push_front, push_back, pop_front and pop_back is O(1) WORST")
+print("  CASE -- one store, or one load-and-clear, plus a modulo.  So Phi = 0")
+print("  handles all of them: T_hat = T = 1 for every non-growing operation.")
+print()
+print("  Growth is the only event that needs an amortised argument, and it is")
+print("  the Exercise 1 argument verbatim.  Growth fires at n = 8, 16, 32, ...")
+print("  and copies n elements, so")
+print("      SUM over the run of copies = 8 + 16 + 32 + ... < n,")
+print("  i.e. under 1 copy per push on average, plus the 1 store.  Hence the")
+print("  amortised cost is at most 2, and the measurement above confirms")
+print("  1.0220.  With a potential Phi = 0 you get the *worst case* bound for")
+print("  the operations and an *amortised* bound for growth -- the two halves")
+print("  of the analysis use different methods, which is the usual shape.")
+print()
+print(f"     {'growth #':>10} {'capacity after':>16} {'n copied':>10} {'sum so far':>12}")
+d = RingDeque()
+capacities, total = [], 0
+for step in range(2000):
+    if d.n == len(d.arr):
+        capacities.append((len(d.arr), d.n))
+        total += d.n
+    d.push_back(step)
+for k, (before, copied) in enumerate(capacities, start=1):
+    sofar = sum(c for _, c in capacities[:k])
+    print(f"     {k:10d} {2 * before:16d} {copied:10d} {sofar:12d}")
+print(f"     after 2000 push_backs: capacity {len(d.arr)}, total copies {d.moves}, "
+      f"amortised {d.moves / 2000:.4f}")
+print()
+print("  Total copies 2,040 over 2,000 pushes is under 1 per push, confirming")
+print("  the geometric series and not merely the Theta.  Also note growth")
+print("  happened at exactly 8, 16, 32, ... , which is the 'every gap is empty'")
+print("  condition: for a ring buffer that condition is simply n = C.")
+print()
+print("=== (d) pop from both ends, checked against a list ===")
+random.seed(11)
+d = RingDeque()
+ref = []
+for step in range(4000):
+    r = random.random()
+    if not ref or r < 0.3:
+        d.push_front(step)
+        ref.insert(0, step)
+    elif r < 0.6:
+        d.push_back(step)
+        ref.append(step)
+    elif r < 0.8:
+        assert d.pop_front() == ref.pop(0), f"pop_front at {step}"
+    else:
+        assert d.pop_back() == ref.pop(), f"pop_back at {step}"
+    assert d.as_list() == ref, f"structure diverged at step {step}"
+print(f"  4000 mixed pushes and pops: matches a Python list at every step")
+print(f"    final size {d.n}, capacity {len(d.arr)}, grows {d.grows}")
+print(f"    total element moves {d.moves:,}   amortised per operation "
+      f"{d.moves / 4000:.4f}")
+print()
+print("  Compare with (a): a pure push_back workload on the doubling array of")
+print("  Exercise 1 measured 0.9990 copies per append.  This deque does strictly")
+print("  MORE work per operation -- two indices and a modulo instead of one --")
+print("  and is cheaper per operation, because its expensive events (growth)")
+print("  are rarer and its non-growing operations are O(1) worst case rather")
+print("  than O(1) amortised.  The amortised bound is a statement about a")
+print("  TOTAL, so a rarer expensive event wins.  This is Exercise 6's queue")
+print("  arriving at the same place by a different route.")
+```
+
+```text
+=== (c) the proposed rule does NOT give O(1) amortised ===
+
+  On a linear array, when the run has no free slot to its left, the
+  nearest free slot is on the RIGHT, so push_front must shift the whole
+  run right by one -- n moves -- to create exactly ONE usable slot.
+  One n-move buys one slot, so the amortised cost is Theta(n), not
+  Theta(1).  Growing whenever every gap is empty does not change that:
+  growth adds slack in bulk, but the rule then spends it one slot at a
+  time, each time at the price of shifting the whole run.
+
+  Pure push_front workloads, 2000 operations:
+     structure            element moves   amortised
+     LinearGapDeque           2,001,040   1000.5200
+     RingDeque                    2,040      1.0200
+
+  A 50/50 random workload, 4000 operations, both structures checked
+  against a Python list after every single step:
+     structure            element moves   grows   amortised
+     LinearGapDeque           3,941,726       9    985.4315
+     RingDeque                    4,088       9      1.0220
+
+  The gap-filling rule costs three orders of magnitude more per
+  operation than the ring buffer, and the difference is not a constant:
+  985.43 versus 1.02 on the random workload, and the gap-filling figure
+  tracks n/2 while the ring figure sits at 1.02 regardless of size.
+  Only the ring buffer is O(1) amortised, so (c)'s conclusion is true --
+  but for the ring buffer, and the 'use whatever free slots exist' rule
+  is exactly what has to be given up.
+
+=== the potential that pays for the ring buffer's growth ===
+
+  Every push_front, push_back, pop_front and pop_back is O(1) WORST
+  CASE -- one store, or one load-and-clear, plus a modulo.  So Phi = 0
+  handles all of them: T_hat = T = 1 for every non-growing operation.
+
+  Growth is the only event that needs an amortised argument, and it is
+  the Exercise 1 argument verbatim.  Growth fires at n = 8, 16, 32, ...
+  and copies n elements, so
+      SUM over the run of copies = 8 + 16 + 32 + ... < n,
+  i.e. under 1 copy per push on average, plus the 1 store.  Hence the
+  amortised cost is at most 2, and the measurement above confirms
+  1.0220.  With a potential Phi = 0 you get the *worst case* bound for
+  the operations and an *amortised* bound for growth -- the two halves
+  of the analysis use different methods, which is the usual shape.
+
+       growth #   capacity after   n copied   sum so far
+              1               16          8            8
+              2               32         16           24
+              3               64         32           56
+              4              128         64          120
+              5              256        128          248
+              6              512        256          504
+              7             1024        512         1016
+              8             2048       1024         2040
+     after 2000 push_backs: capacity 2048, total copies 2040, amortised 1.0200
+
+  Total copies 2,040 over 2,000 pushes is under 1 per push, confirming
+  the geometric series and not merely the Theta.  Also note growth
+  happened at exactly 8, 16, 32, ... , which is the 'every gap is empty'
+  condition: for a ring buffer that condition is simply n = C.
+
+=== (d) pop from both ends, checked against a list ===
+  4000 mixed pushes and pops: matches a Python list at every step
+    final size 828, capacity 1024, grows 7
+    total element moves 1,016   amortised per operation 0.2540
+
+  Compare with (a): a pure push_back workload on the doubling array of
+  Exercise 1 measured 0.9990 copies per append.  This deque does strictly
+  MORE work per operation -- two indices and a modulo instead of one --
+  and is cheaper per operation, because its expensive events (growth)
+  are rarer and its non-growing operations are O(1) worst case rather
+  than O(1) amortised.  The amortised bound is a statement about a
+  TOTAL, so a rarer expensive event wins.  This is Exercise 6's queue
+  arriving at the same place by a different route.
+```
+
+**(d)** The code below checks both structures against a Python `list` after *every
+single* operation, so the numbers belong to a correct implementation rather than
+a fast wrong one. On the 50/50 random workload the gap rule costs `985.4315`
+element moves per operation and the ring buffer `1.0220`; on 2000 pure
+`push_front`s they are `1000.5200` and `1.0200`; on 4000 mixed pushes *and pops*
+the ring buffer measures `1,016` moves in total, **amortised `0.2540`**.
+
+Compare with (a): a pure-`push_back` workload on Exercise 1's doubling array
+measured `0.9990` copies per append. This deque does strictly *more* work per
+operation — two indices and a modulo instead of one — and is still cheaper
+per operation, because its expensive events are rarer and its ordinary operations
+are $O(1)$ worst case rather than $O(1)$ amortised. **The amortised bound is a
+statement about a total, so a rarer expensive event wins.** That is also
+Exercise 6's queue arriving at the same place by a different route: there the
+compaction is amortised because it is hard to avoid, here it is avoided outright.
+
+What the gap rule really teaches is that $O(1)$ amortised is not a property of
+"having spare capacity". It is a property of *which* operation pays for that
+spare capacity. The ring buffer does not have more slack than the linear array;
+it simply never has to move anything in order to reach it.
 
 </details>
 

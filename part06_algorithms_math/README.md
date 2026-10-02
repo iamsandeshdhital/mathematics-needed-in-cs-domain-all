@@ -55,10 +55,10 @@ before that. Learn to say *which quantifier* and the rest of the part follows.
   3.11 with the standard library alone; the `### With Libraries` subsections are
   optional.
 
-You do **not** need calculus, you do not need to have taken a algorithms course,
-and you do not need to know what a matroid is before Lesson 82 — it is defined
-there from scratch. You need to be willing to write one algebraic line and
-check it.
+You do **not** need calculus, you do not need to have taken an algorithms
+course, and you do not need to know what a matroid is before Lesson 82 — it is
+defined there from scratch. You need to be willing to write one algebraic line
+and check it.
 
 ## A suggested route
 
@@ -106,7 +106,7 @@ systems discussion.
 ## Where to go next
 
 [Part 07 — Geometry for Graphics](../part07_geometry_graphics/) takes the
-algorithms of 92 and asks them about space: hulls, closest pairs,
+algorithms of 80–82 and asks them about space: hulls, closest pairs,
 point-in-polygon, and broad-phase structures whose whole purpose is to avoid
 the $\Theta(n^2)$ this part has been pricing. Start with
 [Lesson 90 — Vectors in 3D and the Cross Product](../part07_geometry_graphics/90_vectors_3d_and_cross_product.md).

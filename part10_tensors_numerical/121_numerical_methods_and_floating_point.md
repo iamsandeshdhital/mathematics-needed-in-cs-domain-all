@@ -275,7 +275,7 @@ attainable relative accuracy is about $\varepsilon^{2/3} \approx 3.7 \times
 
 | representable decimals | $d = p/q$ exact **iff** $q$ is a power of two | only binary fractions are exact | why 0.1 is not 0.1 |
 
-| absolute error | `$\lvert \hat{x} - x\rvert$` | how far off, in these units | physical quantities with a fixed scale |
+| absolute error | `$|\hat{x} - x|$` | how far off, in these units | physical quantities with a fixed scale |
 
 | relative error | `$\lvert \hat{x}-x\rvert / \lvert x\rvert$` | how far off compared to the target | unit-free quantities, computed values |
 
@@ -454,25 +454,43 @@ subtracted.
 ```python
 """IEEE 754 and why 0.1 + 0.2 != 0.3.
 
+
+
 Binary floating point stores a sign, an exponent and a mantissa.  For a
+
 double-precision float the 64 bits are
+
+
 
     1 sign bit | 11 exponent bits | 52 fraction bits
 
+
+
 Normalised, the value is  (-1)^sign * 1.fraction * 2^(exponent - 1023), so the
+
 smallest amount you can add to 1.0 and get a different number is 2^-52, about
+
 2.22e-16.  That is machine epsilon for float64.
 
+
+
 Every non-negative float64 is a binary fraction k / 2^52, so "is 0.1 exactly
+
 representable?" is really "is 0.1 = k / 2^52 for some integer k?"  It is not:
+
 1/10 has a factor of 5 in the denominator and no power of two absorbs it.
+
 Exactly representable decimals are only the ones whose reduced denominator is a
+
 power of two -- 0.5, 0.25, 0.125, 0.0625.
 
-Use fractions.Fraction for the exact reasoning below.  A float64 is always
-exactly a rational, so Fraction(0.1) tells you what the machine actually holds.
-"""
 
+
+Use fractions.Fraction for the exact reasoning below.  A float64 is always
+
+exactly a rational, so Fraction(0.1) tells you what the machine actually holds.
+
+"""
 import math
 import struct
 from fractions import Fraction
@@ -504,11 +522,8 @@ def rule(title):
     print("=" * 68)
     print(title)
     print("=" * 68)
-
-
 # ---------------------------------------------------------------- 1. epsilon
 rule("1. Machine epsilon: the gap between 1.0 and the number just above it")
-
 EPS = 2.0**-52
 print(f"2^-52                   = {EPS!r}")
 print(f"1.0 + that              = {1.0 + EPS!r}")
@@ -533,10 +548,8 @@ print("   0.1 as float64          = 0.1")
 print("   That is roughly 1 part in a million of error before you start, and")
 print("   it is why GPU training uses float32 for speed and float64 for the")
 print("   quantities that have to be right.")
-
 # ------------------------------------------------------------- 2. exactness
 rule("2. Which decimals are exact, and why 0.1 is not one of them")
-
 print("`exact` means Fraction(the float) equals the intended rational exactly:")
 print(f"   {'decimal':<10} {'rational':<10} {'exact?':<8} the stored double")
 for name, exact in [("0.5", Fraction(1, 2)), ("0.25", Fraction(1, 4)),
@@ -552,10 +565,8 @@ print("binary fractions and survive exactly.  0.1 = 1/10 has a factor of 5 in")
 print("the denominator and nothing binary can hold it.  Same for 0.2, 0.3, 0.7.")
 print("That is the entire story behind the famous example.")
 print()
-
 # --------------------------------------------------------- 3. binary digits
 rule("3. The binary expansions, so you can see it")
-
 for name, x in [("0.5", 0.5), ("0.1", 0.1), ("0.2", 0.2), ("0.3", 0.3)]:
     digits = binary_expansion(x)
     head, tail = digits[:10], digits[10:]
@@ -571,14 +582,11 @@ print(f"   0.5 is stored as {bits(0.5)}")
 print("   the tail of 0.1's pattern repeats forever; 0.5 is all zeros after the")
 print("   leading 1.")
 print()
-
 # ----------------------------------------------------------- 4. the addition
 rule("4. The addition, in exact arithmetic")
-
 a, b, c = 0.1, 0.2, 0.3
 fa, fb = Fraction(a), Fraction(b)
 tenth, fifth, three_tenths = Fraction(1, 10), Fraction(1, 5), Fraction(3, 10)
-
 print(f"0.1 + 0.2 in Python       = {a + b!r}")
 print(f"0.3 in Python             = {c!r}")
 print(f"equal?                    = {a + b == c}")
@@ -620,10 +628,8 @@ print()
 print(f"and 0.1 + 0.5 == 0.6 is {0.1 + 0.5 == 0.6} -- because 0.5 is exact, so")
 print("only one rounding is involved on the way in for it, and the errors happen")
 print("to cancel.  Exactness of the operands is what decides these cases.")
-
 # ------------------------------------------------------------- 5. what to do
 rule("5. What to do about it")
-
 print("WRONG: use == when you meant mathematical equality.")
 print(f"   (0.1 + 0.2 == 0.3) = {a + b == c}   <- and this is not a rare corner")
 print("   case; it is the first thing anyone writes.")
@@ -651,6 +657,8 @@ print("defect in Python.  The defect is code that assumes real arithmetic where"
 print("it has floating point -- and that is the subject of the rest of this")
 print("lesson.")
 ```
+
+
 ### 2. Absolute versus relative error, and catastrophic cancellation
 
 
@@ -658,20 +666,33 @@ print("lesson.")
 ```python
 """Absolute versus relative error, and catastrophic cancellation.
 
+
+
 Absolute error answers "how far off, in these units".  Relative error answers
+
 "how far off, compared to what I was aiming at".  You need both, and when they
+
 disagree sharply you are looking at cancellation.
 
+
+
 Catastrophic cancellation is subtractive cancellation: you subtract two nearly
+
 equal numbers, each carrying a rounding error, and the answer is tiny compared
+
 with the inputs.  The absolute error in the inputs survives; the relative error
+
 in the answer explodes.  No amount of care at the subtraction will help,
+
 because the information was already lost when the operands were rounded.
 
-The standard example is sqrt(x^2 + 1) - x for small x.  Mathematically it is
-1 / (sqrt(x^2 + 1) + x), and the two forms agree for large x but not for small.
-"""
 
+
+The standard example is sqrt(x^2 + 1) - x for small x.  Mathematically it is
+
+1 / (sqrt(x^2 + 1) + x), and the two forms agree for large x but not for small.
+
+"""
 import math
 import struct
 from fractions import Fraction
@@ -690,11 +711,8 @@ def rule(title):
     print("=" * 68)
     print(title)
     print("=" * 68)
-
-
 # ------------------------------------------------------------ absolute error
 rule("1. Two ways to be wrong, and which one matters")
-
 print(f"   answer {0.1:.6f} with error 1e-4   ->  relative error "
       f"{relative_error(0.1 + 1e-4, 0.1):.2e}")
 print(f"   answer {1e6:.6f} with error 1e-4   ->  relative error "
@@ -710,10 +728,8 @@ print("because each addition contributes at most half an ulp of relative")
 print("error, and those errors compound.")
 print(f"   summing 1000 terms: bound is about {1e-16 * 1000:.0e}")
 print()
-
 # ------------------------------------------------------------ cancellation 1
 rule("2. Catastrophic cancellation: sqrt(x^2 + 1) - x")
-
 print("The true value is 1/(sqrt(x^2+1) + x), computed here in exact rational")
 print("arithmetic via fractions.Fraction, so the reference is trustworthy.")
 print()
@@ -738,10 +754,8 @@ print("   - solving a nearly singular linear system   (Lesson 32)")
 print("   - the quadratic formula's b^2 - 4ac when b^2 >> 4ac")
 print("   - computing sin(x) as x - sin(x) near 0")
 print()
-
 # ------------------------------------------------------------ cancellation 2
 rule("3. The same lesson in integers, where there is no rounding at all")
-
 print("Floating point is not required for cancellation.  Here every value is a")
 print("Python int, so the arithmetic is exact and there is no epsilon at all:")
 a, b = 10**16, 10**16 + 1
@@ -781,8 +795,6 @@ def f32_ulp(x):
     (bits,) = struct.unpack("<I", struct.pack("<f", x))
     (nxt,) = struct.unpack("<f", struct.pack("<I", bits + 1))
     return nxt - x
-
-
 base = f32(1e17)
 print(f"   float32 gap near 1e17            = {f32_ulp(base):.0f}")
 print(f"   float64 gap near 1e17            = {math.ulp(1e17):.0f}")
@@ -791,10 +803,8 @@ print(f"   float64(1e17) == float64(1e17+1) = {float(1e17) == float(1e17 + 1)}")
 print("   which is why float32 stops being able to count past 2^24 = 16777216,")
 print("   long before float64 stops at 2^52.")
 print()
-
 # ------------------------------------------------------------ the repair
 rule("4. How you repair cancellation: change the algebra")
-
 # The classic repair for (a + b) - a when b is small.
 small = 1e-9
 big = 1.0
@@ -815,10 +825,8 @@ print("Rule: if you can arrange for the answer to be computed without")
 print("subtracting two nearly equal numbers, do that instead of adding")
 print("precision.  Extra precision buys you a few more digits; a reformulation")
 print("buys you all of them.")
-
 # ------------------------------------------------------------ ulp and spacing
 rule("5. Spacing grows with magnitude, which is why relative error is the norm")
-
 print(f"   {'magnitude':>12} {'gap to the next double':>26}")
 for m in (1.0, 1e3, 1e6, 1e9, 1e12, 1e15):
     print(f"   {m:>12.0e} {math.ulp(m):>26.6g}")
@@ -834,6 +842,8 @@ print(f"   smallest positive float64 = {5e-324!r}")
 print("There is no problem with small numbers.  The problem is always")
 print("subtracting large ones.")
 ```
+
+
 ### 3. Conditioning: which problems are fragile, and which algorithms are
 
 
@@ -841,26 +851,45 @@ print("subtracting large ones.")
 ```python
 """Conditioning: how much a small input change can move the answer.
 
+
+
 A problem is WELL conditioned when a relative input change of size eps gives a
+
 relative output change of about the same size.  The amplification factor is the
+
 condition number
+
+
 
     kappa = (relative output change) / (relative input change)
 
+
+
 and for a scalar function it has the closed form
+
+
 
     kappa(x) = |x f'(x)| / |f(x)|
 
+
+
 kappa is a property of the PROBLEM, not of your code.  No extra precision, no
+
 clever algorithm and no amount of care will change it.  That is exactly why an
+
 ill-conditioned problem is not a code failure -- and exactly why "buy more
+
 precision" is often the wrong response.
 
-The sharp distinction this block insists on: CANCELLATION is an instability in
-your ALGORITHM, and ILL-CONDITIONING is a property of the PROBLEM.  They look
-identical in the output and they have opposite fixes.
-"""
 
+
+The sharp distinction this block insists on: CANCELLATION is an instability in
+
+your ALGORITHM, and ILL-CONDITIONING is a property of the PROBLEM.  They look
+
+identical in the output and they have opposite fixes.
+
+"""
 import math
 
 
@@ -874,11 +903,8 @@ def rule(title):
     print("=" * 68)
     print(title)
     print("=" * 68)
-
-
 # -------------------------------------- 1. cancellation is NOT conditioning
 rule("1. First, a correction that matters: cancellation is not conditioning")
-
 print("Last lesson's star example was sqrt(x^2+1) - x evaluated in floating")
 print("point, which returns exactly 0.0 at x = 1e8.  It is tempting to call")
 print("that an ill-conditioned problem.  It is not.")
@@ -907,10 +933,8 @@ print("   ill-conditioned     -> rephrase the PROBLEM, or accept the answer is")
 print("                         not knowable.  More precision buys you")
 print("                         digits divided by kappa.")
 print()
-
 # ------------------------------------------- 2. a genuinely bad function
 rule("2. A genuinely ill-conditioned function: log(x) near x = 1")
-
 log = lambda x: math.log(x)
 dlog = lambda x: 1.0 / x
 print("As x approaches 1, log(x) approaches 0 while x stays at 1.  The answer")
@@ -935,9 +959,7 @@ print("The true value is about 1e-16, which is entirely below the resolution")
 print("of the input itself.  There is no algorithm that recovers it from that")
 print("input.  The information is not in the number you were given.")
 print()
-
 rule("3. Two more, for shape: a pole and a high power")
-
 tan = lambda x: math.tan(x)
 dtan = lambda x: 1.0 / math.cos(x) ** 2
 print("tan(x) has a pole at pi/2, so kappa explodes on approach:")
@@ -957,10 +979,8 @@ print("Raising to a power is the simplest way to manufacture an ill-conditioned"
 print("problem out of a well-conditioned one, which is why high powers of")
 print("small numbers appear in so many overflow bugs.")
 print()
-
 # ------------------------------------------- 4. systems: the practical case
 rule("4. Ill-conditioned linear systems, where it actually bites")
-
 print("Solve A x = b for A = [[1,1],[1,1+eps]] and b = A @ [1,1], so the exact")
 print("answer is [1,1] for every eps.  Then perturb b by ONE ulp and watch.")
 print()
@@ -970,8 +990,6 @@ def solve2(A, b):
     det = A[0][0] * A[1][1] - A[0][1] * A[1][0]
     return ((b[0] * A[1][1] - A[0][1] * b[1]) / det,
             (A[0][0] * b[1] - b[0] * A[1][0]) / det)
-
-
 print(f"   {'eps':>8} {'x (exact answer is [1,1])':>28} {'rel in':>10}"
       f" {'rel out':>10} {'amplification':>14}")
 for eps in (1e-2, 1e-4, 1e-8, 1e-12):
@@ -1027,8 +1045,6 @@ def ridge(A, b, lam):
 
 def err(x):
     return math.hypot(x[0] - 1.0, x[1] - 1.0)
-
-
 eps = 1e-12
 A = [[1.0, 1.0], [1.0, 1.0 + eps]]
 b = [2.0, 2.0 + eps]
@@ -1057,10 +1073,8 @@ print()
 print("Note what did NOT happen: nobody reached for a wider float.  The")
 print("information destroyed by the near-singular A was already gone.")
 print()
-
 # ------------------------------------------- 5. digits you actually keep
 rule("5. Turning kappa into a digit count")
-
 print("float64 carries about 16 significant decimal digits.  A condition")
 print("number of 10^k costs you about k of them.")
 print()
@@ -1084,9 +1098,7 @@ print("digits) leaves you with 24, and switching to exact arithmetic leaves you"
 print("with the error that was already in the input.  The digits were never")
 print("recoverable.")
 print()
-
 rule("6. So: an ill-conditioned problem is a property, not a failure")
-
 print("Three things that get confused, and the order to check them.")
 print()
 print("  CONDITIONING  a property of the problem, fixed before you write code.")
@@ -1107,6 +1119,8 @@ print()
 print("Most people start at 3 and buy precision that step 1 or 2 would have")
 print("made unnecessary.")
 ```
+
+
 ### 4. Bisection and Newton, from scratch, with the error bounds
 
 
@@ -1114,21 +1128,35 @@ print("made unnecessary.")
 ```python
 """Bisection and Newton-Raphson, from scratch, with their error guarantees.
 
+
+
 BISECTION needs only continuity and a sign change.  It is unconditionally
+
 stable and its error bound is a theorem: after n iterations on an interval of
+
 width w, the error is at most w / 2^(n+1).  It converges slowly and linearly,
+
 but it cannot be made to fail by a bad starting point.
 
+
+
 NEWTON uses the derivative.  It converges quadratically -- the number of
+
 correct digits roughly doubles each step -- but it is only locally convergent
+
 and it can walk off to somewhere useless.  The safeguard everyone actually uses
+
 is Newton's method with a bisection fallback, which keeps the speed and cannot
+
 lose the bracket.
 
-Both are below, both print their iterates, and both are checked against a
-correct reference.
-"""
 
+
+Both are below, both print their iterates, and both are checked against a
+
+correct reference.
+
+"""
 import math
 
 
@@ -1137,15 +1165,20 @@ def rule(title):
     print("=" * 68)
     print(title)
     print("=" * 68)
-
-
 # ================================================================ bisection
+
+
 def bisection(f, a, b, tol=1e-12, max_iter=200):
     """Return (root, iterations, history).
 
+
+
     Precondition: f(a) and f(b) have opposite signs.  Each step halves the
+
     bracket, so after n steps the interval is (b-a)/2^n wide and the returned
+
     midpoint is within half of that of the true root.
+
     """
     fa, fb = f(a), f(b)
     if fa * fb > 0:
@@ -1172,13 +1205,16 @@ def bisection_iterations(width, tol):
         w /= 2.0
         n += 1
     return n
-
-
 # =================================================================== newton
+
+
 def newton(f, df, x0, tol=1e-12, max_iter=100):
     """Return (root, iterations, history) using the plain Newton iteration.
 
+
+
     x_{n+1} = x_n - f(x_n) / f'(x_n)
+
     """
     history = []
     x = x0
@@ -1195,10 +1231,16 @@ def newton(f, df, x0, tol=1e-12, max_iter=100):
 def newton_bisected(f, df, a, b, tol=1e-12, max_iter=200):
     """Newton when it behaves, bisection whenever it does not.
 
+
+
     Keep the bracket [a, b] invariant at all times.  Take a Newton step only
+
     while it lands strictly inside the bracket; otherwise fall back to the
+
     midpoint.  This cannot diverge and cannot lose the sign change, so it is as
+
     safe as bisection and as fast as Newton on a well-behaved function.
+
     """
     fa, fb = f(a), f(b)
     if fa * fb > 0:
@@ -1223,16 +1265,12 @@ def newton_bisected(f, df, a, b, tol=1e-12, max_iter=200):
         else:
             x = 0.5 * (a + b)             # Newton wanted to leave the bracket
     return x, max_iter, history, newton_steps
-
-
 # ===================================================== worked case: sqrt(2)
 rule("1. Worked example: the square root of 2, step by step")
-
 TARGET = math.sqrt(2.0)
 print(f"f(x) = x^2 - 2,  f'(x) = 2x,  true root = {TARGET!r}")
 print(f"{TARGET!r} is the correctly rounded double nearest the real sqrt(2).")
 print()
-
 print("BISECTION on [1, 2].  f(1) = -1, f(2) = 2, so the root is bracketed.")
 print(f"   {'n':>3} {'a':>22} {'b':>22} {'midpoint':>22} {'f(midpoint)':>14}")
 root, iters, hist = bisection(lambda x: x * x - 2.0, 1.0, 2.0, tol=1e-12)
@@ -1244,7 +1282,6 @@ for n, a, b, mid, fm in hist[-3:]:
 print(f"   stopped after {iters} iterations at {root!r}")
 print(f"   error = {abs(root - TARGET):.3e}")
 print()
-
 print("NEWTON from x0 = 1.  x_{n+1} = x - (x^2 - 2)/(2x) = (x + 2/x)/2, which")
 print("is the Babylonian / Heron method -- the same one a square-root routine uses.")
 print(f"   {'n':>3} {'x':>22} {'f(x)':>14} {'correct digits':>16}")
@@ -1261,9 +1298,7 @@ print("quadratic convergence: each step doubles the number of correct digits.")
 print("Bisection added about one digit per step and needed 40 iterations for")
 print("the same precision.")
 print()
-
 rule("2. The error guarantee, and why bisection is bulletproof")
-
 width = 1.0
 print("Bisection's bound is a theorem, not an observation.  Starting from an")
 print("interval of width w, after n iterations the interval has width w / 2^n,")
@@ -1287,8 +1322,6 @@ print()
 def sign_change(f, a, b):
     fa, fb = f(a), f(b)
     return fa * fb <= 0
-
-
 print(f"   f(1)*f(2) <= 0 ? {sign_change(lambda x: x * x - 2.0, 1.0, 2.0)}")
 print(f"   f(1)*f(1) <= 0 ? {sign_change(lambda x: x * x - 2.0, 1.0, 1.0)}"
       "   (no sign change, so bisection correctly refuses)")
@@ -1297,9 +1330,7 @@ try:
 except ValueError as exc:
     print(f"   ValueError: {exc}")
 print()
-
 rule("3. Newton is fast until it is not")
-
 print("Quadratic convergence is LOCAL.  It is a statement about a neighbourhood")
 print("of the root, not a global guarantee, and the textbook example of the")
 print("difference is f(x) = x^3 - 2x + 2 with f'(x) = 3x^2 - 2.")
@@ -1314,8 +1345,6 @@ def cubic(x):
 
 def dcubic(x):
     return 3.0 * x ** 2 - 2.0
-
-
 REAL_ROOT = -1.7692923542386314
 print(f"   {'x0':>6} {'iterations':>11} {'final x':>24} {'f(x)':>14} {'converged':>10}")
 for x0 in (0.0, 1.0, 0.5, -1.0, -2.0, 2.0):
@@ -1345,9 +1374,7 @@ print("The lesson is not 'Newton is dangerous'.  It is that Newton needs a")
 print("bracket or a verified-good starting point, and the verification is")
 print("cheap.")
 print()
-
 rule("4. The fix everyone uses: Newton with a bisection fallback")
-
 print("Keep a bracket [a, b] whose endpoints have opposite signs.  Take the")
 print("Newton step when it lands strictly inside the bracket; otherwise take")
 print("the midpoint.  You keep quadratic convergence near the root and")
@@ -1378,9 +1405,7 @@ print("is good, pure bisection if you need a guarantee and can afford the")
 print("iterations, and the safeguarded hybrid in every other case.  It costs")
 print("one comparison per iteration and removes a whole class of bug.")
 print()
-
 rule("5. Choosing a tolerance, which is a real decision")
-
 print("A tolerance that is too loose returns a number you did not want.  A")
 print("tolerance that is too tight makes the solver spin: it cannot reach the")
 print("target, because the target is below the resolution of the arithmetic.")
@@ -1409,8 +1434,6 @@ print()
 def relative_converged(f, x, tol):
     """The tolerance test to actually use: residual scaled by the magnitude."""
     return abs(f(x)) < tol * max(1.0, abs(x))
-
-
 print(f"   at the exact root, every test agrees it has converged: "
       f"abs {abs(cubic(REAL_ROOT)) < 1e-12}, "
       f"rel {relative_converged(cubic, REAL_ROOT, 1e-12)}, "
@@ -1450,6 +1473,8 @@ print("will do so for any function written in small units.  Test the estimated")
 print("error in x, or the step size -- never the raw residual against an")
 print("absolute constant.")
 ```
+
+
 ### 5. Finite differences, and why a tiny step is a terrible step
 
 
@@ -1457,151 +1482,290 @@ print("absolute constant.")
 ```python
 """Finite differences: measuring a derivative you cannot differentiate for.
 
+
+
 Two errors fight each other, and the step size h is where you choose which one
+
 wins.
 
+
+
   TRUNCATION error comes from the Taylor series.  For a forward difference the
+
   first neglected term is h f''(x)/2, so the error is O(h) -- halving h halves
+
   the error.  For a central difference the h^2 terms cancel by symmetry and the
+
   error is O(h^2) -- halving h quarters the error.
 
+
+
   ROUNDOFF error comes from the arithmetic.  f(x+h) and f(x) are each known to
+
   within about eps|f|, so their difference has an absolute error of about
+
   2 eps |f|.  Dividing by h turns that into an error of about 2 eps |f| / h --
+
   which GROWS as h shrinks.
 
+
+
 Total error is roughly  C1 * h        +  2 eps |f| / h     (forward)
+
                   roughly  C2 * h^2     +  2 eps |f| / h     (central)
 
+
+
 The truncation term wants h small; the roundoff term wants h LARGE.  The best
+
 h is where they balance:
 
-  forward:   h* ~ sqrt(2 eps |f| / |f''|)
-  central:   h* ~ (3 eps |f| / |f'''|)^(1/3)
 
+
+  forward:   h* ~ sqrt(2 eps |f| / |f''|)
+
+  central:   h* ~ (3 eps |f| / |f'''|)^(1/3)
 which is why the optimum for a central difference is about 6e-6 rather than
 1e-8.  Choosing h "as small as possible" makes the answer WORSE, and this block
 measures exactly how much worse.
 """
 
+
+
 import math
 
 
+
+
+
 def rule(title):
+
     print()
+
     print("=" * 68)
+
     print(title)
+
     print("=" * 68)
+
+
+
 
 
 EPS = 2.0**-52
 
+
+
 # A function with a known derivative, so the error can be measured exactly.
+
 F = lambda x: math.sin(x) + 0.3 * x**2
+
 DF = lambda x: math.cos(x) + 0.6 * x
+
 D2F = lambda x: -math.sin(x) + 0.6
+
 D3F = lambda x: -math.cos(x)
+
+
 
 X = 1.3
 
 
+
+
+
 def forward(x, h):
+
     """(f(x+h) - f(x)) / h.  Error is O(h)."""
+
     return (F(x + h) - F(x)) / h
 
 
+
+
+
 def backward(x, h):
+
     """(f(x) - f(x-h)) / h.  Also O(h), same constant."""
+
     return (F(x) - F(x - h)) / h
 
 
+
+
+
 def central(x, h):
+
     """(f(x+h) - f(x-h)) / (2h).  Error is O(h^2)."""
+
     return (F(x + h) - F(x - h)) / (2.0 * h)
 
 
+
+
+
 def rel_err(approx):
+
     return abs(approx - DF(X)) / abs(DF(X))
 
 
+
+
+
 # ------------------------------------------------------------------- 1
+
 rule("1. Forward versus central, at the same step size")
 
+
+
 exact = DF(X)
+
 print(f"f(x) = sin(x) + 0.3x^2,  f'(x) = cos(x) + 0.6x")
+
 print(f"at x = {X}:  f'(x) = {exact!r}")
+
 print()
+
 print(f"   {'h':>12} {'forward err':>14} {'central err':>14} {'ratio':>10}")
+
 for h in (1e-1, 1e-2, 1e-3, 1e-4, 1e-5, 1e-6, 1e-7, 1e-8):
+
     ef, ec = rel_err(forward(X, h)), rel_err(central(X, h))
+
     print(f"   {h:>12.0e} {ef:>14.3e} {ec:>14.3e} {ef / ec:>9.1f}x")
+
 print()
+
 print("Central wins by four orders of magnitude in the middle of the range:")
+
 print("at h = 1e-4 the forward error is 1.7e-5 and the central error is 4.3e-10,")
+
 print("a ratio of 40736.  That is the asymmetry doing the work -- quartering")
+
 print("the forward error needs halving h, while the central error falls as h^2.")
+
 print()
+
 print("But look at the last two rows.  From 1e-6 to 1e-8 the CENTRAL error")
+
 print("gets WORSE (7.5e-12, then 5.6e-11, then 1.6e-10), and by h = 1e-8 the two")
+
 print("are identical to one digit.  Central is not simply better; it has a")
+
 print("window, and 1e-8 is outside it.  Section 2 explains why.")
+
 print()
+
 print("The reason for the window is symmetry.  The forward difference's")
+
 print("expansion is")
+
 print("   f'(x) + h f''(x)/2 + h^2 f'''(x)/6 + ...  <- the h term survives")
 print("The central difference's is")
 print("   f'(x) + h^2 f'''(x)/6 + ...               <- the h term cancels")
+
 print()
+
 print("The cost of central is that it needs f at two extra points, and for a")
+
 print("function with a boundary or a domain edge, x-h may not be available.")
+
 print()
+
+
 
 # ------------------------------------------------------------------- 2
+
 rule("2. Where the optimum step size is, and why it is not 'as small as possible'")
 
+
+
 print("Halving h reduces truncation and increases roundoff, so the error curve")
+
 print("has a U shape with a minimum.  Walk into that minimum from both sides:")
+
 print()
+
 print(f"   {'h':>12} {'forward rel err':>18} {'central rel err':>18}")
+
 rows = []
+
 h = 1e-2
+
 while h >= 1e-17:
+
     rows.append((h, rel_err(forward(X, h)), rel_err(central(X, h))))
+
     h /= 10.0
+
 for h, ef, ec in rows:
+
     print(f"   {h:>12.0e} {ef:>18.3e} {ec:>18.3e}")
+
 best_f = min(rows, key=lambda r: r[1])
+
 best_c = min(rows, key=lambda r: r[2])
+
 BEST_F_H, BEST_F_ERR = best_f[0], best_f[1]
+
 BEST_C_H, BEST_C_ERR = best_c[0], best_c[2]
+
 print()
+
 print(f"   best forward error {BEST_F_ERR:.3e} at h = {BEST_F_H:.0e}")
+
 print(f"   best central error {BEST_C_ERR:.3e} at h = {BEST_C_H:.0e}")
+
 print()
+
 print("The forward error improves all the way down to 1e-8 and then turns")
+
 print("back up; the central error bottoms out at 1e-5 and climbs steeply after")
+
 print("1e-6.  Both curves have a minimum, and both minima are at FINITE h.")
+
 print()
+
 print("   THE OPTIMUM IS FINITE, AND IT IS MUCH LARGER THAN YOU GUESS.")
+
 print("   A step of 1e-16 is not 'more accurate'.  At that size f(x+h) == f(x)")
+
 print("   for most functions, so the numerator is 0 or pure rounding noise and")
+
 print("   the derivative comes back as 0, or as an enormous wrong number.")
+
 print("   Shrinking the step makes the answer strictly worse, and the code")
+
 print("   still runs, and nothing raises.")
+
 print()
+
+
 
 # ------------------------------------------------------------------- 3
+
 rule("3. The formulas for h*, and the order of magnitude they predict")
 
+
+
 f1 = abs(DF(X))
+
 f2 = abs(D2F(X))
+
 f3 = abs(D3F(X))
+
 h_star_forward = math.sqrt(2.0 * EPS * f1 / f2)
+
 h_star_central = (3.0 * EPS * f1 / f3) ** (1.0 / 3.0)
+
 print("forward:   h* ~ sqrt(2 eps |f'| / |f''|)")
+
 print(f"          = sqrt(2 * {EPS:.3e} * {f1:.6f} / {f2:.6f}) = {h_star_forward:.3e}")
+
 print(f"   measured best was {BEST_F_H:.0e}  (same order of magnitude)")
+
 print()
+
 print("central:   h* ~ (3 eps |f'| / |f'''|)^(1/3)")
 print(f"          = (3 * {EPS:.3e} * {f1:.6f} / {f3:.6f})^(1/3) = "
       f"{h_star_central:.3e}")
@@ -1613,10 +1777,8 @@ print(f"central optimum ({h_star_central:.0e}) is about "
 print(f"({h_star_forward:.0e}).  Central differences tolerate a much bigger step,")
 print("which is the practical payoff, not just the accuracy payoff.")
 print()
-
 # ------------------------------------------------------------------- 4
 rule("4. The floor: how good can a finite difference possibly be?")
-
 print("The roundoff floor for the central difference is about 2 eps |f| / h*,")
 print("and with h* ~ eps^(1/3) that becomes about eps^(2/3) -- around 1e-11.")
 print(f"   EPS^(2/3)      = {EPS ** (2.0 / 3.0):.3e}")
@@ -1651,45 +1813,77 @@ print("arithmetic all the way through, so it cannot contain abs, max, or a")
 print("branch on the sign of a real number.  Everything smooth and analytic")
 print("works, which is most of what you differentiate in practice.")
 print()
-
 # ------------------------------------------------------------------- 5
 rule("5. A worked choice of h you can defend")
-
 print("You are asked for f'(2.0) of f(x) = x * exp(x), to 10 correct digits.")
 print("You do not know f''' but you can bound it, and that is enough.")
+
 print()
+
+
+
 
 
 def g(x):
+
     return x * math.exp(x)
 
 
+
+
+
 def dg(x):
+
     return (x + 1.0) * math.exp(x)
 
 
+
+
+
 def g_forward(x, h):
+
     return (g(x + h) - g(x)) / h
 
 
+
+
+
 def g_central(x, h):
+
     return (g(x + h) - g(x - h)) / (2.0 * h)
 
 
+
+
+
 XG = 2.0
+
 print(f"   f'(2) = {dg(XG)!r}")
+
 print()
+
 print("Step 1: find the best h empirically on a log grid, which is what you")
+
 print("would actually do in code.")
+
 grid = [10.0**(-k) for k in range(2, 19)]
+
 bf = min(grid, key=lambda h: abs(g_forward(XG, h) - dg(XG)))
+
 bc = min(grid, key=lambda h: abs(g_central(XG, h) - dg(XG)))
+
 print(f"   forward: best h = {bf:.0e}, rel err "
+
       f"{abs(g_forward(XG, bf) - dg(XG)) / dg(XG):.3e}")
+
 print(f"   central: best h = {bc:.0e}, rel err "
+
       f"{abs(g_central(XG, bc) - dg(XG)) / dg(XG):.3e}")
+
 print()
+
 print("Step 2: check the rule of thumb predicts the same order of magnitude.")
+
 print("   |f'(2)| = %.6f, |f''(2)| = %.6f, |f'''(2)| = %.6f"
       % (abs(dg(XG)), abs((XG + 2.0) * math.exp(XG)),
          abs((XG + 3.0) * math.exp(XG))))
@@ -1711,6 +1905,8 @@ print("Never promise more digits than the method delivers.  A gradient that is")
 print("quietly wrong in its twelfth digit will corrupt a Newton step or a")
 print("convergence test long before anyone notices the value itself.")
 ```
+
+
 ### With Libraries
 
 
@@ -1732,17 +1928,16 @@ not runnable
 ```python
 """The same facts, checked against numpy, mpmath and Python's own tools.
 
-Run with: python -c "import numpy, mpmath; print(numpy.__version__, mpmath.__version__)"
-"""
 
+
+Run with: python -c "import numpy, mpmath; print(numpy.__version__, mpmath.__version__)"
+
+"""
 import math
 import struct
 from fractions import Fraction
-
 import numpy as np
-
 # --- IEEE 754 and epsilon -----------------------------------------------------
-
 print("numpy agrees about what float64 is:")
 print(f"   eps          = {np.finfo(np.float64).eps!r}")
 print(f"   1 + eps == 1 = {1.0 + np.finfo(np.float64).eps == 1.0}")
@@ -1754,16 +1949,13 @@ print(f"   np.spacing(1.0)   = {np.spacing(1.0)!r}")
 print(f"   np.spacing(1e12)  = {np.spacing(1e12)!r}")
 print(f"   math.ulp(1.0)     = {math.ulp(1.0)!r}   (the same number)")
 print()
-
 print("and about which decimals are exact -- nextafter resolves it bit by bit:")
 for d in (0.5, 0.25, 0.125, 0.0625, 0.1, 0.2, 0.3, 0.7):
     v = float(d)
     exact = Fraction(v) == Fraction(d).limit_denominator(10**9)
     print(f"   {d:<8} = {v!r:<24} exact to 9 places: {exact}")
 print()
-
 # --- 0.1 + 0.2 != 0.3, with exact arithmetic ---------------------------------
-
 print("the addition, and numpy's own two 'equal' ways:")
 a, b, c = 0.1, 0.2, 0.3
 print(f"   0.1 + 0.2            = {a + b!r}")
@@ -1784,9 +1976,7 @@ print()
 print("The np.spacing function is the machine-precise way to ask 'how big is a")
 print("step at this magnitude', which is what a step-size choice needs.")
 print()
-
 # --- catastrophic cancellation, in numpy --------------------------------------
-
 print("catastrophic cancellation, computed two ways:")
 xs = np.array([1e8, 1e10, 1e12])
 naive = np.sqrt(xs**2 + 1.0) - xs
@@ -1820,9 +2010,7 @@ print("whole standard library of cancellation avoidance.  numpy has them")
 print("because everyone needed them and nobody could remember to factor them")
 print("out of their own code.")
 print()
-
 # --- summation order ----------------------------------------------------------
-
 print("summation order, which numpy documents rather than hides:")
 v = np.array([1e16, 1.0, -1e16, 1.0])
 fold = 0.0
@@ -1854,9 +2042,7 @@ print("it beats a naive loop on many similar terms.  It still loses the 1e16")
 print("case above: pairwise reduces how OFTEN a small term is swallowed, it does")
 print("not prevent it.  math.fsum, which never rounds until the end, gets 2.0.")
 print()
-
 # --- conditioning --------------------------------------------------------------
-
 print("condition numbers, where numpy can measure instead of you deriving:")
 A_good = np.array([[3.0, 1.0], [1.0, 3.0]])
 A_bad = np.array([[1.0, 1.0], [1.0, 1.0 + 1e-12]])
@@ -1881,12 +2067,9 @@ print("and it is exactly what Lesson 38 and Lesson 40 are for.  It does not")
 print("recover the true answer -- the information is gone -- but it returns")
 print("the minimum-norm one instead of something enormous.")
 print()
-
 # --- root finding ---------------------------------------------------------------
-
 print("root finding, and the tools that already know about the failure modes:")
 from scipy.optimize import brentq
-
 target = math.sqrt(2.0)
 print(f"   the true sqrt(2) is {target!r}")
 xs = np.linspace(0.0, 2.0, 21)
@@ -1908,12 +2091,9 @@ print("   brentq raises ValueError on the second pair, which is the correct")
 print("   behaviour: refusing a bracket is how bisection-based methods stay")
 print("   trustworthy.")
 print()
-
 # --- finite differences ---------------------------------------------------------
-
 print("finite differences, and what scipy's defaults actually buy you:")
 from scipy.optimize import approx_fprime
-
 func = lambda t: np.sin(t) + 0.3 * t**2
 x0 = np.array([1.3])
 exact = math.cos(1.3) + 0.6 * 1.3
@@ -1954,9 +2134,7 @@ print(f"      f(x) = x^2 at x=1.3, h=1e-30")
 print(f"      Im((x + ih)^2) / h = {(c ** 2).imag / 1e-30!r}")
 print(f"      exact derivative    = {2 * 1.3!r}")
 print()
-
 # --- the summary numbers -------------------------------------------------------
-
 print("summary of the constants this lesson turned on:")
 print(f"   float64 eps        = {np.finfo(np.float64).eps:.6e}")
 print(f"   float64 eps^(2/3)  = {np.finfo(np.float64).eps ** (2 / 3):.6e}"
@@ -1966,6 +2144,8 @@ print(f"   float64 eps^(1/3)  = {np.finfo(np.float64).eps ** (1 / 3):.6e}"
 print(f"   float32 eps        = {np.finfo(np.float32).eps:.6e}")
 print(f"   2**53              = {2 ** 53}   (integers stop being exact here)")
 ```
+
+
 ## Common Mistakes
 
 
@@ -3073,13 +3253,11 @@ direction of each rounding. (d) Give the three defensible responses.
 <summary>Solution</summary>
 
 ```python
-```python
 """Exercise 1 solution: build the floating point model, and explain 0.1+0.2.
 
 No floating point arithmetic in the derivation -- every claim about what the
 machine holds is made with exact integers and rationals.
 """
-
 import math
 import struct
 from fractions import Fraction
@@ -3090,11 +3268,8 @@ def rule(title):
     print("=" * 68)
     print(title)
     print("=" * 68)
-
-
 # ------------------------------------------------------------------ part A
 rule("A. Machine epsilon, computed two ways")
-
 # Build it from first principles: 2^-52, because the fraction field is 52 bits
 # wide and the exponent is scaled by 2^-52 around 1.0.
 mantissa_bits = 52
@@ -3130,10 +3305,8 @@ print("2^-53 the exact sum 1 + h is nearer to 1.0, and at or above it the sum")
 print("rounds up to 1.0 + 2^-52.  Machine epsilon is that full gap, 2^-52,")
 print("and every error estimate in numerical analysis is built from it.")
 print()
-
 # ------------------------------------------------------------------ part B
 rule("B. Which decimals survive, and prove why")
-
 print("A float64 is m * 2^e with |m| < 2^53 an integer.  So a decimal d = p/q")
 print("in lowest terms is representable exactly if and only if q is a power")
 print("of two.  Check it directly with exact rationals:")
@@ -3162,13 +3335,10 @@ print("0.5 is sign/exponent then all zeros: the fraction is empty, so the")
 print("value is exactly 2^-1.  0.1's fraction field is full of the repeating")
 print("binary pattern for 1/5 truncated at 52 bits.")
 print()
-
 # ------------------------------------------------------------------ part C
 rule("C. 0.1 + 0.2 != 0.3, explained exactly")
-
 a, b, c = Fraction(1, 10), Fraction(2, 10), Fraction(3, 10)
 fa, fb, fc = Fraction(0.1), Fraction(0.2), Fraction(0.3)
-
 print("Step 1: the inputs are rounded once, on the way in.")
 print(f"   true 1/10 stored as {fa}")
 print(f"   true 1/5  stored as {fb}")
@@ -3225,8 +3395,6 @@ print("And the one response that is wrong: switching to float64 when you were")
 print("already in float64, or writing abs(a - b) < 1e-15 without relating the")
 print("threshold to the magnitude of a and b.")
 ```
-```
-
 **The bisection lands on the half, not the whole, and that is correct.** The
 first $h$ for which $1 + h \neq 1$ is the rounding tie at $2^{-53}$: below it
 the exact sum is nearer to $1.0$, and at or above it rounds up to
@@ -3264,13 +3432,11 @@ ulp, and show that a ridge term removes the sensitivity.
 <summary>Solution</summary>
 
 ```python
-```python
 """Exercise 2 solution: absolute vs relative error, and the condition number.
 
 The task: measure both kinds of error, find where conditioning actually bites,
 and separate the three things people call 'numerical error'.
 """
-
 import math
 
 
@@ -3287,11 +3453,8 @@ def abs_err(approx, exact):
 
 def rel_err(approx, exact):
     return abs(approx - exact) / abs(exact)
-
-
 # ------------------------------------------------------------------ part A
 rule("A. The same absolute error, two completely different situations")
-
 print(f"   {'exact answer':>16} {'absolute error':>18} {'relative error':>18}")
 for value, err in [(0.1, 1e-4), (1.0, 1e-4), (1e4, 1e-4), (1e8, 1e-4)]:
     print(f"   {value:>16.4g} {err:>18.3e} {rel_err(value + err, value):>18.3e}")
@@ -3318,10 +3481,8 @@ print("            Report both when you can.  '1.4142135623730951, relative")
 print("            error below 1e-15' is a complete statement; the number")
 print("            alone is not.")
 print()
-
 # ------------------------------------------------------------------ part B
 rule("B. Relative error, and how it grows with a long sum")
-
 n_values = [0.1] * 1000
 true_sum = 0.1 * 1000
 
@@ -3338,8 +3499,6 @@ def pairwise(vs):
         return vs[0] if vs else 0.0
     mid = len(vs) // 2
     return pairwise(vs[:mid]) + pairwise(vs[mid:])
-
-
 print(f"summing {len(n_values)} copies of 0.1, true sum {true_sum}")
 print(f"   left-to-right fold  = {fold(n_values)!r}")
 print(f"   pairwise           = {pairwise(n_values)!r}")
@@ -3361,17 +3520,13 @@ print("not a fluke.  Pairwise beats it by a wide margin because the running")
 print("total stays close to the final answer instead of drifting away from it,")
 print("so each new rounding is small relative to what is being accumulated.")
 print()
-
 # ------------------------------------------------------------------ part C
 rule("C. Condition number: is the PROBLEM the problem?")
-
 EPS = 2.0**-52
 
 
 def kappa_scalar(f, df, x):
     return abs(x * df(x) / f(x))
-
-
 print("kappa = |x f'(x) / f(x)|: how many times bigger is a relative input")
 print("error than the relative output error it produces.")
 print()
@@ -3411,10 +3566,8 @@ print("   1. Is my ALGORITHM stable here?   -> rephrase the computation.")
 print("   2. Is the PROBLEM conditioned?     -> rephrase the problem.")
 print("   3. Was the INPUT precise enough?   -> only now buy precision.")
 print()
-
 # ------------------------------------------------------------------ part D
 rule("D. It bites hardest on linear systems, and there is a fix")
-
 print("A = [[1,1],[1,1+eps]], b = A @ [1,1], so the exact answer is [1,1] for")
 print("every eps.  Perturb b by ONE ulp and watch the answer move.")
 print()
@@ -3436,8 +3589,6 @@ def ridge(A, b, lam):
             for j in range(n)] for i in range(n)]
     Atb = [sum(A[k][i] * b[k] for k in range(n)) for i in range(n)]
     return solve2(AtA, Atb)
-
-
 print(f"   {'eps':>8} {'rel err, clean b':>18} {'rel err, b+1ulp':>18}"
       f" {'ridge 1e-4':>12}")
 eps = 1e-12
@@ -3471,8 +3622,6 @@ print("one-bit input change -- and the penalty term buys back stability by")
 print("accepting a little bias.  Bias and variance, from a numerical")
 print("perspective rather than a statistical one.")
 ```
-```
-
 **Part A is about reporting, not about computing.** The same absolute error
 varies by twelve orders of magnitude in relative terms, so "accurate to 1e-4"
 is not a specification. Absolute error is the right measure when the unit has
@@ -3514,17 +3663,14 @@ explain why that is not the fix.
 <summary>Solution</summary>
 
 ```python
-```python
 """Exercise 3 solution: catastrophic cancellation, three ways.
 
 The task is to find a formula that looks catastrophically wrong and then
 repair it, twice, and to explain why the repair is a change of ALGORITHM rather
 than a change of precision.
 """
-
 import math
 from decimal import Decimal, getcontext
-
 getcontext().prec = 60
 
 
@@ -3533,14 +3679,10 @@ def rule(title):
     print("=" * 68)
     print(title)
     print("=" * 68)
-
-
 # ---------------------------------------------------------------- part A
 rule("A. The quadratic formula's small root")
-
 a, b, c = 1.0, 1e9, 1.0
 disc = b * b - 4 * a * c
-
 print("Solve a x^2 + b x + c = 0 with a = 1, b = 1e9, c = 1.")
 print(f"   b * b            = {b * b!r}")
 print(f"   4*a*c            = {4 * a * c!r}")
@@ -3556,7 +3698,6 @@ naive_small = (-b + math.sqrt(disc)) / (2 * a)
 print(f"   big root   = {naive_big!r}")
 print(f"   small root = {naive_small!r}    <- exactly zero")
 print()
-
 # The exact answer, in 60-digit decimal arithmetic.
 exact_disc = Decimal(b) ** 2 - 4 * Decimal(1) * Decimal(1)
 exact_big = (-Decimal(b) - exact_disc.sqrt()) / 2
@@ -3581,10 +3722,8 @@ print(f"   both agree with exact to "
       f"{max(abs(stable_small - exact_small_f), abs(stable_small2 - exact_small_f)) / abs(exact_small_f):.1e}"
       " relative")
 print()
-
 # ---------------------------------------------------------------- part B
 rule("B. expm1-style cancellation, and the library that already fixed it")
-
 print("The standard demonstration: exp(x) - 1 for very small x.")
 print(f"   {'x':>12} {'exp(x) - 1':>24} {'math.expm1(x)':>24} {'rel err exp':>12}"
       f" {'rel err expm1':>14}")
@@ -3606,10 +3745,8 @@ print("sums the tail x + x^2/2 + ... from the SMALL end upward keeps every")
 print("digit.  Reordering the arithmetic to add small things together first is")
 print("the general repair for cancellation.")
 print()
-
 # ---------------------------------------------------------------- part C
 rule("C. Why more precision is the wrong answer here")
-
 print("The same naive formula in 60-digit decimal arithmetic:")
 print(f"   exact small root, 60 digits = {exact_small}")
 print(f"   naive,  float64             = {naive_small!r}")
@@ -3657,8 +3794,6 @@ print("Each of those naive forms is fine most of the time and silently wrong")
 print("at one end of its range.  That is the whole argument for using the")
 print("named function rather than the obvious expression.")
 ```
-```
-
 **Part A: the discriminant is destroyed before the formula sees it.** With
 $b = 10^9$, $b^2 = 10^{18}$ and the gap between doubles there is 128, so
 subtracting $4ac = 4$ rounds straight back to $10^{18}$. The small root is
@@ -3702,17 +3837,14 @@ using the complex step.
 <summary>Solution</summary>
 
 ```python
-```python
 """Exercise 4 solution: choose a step size, and defend the choice.
 
 The task: build a derivative routine that picks its own step size, show that a
 naive tiny step is much worse, and show how to reach beyond the central
 difference's ~11-digit ceiling without changing language.
 """
-
 import cmath
 import math
-
 EPS = 2.0**-52
 
 
@@ -3721,16 +3853,12 @@ def rule(title):
     print("=" * 68)
     print(title)
     print("=" * 68)
-
-
 # ------------------------------------------------------------- part A
 rule("A. The three formulas, and the function they are for")
-
 f = lambda x: math.sin(x) + 0.3 * x**2
 df = lambda x: math.cos(x) + 0.6 * x
 d2f = lambda x: -math.sin(x) + 0.6
 d3f = lambda x: -math.cos(x)
-
 X = 1.3
 
 
@@ -3740,8 +3868,6 @@ def forward(x, h):
 
 def central(x, h):
     return (f(x + h) - f(x - h)) / (2.0 * h)
-
-
 print(f"f(x) = sin(x) + 0.3 x^2 at x = {X}")
 print(f"  f'  = {df(X)!r}")
 print(f"  f'' = {d2f(X)!r}")
@@ -3761,10 +3887,8 @@ print("Both formulas land within a small factor of the measured optimum, which")
 print("is all they promise: they depend on derivatives you usually do not know.")
 print("In practice you bracket the order of magnitude and check.")
 print()
-
 # ------------------------------------------------------------- part B
 rule("B. Why the smallest possible step is the worst possible step")
-
 print("The full sweep, central difference:")
 print(f"   {'h':>10} {'f(x+h) == f(x)?':>18} {'rel err':>12}")
 rows = []
@@ -3790,7 +3914,6 @@ print(f"Once h is below that, f(x + h) rounds to f(x) exactly, the numerator")
 print("is 0, and the quotient is 0.0 -- a derivative that is silently wrong by")
 print("an unbounded factor rather than a merely imprecise one.")
 print()
-
 # ------------------------------------------------------------- part C
 rule("C. An automatic chooser, which is what you should actually ship")
 
@@ -3813,8 +3936,6 @@ def derivative_auto(f, x, order="central"):
     if order == "central":
         return (f(x + h) - f(x - h)) / (2.0 * h), h
     return (f(x + h) - f(x)) / h, h
-
-
 print("With no derivatives available, use eps^(1/3) * |f(x)| as the step scale:")
 print(f"   {'x':>8} {'f(x)':>16} {'h chosen':>12} {'rel err':>12}")
 for x in (0.5, 1.3, 2.7, 5.0, 10.0):
@@ -3834,7 +3955,6 @@ print()
 print("Both ceilings are properties of float64, not of your code.  To beat the")
 print("central difference's ceiling you must change the method.")
 print()
-
 # ------------------------------------------------------------- part D
 rule("D. Beating the ceiling: the complex step")
 
@@ -3847,11 +3967,8 @@ def complex_step(f, x, h=1e-30):
 def complex_step_exp(x, h=1e-30):
     """f(x) = x * e^x evaluated at the complex point x + i h."""
     return complex(x, h) * cmath.exp(complex(x, h))
-
-
 g = lambda t: t * math.exp(t)
 dg = lambda t: (t + 1.0) * math.exp(t)
-
 H_CS = 1e-30
 print("f(x) = x e^x at x = 2")
 print(f"   exact derivative      = {dg(2.0)!r}")
@@ -3878,8 +3995,6 @@ print("differentiated in practice.  This is the cheapest member of the")
 print("automatic-differentiation family: one forward pass, one function, no")
 print("tape, no reverse mode, no compiler.")
 ```
-```
-
 **Part A: the minimum is at a finite $h$ and it is about $10^{-5}$.** The sweep
 shows the relative error falling to `7.478e-12` at $h = 10^{-5}$ and then rising
 by seven orders of magnitude as $h$ shrinks further. The shape is the sum of
@@ -3918,16 +4033,13 @@ default tolerance and explain why an unreachable one is dangerous.
 <summary>Solution</summary>
 
 ```python
-```python
 """Exercise 5 solution: build a solver you would actually ship.
 
 The task: write a root finder with a real tolerance policy, show that the
 tolerance is reachable rather than aspirational, and show what happens when a
 solver is asked for more digits than the arithmetic has.
 """
-
 import math
-
 EPS = 2.0**-52
 
 
@@ -3992,11 +4104,8 @@ def solve(f, a, b, rel_tol=1e-12, max_iter=100, df=None):
         else:
             x = 0.5 * (a + b)
     return x, max_iter, newton_steps, False
-
-
 # ------------------------------------------------------------------ part A
 rule("A. It works, and it refuses to work when it cannot")
-
 cases = [
     ("x^2 - 2", lambda x: x * x - 2.0, lambda x: 2.0 * x, 1.0, 2.0,
      math.sqrt(2.0)),
@@ -4007,7 +4116,6 @@ cases = [
     ("cos(x) - x", lambda x: math.cos(x) - x, lambda x: -math.sin(x) - 1.0,
      0.0, 1.0, 0.7390851332151607),
 ]
-
 print(f"   {'problem':<14} {'root':>22} {'iters':>6} {'Newton':>7}"
       f" {'converged':>10} {'rel err':>11}")
 for name, f, df, a, b, exact in cases:
@@ -4019,7 +4127,6 @@ print()
 print("Four different functions, all to about 12 digits, all inside their")
 print("brackets, and the Newton accelerator does most of the work.")
 print()
-
 try:
     solve(lambda x: x * x - 2.0, 3.0, 4.0)
 except NoBracketError as exc:
@@ -4030,10 +4137,8 @@ print("Refusing is the feature.  A solver that 'returns something' when there")
 print("is no root in the interval is worse than one that raises, because you")
 print("will believe it.")
 print()
-
 # ------------------------------------------------------------------ part B
 rule("B. The tolerance must be reachable")
-
 print("How many digits can float64 actually deliver here?")
 x_true = math.sqrt(2.0)
 print(f"   the true sqrt(2) is {x_true!r}")
@@ -4071,10 +4176,8 @@ print("Rule: set rel_tol to something like 1e-12, which is achievable, and")
 print("let the iteration count be whatever it needs to be.  Never set a")
 print("tolerance to a number of digits you cannot otherwise justify.")
 print()
-
 # ------------------------------------------------------------------ part C
 rule("C. Choosing a default tolerance")
-
 print("A practical policy, in order:")
 print()
 print("   1. RELATIVE, not absolute.  rel_tol * max(1, |x|) behaves the same")
@@ -4100,7 +4203,6 @@ print("implementations from Lesson 101 carry a tolerance and a max_iter")
 print("together, and why the sensible ones also watch the STEP SIZE rather")
 print("than the loss, because the loss can be flat while the iterate is")
 print("still moving.")
-
 # ------------------------------------------------------------------ part D
 rule("D. The same solver, used where bisection alone would be painful")
 
@@ -4108,8 +4210,6 @@ rule("D. The same solver, used where bisection alone would be painful")
 def f_wide(x):
     """A root at arccos(0.1) ~= 1.4706, so it takes bisection a while to reach."""
     return math.cos(x) * 1e6 - 1e5
-
-
 exact_wide = math.acos(0.1)
 print(f"   f(1) = {f_wide(1.0):.6g}, f(2) = {f_wide(2.0):.6g}, "
       f"true root = {exact_wide!r}")
@@ -4131,8 +4231,6 @@ def plain_bisection(f, a, b, rel_tol=1e-12, max_iter=200):
         else:
             a, fa = mid, f(mid)
     return 0.5 * (a + b), max_iter
-
-
 r2, n2 = plain_bisection(f_wide, 1.0, 2.0)
 print(f"   plain bisection:    {n2} iterations, root={r2!r}")
 print(f"   agree to {abs(r1 - r2) / max(1.0, abs(r1)):.1e} relative")
@@ -4144,8 +4242,6 @@ print("where Newton cycles it degrades gracefully to bisection instead of")
 print("diverging.  That is why scipy's brentq, and every other production")
 print("root-finder, is built this way.")
 ```
-```
-
 **The stopping rule is the interesting part.** The lesson tests
 $|f(x)/f'(x)| < \tau\max(1, |x|)$, the first-order estimate of how far $x$ still
 is from a root. Comparing $|f(x)|$ against an absolute constant is wrong
@@ -4185,7 +4281,6 @@ production quadrature routine does instead.
 <summary>Solution</summary>
 
 ```python
-```python
 """Exercise 6 solution: an integrator that knows when to stop.
 
 The task: implement three rules and show, with real numbers, that a rule
@@ -4193,7 +4288,6 @@ tuned for smooth integrands is much worse than one tuned for arbitrary ones.
 The point is that "accurate to 1e-12" is meaningless without saying accurate
 FOR WHAT.
 """
-
 import math
 
 
@@ -4202,9 +4296,9 @@ def rule(title):
     print("=" * 68)
     print(title)
     print("=" * 68)
-
-
 # ------------------------------------------------------- the three rules
+
+
 def midpoint(f, a, b, n):
     """n equal panels, one evaluation each.  Error is O(h^2) = O(1/n^2)."""
     h = (b - a) / n
@@ -4232,9 +4326,9 @@ def trapezoid(f, a, b, n):
     for i in range(1, n):
         total += f(a + i * h)
     return total * h
-
-
 # --------------------------------------------------------- the integrand
+
+
 def f_smooth(x):
     """sin(x) on [0, pi].  The exact value is 2."""
     return math.sin(x)
@@ -4256,19 +4350,13 @@ def f_soft(x):
     same problem.
     """
     return abs(x) ** 1.5
-
-
 EXACTS = [(f_smooth, 0.0, math.pi, 2.0, "sin(x) on [0, pi]"),
           (f_rough, 0.0, 1.0, 2.0 / 3.0, "sqrt(x) on [0, 1]"),
           (f_soft, -1.0, 1.0, 4.0 / 5.0, "|x|^1.5 on [-1, 1]")]
-
-
 # ------------------------------------------------------------------ part A
 rule("A. Error against panels, for three integrands")
-
 RULES = [("trapezoid", trapezoid), ("midpoint", midpoint), ("simpson", simpson)]
 PANELS = [10, 100, 1000, 10000, 100000]
-
 for func, a, b, exact, label in EXACTS:
     print(f"{label}, exact = {exact!r}")
     print(f"   {'panels':>8} {'trapezoid':>14} {'midpoint':>14} {'simpson':>14}")
@@ -4282,10 +4370,8 @@ for func, a, b, exact, label in EXACTS:
                 cells.append(f"{'(even n)':>14}")
         print(f"   {n:>8} {cells[0]} {cells[1]} {cells[2]}")
     print()
-
 # ------------------------------------------------------------------ part B
 rule("B. What the slopes mean, and which integrand breaks which rule")
-
 print("Every time you double the panels, watch the error:")
 print()
 print(f"   {'integrand':<20} {'rule':<11} {'ratio':>7}   reading")
@@ -4330,10 +4416,8 @@ print("O(1/n^4) on smooth integrands and closer to O(1/n^3) on a function")
 print("with one corner in the middle.  A claim like 'this integrates to")
 print("1e-12' is incomplete until you say what was integrated.")
 print()
-
 # ------------------------------------------------------------------ part C
 rule("C. Choose n from a target tolerance, honestly")
-
 TARGET = 1e-10
 MAX_N = 200000
 print(f"Find the smallest power-of-four panel count reaching {TARGET:.0e} "
@@ -4359,7 +4443,6 @@ for func, a, b, exact, label in EXACTS:
             print(f"   {name:<11} did not reach {TARGET:.0e} within "
                   f"n = {MAX_N:,}")
     print()
-
 print("Read the panel counts against the target of 1e-10.")
 print()
 print("On the smooth integrand Simpson needs 1024 panels and midpoint needs")
@@ -4386,9 +4469,7 @@ print("panels, and if they differ by more than the tolerance it doubles again")
 print("-- and if they agree to the tolerance it stops, whatever the theory")
 print("predicted.  The theory is a starting guess; the agreement is the")
 print("evidence.")
-
 rule("D. The rule of thumb you should actually remember")
-
 print("   integrand                rule        error per doubling of panels")
 print("   ----------------------   ---------  --------------------------")
 print("   smooth everywhere        Simpson     divides by 16   (measured 16.6)")
@@ -4415,8 +4496,6 @@ print("lesson, and the same philosophy as a safeguarded root-finder: measure")
 print("your own progress instead of trusting a bound that assumed conditions")
 print("you have not checked.")
 ```
-```
-
 **The measured ratios are the whole exercise.** On $\sin(x)$ the trapezoid and
 midpoint gain a factor of 4 per doubling of the panel count and Simpson gains
 about 16.6, which is exactly the textbook statement. The two awkward integrands
@@ -4458,7 +4537,6 @@ an independent reference and asserts a stated number of correct digits.
 <summary>Solution</summary>
 
 ```python
-```python
 """Challenge solution: a tiny numeric toolkit that reports its own reliability.
 
 Everything here is one file of standard-library Python: IEEE 754 inspection,
@@ -4469,11 +4547,9 @@ The design rule the whole thing illustrates: a numerical routine that cannot
 tell you how much to trust it is not finished.  Every function below returns
 the value AND the evidence for that value.
 """
-
 import math
 import struct
 from fractions import Fraction
-
 EPS = 2.0**-52
 
 
@@ -4482,9 +4558,9 @@ def banner(title):
     print("=" * 70)
     print(title)
     print("=" * 70)
-
-
 # ===================================================== 1. the float model
+
+
 def bits(x):
     (packed,) = struct.unpack("<Q", struct.pack("<d", x))
     return f"{packed:064b}"
@@ -4498,10 +4574,7 @@ def exact(x):
 def spacing(x):
     """The gap to the next float. Doubles roughly every factor of 2 in size."""
     return math.ulp(x)
-
-
 banner("1. Inspecting the machine's numbers")
-
 for v in (1.0, 0.1, 1e16, 5e-324, 1.7976931348623157e308):
     print(f"   {v!r}")
     print(f"      bits     {bits(v)}")
@@ -4512,15 +4585,13 @@ print("Every float64 is exactly a rational.  'exact(x)' is the single most")
 print("useful debugging tool in numerical code, because it shows you the value")
 print("you have rather than the one you meant.")
 print()
-
 # ============================================ 2. an honest error estimate
+
+
 def relative(a, b):
     """Relative error of a against a known-exact b."""
     return abs(a - b) / abs(b)
-
-
 banner("2. Relative error, and why the absolute one is not enough")
-
 print(f"   {'exact':>14} {'absolute error':>16} {'relative error':>16}")
 for value in (1e-8, 1.0, 1e8):
     approx = value * (1 + 1e-12)
@@ -4533,8 +4604,9 @@ print("checks absolute differences against a fixed epsilon, it is testing")
 print("nothing on the small inputs and nothing you care about on the large")
 print("ones.")
 print()
-
 # ============================================== 3. a self-reporting solver
+
+
 class Solver:
     """Bisection with a Newton accelerator, reporting how far it got.
 
@@ -4549,11 +4621,9 @@ class Solver:
     A caller can therefore decide whether to trust the answer, rather than
     having to trust the implementation.
     """
-
     def __init__(self, rel_tol=1e-12, max_iter=100):
         self.rel_tol = rel_tol
         self.max_iter = max_iter
-
     def solve(self, f, a, b, df=None):
         fa, fb = f(a), f(b)
         if fa * fb > 0.0:
@@ -4584,10 +4654,7 @@ class Solver:
             x = candidate if a < candidate < b else 0.5 * (a + b)
         return {"value": x, "iterations": self.max_iter,
                 "status": "iteration limit", "estimate": None}
-
-
 banner("3. A root finder that reports its own reliability")
-
 problems = [
     ("x^2 - 2", lambda x: x * x - 2, lambda x: 2 * x, 1.0, 2.0),
     ("x^3 - 2x + 2", lambda x: x**3 - 2 * x + 2,
@@ -4621,8 +4688,9 @@ print()
 print("   The status is the product.  Without it, a caller cannot distinguish")
 print("   'converged to 1e-12' from 'gave up at 1e-16 and did not say so'.")
 print()
-
 # ================================== 4. a self-reporting derivative
+
+
 def derivative(f, x, order="central"):
     """Return (value, step, note) with the step chosen by the lesson's rule."""
     scale = abs(f(x)) or 1.0
@@ -4641,10 +4709,7 @@ def derivative(f, x, order="central"):
 def complex_step(f, x, h=1e-30):
     """f'(x) via Im(f(x + i h)) / h. Needs complex-safe f; exact when f is."""
     return f(complex(x, h)).imag / h
-
-
 banner("4. A derivative that picks its own step, and a better one")
-
 f = lambda t: math.sin(t) + 0.3 * t * t
 df = lambda t: math.cos(t) + 0.6 * t
 print(f"   f(x) = sin(x) + 0.3x^2,  exact f'(1.3) = {df(1.3)!r}")
@@ -4668,7 +4733,6 @@ print("returns a relative error of 100%, because f(1.3 + 1e-16) is bit-for-bit")
 print("f(1.3) and the numerator is zero.  Choosing h badly is worse than")
 print("choosing a crude scheme.")
 print()
-
 # ================================================= 5. a sanity harness
 banner("5. A harness that would have caught every bug in this lesson")
 
@@ -4684,8 +4748,6 @@ def audit(name, value, reference, want_digits):
     print(f"   {name:<34} {digits:>6.1f} digits   want {want_digits:>2}   "
           f"{verdict}")
     return digits >= want_digits
-
-
 checks = []
 checks.append(audit("sqrt(2) via midpoint, tol 1e-12",
                     Solver().solve(lambda x: x * x - 2, 1.0, 2.0,
@@ -4717,8 +4779,6 @@ print("That is the transferable lesson, and it is the same one the rest of")
 print("this repository keeps making: define what the answer should be, then")
 print("make the code disagree with that definition loudly when it is wrong.")
 ```
-```
-
 **The design rule the whole file illustrates is that a numerical routine which
 cannot tell you how much to trust it is not finished.** Each routine returns
 evidence, not just a value:

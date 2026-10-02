@@ -2505,12 +2505,12 @@ Output:
      Identical: padding adds exact zeros, so both sides are unchanged.
 
 (d) every 16-point bin in the first half with |X[k]| > 1e-9, at fs = 8000
-     bin  0   |X[k]| =  20.000000   f = k*fs/16 =      0.0 Hz   between two 8-point bins, new information
+     bin  0   |X[k]| =  20.000000   f = k*fs/16 =      0.0 Hz   DC: the sum of the samples, unchanged
      bin  1   |X[k]| =  15.447561   f = k*fs/16 =    500.0 Hz   between two 8-point bins, new information
-     bin  2   |X[k]| =   6.308644   f = k*fs/16 =   1000.0 Hz   = X8[1], an even bin and a copy
+     bin  2   |X[k]| =   6.308644   f = k*fs/16 =   1000.0 Hz   = X8[1], an even bin and an exact copy
      bin  3   |X[k]| =   0.446933   f = k*fs/16 =   1500.0 Hz   between two 8-point bins, new information
      bin  5   |X[k]| =   1.003151   f = k*fs/16 =   2500.0 Hz   between two 8-point bins, new information
-     bin  6   |X[k]| =   0.448342   f = k*fs/16 =   3000.0 Hz   = X8[3], an even bin and a copy
+     bin  6   |X[k]| =   0.448342   f = k*fs/16 =   3000.0 Hz   = X8[3], an even bin and an exact copy
      bin  7   |X[k]| =   0.408391   f = k*fs/16 =   3500.0 Hz   between two 8-point bins, new information
      Bin 16-k mirrors bin k, so the second half carries no new magnitudes.
      Read the frequencies, not the bin numbers: 500 Hz is bin 1 here and
