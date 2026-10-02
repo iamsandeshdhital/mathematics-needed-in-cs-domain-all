@@ -1983,7 +1983,7 @@ cofactor matrix directly would give a wrong "inverse" that still multiplies out 
 
 </details>
 
-**Challenge — Exercise 3 — what `det(A) = 0` does and does not determine.** Let
+**[ ] Exercise 3 — what `det(A) = 0` does and does not determine.** Let
 
     A = | 1  2  0 |
         | 2  4  0 |
@@ -2258,6 +2258,454 @@ uninformative `0` the moment *any* direction is lost. The lesson's cofactor matr
 shows the third case: for the singular `S3` of the third code block, `det = 0` and
 `adj(S3) = 0`, so not one digit of the dependence structure survives in the
 determinant, while the pivot count recovers it exactly.
+
+**Challenge.** Let
+
+    A  = | 2  1  0 |     S2 = | 1  2  3 |     S1 = | 1  2  3 |
+         | 1  2  1 |          | 2  4  6 |          | 2  4  6 |
+         | 0  1  2 |          | 1  1  1 |          | 3  6  9 |
+
+(a) For `A`: compute `det(A)` and `adj(A)`, then form `A⁻¹` **twice** — as
+`adj(A)/det(A)` and by Gaussian elimination on `[A | I]` — and confirm the two
+agree and that `A A⁻¹ = I`. Then verify `A adj(A) = det(A) I` directly and say in
+one sentence what that identity is doing for you.
+
+(b) For `S2`: compute `det(S2)`, `adj(S2)`, and `S2 adj(S2)`. Show that
+`adj(S2)` is **not** the zero matrix even though `S2` is singular, relate its
+columns to `ker(S2)`, and confirm that `S2 adj(S2) = det(S2) I` still holds.
+Explain in one sentence what that identity is worth once `det = 0`.
+
+(c) For `S1`: show that `adj(S1)` is exactly the zero matrix and explain why
+`rank(S1) = 1` forces that. Then tabulate all three matrices by `det`, rank, and
+the number of nonzero entries in `adj`.
+
+(d) Run Cramer's rule on `A x = (1, 0, 1)` and check the result against `A x = b`.
+Then run the same move on `S2 x = (1, 0, 1)`, and explain in one paragraph what
+breaks — being precise about `k/0` versus `0/0` — and name the one piece of
+information the determinant has thrown away that you now need.
+
+**(a)** Expanding along row 0: `2(2·2 − 1·1) − 1(1·2 − 1·0) + 0 = 2·3 − 2 = 4`. So
+`det(A) = 4 ≠ 0` and the matrix is invertible. The cofactor matrix is
+
+    |  3  -2   1 |
+    | -2   4  -2 |
+    |  1  -2   3 |
+
+and the adjugate is its **transpose**. Here the cofactor matrix happens to be
+symmetric, so the transpose is invisible — which is exactly why Exercise 2 had to
+reach for a `2 × 2`, where it is not. Dividing by `4` and eliminating on
+`[A | I]` give the same matrix to the last digit,
+
+    | 0.75  -0.50   0.25 |
+    |-0.50   1.00  -0.50 |
+    | 0.25  -0.50   0.75 |
+
+and multiplying `A` by it returns the identity exactly.
+
+What the identity `A adj(A) = det(A) I` is doing for you: it is the algebraic
+license to divide. Without it, `adj(A)` is just a matrix of cofactors with no
+claim to invert anything. With it, both `A adj(A)` and `adj(A) A` are *known* to
+be the same scalar multiple of `I`, so dividing both by `det(A)` hands you a
+**two-sided** inverse for free — you never have to check the second product
+separately. That is the entire content of the inverse formula.
+
+**(b)** `rank(S2) = 2`, so `det(S2) = 0`, yet
+
+    adj(S2) = | -2   1   0 |
+              |  4  -2   0 |
+              | -2   1   0 |
+
+is emphatically not zero. The reason is worth knowing: the null vector of `S2`
+is `(1, −2, 1)`, and **every column of `adj(S2)` is a multiple of it** — columns
+`−2·(1,−2,1)`, `1·(1,−2,1)` and `0`. For a matrix of rank exactly `n − 1` the
+adjugate has rank `1` and points along the single direction that was lost. So
+the dependence information is not destroyed by `det = 0`; it has simply moved
+somewhere the inverse formula cannot reach it.
+
+And `S2 adj(S2)` is the zero matrix, so the identity `S2 adj(S2) = det(S2) I`
+still holds. That is the whole story: when `det = 0` the identity degenerates to
+`0 = 0`. It constrains nothing, divides into nothing, and the "inverse" you
+computed is a matrix whose entire image is a single direction. Gaussian
+elimination says the same thing more bluntly — it refuses to run, reporting no
+pivot in the second column.
+
+**(c)** `adj(S1)` is the zero matrix, entry by entry. The reason is dimensional
+rather than accidental: a `3 × 3` adjugate is built from `2 × 2` minors, and
+`S1` has rank `1 ≤ 3 − 2`, so every `2 × 2` minor vanishes and so does the whole
+adjugate. One more row of dependence and the last trace of structure is gone.
+
+The three cases together:
+
+| matrix | `det` | rank | nonzero entries in `adj` | invertible |
+|---|---|---|---|---|
+| `A` | `4` | 3 | 9 | yes |
+| `S2` | `0` | 2 | 6 | no |
+| `S1` | `0` | 1 | 0 | no |
+
+`det` distinguishes the first row from the other two and says **nothing** about
+the difference between the second and third. It is one bit, and `S2` and `S1` are
+on the same side of it. `rank` is the quantity that separates them.
+
+**(d)** Cramer's rule on `A`: the three replaced-column determinants come out
+`4, −4, 4`, so dividing by `det(A) = 4` gives `x = (1, −1, 1)`, and
+`A(1, −1, 1) = (1, 0, 1)` — correct.
+
+On `S2` the denominators are all `0`, and the numerators are `−2, 4, −2`, none of
+them zero. So each expression is `k/0` with `k ≠ 0`: **undefined, not zero**. The
+distinction matters. `0/0` is indeterminate, and one might hope the system has a
+consistent family of answers hiding in it; `k/0` with `k ≠ 0` rules that out
+immediately, because replacing a column with `b` and getting a nonzero determinant
+means `b` left the column space. What is lost is precisely the *consistency*
+information: whether `S2 x = b` is solvable at all, or solvable with infinitely
+many solutions. `det` reports "singular" for both cases and cannot separate them.
+
+So the division is not a detail to be tidied away. Cancelling a factor of `det`,
+or "simplifying" `adj/det` into a single expression, is legal only when you have
+already established `det ≠ 0` — and establishing that is the entire job. The step
+that looks like algebra is the step that silently throws away the distinction
+between *no solution* and *infinitely many*.
+
+```python
+TOL = 1e-9
+
+
+# ---------------------------------------------------------------- helpers
+def shape(M):
+    return len(M), len(M[0])
+
+
+def matmul(A, B):
+    ra, ca = shape(A)
+    rb, cb = shape(B)
+    if ca != rb:
+        raise ValueError(f"cannot multiply {ra}x{ca} by {rb}x{cb}")
+    return [[sum(A[i][k] * B[k][j] for k in range(ca)) for j in range(cb)]
+            for i in range(ra)]
+
+
+def matvec(M, v):
+    return [sum(M[i][k] * v[k] for k in range(len(v))) for i in range(len(M))]
+
+
+def det(M):
+    n = len(M)
+    if n == 1:
+        return M[0][0]
+    if n == 2:
+        return M[0][0] * M[1][1] - M[0][1] * M[1][0]
+    total = 0.0
+    for j in range(n):
+        minor = [[M[i][c] for c in range(n) if c != j] for i in range(1, n)]
+        sign = 1.0 if j % 2 == 0 else -1.0
+        total += sign * M[0][j] * det(minor)
+    return total
+
+
+def cofactor(M, i, j):
+    n = len(M)
+    minor = [[M[r][c] for c in range(n) if c != j] for r in range(n) if r != i]
+    sign = 1.0 if (i + j) % 2 == 0 else -1.0
+    return sign * det(minor)
+
+
+def adjugate(M):
+    """The TRANSPOSE of the cofactor matrix -- the transpose is the whole point."""
+    n = len(M)
+    # + 0.0 normalises -0.0 to 0.0 so the printout does not show "-0.00".
+    return [[cofactor(M, j, i) + 0.0 for j in range(n)] for i in range(n)]
+
+
+def rref(A, tol=TOL):
+    M = [list(row) for row in A]
+    rows, cols = len(M), len(M[0])
+    pr, pivots = 0, []
+    for col in range(cols):
+        if pr == rows:
+            break
+        best = max(range(pr, rows), key=lambda r: abs(M[r][col]))
+        if abs(M[best][col]) <= tol:
+            continue
+        M[pr], M[best] = M[best], M[pr]
+        p = M[pr][col]
+        M[pr] = [v / p for v in M[pr]]
+        for r in range(rows):
+            if r != pr and M[r][col] != 0.0:
+                f = M[r][col]
+                M[r] = [M[r][c] - f * M[pr][c] for c in range(cols)]
+        pivots.append(col)
+        pr += 1
+    return [[v + 0.0 for v in row] for row in M], pivots
+
+
+def rank(A, tol=TOL):
+    return len(rref(A, tol)[1])
+
+
+def null_space(A, tol=TOL):
+    M, pivots = rref(A, tol)
+    cols = len(A[0])
+    basis = []
+    for fc in [c for c in range(cols) if c not in pivots]:
+        v = [0.0] * cols
+        v[fc] = 1.0
+        for i, pc in enumerate(pivots):
+            v[pc] = -M[i][fc]
+        basis.append(v)
+    return basis
+
+
+def eye(n):
+    return [[1.0 if i == j else 0.0 for j in range(n)] for i in range(n)]
+
+
+def inverse_by_elimination(M, tol=TOL):
+    n = len(M)
+    aug = [list(M[i]) + [1.0 if i == j else 0.0 for j in range(n)]
+           for i in range(n)]
+    for col in range(n):
+        best = max(range(col, n), key=lambda r: abs(aug[r][col]))
+        if abs(aug[best][col]) <= tol:
+            raise ValueError("matrix is singular: no pivot in this column")
+        aug[col], aug[best] = aug[best], aug[col]
+        p = aug[col][col]
+        aug[col] = [v / p for v in aug[col]]
+        for r in range(n):
+            if r != col and aug[r][col] != 0.0:
+                f = aug[r][col]
+                aug[r] = [aug[r][c] - f * aug[col][c] for c in range(2 * n)]
+    return [row[n:] for row in aug]
+
+
+def print_matrix(label, M, width=6):
+    rows, cols = shape(M)
+    print(f"  {label}  ({rows}x{cols})")
+    for row in M:
+        print("    | " + " ".join(f"{x:{width}.2f}" for x in row) + " |")
+
+
+def show(label, v, width=6):
+    print(f"  {label} = [" + ", ".join(f"{x:{width}.4f}" for x in v) + "]")
+
+
+A = [[2.0, 1.0, 0.0],
+     [1.0, 2.0, 1.0],
+     [0.0, 1.0, 2.0]]
+
+print("=== (a) A: invertible, three routes to A^-1 must agree ===")
+print_matrix("A", A)
+dA = det(A)
+adjA = adjugate(A)
+print(f"  det(A) = {dA:g}   (row expansion: 2*3 - 1*2 + 0*1 = {2 * 3 - 1 * 2})")
+print_matrix("adj(A)", adjA)
+inv_formula = [[adjA[i][j] / dA for j in range(3)] for i in range(3)]
+inv_elim = inverse_by_elimination(A)
+print_matrix("adj(A)/det(A)", inv_formula)
+print_matrix("by elimination", inv_elim)
+print(f"  the two agree: {all(abs(inv_formula[i][j] - inv_elim[i][j]) <= TOL for i in range(3) for j in range(3))}")
+prod = matmul(A, inv_formula)
+print_matrix("A (adj(A)/det(A))", prod)
+print(f"  that is the identity: {all(abs(prod[i][j] - eye(3)[i][j]) <= TOL for i in range(3) for j in range(3))}")
+print()
+print("  The identity A adj(A) = det(A) I is the whole reason dividing by det")
+print("  works. Verify it directly:")
+lhs = matmul(A, adjA)
+print_matrix("A adj(A)", lhs)
+print_matrix("det(A) I", [[dA if i == j else 0.0 for j in range(3)] for i in range(3)])
+print(f"  equal: {all(abs(lhs[i][j] - (dA if i == j else 0.0)) <= TOL for i in range(3) for j in range(3))}")
+print(f"  Both sides equal {dA:g} I, so dividing by det(A) = {dA:g} -- legal --")
+print("  and the two-sided inverse falls out for free.")
+
+S2 = [[1.0, 2.0, 3.0],
+      [2.0, 4.0, 6.0],
+      [1.0, 1.0, 1.0]]
+
+print()
+print("=== (b) S2: singular, but the adjugate is NOT zero ===")
+print_matrix("S2", S2)
+dS = det(S2)
+adjS = adjugate(S2)
+print(f"  rank(S2) = {rank(S2)} of 3, so det(S2) = {dS:g}")
+print_matrix("adj(S2)", adjS)
+print(f"  adj(S2) is all zero? {all(abs(adjS[i][j]) <= TOL for i in range(3) for j in range(3))}")
+print("  Not zero, and the reason is instructive. The null vector of S2 is")
+ns = null_space(S2)[0]
+show("null vector of S2", ns)
+print("  and every COLUMN of adj(S2) is a multiple of it:")
+for j in range(3):
+    col = [adjS[i][j] for i in range(3)]
+    scale = next((col[i] / ns[i] for i in range(3) if abs(ns[i]) > TOL), None)
+    print(f"    column {j} = {str([round(t, 4) for t in col]):<22} = "
+          f"{scale:g} * null vector")
+print("  So for a rank n-1 matrix the adjugate still carries the direction that")
+print("  was lost -- it just cannot act as an inverse, since it only spans that")
+print("  one direction.")
+lhs2 = matmul(S2, adjS)
+print_matrix("S2 adj(S2)", lhs2)
+print(f"  equal to det(S2) I = the ZERO matrix: "
+      f"{all(abs(lhs2[i][j]) <= TOL for i in range(3) for j in range(3))}")
+print("  So the identity still holds -- and it now reads 0 = 0, which says")
+print("  nothing at all. No division is available and no inverse exists.")
+try:
+    inverse_by_elimination(S2)
+    print("  elimination unexpectedly succeeded")
+except ValueError as exc:
+    print(f"  elimination on S2 refuses: {exc}")
+
+print()
+print("=== (c) S1: also singular, and here adj is exactly zero ===")
+S1 = [[1.0, 2.0, 3.0],
+      [2.0, 4.0, 6.0],
+      [3.0, 6.0, 9.0]]
+print_matrix("S1", S1)
+dS1 = det(S1)
+adjS1 = adjugate(S1)
+print(f"  rank(S1) = {rank(S1)} of 3, so det(S1) = {dS1:g}")
+print_matrix("adj(S1)", adjS1)
+print(f"  adj(S1) is all zero? {all(abs(adjS1[i][j]) <= TOL for i in range(3) for j in range(3))}")
+print("  Every 2x2 minor of a rank-1 matrix is 0, and a 3x3 adjugate is made of")
+print("  2x2 minors, so adj is the zero matrix outright. Three cases, one det:")
+for label, M in (("A  (rank 3)", A), ("S2 (rank 2)", S2), ("S1 (rank 1)", S1)):
+    d = det(M)
+    a = adjugate(M)
+    nz = sum(1 for i in range(3) for j in range(3) if abs(a[i][j]) > TOL)
+    print(f"    {label}: det = {d:5g}   nonzero entries of adj = {nz}   "
+          f"invertible = {d != 0.0}")
+
+print()
+print("=== (d) what breaks if you divide anyway ===")
+print("  Cramer's rule for A x = b, with b = (1, 0, 1):")
+b = [1.0, 0.0, 1.0]
+for i in range(3):
+    Mc = [list(row) for row in A]
+    for r in range(3):
+        Mc[r][i] = b[r]
+    print(f"    det(A with column {i} replaced by b) / det(A) = {det(Mc):g} / {dA:g} = {det(Mc) / dA:g}")
+x_cramers = [det([[b[r] if c == i else A[r][c] for c in range(3)] for r in range(3)]) / dA
+             for i in range(3)]
+show("x from Cramer's rule", x_cramers)
+print(f"  A x = {matvec(A, x_cramers)}   matches b: "
+      f"{all(abs(t) <= TOL for t in [matvec(A, x_cramers)[i] - b[i] for i in range(3)])}")
+print()
+print("  Now the same Cramer move on S2, whose det is 0. Every numerator comes out")
+print("  NONZERO, so each fraction is k/0 with k != 0 -- undefined, not zero:")
+for i in range(3):
+    Mc = [[b[r] if c == i else S2[r][c] for c in range(3)] for r in range(3)]
+    num = det(Mc)
+    print(f"    det(S2 with column {i} replaced by b) = {num:g}")
+print("  A 0 denominator is not an answer of 0. It means the system is either")
+print("  unsolvable or infinitely solvable, and the determinant alone cannot")
+print("  say which -- that needs the rank. Never cancel, divide, or 'simplify'")
+print("  a factor of det away when det may be 0: the division is the step that")
+print("  silently discards the consistency information.")
+```
+
+Output:
+
+```
+=== (a) A: invertible, three routes to A^-1 must agree ===
+  A  (3x3)
+    |   2.00   1.00   0.00 |
+    |   1.00   2.00   1.00 |
+    |   0.00   1.00   2.00 |
+  det(A) = 4   (row expansion: 2*3 - 1*2 + 0*1 = 4)
+  adj(A)  (3x3)
+    |   3.00  -2.00   1.00 |
+    |  -2.00   4.00  -2.00 |
+    |   1.00  -2.00   3.00 |
+  adj(A)/det(A)  (3x3)
+    |   0.75  -0.50   0.25 |
+    |  -0.50   1.00  -0.50 |
+    |   0.25  -0.50   0.75 |
+  by elimination  (3x3)
+    |   0.75  -0.50   0.25 |
+    |  -0.50   1.00  -0.50 |
+    |   0.25  -0.50   0.75 |
+  the two agree: True
+  A (adj(A)/det(A))  (3x3)
+    |   1.00   0.00   0.00 |
+    |   0.00   1.00   0.00 |
+    |   0.00   0.00   1.00 |
+  that is the identity: True
+
+  The identity A adj(A) = det(A) I is the whole reason dividing by det
+  works. Verify it directly:
+  A adj(A)  (3x3)
+    |   4.00   0.00   0.00 |
+    |   0.00   4.00   0.00 |
+    |   0.00   0.00   4.00 |
+  det(A) I  (3x3)
+    |   4.00   0.00   0.00 |
+    |   0.00   4.00   0.00 |
+    |   0.00   0.00   4.00 |
+  equal: True
+  Both sides equal 4 I, so dividing by det(A) = 4 -- legal --
+  and the two-sided inverse falls out for free.
+
+=== (b) S2: singular, but the adjugate is NOT zero ===
+  S2  (3x3)
+    |   1.00   2.00   3.00 |
+    |   2.00   4.00   6.00 |
+    |   1.00   1.00   1.00 |
+  rank(S2) = 2 of 3, so det(S2) = 0
+  adj(S2)  (3x3)
+    |  -2.00   1.00   0.00 |
+    |   4.00  -2.00   0.00 |
+    |  -2.00   1.00   0.00 |
+  adj(S2) is all zero? False
+  Not zero, and the reason is instructive. The null vector of S2 is
+  null vector of S2 = [1.0000, -2.0000, 1.0000]
+  and every COLUMN of adj(S2) is a multiple of it:
+    column 0 = [-2.0, 4.0, -2.0]      = -2 * null vector
+    column 1 = [1.0, -2.0, 1.0]       = 1 * null vector
+    column 2 = [0.0, 0.0, 0.0]        = 0 * null vector
+  So for a rank n-1 matrix the adjugate still carries the direction that
+  was lost -- it just cannot act as an inverse, since it only spans that
+  one direction.
+  S2 adj(S2)  (3x3)
+    |   0.00   0.00   0.00 |
+    |   0.00   0.00   0.00 |
+    |   0.00   0.00   0.00 |
+  equal to det(S2) I = the ZERO matrix: True
+  So the identity still holds -- and it now reads 0 = 0, which says
+  nothing at all. No division is available and no inverse exists.
+  elimination on S2 refuses: matrix is singular: no pivot in this column
+
+=== (c) S1: also singular, and here adj is exactly zero ===
+  S1  (3x3)
+    |   1.00   2.00   3.00 |
+    |   2.00   4.00   6.00 |
+    |   3.00   6.00   9.00 |
+  rank(S1) = 1 of 3, so det(S1) = 0
+  adj(S1)  (3x3)
+    |   0.00   0.00   0.00 |
+    |   0.00   0.00   0.00 |
+    |   0.00   0.00   0.00 |
+  adj(S1) is all zero? True
+  Every 2x2 minor of a rank-1 matrix is 0, and a 3x3 adjugate is made of
+  2x2 minors, so adj is the zero matrix outright. Three cases, one det:
+    A  (rank 3): det =     4   nonzero entries of adj = 9   invertible = True
+    S2 (rank 2): det =     0   nonzero entries of adj = 6   invertible = False
+    S1 (rank 1): det =     0   nonzero entries of adj = 0   invertible = False
+
+=== (d) what breaks if you divide anyway ===
+  Cramer's rule for A x = b, with b = (1, 0, 1):
+    det(A with column 0 replaced by b) / det(A) = 4 / 4 = 1
+    det(A with column 1 replaced by b) / det(A) = -4 / 4 = -1
+    det(A with column 2 replaced by b) / det(A) = 4 / 4 = 1
+  x from Cramer's rule = [1.0000, -1.0000, 1.0000]
+  A x = [1.0, 0.0, 1.0]   matches b: True
+
+  Now the same Cramer move on S2, whose det is 0. Every numerator comes out
+  NONZERO, so each fraction is k/0 with k != 0 -- undefined, not zero:
+    det(S2 with column 0 replaced by b) = -2
+    det(S2 with column 1 replaced by b) = 4
+    det(S2 with column 2 replaced by b) = -2
+  A 0 denominator is not an answer of 0. It means the system is either
+  unsolvable or infinitely solvable, and the determinant alone cannot
+  say which -- that needs the rank. Never cancel, divide, or 'simplify'
+  a factor of det away when det may be 0: the division is the step that
+  silently discards the consistency information.
+```
 
 </details>
 

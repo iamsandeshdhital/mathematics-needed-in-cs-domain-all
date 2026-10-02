@@ -1924,8 +1924,8 @@ injective, so distinct inputs give distinct outputs.
 
 </details>
 
-**Challenge — Exercise 2 — a matrix with one genuine redundancy, all four
-subspaces computed.** Let
+**[ ] Exercise 2 — a matrix with one genuine redundancy, all four subspaces
+computed.** Let
 
     A = | 1  2  0  3 |
         | 2  4  1  7 |
@@ -2479,7 +2479,424 @@ you which. Confusing the two is how a model ships with silently unstable
 coefficients — and it is why the honest diagnostic is `np.linalg.cond`, not
 `np.linalg.matrix_rank`.
 
+**Challenge.** Consider four candidate subsets of `ℝ³`:
+
+    S1 = { x : x₁ + x₂ + x₃ = 0 }
+    S2 = { x : x₁ + x₂ + x₃ = 1 }
+    S3 = { (a, b, ab) : a, b ∈ ℝ }
+    S4 = { x : x₁ = 0, x₂ ≥ 0 }
+
+(a) Run the three subspace tests on each — `0 ∈ S`, `u + v ∈ S`, `cu ∈ S` — using
+members of each set as the probes, and report **which** test fails. Give the
+dimension of the one that survives.
+
+(b) List the possible dimensions of a subspace of `ℝ³` and say how many subspaces
+of each dimension there are. Then explain in one paragraph why a basis is
+reported as a list of vectors rather than as a single number.
+
+(c) Verify `dim(U + W) + dim(U ∩ W) = dim U + dim W` for
+`U = span(e₁, e₂)` and `W = span((1,1,0), e₃)`, and again for
+`U = span(e₁)`, `W = span(e₂)`. Compute `dim(U ∩ W)` **without** using the formula
+you are testing. Then state the inequality the formula implies and say what a
+violation would prove.
+
+(d) Take `S3`, skip the subspace test, and exhibit three vectors of `S3` that are
+linearly independent. Explain in one paragraph what goes wrong, and specifically
+why the "dimension" you would report for `S3` is not merely wrong but not a
+question that is well posed.
+
+**(a)** The three tests, with `u` and `v` genuine members of each set:
+
+| set | `0 ∈ S` | `u + v ∈ S` | `cu ∈ S` | verdict |
+|---|---|---|---|---|
+| `S1` | yes | yes | yes | **subspace**, `dim = 2` |
+| `S2` | **no** | no | no | not a subspace |
+| `S3` | yes | **no** | **no** | not a subspace |
+| `S4` | yes | yes | **no** | not a subspace |
+
+The spread is the whole lesson. `S1` passes everything, and since it is the
+kernel of the nonzero row `(1, 1, 1)` it has dimension `3 − 1 = 2` — the same
+`ker(Aᵀ)` bookkeeping as Exercise 2.
+
+`S2` fails the cheapest possible test: `0 ∉ S2`, because `0 + 0 + 0 = 0 ≠ 1`. It
+fails the other two as well, but you should never have got that far. Note that
+`S2` is not "almost" a subspace — it is a *translate* of `S1`, and translating a
+subspace off the origin is precisely what destroys it.
+
+`S4` is the one that catches people, and it is why the tests are not
+interchangeable. It contains `0`. It is closed under addition, since
+`(0, x₂, x₃) + (0, y₂, y₃) = (0, x₂ + y₂, x₃ + y₃)` with `x₂ + y₂ ≥ 0`. It is even
+a *cone*. But `-u` for `u = (0, 1, 5)` is `(0, −1, −5)`, whose second coordinate
+is negative, so it has left the set. **One** failing axiom is enough.
+
+`S3` fails both closure tests, and the reason is worth seeing. For `c = −1`,
+`-1 · (a, b, ab) = (−a, −b, −ab)`, and the set wants the third coordinate to be
+`(−a)(−b) = +ab`, not `−ab`. Generally `c(a, b, ab) = (ca, cb, cab)` lands back in
+`S3` only when `cab = c²ab`, i.e. only for `c = 1` or `ab = 0`. So it is not
+scale-invariant for any `c ≠ 1`. Checking one axiom and stopping is not a
+shortcut; all three are load-bearing, and *which* one fails tells you what kind of
+object you are actually holding.
+
+**(b)** Four possible dimensions, and the counts are wildly different:
+
+| dimension | what it is | how many |
+|---|---|---|
+| `0` | `{0}` | exactly **1** |
+| `1` | a line through the origin | **uncountably many** |
+| `2` | a plane through the origin | **uncountably many** |
+| `3` | all of `ℝ³` | exactly **1** |
+
+So the number of *dimensions* is `4`, while the number of *subspaces* is not
+finite. "What is its dimension?" has four possible answers and is a question
+about a single integer. "Which subspace is it?" has infinitely many answers and
+cannot be answered by any integer at all.
+
+That asymmetry is why a basis is written as a list. `dim U = 2` is compatible with
+`U = span(e₁, e₂)`, `U = span((1,1,0), e₃)`, and infinitely many others; the
+dimension tells you how many vectors to ask for, never which ones. Only the
+actual list identifies the subspace, and a different valid list — the RREF rows
+instead of the original columns, say — identifies the same subspace just as well.
+Rank and pivot counting answer the integer question; nothing in the arithmetic
+answers the identity question.
+
+**(c)** For `U = span(e₁, e₂)` and `W = span((1,1,0), e₃)`, both of dimension `2`:
+`dim(U + W) = 3` (the stacked basis spans all of `ℝ³`) and `dim(U ∩ W) = 1` (the
+single shared direction is `(1,1,0)`). Then
+
+    3 + 1 = 4  =  2 + 2   ✓
+
+For `U = span(e₁)` and `W = span(e₂)`, both of dimension `1`: `dim(U ∩ W) = 0` and
+`dim(U + W) = 2`, so
+
+    2 + 0 = 2  =  1 + 1   ✓
+
+Computing `dim(U ∩ W)` without the formula is the part that makes this a test
+rather than a tautology. A shared vector satisfies `Σ aᵢ Pᵢ = Σ bⱼ Qⱼ`, which is
+a homogeneous system in `len(P) + len(Q)` unknowns; since both basis lists are
+independent the map from solutions to vectors has trivial kernel, so the answer is
+`len(P) + len(Q) − rank(M)`. Here that is `4 − 3 = 1` and `2 − 2 = 0`, and only
+*then* does the dimension formula get to be checked against those numbers.
+
+Read the formula as a budget: `dim U + dim W` **overcounts by exactly
+`dim(U ∩ W)`**. Two subspaces in general position share only `{0}`, so their
+dimensions add cleanly; every dimension they share by accident is subtracted
+once. The second pair shows the extreme — two independent lines have nothing in
+common, so `1 + 1 = 2` with nothing to subtract — while the first pair shares
+half of itself.
+
+The formula immediately implies the inequality `dim(U + W) ≤ dim U + dim W`, since
+`dim(U ∩ W) ≥ 0`. So a computed `dim(U + W)` *larger* than `dim U + dim W` is not
+a subtle discrepancy to be explained away: it is **proof of an arithmetic error**,
+with no alternative reading. In practice this is the cheapest self-check
+available when you are unsure whether a basis was built correctly.
+
+**(d)** Three vectors of `S3` that are linearly independent:
+
+    (1, 2, 2),   (3, 4, 12),   (1, 0, 0)
+
+All three are in `S3` — `2 = 1·2`, `12 = 3·4`, `0 = 1·0` — and their rank is `3`
+of `3`, so they are independent. So here is a set containing three independent
+vectors, which is the raw material of a basis.
+
+But their **span** is not `S3`. Their sum `(5, 6, 14)` is in the span and not in
+`S3`, which wants `14 = 5·6 = 30`. So the span is a genuine 3-dimensional
+subspace of `ℝ³` — necessarily all of `ℝ³` — while `S3` is something else
+entirely, and something that is not closed under addition.
+
+The two claims are unrelated. **Linear independence is a statement about a list
+of vectors.** The dimension of `S3` is a statement about the *set*. And the
+dimension of a set is only well posed once the set is a subspace, because
+dimension is defined as the number of vectors in a basis of the set, and
+"S3 = span{(1,2,2), (3,4,12), (1,0,0)}" is a false statement rather than a
+true one with a wrong number attached.
+
+That is the dangerous shape of the error: a plausible small integer, arrived at
+by entirely legitimate pivot arithmetic, attached to a claim that was never a
+claim about `S3` at all. Nothing in the counting will flag it. The only thing
+that catches it is running the three subspace tests *before* you start counting —
+which is why the test comes first in the lesson's own method and not as an
+afterthought.
+
+```python
+TOL = 1e-9
+
+
+# ---------------------------------------------------------------- helpers
+def rref(A, tol=TOL):
+    M = [list(row) for row in A]
+    rows, cols = len(M), len(M[0])
+    pr, pivots = 0, []
+    for col in range(cols):
+        if pr == rows:
+            break
+        best = max(range(pr, rows), key=lambda r: abs(M[r][col]))
+        if abs(M[best][col]) <= tol:
+            continue
+        M[pr], M[best] = M[best], M[pr]
+        p = M[pr][col]
+        M[pr] = [v / p for v in M[pr]]
+        for r in range(rows):
+            if r != pr and M[r][col] != 0.0:
+                f = M[r][col]
+                M[r] = [M[r][c] - f * M[pr][c] for c in range(cols)]
+        pivots.append(col)
+        pr += 1
+    return [[v + 0.0 for v in row] for row in M], pivots
+
+
+def rank(A, tol=TOL):
+    return len(rref(A, tol)[1])
+
+
+def add(u, v):
+    return [u[i] + v[i] for i in range(3)]
+
+
+def scale(c, u):
+    return [c * t for t in u]
+
+
+def show(label, v, width=5):
+    return f"  {label} = [" + ", ".join(f"{x + 0.0:{width}.1f}" for x in v) + "]"
+
+
+print("=== (a) four candidate sets in R^3, run through the three tests ===")
+print("  Tests: 0 in S, u+v in S for u,v in S, cu in S for u in S.")
+print("  The probe vectors are MEMBERS of each set, so a failure is real.")
+print()
+
+cases = [
+    ("S1  {x : x1 + x2 + x3 = 0}", lambda x: abs(x[0] + x[1] + x[2]) <= TOL,
+     [-1.0, 0.0, 1.0], [2.0, 1.0, -3.0]),
+    ("S2  {x : x1 + x2 + x3 = 1}", lambda x: abs(x[0] + x[1] + x[2] - 1.0) <= TOL,
+     [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]),
+    ("S3  {(a, b, ab) : a, b in R}", lambda x: abs(x[2] - x[0] * x[1]) <= TOL,
+     [1.0, 2.0, 2.0], [3.0, 4.0, 12.0]),
+    ("S4  {x : x1 = 0, x2 >= 0}", lambda x: x[0] == 0.0 and x[1] >= 0.0,
+     [0.0, 1.0, 5.0], [0.0, 2.0, -1.0]),
+]
+
+zero = [0.0, 0.0, 0.0]
+for name, in_set, u, v in cases:
+    has_zero = in_set(zero)
+    s = add(u, v)
+    add_ok = in_set(s)
+    neg_u = scale(-1.0, u)
+    neg_ok = in_set(neg_u)
+    two_u = scale(2.0, u)
+    two_ok = in_set(two_u)
+    scale_ok = neg_ok and two_ok
+    verdict = has_zero and add_ok and scale_ok
+    failed = [n for n, ok in (("0 in S", has_zero), ("addition", add_ok),
+                              ("scaling", scale_ok)) if not ok]
+    print(f"  {name}")
+    print(show("u ", u) + f"   in S? {in_set(u)}")
+    print(show("v ", v) + f"   in S? {in_set(v)}")
+    print(show("u+v", s) + f"   in S? {add_ok}")
+    print(show("-u ", neg_u) + f"   in S? {neg_ok}")
+    print(show("2u ", two_u) + f"   in S? {two_ok}")
+    print(f"    SUBSPACE: {verdict}   failed: {', '.join(failed) if failed else 'nothing'}")
+    print()
+
+print("  The spread is the point. S1 passes everything, so it is a subspace of")
+print("  dimension 2. S2 fails the cheapest test, 0 in S, and is over instantly.")
+print("  S4 is the one that catches people: it contains 0 and it IS closed under")
+print("  addition, yet -u leaves it, so it is not a subspace. And S3 fails both")
+print("  closure tests -- c(a,b,ab) = (ca,cb,cab) only lands back in the set when")
+print("  c = 1, because the set wants c^2 ab in the third slot and gets c ab.")
+print("  Checking one axiom and stopping is not a shortcut; all three earn their")
+print("  keep, and which one fails tells you what kind of mistake you are looking at.")
+
+print()
+print("=== (b) how many subspaces does R^3 have? ===")
+print("  dim 0: {0}                        -- exactly 1")
+print("  dim 1: lines through the origin   -- one per nonzero DIRECTION, and")
+print("        (1,1,0) spans the same line as (2,2,0), so uncountably many.")
+print("  dim 2: planes through the origin  -- likewise uncountably many; each is")
+print("        the kernel of a nonzero row, e.g. [1, 1, 1] has rank 1, so its")
+print(f"        kernel has dimension {3 - rank([[1.0, 1.0, 1.0]])}")
+print("  dim 3: R^3 itself                 -- exactly 1")
+print()
+print("  So the number of DIMENSIONS is 4, while the number of SUBSPACES is not")
+print("  finite. 'What is its dimension' has four possible answers; 'which")
+print("  subspace is it' has infinitely many. Rank and pivot counting answer the")
+print("  first question, and no amount of arithmetic answers the second -- that is")
+print("  why a basis is given as a specific list rather than as a number.")
+
+print()
+print("=== (c) dim(U+W) + dim(U n W) = dim U + dim W ===")
+# U and W are given as LISTS OF BASIS VECTORS, so the algebra below is about
+# span(...) directly and does not depend on rows-versus-columns bookkeeping.
+U = [[1.0, 0.0, 0.0],
+     [0.0, 1.0, 0.0]]              # span(e1, e2): the z = 0 plane
+W = [[1.0, 1.0, 0.0],
+     [0.0, 0.0, 1.0]]              # span((1,1,0), e3)
+
+
+def dim_span(vecs):
+    return rank(vecs)
+
+
+def dim_intersection(P, Q):
+    """dim(span P n span Q) without using the formula we are testing.
+
+    A shared vector x solves sum a_i P_i = sum b_j Q_j, i.e. M (a,b) = 0 for
+    the 3x(len(P)+len(Q)) matrix M below. Both basis lists are independent, so
+    the map from solutions to x has trivial kernel and dim = len(P)+len(Q)-rank M.
+    """
+    n, m = len(P), len(Q)
+    M = [[P[i][r] for i in range(n)] + [-Q[j][r] for j in range(m)] for r in range(3)]
+    return n + m - rank(M)
+
+
+dim_U, dim_W = dim_span(U), dim_span(W)
+dim_sum = dim_span(U + W)
+dim_inter = dim_intersection(U, W)
+print(f"  U = span(e1, e2)          dim U = {dim_U}")
+print(f"  W = span((1,1,0), e3)     dim W = {dim_W}")
+print(f"  dim(U + W) = {dim_sum}   (the six stacked vectors span R^3)")
+print(f"  dim(U n W) = {dim_inter}   (only the direction (1,1,0) is shared)")
+print(f"  dim(U + W) + dim(U n W) = {dim_sum} + {dim_inter} = {dim_sum + dim_inter}")
+print(f"  dim U + dim W             = {dim_U} + {dim_W} = {dim_U + dim_W}")
+print(f"  the formula holds: {dim_sum + dim_inter == dim_U + dim_W}")
+print()
+print("  Second pair, this time with no overlap at all:")
+P, Q = [[1.0, 0.0, 0.0]], [[0.0, 1.0, 0.0]]
+dP, dQ = dim_span(P), dim_span(Q)
+dP_inter, dP_sum = dim_intersection(P, Q), dim_span(P + Q)
+print(f"  U = span(e1), W = span(e2): dims {dP} and {dQ}, "
+      f"dim(U n W) = {dP_inter}, dim(U + W) = {dP_sum}")
+print(f"  {dP_sum} + {dP_inter} = {dP_sum + dP_inter}  and  "
+      f"{dP} + {dQ} = {dP + dQ}   holds: {dP_sum + dP_inter == dP + dQ}")
+print()
+print("  Read it as a budget: dim U + dim W OVERCOUNTS by exactly dim(U n W).")
+print("  Two subspaces in general position share only 0 and their dimensions add")
+print("  clean; every dimension they share by accident gets subtracted once. The")
+print("  formula implies dim(U + W) <= dim U + dim W, so a computed dim(U + W)")
+print("  larger than dim U + dim W is not a subtlety, it is proof of an error.")
+
+print()
+print("=== (d) what breaks if you skip the subspace test ===")
+S3 = lambda x: abs(x[2] - x[0] * x[1]) <= TOL
+vecs = [[1.0, 2.0, 2.0], [3.0, 4.0, 12.0], [1.0, 0.0, 0.0]]
+print("  Pretend S3 = {(a, b, ab)} is a subspace and ask for its dimension.")
+for v in vecs:
+    print(show("  v", v) + f"   in S3? {S3(v)}")
+print(f"  These {len(vecs)} vectors are linearly independent: rank = {rank(vecs)} of 3.")
+print("  So their SPAN is 3-dimensional. But their span is not S3:")
+s = [sum(v[i] for v in vecs) for i in range(3)]
+print(show("  sum", s) + f"   in S3? {S3(s)}   (S3 needs x3 = x1*x2 = "
+      f"{s[0] * s[1]}, but x3 = {s[2]})")
+print()
+print("  'Three independent vectors lying in S3' and 'S3 has dimension 3' are")
+print("  unrelated claims. Independence is a statement about a list of vectors;")
+print("  the dimension of S3 is a statement about the set, and it is not even a")
+print("  well-posed question until the set passes the three tests. The failure")
+print("  mode is a number that looks perfectly reasonable and means nothing, and")
+print("  no amount of pivot counting will ever tell you so.")
+```
+
+Output:
+
+```
+=== (a) four candidate sets in R^3, run through the three tests ===
+  Tests: 0 in S, u+v in S for u,v in S, cu in S for u in S.
+  The probe vectors are MEMBERS of each set, so a failure is real.
+
+  S1  {x : x1 + x2 + x3 = 0}
+  u  = [ -1.0,   0.0,   1.0]   in S? True
+  v  = [  2.0,   1.0,  -3.0]   in S? True
+  u+v = [  1.0,   1.0,  -2.0]   in S? True
+  -u  = [  1.0,   0.0,  -1.0]   in S? True
+  2u  = [ -2.0,   0.0,   2.0]   in S? True
+    SUBSPACE: True   failed: nothing
+
+  S2  {x : x1 + x2 + x3 = 1}
+  u  = [  1.0,   0.0,   0.0]   in S? True
+  v  = [  0.0,   1.0,   0.0]   in S? True
+  u+v = [  1.0,   1.0,   0.0]   in S? False
+  -u  = [ -1.0,   0.0,   0.0]   in S? False
+  2u  = [  2.0,   0.0,   0.0]   in S? False
+    SUBSPACE: False   failed: 0 in S, addition, scaling
+
+  S3  {(a, b, ab) : a, b in R}
+  u  = [  1.0,   2.0,   2.0]   in S? True
+  v  = [  3.0,   4.0,  12.0]   in S? True
+  u+v = [  4.0,   6.0,  14.0]   in S? False
+  -u  = [ -1.0,  -2.0,  -2.0]   in S? False
+  2u  = [  2.0,   4.0,   4.0]   in S? False
+    SUBSPACE: False   failed: addition, scaling
+
+  S4  {x : x1 = 0, x2 >= 0}
+  u  = [  0.0,   1.0,   5.0]   in S? True
+  v  = [  0.0,   2.0,  -1.0]   in S? True
+  u+v = [  0.0,   3.0,   4.0]   in S? True
+  -u  = [  0.0,  -1.0,  -5.0]   in S? False
+  2u  = [  0.0,   2.0,  10.0]   in S? True
+    SUBSPACE: False   failed: scaling
+
+  The spread is the point. S1 passes everything, so it is a subspace of
+  dimension 2. S2 fails the cheapest test, 0 in S, and is over instantly.
+  S4 is the one that catches people: it contains 0 and it IS closed under
+  addition, yet -u leaves it, so it is not a subspace. And S3 fails both
+  closure tests -- c(a,b,ab) = (ca,cb,cab) only lands back in the set when
+  c = 1, because the set wants c^2 ab in the third slot and gets c ab.
+  Checking one axiom and stopping is not a shortcut; all three earn their
+  keep, and which one fails tells you what kind of mistake you are looking at.
+
+=== (b) how many subspaces does R^3 have? ===
+  dim 0: {0}                        -- exactly 1
+  dim 1: lines through the origin   -- one per nonzero DIRECTION, and
+        (1,1,0) spans the same line as (2,2,0), so uncountably many.
+  dim 2: planes through the origin  -- likewise uncountably many; each is
+        the kernel of a nonzero row, e.g. [1, 1, 1] has rank 1, so its
+        kernel has dimension 2
+  dim 3: R^3 itself                 -- exactly 1
+
+  So the number of DIMENSIONS is 4, while the number of SUBSPACES is not
+  finite. 'What is its dimension' has four possible answers; 'which
+  subspace is it' has infinitely many. Rank and pivot counting answer the
+  first question, and no amount of arithmetic answers the second -- that is
+  why a basis is given as a specific list rather than as a number.
+
+=== (c) dim(U+W) + dim(U n W) = dim U + dim W ===
+  U = span(e1, e2)          dim U = 2
+  W = span((1,1,0), e3)     dim W = 2
+  dim(U + W) = 3   (the six stacked vectors span R^3)
+  dim(U n W) = 1   (only the direction (1,1,0) is shared)
+  dim(U + W) + dim(U n W) = 3 + 1 = 4
+  dim U + dim W             = 2 + 2 = 4
+  the formula holds: True
+
+  Second pair, this time with no overlap at all:
+  U = span(e1), W = span(e2): dims 1 and 1, dim(U n W) = 0, dim(U + W) = 2
+  2 + 0 = 2  and  1 + 1 = 2   holds: True
+
+  Read it as a budget: dim U + dim W OVERCOUNTS by exactly dim(U n W).
+  Two subspaces in general position share only 0 and their dimensions add
+  clean; every dimension they share by accident gets subtracted once. The
+  formula implies dim(U + W) <= dim U + dim W, so a computed dim(U + W)
+  larger than dim U + dim W is not a subtlety, it is proof of an error.
+
+=== (d) what breaks if you skip the subspace test ===
+  Pretend S3 = {(a, b, ab)} is a subspace and ask for its dimension.
+    v = [  1.0,   2.0,   2.0]   in S3? True
+    v = [  3.0,   4.0,  12.0]   in S3? True
+    v = [  1.0,   0.0,   0.0]   in S3? True
+  These 3 vectors are linearly independent: rank = 3 of 3.
+  So their SPAN is 3-dimensional. But their span is not S3:
+    sum = [  5.0,   6.0,  14.0]   in S3? False   (S3 needs x3 = x1*x2 = 30.0, but x3 = 14.0)
+
+  'Three independent vectors lying in S3' and 'S3 has dimension 3' are
+  unrelated claims. Independence is a statement about a list of vectors;
+  the dimension of S3 is a statement about the set, and it is not even a
+  well-posed question until the set passes the three tests. The failure
+  mode is a number that looks perfectly reasonable and means nothing, and
+  no amount of pivot counting will ever tell you so.
+```
+
 </details>
+
 
 ## Summary
 

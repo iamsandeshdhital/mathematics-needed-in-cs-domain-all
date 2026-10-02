@@ -2644,7 +2644,7 @@ print("what to care about.")
 ```
 
 </details>
-**Challenge — Build a refutation engine, and use it to decide eight statements
+**[ ] Challenge 7 — Build a refutation engine, and use it to decide eight statements
 without ever evaluating one directly.** Write a function
 `refute(assumptions, target, atoms)` that works like this: it builds the
 assumption set Γ ∪ {¬target}, and searches for a subset of Γ that is already

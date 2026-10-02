@@ -3495,6 +3495,871 @@ of W weighted by g, which as a matrix product is W^T g. Substituting W:
 
 </details>
 
+**[ ] Exercise 6 — four spaces, redundancy, preimages, and what a kernel
+destroys.** (a) For the `3 × 4` design matrix
+
+    A = | 1  2  3  4 |
+        | 5  6  7  9 |
+        | 2  3  4  5 |
+
+report the rank, a basis for the row space, a basis for the column space (using
+pivot columns of the **original** `A`), and a basis for the kernel. Give the
+ambient space of each one, and check rank-nullity twice: as
+`dim(ker) = n - r`, and as `dim(row) = dim(col) = r`.
+
+(b) Take the `5 × 5` dataset of five students, with columns
+`hours`, `rate`, `score`, `projects`, `rating`:
+
+    | 3.0  0.90  48.0  10.0  6.0 |
+    | 5.0  0.80  66.0  12.0  7.0 |
+    | 2.0  0.60  32.0   8.0  5.0 |
+    | 4.0  0.95  59.0  11.0  6.5 |
+    | 6.0  0.85  77.0  13.0  8.0 |
+
+Find the kernel, name the columns that appear in the nonzero coordinates of the
+null vector, and verify the relation row by row. Then drop the `score` column
+and recompute the rank, to confirm you removed redundancy rather than
+information.
+
+(c) For `T(x, y) = (x, x)` and `S(u, v) = (0, v)`, compute `ker(T)`, `ker(S)` and
+`ker(S T)` directly. Then show by explicit substitution that
+`ker(S T) = T⁻¹(ker S)` is the right rule and
+`ker(S T) = ker(S) + ker(T)` is the wrong one, and say in one sentence what
+makes it wrong.
+
+(d) The screen projection `P(x, y, z) = (x, y)` has a kernel. Find it, then take
+the two 3-D points `(1, 2, 5)` and `(1, 2, 900)` and show that `B - A` is a
+scalar multiple of your kernel vector. Explain in one sentence what a renderer
+loses by using `P`, and then show that the `4 × 4` homogeneous version has a
+trivial kernel.
+
+(e) For `W = [[1, -1, 0.5], [0, 2, -1]]` and `b = [0.5, -0.25]`, take
+`u = (1, -2, 3)` and `v = u + k` for a kernel vector `k` of `W`. Show
+`W u + b = W v + b`, and then show the ReLU outputs agree too. Explain in one
+paragraph why no layer placed *after* `W` can undo this, and identify the
+different set of inputs the ReLU itself makes indistinguishable.
+
+**Challenge.** A colleague claims that a neural network "has a kernel, like every
+linear map". (a) Refute the claim for the network `relu(W v + b)` above by
+producing two distinct inputs the ReLU network *does* separate, and say what
+condition on the stack would make the claim true instead. (b) Characterise the
+set of inputs the ReLU collapses, and say which subspace axiom it fails — try the
+zero vector first, since that is the cheapest test, and say what to do when it
+comes back inconclusive. (c) For a stack of `L` purely linear layers with widths
+`w₁, …, w_L`, give the dimension of the kernel of the composed map, and explain
+in one paragraph why the nonlinearity is the only thing in the stack that widens
+it.
+
+<details>
+<summary>Solution</summary>
+
+**Part (a).** The rank is `3`, which is the maximum for a `3`-row matrix, so `A`
+is surjective onto `ℝ³` and the column space is all of `ℝ³`.
+
+The three spaces and their ambient homes:
+
+| space | ambient | dimension | where the basis comes from |
+|---|---|---|---|
+| row space | `ℝ⁴` | `3` | the nonzero rows of the RREF |
+| column space | `ℝ³` | `3` | pivot columns `[0, 1, 3]` of the **original** `A` |
+| kernel | `ℝ⁴` | `1` | free variable `x₃` set to `1` |
+
+The ambient space is the single most commonly botched detail here. The row space
+is a set of 4-vectors because a row is read as a coefficient vector for the
+model; the column space is a set of 3-vectors because a column is a prediction
+for one of the three observations. They have the same dimension and live in
+different rooms.
+
+Rank-nullity checks out both ways: `dim(ker) = 4 - 3 = 1`, and
+`3 + (4 - 3) = 4 = n`, so the domain splits completely. And
+`dim(row) = dim(col) = 3 = r`, the row-rank-equals-column-rank theorem stated in
+map language.
+
+**Part (b).** The rank is `4` of `5`, so the kernel is one-dimensional and there
+is exactly one relation among the columns — up to scaling. It is
+
+    score = 10 · hours + 20 · rate
+
+and the null vector `(-10, -20, 1, 0, 0)` reads off that identity directly: the
+coefficient of a column is how many times it appears on the right. The zeros in
+positions 3 and 4 are the substantive part of the answer. They say `projects`
+and `rating` are *not* involved in the redundancy — this is one local
+dependency, not a general collapse of the dataset.
+
+The row-by-row subtraction is the honest verification, and every residual is
+`+0.000000`, not "small". The relation was built to be exact, so if you see
+`1e-13` here your data or your arithmetic is wrong.
+
+Dropping `score` leaves the rank at `4`. That is the point: `score` was a
+*linear combination of columns already present*, so it added a kernel direction
+without adding any reachable prediction. Removing it costs you no rank. The
+practical reading is that you can predict the score from the other four features
+exactly and should not spend a coefficient on it.
+
+**Part (c).** Directly:
+
+    ker(T)   = span{(0, 1)}     since T(x, y) = (x, x) = 0 forces x = 0
+    ker(S)   = span{(1, 0)}     since S(u, v) = (0, v) = 0 forces v = 0
+    ker(S T) = span{(0, 1)}
+
+`S T` maps `(x, y) ↦ (0, x)`, so `S T = 0` forces `x = 0` and leaves `y` free.
+The preimage rule is right: `ker(S T) = T⁻¹(ker S)`, and since `ker S = {(0, 0)}`,
+the preimage is exactly the set `T` sends to `0`, namely `ker T`. The
+substitutions confirm it: `T(0, 1) = (0, 0)` is in `ker S`; `T(1, 1) = (1, 1)` and
+`T(5, 0) = (5, 5)` are not.
+
+The sum rule predicts dimension `1 + 1 = 2` and the truth is `1`. It is wrong
+because `S` never touches the input — it acts on `T`'s **output**. Only the
+inputs whose *outputs* land in `ker S` qualify, and `ker T` is generally a
+subset of that set, not a co-equal summand. Here `T⁻¹(ker S)` happens to equal
+`ker T` because `ker S` is trivial, so the two rules differ only in the
+arithmetic; on a less degenerate example they differ as sets.
+
+**Part (d).** `ker(P) = span{(0, 0, 1)}`, and the difference of the two points is
+`B - A = (0, 0, 895) = 895 · (0, 0, 1)` — a pure kernel vector, which is the
+only way two points can share an image. Two points 895 units apart in depth
+produce the identical pixel, so a 3-D renderer has thrown away exactly the
+coordinate its depth buffer exists to sort on. Z-fighting is not a precision
+problem here; it is a rank problem, and no amount of depth precision fixes it.
+
+The `4 × 4` homogeneous matrix has rank `4`, so `dim(ker) = 4 - 4 = 0` and
+distinct points stay distinct. Keeping the divide until the very end is what
+preserves this.
+
+**Part (e).** With `k = (0, 0.5, 1)`, the pre-activations are
+`W u + b = (5.0, -7.25)` and `W v + b = (5.0, -7.25)` — equal, because
+`W k = 0`. The ReLU outputs agree too: `(5.0, 0.0)` both times.
+
+The reason nothing downstream helps is not about ReLU specifically. A kernel
+collision means two inputs reach the rest of the network as the *same* number.
+Any function whatsoever of an equal argument is equal, so if the next layer is a
+deterministic map — linear, ReLU, softmax, or a composition of all three — it
+receives one value and has nothing to work with. The information is destroyed
+at the linear layer, not hidden at the ReLU.
+
+The ReLU is itself not injective, for a different reason: it collapses the whole
+negative orthant. `relu(-1, -2) = relu(-3, -7) = (0, 0)`. That is a much milder
+and structurally different failure than a linear kernel — it is a half-space
+sitting at the origin, not a subspace through it.
+
+```python
+TOL = 1e-9
+
+
+# ---------------------------------------------------------------- helpers
+def shape(M):
+    return len(M), len(M[0])
+
+
+def transpose(M):
+    rows, cols = shape(M)
+    return [[M[i][j] for i in range(rows)] for j in range(cols)]
+
+
+def matmul(A, B):
+    rows_a, cols_a = shape(A)
+    rows_b, cols_b = shape(B)
+    if cols_a != rows_b:
+        raise ValueError(f"cannot multiply {rows_a}x{cols_a} by {rows_b}x{cols_b}")
+    return [[sum(A[i][k] * B[k][j] for k in range(cols_a)) for j in range(cols_b)]
+            for i in range(rows_a)]
+
+
+def matvec(M, v):
+    rows, cols = shape(M)
+    if len(v) != cols:
+        raise ValueError(f"vector has {len(v)} entries, matrix has {cols} columns")
+    return [sum(M[i][k] * v[k] for k in range(cols)) for i in range(rows)]
+
+
+def rref(A, tol=TOL):
+    M = [list(row) for row in A]
+    rows, cols = len(M), len(M[0])
+    pivot_row, pivots = 0, []
+    for col in range(cols):
+        if pivot_row == rows:
+            break
+        best = max(range(pivot_row, rows), key=lambda r: abs(M[r][col]))
+        if abs(M[best][col]) <= tol:
+            continue
+        M[pivot_row], M[best] = M[best], M[pivot_row]
+        p = M[pivot_row][col]
+        M[pivot_row] = [v / p for v in M[pivot_row]]
+        for r in range(rows):
+            if r != pivot_row and M[r][col] != 0.0:
+                f = M[r][col]
+                M[r] = [M[r][c] - f * M[pivot_row][c] for c in range(cols)]
+        pivots.append(col)
+        pivot_row += 1
+    M = [[v + 0.0 for v in row] for row in M]
+    return M, pivots
+
+
+def rank(A, tol=TOL):
+    return len(rref(A, tol)[1])
+
+
+def null_space(A, tol=TOL):
+    M, pivots = rref(A, tol)
+    cols = shape(A)[1]
+    basis = []
+    for fc in [c for c in range(cols) if c not in pivots]:
+        v = [0.0] * cols
+        v[fc] = 1.0
+        for i, pc in enumerate(pivots):
+            v[pc] = -M[i][fc]
+        basis.append(v)
+    return basis
+
+
+def image_basis(A, tol=TOL):
+    _, pivots = rref(A, tol)
+    return [[A[i][c] for i in range(len(A))] for c in pivots]
+
+
+def print_matrix(label, M, width=7):
+    rows, cols = shape(M)
+    print(f"{label}  ({rows}x{cols})")
+    for row in M:
+        print("  | " + " ".join(f"{x:{width}.3f}" for x in row) + " |")
+
+
+def say(text=""):
+    print(text)
+
+
+# ---------------------------------------------------------------- 1
+say("=== Part 1: the four spaces of a 3x4 design matrix ===")
+A = [[1.0, 2.0, 3.0, 4.0],
+     [5.0, 6.0, 7.0, 9.0],
+     [2.0, 3.0, 4.0, 5.0]]
+print_matrix("A (3x4: 3 observations, 4 features)", A)
+m, n = shape(A)
+r = rank(A)
+Mrr, piv = rref(A)
+row_b = [row for row in Mrr if any(abs(t) > TOL for t in row)]
+col_b = image_basis(A)
+ker_b = null_space(A)
+say()
+say(f"rank r = {r}, m = {m} rows, n = {n} columns")
+say(f"  row space     in R^{n}, dim {len(row_b)}   basis = nonzero RREF rows")
+for w in row_b:
+    say(f"      {w}")
+say(f"  column space  in R^{m}, dim {len(col_b)}   basis = pivot columns {piv} of the ORIGINAL A")
+for w in col_b:
+    say(f"      {w}")
+say(f"  kernel        in R^{n}, dim {len(ker_b)} = n - r = {n} - {r}")
+for w in ker_b:
+    say(f"      {[round(t, 4) for t in w]}      A w = {[round(t, 12) for t in matvec(A, w)]}")
+say()
+say(f"  r + (n - r) = {r} + {n - r} = {r + n - r} = n = {n}   (rank-nullity)")
+say(f"  dim(row) = {len(row_b)} = dim(col) = {len(col_b)} = r = {r}")
+say()
+say("The row space lives in R^4 (one entry per COLUMN, so a coefficient vector")
+say("for the model) and the column space in R^3 (one entry per ROW, so a")
+say("prediction). Different ambient spaces, same dimension: the row-rank-equals-")
+say("column-rank theorem of lesson 34, seen from the map side.")
+
+# ---------------------------------------------------------------- 2
+say()
+say("=== Part 2: a dataset with one genuinely redundant feature ===")
+D = [[3.0, 0.90, 48.0, 10.0, 6.0],
+     [5.0, 0.80, 66.0, 12.0, 7.0],
+     [2.0, 0.60, 32.0,  8.0, 5.0],
+     [4.0, 0.95, 59.0, 11.0, 6.5],
+     [6.0, 0.85, 77.0, 13.0, 8.0]]
+say("5 observations x 5 features, built so col 2 = 10*col 0 + 20*col 1 exactly:")
+for row in D:
+    say(f"  {row}")
+rd = rank(D)
+ncol = shape(D)[1]
+say()
+say(f"rank = {rd} of {ncol} columns, so dim(ker) = {ncol} - {rd} = {ncol - rd}")
+for w in null_space(D):
+    # Round for display: the rref arithmetic leaves 1e-14 noise in the
+    # coefficients that are mathematically zero.
+    shown = [0.0 if abs(t) < 1e-9 else round(t, 4) for t in w]
+    say(f"  null vector {shown}")
+    say(f"    A w = {[round(t, 12) for t in matvec(D, w)]}")
+    nz = [(i, shown[i]) for i in range(ncol) if shown[i] != 0.0]
+    say(f"    nonzero entries at {nz}")
+    say("    so the relation involves exactly those columns; every other")
+    say("    coefficient is zero, and the redundancy is confined to them.")
+say()
+say("Column 2 is score, and col 2 - 10*col 0 - 20*col 1 = 0 row by row:")
+for row in D:
+    say(f"  {row[2]} - 10*{row[0]} - 20*{row[1]} = {row[2] - 10 * row[0] - 20 * row[1]:+.6f}")
+say()
+trimmed = [row[:2] + row[3:] for row in D]
+say(f"rank with 5 columns = {rd}")
+say(f"rank with 4 columns (score dropped) = {rank(trimmed)}")
+say("Same rank, so nothing inside the span was lost.")
+
+# ---------------------------------------------------------------- 3
+say()
+say("=== Part 3: ker(S o T) is a PREIMAGE, verified ===")
+T = [[1.0, 0.0], [1.0, 0.0]]      # (x, y) -> (x, x)
+S = [[0.0, 0.0], [0.0, 1.0]]      # (u, v) -> (0, v)
+print_matrix("T  (x,y) -> (x,x)", T)
+print_matrix("S  (u,v) -> (0,v)", S)
+print_matrix("S T", matmul(S, T))
+ker_T = null_space(T)
+ker_S = null_space(S)
+ker_ST = null_space(matmul(S, T))
+say()
+say(f"  ker(T)   = {[[round(t, 4) for t in w] for w in ker_T]}")
+say(f"  ker(S)   = {[[round(t, 4) for t in w] for w in ker_S]}")
+say(f"  ker(S T) = {[[round(t, 4) for t in w] for w in ker_ST]}")
+say(f"  the SUM rule would give dim {len(ker_S)} + {len(ker_T)} = {len(ker_S) + len(ker_T)}")
+say(f"  the truth is dim ker(S T) = {len(ker_ST)}")
+say()
+say("  Direct check of the preimage rule: ker(S o T) = T^-1(ker S) = ker T,")
+say("  because ker S = {(0,0)} and only the inputs T maps to 0 qualify.")
+for w in ([0.0, 1.0], [1.0, 1.0], [5.0, 0.0]):
+    t_out = matvec(T, w)
+    s_out = matvec(S, t_out)
+    in_ker_S = all(abs(t) <= TOL for t in t_out)
+    say(f"    T{w} = {t_out}  in ker(S)? {in_ker_S}   S(T w) = {s_out}")
+say()
+say("  Both (0,1) and (0,0) are in ker(S T): T sends them to 0 and S kills 0.")
+say("  (1,1) is NOT: T(1,1) = (1,1) is not in ker(S), and S(1,1) = (0,1) != 0.")
+say()
+say("  The sum rule overcounts here and undercounts in general: S never touches")
+say("  the input, it acts on T's OUTPUT. What matters is which of T's outputs S")
+say("  kills, not which inputs S would have killed on its own.")
+
+# ---------------------------------------------------------------- 4
+say()
+say("=== Part 4: a projection has a kernel, which is fatal for rendering ===")
+P = [[1.0, 0.0, 0.0],
+     [0.0, 1.0, 0.0]]      # (x, y, z) -> (x, y)
+print_matrix("P  (x,y,z) -> (x,y)", P)
+kp = null_space(P)
+say(f"  rank {rank(P)}, dim(ker) = {shape(P)[1]} - {rank(P)} = {shape(P)[1] - rank(P)}")
+say(f"  ker(P) = {[[round(t, 6) for t in w] for w in kp]}")
+p1 = [1.0, 2.0, 5.0]
+p2 = [1.0, 2.0, 900.0]
+say()
+say(f"  point A = {p1}  ->  P A = {matvec(P, p1)}")
+say(f"  point B = {p2}  ->  P B = {matvec(P, p2)}")
+say(f"  same 2-D point from points {abs(p2[2] - p1[2]):g} units apart in z")
+diff = [p2[i] - p1[i] for i in range(3)]
+scale = diff[2] / kp[0][2]
+say(f"  B - A = {diff}")
+say(f"  that is {scale:g} * the kernel basis {kp[0]}")
+say(f"  check: {scale:g} * {[round(t, 6) for t in kp[0]]} = {[scale * t for t in kp[0]]}")
+say()
+say("  Two DISTINCT 3-D points give the SAME 2-D point. That is the whole failure:")
+say("  the projection has a nontrivial kernel, so the renderer cannot tell them")
+say("  apart and the depth buffer stores z-fighting instead of resolving it.")
+say("  Adding a 4th homogeneous coordinate and keeping the divide until the end")
+say("  gives an invertible 4x4 matrix:")
+Q = [[1.0, 0.0, 0.0, 0.0],
+     [0.0, 1.0, 0.0, 0.0],
+     [0.0, 0.0, 1.0, 0.0],
+     [0.0, 0.0, 0.0, 1.0]]
+say(f"    rank of the 4x4 identity = {rank(Q)}, dim(ker) = {shape(Q)[1]} - {rank(Q)} = 0")
+say("  no direction is lost, so distinct points stay distinct. That is the standard")
+say("  reason clip space is 4-D rather than 3-D.")
+
+# ---------------------------------------------------------------- 5
+say()
+say("=== Part 5: a kernel collision is fatal; ReLU has its own collapsed set ===")
+
+
+def relu(v):
+    return [max(0.0, t) for t in v]
+
+
+W = [[1.0, -1.0, 0.5],
+     [0.0, 2.0, -1.0]]
+b = [0.5, -0.25]
+say(f"W = {W}, bias b = {b}")
+
+
+def net(v):
+    """One affine layer, then ReLU. The bias makes the affine part, not the ReLU."""
+    z = [sum(W[i][k] * v[k] for k in range(len(v))) + b[i] for i in range(len(W))]
+    return z, relu(z)
+
+
+u = [1.0, -2.0, 3.0]
+kv = null_space(W)[0]
+v_collide = [u[i] + kv[i] for i in range(3)]
+say()
+say("The affine part is linear, so it has a kernel. Take a probe point and one")
+say("kernel step:")
+say(f"  u         = {u}")
+say(f"  ker basis = {[round(t, 4) for t in kv]}")
+say()
+say("A kernel collision is FATAL, and no later layer can undo it:")
+say(f"  v = u + ker = {v_collide}")
+say(f"  W u + b = {net(u)[0]}")
+say(f"  W v + b = {net(v_collide)[0]}")
+say(f"  equal: {net(u)[0] == net(v_collide)[0]}, because W times a kernel vector is 0.")
+say("  The two pre-activations are IDENTICAL, so relu cannot separate them either:")
+say(f"  relu(W u + b) = {net(u)[1]}")
+say(f"  relu(W v + b) = {net(v_collide)[1]}")
+say("  Any function of an equal argument is equal, so once a linear layer collides")
+say("  two inputs, nothing downstream can recover the difference.")
+say()
+say("The ReLU is not injective either, but for a completely different reason: it is")
+say("the NEGATIVE orthant that collapses.")
+for p, q in (([-1.0, -2.0], [-3.0, -7.0]), ([0.0, -0.5], [0.0, -9.0])):
+    say(f"  relu{p} = {relu(p)}   relu{q} = {relu(q)}   equal: {relu(p) == relu(q)}")
+say("  Every negative input maps to 0, so the whole negative orthant is one")
+say("  indistinguishable set -- a kernel in the same practical sense.")
+say()
+say("So a network has no single kernel: each layer has its own set of")
+say("indistinguishable inputs, and a stack of PURE linear maps has exactly the")
+say("kernel of the single matrix they collapse to, of rank r. That is why the")
+say("nonlinearity buys expressiveness, and why a layer of width w bottlenecks to")
+say("r dimensions the moment you remove it.")
+```
+
+Output:
+
+```
+=== Part 1: the four spaces of a 3x4 design matrix ===
+A (3x4: 3 observations, 4 features)  (3x4)
+  |   1.000   2.000   3.000   4.000 |
+  |   5.000   6.000   7.000   9.000 |
+  |   2.000   3.000   4.000   5.000 |
+
+rank r = 3, m = 3 rows, n = 4 columns
+  row space     in R^4, dim 3   basis = nonzero RREF rows
+      [1.0, 0.0, -1.0, 0.0]
+      [0.0, 1.0, 2.0, 0.0]
+      [0.0, 0.0, 0.0, 1.0]
+  column space  in R^3, dim 3   basis = pivot columns [0, 1, 3] of the ORIGINAL A
+      [1.0, 5.0, 2.0]
+      [2.0, 6.0, 3.0]
+      [4.0, 9.0, 5.0]
+  kernel        in R^4, dim 1 = n - r = 4 - 3
+      [1.0, -2.0, 1.0, -0.0]      A w = [0.0, 0.0, 0.0]
+
+  r + (n - r) = 3 + 1 = 4 = n = 4   (rank-nullity)
+  dim(row) = 3 = dim(col) = 3 = r = 3
+
+The row space lives in R^4 (one entry per COLUMN, so a coefficient vector
+for the model) and the column space in R^3 (one entry per ROW, so a
+prediction). Different ambient spaces, same dimension: the row-rank-equals-
+column-rank theorem of lesson 34, seen from the map side.
+
+=== Part 2: a dataset with one genuinely redundant feature ===
+5 observations x 5 features, built so col 2 = 10*col 0 + 20*col 1 exactly:
+  [3.0, 0.9, 48.0, 10.0, 6.0]
+  [5.0, 0.8, 66.0, 12.0, 7.0]
+  [2.0, 0.6, 32.0, 8.0, 5.0]
+  [4.0, 0.95, 59.0, 11.0, 6.5]
+  [6.0, 0.85, 77.0, 13.0, 8.0]
+
+rank = 4 of 5 columns, so dim(ker) = 5 - 4 = 1
+  null vector [-10.0, -20.0, 1.0, 0.0, 0.0]
+    A w = [0.0, 0.0, 0.0, 0.0, 0.0]
+    nonzero entries at [(0, -10.0), (1, -20.0), (2, 1.0)]
+    so the relation involves exactly those columns; every other
+    coefficient is zero, and the redundancy is confined to them.
+
+Column 2 is score, and col 2 - 10*col 0 - 20*col 1 = 0 row by row:
+  48.0 - 10*3.0 - 20*0.9 = +0.000000
+  66.0 - 10*5.0 - 20*0.8 = +0.000000
+  32.0 - 10*2.0 - 20*0.6 = +0.000000
+  59.0 - 10*4.0 - 20*0.95 = +0.000000
+  77.0 - 10*6.0 - 20*0.85 = +0.000000
+
+rank with 5 columns = 4
+rank with 4 columns (score dropped) = 4
+Same rank, so nothing inside the span was lost.
+
+=== Part 3: ker(S o T) is a PREIMAGE, verified ===
+T  (x,y) -> (x,x)  (2x2)
+  |   1.000   0.000 |
+  |   1.000   0.000 |
+S  (u,v) -> (0,v)  (2x2)
+  |   0.000   0.000 |
+  |   0.000   1.000 |
+S T  (2x2)
+  |   0.000   0.000 |
+  |   1.000   0.000 |
+
+  ker(T)   = [[-0.0, 1.0]]
+  ker(S)   = [[1.0, -0.0]]
+  ker(S T) = [[-0.0, 1.0]]
+  the SUM rule would give dim 1 + 1 = 2
+  the truth is dim ker(S T) = 1
+
+  Direct check of the preimage rule: ker(S o T) = T^-1(ker S) = ker T,
+  because ker S = {(0,0)} and only the inputs T maps to 0 qualify.
+    T[0.0, 1.0] = [0.0, 0.0]  in ker(S)? True   S(T w) = [0.0, 0.0]
+    T[1.0, 1.0] = [1.0, 1.0]  in ker(S)? False   S(T w) = [0.0, 1.0]
+    T[5.0, 0.0] = [5.0, 5.0]  in ker(S)? False   S(T w) = [0.0, 5.0]
+
+  Both (0,1) and (0,0) are in ker(S T): T sends them to 0 and S kills 0.
+  (1,1) is NOT: T(1,1) = (1,1) is not in ker(S), and S(1,1) = (0,1) != 0.
+
+  The sum rule overcounts here and undercounts in general: S never touches
+  the input, it acts on T's OUTPUT. What matters is which of T's outputs S
+  kills, not which inputs S would have killed on its own.
+
+=== Part 4: a projection has a kernel, which is fatal for rendering ===
+P  (x,y,z) -> (x,y)  (2x3)
+  |   1.000   0.000   0.000 |
+  |   0.000   1.000   0.000 |
+  rank 2, dim(ker) = 3 - 2 = 1
+  ker(P) = [[-0.0, -0.0, 1.0]]
+
+  point A = [1.0, 2.0, 5.0]  ->  P A = [1.0, 2.0]
+  point B = [1.0, 2.0, 900.0]  ->  P B = [1.0, 2.0]
+  same 2-D point from points 895 units apart in z
+  B - A = [0.0, 0.0, 895.0]
+  that is 895 * the kernel basis [-0.0, -0.0, 1.0]
+  check: 895 * [-0.0, -0.0, 1.0] = [-0.0, -0.0, 895.0]
+
+  Two DISTINCT 3-D points give the SAME 2-D point. That is the whole failure:
+  the projection has a nontrivial kernel, so the renderer cannot tell them
+  apart and the depth buffer stores z-fighting instead of resolving it.
+  Adding a 4th homogeneous coordinate and keeping the divide until the end
+  gives an invertible 4x4 matrix:
+    rank of the 4x4 identity = 4, dim(ker) = 4 - 4 = 0
+  no direction is lost, so distinct points stay distinct. That is the standard
+  reason clip space is 4-D rather than 3-D.
+
+=== Part 5: a kernel collision is fatal; ReLU has its own collapsed set ===
+W = [[1.0, -1.0, 0.5], [0.0, 2.0, -1.0]], bias b = [0.5, -0.25]
+
+The affine part is linear, so it has a kernel. Take a probe point and one
+kernel step:
+  u         = [1.0, -2.0, 3.0]
+  ker basis = [-0.0, 0.5, 1.0]
+
+A kernel collision is FATAL, and no later layer can undo it:
+  v = u + ker = [1.0, -1.5, 4.0]
+  W u + b = [5.0, -7.25]
+  W v + b = [5.0, -7.25]
+  equal: True, because W times a kernel vector is 0.
+  The two pre-activations are IDENTICAL, so relu cannot separate them either:
+  relu(W u + b) = [5.0, 0.0]
+  relu(W v + b) = [5.0, 0.0]
+  Any function of an equal argument is equal, so once a linear layer collides
+  two inputs, nothing downstream can recover the difference.
+
+The ReLU is not injective either, but for a completely different reason: it is
+the NEGATIVE orthant that collapses.
+  relu[-1.0, -2.0] = [0.0, 0.0]   relu[-3.0, -7.0] = [0.0, 0.0]   equal: True
+  relu[0.0, -0.5] = [0.0, 0.0]   relu[0.0, -9.0] = [0.0, 0.0]   equal: True
+  Every negative input maps to 0, so the whole negative orthant is one
+  indistinguishable set -- a kernel in the same practical sense.
+
+So a network has no single kernel: each layer has its own set of
+indistinguishable inputs, and a stack of PURE linear maps has exactly the
+kernel of the single matrix they collapse to, of rank r. That is why the
+nonlinearity buys expressiveness, and why a layer of width w bottlenecks to
+r dimensions the moment you remove it.
+```
+
+**Challenge.**
+
+(a) The set of inputs the network sends to `0` is the preimage of `0` under
+ReLU, which is
+
+    Z = { v : W v + b ≤ 0 componentwise }
+
+Start with the zero vector, as instructed. Is `0 ∈ Z`? No:
+
+    W 0 + b = (0.5, -0.25)      first entry positive, so 0 ∉ Z
+    net(0)  = (0.5, 0.0)        not the zero output
+
+That single check is decisive, and it is the strongest form of the refutation
+available: a kernel *always* contains `0`, because `0` is the one input whose
+image is forced regardless of the map. `Z` does not contain it, so `Z` is not a
+kernel and none of the machinery attached to kernels — dimension counting,
+rank-nullity, the `V_kept ⊕ ker` decomposition — applies to it.
+
+Setting `b = 0` repairs the zero test and loses the argument, which is worth
+seeing. Now `Z₀ = {v : W v ≤ 0}` does contain `0`, but it is not closed under
+negation: `(-1, 0, 0)` is in `Z₀` and `(1, 0, 0)` is not, since
+`W(1, 0, 0) = (1, 0)`. Closure under all real scalars is the axiom that fails.
+`Z₀` is a convex cone.
+
+What the network has *instead* is one kernel per linear layer — here
+`dim(ker W) = 3 - 2 = 1`, with basis `(0, 0.5, 1)` — and part (e) already
+showed that a kernel step in that layer is fatal. The preimage rule from part (c)
+does not chain across a ReLU, because ReLU is not linear and has no kernel in
+that sense, so there is never a single set whose dimension you can count.
+
+(b) The claim becomes correct exactly when there is **no nonlinearity anywhere**
+in the stack. Then the whole network is a composition of linear maps,
+
+    V(W v + b) + c = (V W) v + (V b + c),
+
+and only the single matrix `V W` matters. For the swap `V` and the `W` above,
+`V W = [[0, 2, -1], [1, -1, 0.5]]` has rank `2`, so the network does have a
+genuine one-dimensional kernel of dimension `3 - 2 = 1`. That is Exercise 5(d)
+wearing a network's clothes.
+
+Worth noting that the claim is never about individual pairs. `p = (0, 0, 3)` and
+`q = (0, 0, -1)` are separated by the linear stack *and* by the ReLU, because
+`q - p = (0, 0, -4)` is not in `ker(V W)` — `V W` sends it to `(4, -2)`. The
+claim is about whether a single kernel-like set exists, and across a ReLU none
+does.
+
+The set the ReLU itself collapses is the closed negative orthant
+
+    C = { x : xᵢ ≤ 0 for all i }
+
+which is the entire preimage of `0`. The zero vector **is** in `C`, so the
+cheapest test comes back inconclusive — and that is already the difference from
+a kernel, where `0` is the generator and every other member is a multiple of it.
+The axiom that fails is closure under negative scaling: `(-1, 0, 0) ∈ C` but
+`(1, 0, 0) ∉ C`. `C` *is* closed under addition (`(-1,0,0) + (0,-1,0) =
+(-1,-1,0)` stays in it) and *is* convex, so it is a convex set. The difference
+in one line: a kernel is symmetric about the origin and `C` is not.
+
+(c) For `L` purely linear layers,
+
+    dim(ker of the stack) = w₁ - min(w₁, …, w_L)
+
+Purely linear layers compose into one matrix, and by Exercise 5(e) composing
+with an invertible map preserves the kernel exactly, so the entire stack has the
+kernel of whichever layer is narrowest. Widths `(5, 8, 4, 6)` give `1`;
+`(5, 9, 7, 12)` give `0`; `(3, 3, 3)` give `0`. Depth, surplus width above the
+bottleneck, and parameter count are all irrelevant to that one number, and no
+amount of training changes it.
+
+A nonlinearity is the only thing in the stack that widens it, because it breaks
+the composition. `relu(W₂ W₁ x)` is not a function of `W₂ W₁ x` in any way that
+factors into a single matrix, so there is no matrix left to take a kernel of.
+Depth then multiplies *representations* rather than composing matrices, and the
+rank ceiling of an individual layer stops being the rank ceiling of the network.
+
+```python
+TOL = 1e-9
+
+W = [[1.0, -1.0, 0.5],
+     [0.0, 2.0, -1.0]]
+b = [0.5, -0.25]
+
+
+def matvec(M, v):
+    return [sum(M[i][k] * v[k] for k in range(len(v))) for i in range(len(M))]
+
+
+def relu(v):
+    return [max(0.0, t) for t in v]
+
+
+def z_of(v):
+    """The affine pre-activation, the part that is genuinely linear."""
+    return [matvec(W, v)[i] + b[i] for i in range(2)]
+
+
+def net(v):
+    return relu(z_of(v))
+
+
+def rref(A, tol=TOL):
+    M = [list(row) for row in A]
+    rows, cols = len(M), len(M[0])
+    pivot_row, pivots = 0, []
+    for col in range(cols):
+        if pivot_row == rows:
+            break
+        best = max(range(pivot_row, rows), key=lambda r: abs(M[r][col]))
+        if abs(M[best][col]) <= tol:
+            continue
+        M[pivot_row], M[best] = M[best], M[pivot_row]
+        p = M[pivot_row][col]
+        M[pivot_row] = [v / p for v in M[pivot_row]]
+        for r in range(rows):
+            if r != pivot_row and M[r][col] != 0.0:
+                f = M[r][col]
+                M[r] = [M[r][c] - f * M[pivot_row][c] for c in range(cols)]
+        pivots.append(col)
+        pivot_row += 1
+    return [[v + 0.0 for v in row] for row in M], pivots
+
+
+def rank(A, tol=TOL):
+    return len(rref(A, tol)[1])
+
+
+def null_space(A, tol=TOL):
+    M, pivots = rref(A, tol)
+    cols = len(A[0])
+    basis = []
+    for fc in [c for c in range(cols) if c not in pivots]:
+        v = [0.0] * cols
+        v[fc] = 1.0
+        for i, pc in enumerate(pivots):
+            v[pc] = -M[i][fc]
+        basis.append(v)
+    return basis
+
+
+ZERO3 = [0.0, 0.0, 0.0]
+ZERO2 = [0.0, 0.0]
+
+print("=== (a) the network's zero-preimage is not a kernel ===")
+print("net(v) = relu(W v + b), so net(v) = 0 exactly when W v + b <= 0")
+print("componentwise. Call that set Z. Is 0 in Z?")
+print(f"  W 0 + b = {z_of(ZERO3)}")
+print(f"  every entry <= 0? {all(t <= TOL for t in z_of(ZERO3))}")
+print(f"  net(0)  = {net(ZERO3)}   equal to 0? {net(ZERO3) == ZERO2}")
+print()
+print("  NO. The bias puts the origin outside Z, and a kernel must contain 0,")
+print("  so Z cannot be a kernel. The affine part already broke the axiom that")
+print("  makes a kernel a subspace.")
+print()
+print("Drop the bias and the zero test is no longer decisive, but negation still")
+print("fails. With b = 0, Z0 = {v : W v <= 0}:")
+v = [-1.0, 0.0, 0.0]
+neg = [-v[i] for i in range(3)]
+print(f"  v   = {v}   W v   = {matvec(W, v)}   in Z0? "
+      f"{all(t <= TOL for t in matvec(W, v))}")
+print(f"  -v  = {neg}   W(-v) = {matvec(W, neg)}   in Z0? "
+      f"{all(t <= TOL for t in matvec(W, neg))}")
+print("  Closed under negation? No. A subspace must be closed under every real")
+print("  scalar, so Z0 is a convex cone, not a subspace.")
+print()
+print("What the network DOES have is one kernel per linear layer:")
+print(f"  W (2x3): rank {rank(W)}, dim(ker) = {len(W[0])} - {rank(W)} = "
+      f"{len(W[0]) - rank(W)}, basis {[[round(t, 6) for t in w] for w in null_space(W)]}")
+print("  and the preimage rule ker(S o T) = T^-1(ker S) does NOT chain across a")
+print("  ReLU, because ReLU is not linear and has no kernel in that sense.")
+print("  Take v = (0, 0, 1) and v + (0, 0.5, 1) (a kernel step of W):")
+kv = null_space(W)[0]
+base = [0.0, 0.0, 1.0]
+stepped = [base[i] + kv[i] for i in range(3)]
+print(f"    v     = {str(base):<18}  W v + b = {z_of(base)}  relu = {net(base)}")
+print(f"    v + k = {str(stepped):<18}  W v + b = {z_of(stepped)}  relu = {net(stepped)}")
+print("  equal, as part (e) showed, so the affine layer's kernel is real. The")
+print("  network's own zero-preimage is a different, non-subspace set.")
+
+print()
+print("=== (b) when the claim becomes true, and what ReLU collapses ===")
+V = [[0.0, 1.0], [1.0, 0.0]]
+c = [0.25, -0.5]
+VW = [[sum(V[i][k] * W[k][j] for k in range(2)) for j in range(3)]
+      for i in range(2)]
+print("  A ReLU-free network V(W v + b) + c = (V W) v + (V b + c):")
+print(f"    V W = {VW}   rank {rank(VW)}, so dim(ker) = {len(VW[0])} - "
+      f"{rank(VW)} = {len(VW[0]) - rank(VW)}")
+p = [0.0, 0.0, 3.0]
+q = [0.0, 0.0, -1.0]
+for name, x in (("p", p), ("q", q)):
+    lin = [sum(V[i][k] * matvec(W, x)[k] for k in range(2)) + c[i] for i in range(2)]
+    print(f"    linear stack: {name} -> {lin}    with relu: {net(x)}")
+diff = [q[i] - p[i] for i in range(3)]
+print(f"  q - p = {diff}, which is NOT in ker(V W): "
+      f"{[round(t, 6) for t in matvec(VW, diff)]}")
+print("  So even the linear stack separates p and q, and the ReLU separates them")
+print("  too. The claim is not about individual pairs; it is about a single set")
+print("  that behaves like a kernel, and no such set exists across a ReLU.")
+print()
+print("  The set the ReLU collapses is C = {x : relu(x) = 0} = {x_i <= 0}:")
+for x in ((-1.0, 0.0, 0.0), (0.0, -1.0, 0.0), (-0.5, -0.5, 0.0), (0.0, 0.0, 0.0)):
+    out = relu(list(x))
+    print(f"    relu{list(x)} = {out}   in C? {out == ZERO3}")
+print()
+print("  Test 1, the zero vector: relu(0,0,0) = (0,0,0), and 0 IS in C.")
+print("  Inconclusive, which is itself the difference from a kernel: there the")
+print("  zero vector is the generator and everything else follows from it.")
+print()
+x = [-1.0, 0.0, 0.0]
+y = [0.0, -1.0, 0.0]
+s = [x[i] + y[i] for i in range(3)]
+mid = [(x[i] + y[i]) / 2 for i in range(3)]
+nx = [-x[i] for i in range(3)]
+print("  Test 2, closure under NEGATIVE scaling, which settles it:")
+print(f"    x    = {x} in C? {relu(x) == ZERO3}")
+print(f"    -x   = {nx} in C? {relu(nx) == ZERO3}")
+print("    Not closed under negation, so not a subspace. It IS closed under")
+print(f"  addition (x + y = {s}, in C? {relu(s) == ZERO3}) and convex (midpoint")
+print(f"  {mid}, in C? {relu(mid) == ZERO3}), so C is a convex set. The whole")
+print("  difference in one line: a kernel is symmetric about the origin, C is not.")
+
+print()
+print("=== (c) a purely linear stack of given widths ===")
+for widths in ([5, 8, 4, 6], [5, 9, 7, 12], [3, 3, 3]):
+    n = widths[0]
+    print(f"  widths {str(widths):<16} dim(ker of stack) = {n} - min(widths) = "
+          f"{n - min(widths)}")
+print("  Only the NARROWEST layer matters. Depth and parameter count are")
+print("  irrelevant to it, and a nonlinearity is the only thing in the stack that")
+print("  widens it, because it stops the layers from composing into one matrix.")
+```
+
+Output:
+
+```
+=== (a) the network's zero-preimage is not a kernel ===
+net(v) = relu(W v + b), so net(v) = 0 exactly when W v + b <= 0
+componentwise. Call that set Z. Is 0 in Z?
+  W 0 + b = [0.5, -0.25]
+  every entry <= 0? False
+  net(0)  = [0.5, 0.0]   equal to 0? False
+
+  NO. The bias puts the origin outside Z, and a kernel must contain 0,
+  so Z cannot be a kernel. The affine part already broke the axiom that
+  makes a kernel a subspace.
+
+Drop the bias and the zero test is no longer decisive, but negation still
+fails. With b = 0, Z0 = {v : W v <= 0}:
+  v   = [-1.0, 0.0, 0.0]   W v   = [-1.0, 0.0]   in Z0? True
+  -v  = [1.0, -0.0, -0.0]   W(-v) = [1.0, 0.0]   in Z0? False
+  Closed under negation? No. A subspace must be closed under every real
+  scalar, so Z0 is a convex cone, not a subspace.
+
+What the network DOES have is one kernel per linear layer:
+  W (2x3): rank 2, dim(ker) = 3 - 2 = 1, basis [[-0.0, 0.5, 1.0]]
+  and the preimage rule ker(S o T) = T^-1(ker S) does NOT chain across a
+  ReLU, because ReLU is not linear and has no kernel in that sense.
+  Take v = (0, 0, 1) and v + (0, 0.5, 1) (a kernel step of W):
+    v     = [0.0, 0.0, 1.0]     W v + b = [1.0, -1.25]  relu = [1.0, 0.0]
+    v + k = [0.0, 0.5, 2.0]     W v + b = [1.0, -1.25]  relu = [1.0, 0.0]
+  equal, as part (e) showed, so the affine layer's kernel is real. The
+  network's own zero-preimage is a different, non-subspace set.
+
+=== (b) when the claim becomes true, and what ReLU collapses ===
+  A ReLU-free network V(W v + b) + c = (V W) v + (V b + c):
+    V W = [[0.0, 2.0, -1.0], [1.0, -1.0, 0.5]]   rank 2, so dim(ker) = 3 - 2 = 1
+    linear stack: p -> [-2.75, 1.0]    with relu: [2.0, 0.0]
+    linear stack: q -> [1.25, -1.0]    with relu: [0.0, 0.75]
+  q - p = [0.0, 0.0, -4.0], which is NOT in ker(V W): [4.0, -2.0]
+  So even the linear stack separates p and q, and the ReLU separates them
+  too. The claim is not about individual pairs; it is about a single set
+  that behaves like a kernel, and no such set exists across a ReLU.
+
+  The set the ReLU collapses is C = {x : relu(x) = 0} = {x_i <= 0}:
+    relu[-1.0, 0.0, 0.0] = [0.0, 0.0, 0.0]   in C? True
+    relu[0.0, -1.0, 0.0] = [0.0, 0.0, 0.0]   in C? True
+    relu[-0.5, -0.5, 0.0] = [0.0, 0.0, 0.0]   in C? True
+    relu[0.0, 0.0, 0.0] = [0.0, 0.0, 0.0]   in C? True
+
+  Test 1, the zero vector: relu(0,0,0) = (0,0,0), and 0 IS in C.
+  Inconclusive, which is itself the difference from a kernel: there the
+  zero vector is the generator and everything else follows from it.
+
+  Test 2, closure under NEGATIVE scaling, which settles it:
+    x    = [-1.0, 0.0, 0.0] in C? True
+    -x   = [1.0, -0.0, -0.0] in C? False
+    Not closed under negation, so not a subspace. It IS closed under
+  addition (x + y = [-1.0, -1.0, 0.0], in C? True) and convex (midpoint
+  [-0.5, -0.5, 0.0], in C? True), so C is a convex set. The whole
+  difference in one line: a kernel is symmetric about the origin, C is not.
+
+=== (c) a purely linear stack of given widths ===
+  widths [5, 8, 4, 6]     dim(ker of stack) = 5 - min(widths) = 1
+  widths [5, 9, 7, 12]    dim(ker of stack) = 5 - min(widths) = 0
+  widths [3, 3, 3]        dim(ker of stack) = 3 - min(widths) = 0
+  Only the NARROWEST layer matters. Depth and parameter count are
+  irrelevant to it, and a nonlinearity is the only thing in the stack that
+  widens it, because it stops the layers from composing into one matrix.
+```
+
+</details>
+
 ## Summary
 
 - A map is **linear** when `T(u+v) = T(u) + T(v)` and `T(cu) = cT(u)`. Both imply

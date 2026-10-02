@@ -203,23 +203,25 @@ size: about $14 \times 528^2 \approx 3.9\times10^6$ limb operations. A factor of
 line of code:
 
 ```python
+# not runnable: a sketch of the two loop shapes, to show the structure only.
 # loop: n multiplications by a small constant -- cheap per step, many steps
-acc = 1
-for _ in range(10000):
-    acc *= 3
-
+#   acc = 1
+#   for _ in range(n):
+#       acc *= 3
+#
 # repeated squaring: log2(n) multiplications of BIG numbers -- few steps
-acc = 3
-k = 10000
-while k:
-    if k & 1:
-        acc = acc          # (conceptually) * base
-    base = base * base
-    k >>= 1
+#   acc, base = 1, 3
+#   k = n
+#   while k:
+#       if k & 1:
+#           acc = (acc * base) % m
+#       base = (base * base) % m
+#       k >>= 1
 ```
 
-The version in the code is left as an exercise because the point is structural, not about
-this particular number.
+Both compute `3**n mod m`. The first does $n$ multiplications of a growing accumulator;
+the second does $\log_2 n$ multiplications of numbers no larger than the answer. Exercise 4
+measures the difference — it is a factor of more than a thousand at $n = 10^6$.
 
 ### Example 5: analysing a recursion with the Master Theorem
 
@@ -2120,7 +2122,7 @@ def time_mul(bits, reps):
 print("(a)(b) add and multiply at increasing bit length")
 print(f"  {'bits':>10} {'add us':>12} {'add/bits':>12} {'mul us':>12} {'mul/bits':>12}")
 rows = []
-for bits, reps in ((1000, 20000), (10000, 5000), (100000, 1000), (1000000, 100)):
+for bits, reps in ((1000, 20000), (10000, 5000), (100000, 1000), (1000000, 8)):
     ta = time_add(bits, reps)
     tm = time_mul(bits, reps)
     rows.append((bits, ta, tm))
