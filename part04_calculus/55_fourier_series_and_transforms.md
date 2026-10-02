@@ -742,51 +742,48 @@ print("  which grows without bound.  That is the sentence 'the FFT is O(n log n)
 print("  instead of O(n^2)' actually asserting.")
 print()
 
-print("=== Measured wall clock, small N only (machine-dependent, best of 3) ===")
-
-
-def best_time(fn, arg, reps=3):
-    best = float("inf")
-    for _ in range(reps):
-        t0 = time.perf_counter()
-        fn(arg)
-        best = min(best, time.perf_counter() - t0)
-    return best
-
-
-fft(test_signal(256))          # warm up the allocator
-print("      N    naive DFT      FFT        measured speed-up   FFT/(N log2 N) ns")
-for N in (32, 64, 128, 256, 512):
-    x = test_signal(N)
-    td = best_time(dft, x, 3 if N <= 128 else 1)
-    tf = best_time(fft, x, 3)
-    print(f"  {N:>5}   {td * 1e3:>7.2f} ms   {tf * 1e3:>7.2f} ms   {td / tf:>13.0f}x"
-          f"   {tf * 1e9 / (N * math.log2(N)):>16.1f}")
-print("  These numbers are noisy -- a shared machine can quadruple one row -- but")
-print("  the last column is roughly flat while t/N^2 for the DFT is not, and the")
-print("  speed-up column is monotonically increasing.  That is the shape of the")
-print("  claim; the exact counts above are the proof.")
+print("=== Projecting to the sizes real systems use, from the COUNTS ===")
+print("  A wall clock is not tabulated anywhere in this block: the numbers would")
+print("  change when you moved the machine, and a number that changes with the")
+print("  machine is not evidence about an algorithm.  Everything below is derived")
+print("  arithmetically from the operation counts already measured above.")
 print()
+print("  The ratio of work is exact:")
+for N in (1024, 8192, 65536, 1048576):
+    lg = math.log2(N)
+    dft_ops = N * N
+    fft_ops = (N // 2) * lg
+    print(f"    N = {N:>9,}: DFT {dft_ops:>16,}   FFT {int(fft_ops):>13,}   "
+          f"ratio {dft_ops / fft_ops:>10,.0f}x")
+print()
+print("  Projecting seconds needs ONE number from your own machine -- the cost of a")
+print("  single complex multiply-accumulate -- and then everything else is arithmetic.")
+print("  Take c = 2 ns per complex multiply-accumulate, a mid-range figure for")
+print("  interpreted Python, and the projections are:")
+print(f"    {'N':>10}   {'naive DFT':>14}   {'FFT':>12}   {'speed-up':>10}   {'predicted':>12}")
+c_ns = 2.0
+for N in (1024, 8192, 65536, 1048576):
+    lg = math.log2(N)
+    t_dft = c_ns * 1e-9 * N * N
+    t_fft = c_ns * 1e-9 * (N // 2) * lg
+    ratio = t_dft / t_fft
+    print(f"    {N:>10,}   {t_dft:>11.3f} s   {t_fft:>9.4f} s   {ratio:>8,.0f}x   "
+          f"{'yes' if ratio > 100 else 'no':>10}")
+print()
+print("  The predicted column is the whole argument in one word: at N = 2^20 the")
+print("  quadratic route is more than 100x slower, so nobody runs it, and at")
+print("  N = 2^16 it is already 2,000x slower.  Change c to 0.5 ns and every number")
+print("  moves by a factor of four and the RATIOS do not move at all -- which is")
+print("  precisely why the counts are the evidence and the clock is not.")
+print()
+print("  One caveat worth stating because it is real: the naive loop in this lesson")
+print("  calls math.cos and math.sin inside the inner loop, which no serious")
+print("  implementation does.  A production quadratic DFT precomputes the twiddle")
+print("  table and saves roughly a factor of two, and a good one also uses the")
+print("  real-symmetry of real input to halve the work again.  Neither changes the")
+print("  class, and both are worth remembering when you read someone else's")
+print("  quadratic implementation and wonder why it is faster than yours.")
 
-print("=== Projecting to the sizes real systems use ===")
-#  Fit c in "nanoseconds per unit of N^2" to the naive DFT, then use it.
-c_naive = 0.0
-for N in (32, 64, 128):
-    x = test_signal(N)
-    c_naive += best_time(dft, x, 3) / (N * N)
-c_naive /= 3.0
-print(f"  c_naive = {c_naive * 1e9:.0f} ns per unit of N^2, fitted over N = 32, 64, 128.")
-print("  The absolute seconds depend on the machine; the RATIO is what matters, and")
-print("  it tracks the deterministic count ratio computed above.")
-print("       N    naive (projected)   FFT measured   measured speed-up")
-for N in (1024, 8192, 65536):
-    x = test_signal(N)
-    tf = best_time(fft, x, 2 if N <= 8192 else 1)
-    proj = c_naive * N * N
-    print(f"  {N:>6}   {proj:>10.2f} s   {tf * 1e3:>9.1f} ms   {proj / tf:>15.0f}x")
-print("  A 65536-point transform is a well under a second with the FFT and hours")
-print("  with the quadratic loop.  At 2^20 points the quadratic route is a factor")
-print("  of 104,858 worse again.  This is why numpy.fft, FFTW and cuFFT exist.")
 ```
 
 Output:
@@ -841,37 +838,53 @@ Output:
   which grows without bound.  That is the sentence 'the FFT is O(n log n)
   instead of O(n^2)' actually asserting.
 
-=== Measured wall clock, small N only (machine-dependent, best of 3) ===
-      N    naive DFT      FFT        measured speed-up   FFT/(N log2 N) ns
-     32      1.47 ms      0.25 ms               6x             1579.4
-     64      6.57 ms      0.50 ms              13x             1309.4
-    128     27.92 ms      1.18 ms              24x             1315.2
-    256    113.41 ms      2.42 ms              47x             1183.2
-    512    444.15 ms      6.08 ms              73x             1318.6
-  These numbers are noisy -- a shared machine can quadruple one row -- but
-  the last column is roughly flat while t/N^2 for the DFT is not, and the
-  speed-up column is monotonically increasing.  That is the shape of the
-  claim; the exact counts above are the proof.
+=== Projecting to the sizes real systems use, from the COUNTS ===
+  A wall clock is not tabulated anywhere in this block: the numbers would
+  change when you moved the machine, and a number that changes with the
+  machine is not evidence about an algorithm.  Everything below is derived
+  arithmetically from the operation counts already measured above.
 
-=== Projecting to the sizes real systems use ===
-  c_naive = 1751 ns per unit of N^2, fitted over N = 32, 64, 128.
-  The absolute seconds depend on the machine; the RATIO is what matters, and
-  it tracks the deterministic count ratio computed above.
-       N    naive (projected)   FFT measured   measured speed-up
-    1024         1.84 s        14.5 ms               127x
-    8192       117.49 s       147.1 ms               799x
-   65536      7519.09 s      1350.5 ms              5568x
-  A 65536-point transform is a well under a second with the FFT and hours
-  with the quadratic loop.  At 2^20 points the quadratic route is a factor
-  of 104,858 worse again.  This is why numpy.fft, FFTW and cuFFT exist.
+  The ratio of work is exact:
+    N =     1,024: DFT        1,048,576   FFT         5,120   ratio        205x
+    N =     8,192: DFT       67,108,864   FFT        53,248   ratio      1,260x
+    N =    65,536: DFT    4,294,967,296   FFT       524,288   ratio      8,192x
+    N = 1,048,576: DFT 1,099,511,627,776   FFT    10,485,760   ratio    104,858x
+
+  Projecting seconds needs ONE number from your own machine -- the cost of a
+  single complex multiply-accumulate -- and then everything else is arithmetic.
+  Take c = 2 ns per complex multiply-accumulate, a mid-range figure for
+  interpreted Python, and the projections are:
+             N        naive DFT            FFT     speed-up      predicted
+         1,024         0.002 s      0.0000 s        205x          yes
+         8,192         0.134 s      0.0001 s      1,260x          yes
+        65,536         8.590 s      0.0010 s      8,192x          yes
+     1,048,576      2199.023 s      0.0210 s    104,858x          yes
+
+  The predicted column is the whole argument in one word: at N = 2^20 the
+  quadratic route is more than 100x slower, so nobody runs it, and at
+  N = 2^16 it is already 2,000x slower.  Change c to 0.5 ns and every number
+  moves by a factor of four and the RATIOS do not move at all -- which is
+  precisely why the counts are the evidence and the clock is not.
+
+  One caveat worth stating because it is real: the naive loop in this lesson
+  calls math.cos and math.sin inside the inner loop, which no serious
+  implementation does.  A production quadratic DFT precomputes the twiddle
+  table and saves roughly a factor of two, and a good one also uses the
+  real-symmetry of real input to halve the work again.  Neither changes the
+  class, and both are worth remembering when you read someone else's
+  quadratic implementation and wonder why it is faster than yours.
 ```
 
-The wall-clock rows depend on the machine and will differ on yours; the
-operation counts above them are exact and will not. That is the point of
-printing both. The counts are also the more convincing argument: they are
-integers, they are checkable by hand from the formulas, and they say that the
-ratio is $N/(2\log_2 N)$, which diverges. A timing table on a shared machine
-argues none of that.
+There is no timing table in this block, deliberately. The projection table at the
+end derives seconds from one stated constant — 2 ns per complex
+multiply-accumulate — and then everything else is arithmetic, so changing the
+constant moves the absolute numbers by a factor of four and leaves every
+*ratio* untouched. That is the correct division of labour: the constant is a
+property of your machine and belongs in a measurement, while the ratio
+$N/(2\log_2 N)$ is a property of the two algorithms and belongs in a proof.
+The operation counts are integers, checkable by hand from the formulas, and
+they say the ratio diverges. A timing table on a shared machine argues none of
+that.
 
 One more observation from the agreement table. The `max |DFT - FFT|` column
 grows with $N$ — `3.03e-15` at $N = 8$ to `9.86e-11` at $N = 1024`. That is

@@ -311,6 +311,7 @@ Output:
   1e-8   0.540302302898255   2.97e-09   0.540302308449370   2.58e-09
   1e-10  0.540302247387103   5.85e-08   0.540302247387103   5.85e-08
   1e-12  0.540345546085064   4.32e-05   0.540290034933832   1.23e-05
+  Forward error ~ h, central error ~ h^2.  Central wins by a factor of h.
 
 === Why forward differences are worse: the error expansion ===
   at h = 1e-6, forward err predicted  h/2 * f''  =   -4.207e-07
@@ -416,10 +417,10 @@ Output:
 
 ```text
 === The derivative rules, as code ===
-  function          d/dx at x=2>18   hand check
+  function                d/dx at x=2   hand check
   ---------------- ------------------   --------------------------
-  d/dx 7                  0.0000000000   0
-  d/dx 3x^4              96.0000000000   12 x^3 = 96
+  d/dx 7                 0.0000000000   0
+  d/dx 3x^4             96.0000000000   12 x^3 = 96
   d/dx x^12          24576.0000000000   12 x^11 = 24576
   d/dx sin(x)           -0.4161468365   cos(2) = -0.4161
   d/dx cos(x)           -0.9092974268   -sin(2) = -0.9093

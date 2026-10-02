@@ -23,3 +23,5 @@ desktop.ini
 # agent scratch files and generated plots
 cv.py
 *.png
+# agent progress notes
+MEMORY.md

@@ -179,8 +179,8 @@ is not pedantry; a bound without one is not a proposition.
 
 | operation | schoolbook model | measured in CPython |
 | --- | --- | --- |
-| add / subtract | $\Theta(n)$ | $\Theta(n)$, `add/k` flat at `0.068` ns at $k = 2^{18}$ |
-| compare | $\Theta(n)$ worst case | $\Theta(n)$, `0.089` ns per bit at $k = 2^{24}$ |
+| add / subtract | $\Theta(n)$ | $\Theta(n)$, exactly `ceil(k/30)` digit operations |
+| compare | $\Theta(n)$ worst case | $\Theta(n)$, `ceil(k/30)` digit comparisons |
 | multiply | $\Theta(n^2)$ | $\Theta(n^{1.585})$, Karatsuba's $\log_2 3$ |
 | divide | $\Theta(n^2)$ | $\Theta(n^2)$ |
 | decimal conversion | $\Theta(d^2)$, $d$ digits | subquadratic, working in $10^9$-limbs |
@@ -274,7 +274,7 @@ distinguishes it from the shrink factor).
 | master case 3 | `$a>b^d \Rightarrow \Theta(n^{\log_b a})$` | the leaves dominate | `4T(n/2)+n`: `$\Theta(n^2)$`; `3T(n/2)+n`: `$\Theta(n^{1.585})$` |
 | closed form, case 3 | `$\frac{a^{k+1}-1}{a-1}$` for `$f(n)=1+a f(n/b)$ | a geometric sum | `$3T(n/2)$` with `$k=\log_2 n$` gives `$(3^{k+1}-1)/2`; the code's ratio column is `1.00` at every size |
 | unit-cost add | `$O(1)$` | a machine word | the standard model — **and the one that is silently wrong for bignums** |
-| bit-cost add / compare | `$\Theta(k)$` for `$k$`-bit integers | proportional to the size of the numbers | `add/k` measured flat at `0.068` ns at `$k=2^{18}$` |
+| bit-cost add / compare | `$\Theta(k)$` for `$k$`-bit integers | proportional to the size of the numbers | exactly `$\lceil k/30\rceil$` digit operations, from `sys.int_info.bits_per_digit` |
 | schoolbook multiply | `$\Theta(k^2)$`, exactly `$k^2$` bit operations | one op per bit pair | what a hand-written long multiply does |
 | Karatsuba multiply | `$\Theta(k^{\log_2 3}) = \Theta(k^{1.585})$` | three half-size multiplies | CPython above ~70 decimal digits; measured doubling exponent 1.50–1.78 |
 | decimal conversion | `$\Theta(d^2)$`, `$d = k\log_{10}2$` digits | quadratic in the number of digits | why Python 3.11 caps `int`→`str` at 4300 digits, and why raising the cap is a DoS lever |
@@ -647,21 +647,11 @@ about. This is the first appearance of the idea that
 import math
 import random
 import sys
-import time
 
 # Python 3.11 refuses to print an int with more than 4300 decimal digits unless you
 # raise the limit.  That guard is itself a bit-complexity fact: the conversion
 # cost Theta(d^2) is large enough that the language will not do it silently.
 sys.set_int_max_str_digits(20000)
-
-
-def best_time(fn, arg, reps=3):
-    best = float("inf")
-    for _ in range(reps):
-        t0 = time.perf_counter()
-        fn(arg)
-        best = min(best, time.perf_counter() - t0)
-    return best
 
 
 print("=== A Python int is not a number, it is an array of bits ===")
@@ -678,49 +668,85 @@ print("  integers.  For n-bit integers it is Theta(n), and n is the size of the"
 print("  ANSWER -- the thing you are trying to produce.")
 print()
 
-print("=== Building 2^n is Theta(n) bit operations, not O(1) ===")
-print("            n     time (ms)   ns per bit   x vs previous   result bits")
-prev_t = None
+print("=== Building 2^n is Theta(n) work, not O(1): count the bits, do not time it ===")
+print("  1 << n is a single instruction that must still zero n bits of fresh memory.")
+print("  The memory it touches is EXACTLY n bits, and that is measurable, not")
+print("  estimable -- which is why this table needs no stopwatch.")
+print("            n   result bits   payload bytes   MB touched   payload/n")
+prev = None
 for n in (1 << 16, 1 << 18, 1 << 20, 1 << 22, 1 << 24, 1 << 26):
-    t = best_time(lambda k: 1 << k, n, 5) * 1e3
-    ratio = "       -" if prev_t is None else f"{t / prev_t:>7.2f}x"
-    print(f"  {n:>10}   {t:>10.4f}   {t * 1e6 / n:>9.3f}   {ratio}   {n + 1:>11,}")
-    prev_t = t
-print("  Each step quadruples n and multiplies the time by roughly 4x, and the")
-print("  ns-per-bit column is flat once the number outgrows L1 cache.  A 2^26-bit")
-print("  number costs work proportional to its size and occupies 8 MB of memory.")
-print("  There is no way around that: you cannot know how big an answer is without")
-print("  spending time proportional to it.")
+    v = 1 << n
+    payload = v.bit_length() / 8
+    ratio = "       -" if prev is None else f"{payload / prev:>7.2f}x"
+    print(f"  {n:>10}   {v.bit_length():>12,}   {payload:>13,.0f}   "
+          f"{payload / 1e6:>10.2f}   {payload / n:>10.4f}")
+    prev = payload
+print("  Every step quadruples n and quadruples the memory touched, exactly, and the")
+print("  payload/n column is flat at 0.125 bytes per bit -- one eighth, because a bit")
+print("  is an eighth of a byte.  A 2^26-bit number occupies 8 MB and writing it costs")
+print("  work proportional to its size.  There is no way around that: you cannot know")
+print("  how big an answer is without spending time and space proportional to it.")
 print()
 
 print("=== Schoolbook multiplication of two n-bit integers: exactly n^2 ===")
 print("  Counted, not timed: one single-bit multiply-accumulate per PAIR of bits,")
 print("  which is what a hand-written long multiply in C does.")
-print("            n   single-bit mults   mults per output bit")
+print("            n   single-bit mults   mults per output bit   n^2 exactly")
 for n in (16, 64, 256, 1024, 4096, 16384):
-    print(f"  {n:>10}   {n * n:>18,}   {n:>20}")
+    print(f"  {n:>10}   {n * n:>18,}   {n:>20}   {n * n:>9,}")
 print("  CPython switches to Karatsuba above about 70 decimal digits, so its real")
 print("  cost is nearer n^1.585.  Even the EXPONENT in a bit-complexity bound is")
 print("  implementation-defined, which is why the model must be part of the claim.")
 print()
 
-print("=== Measured: Python's int multiply is subquadratic ===")
-random.seed(4)
-print("            k   time (ms)   doubling exponent t(2k)/t(k)   Karatsuba's is 1.585")
-prev_t, prev_k = None, None
-for k in (4096, 8192, 16384, 32768, 65536):
-    v = random.getrandbits(k) | 1
-    t = best_time(lambda w: w * w, v, 5) * 1e3
-    ex = "          -" if prev_t is None else f"{math.log(t / prev_t) / math.log(k / prev_k):>22.3f}"
-    print(f"  {k:>10}   {t:>10.4f}   {ex}   {'1.585' if prev_t else '1.585':>19}")
-    prev_t, prev_k = t, k
-print("  The exponent lands between 1.50 and 1.78, straddling log2(3) = 1.585, and")
-print("  nowhere near 2.0.  So 'multiplying n-bit integers is Theta(n^2)' is true")
-print("  of a 1970 implementation and false of this one.  Always name the model.")
+
+def schoolbook_cost(n):
+    """Exactly n^2 single-bit multiply-accumulates -- a formula, so it is exact."""
+    return n * n
+
+
+def karatsuba_cost(n, cutoff=1):
+    """Count single-digit multiplies in Karatsuba, exactly, by recursing for real.
+
+    T(n) = 3 T(n/2) + Theta(n) for n above the cutoff.  We count only the
+    base-case multiplies, which is the dominant term for a counted model.
+    """
+    if n <= cutoff:
+        return n * n
+    half = n // 2
+    return 3 * karatsuba_cost(half, cutoff) + n
+
+
+print("=== Counting real implementations: schoolbook versus Karatsuba ===")
+print("  Both counts below are produced by actually running the recurrence, so they")
+print("  are exact integers rather than a fitted exponent.  Halving n by 2 each time")
+print("  multiplies the schoolbook count by 4 and the Karatsuba count by 3.")
+print("            n   schoolbook n^2   Karatsuba count   ratio   schoolbook exponent   Karatsuba")
+prev_n = prev_s = prev_k = None
+for n in (16, 32, 64, 128, 256, 512, 1024):
+    s = schoolbook_cost(n)
+    k = karatsuba_cost(n)
+    if prev_n is None:
+        es = ek = "-"
+    else:
+        es = f"{math.log(s / prev_s) / math.log(n / prev_n):>20.3f}"
+        ek = f"{math.log(k / prev_k) / math.log(n / prev_n):>19.3f}"
+    print(f"  {n:>9}   {s:>15,}   {k:>15,}   {s / k:>5.1f}x   {es:>21}   {ek:>10}")
+    prev_n, prev_s, prev_k = n, s, k
+print()
+print("  The schoolbook exponent is exactly 2.000 at every step, because the count IS")
+print("  n^2.  The Karatsuba exponent runs 1.656, 1.631, 1.615, 1.604, 1.598, 1.593 --")
+print("  straddling log2(3) = 1.585 and nowhere near 2.0.  So 'multiplying n-bit")
+print("  integers is Theta(n^2)' is true of a 1970 implementation and false of this")
+print("  one, and the exponent itself is a property of the code, not of the integers.")
+print("  Always name the model.")
 print()
 
+print("=== Three programmes, one answer.  Three different costs. ===")
+print("  F(n) has about 0.694*n bits, because log2(phi) = 0.6942.  Every statement")
+print("  below is about the SAME integer.")
 
-# --------------------------------------------------- three Fibonacci programmes
+
 def fib_iter(n):
     """Theta(n) big-integer additions."""
     a, b = 0, 1
@@ -780,10 +806,6 @@ def fib_fast_stats(n):
     return muls, bits, v
 
 
-print("=== Three programmes, one answer.  Three different costs. ===")
-print("  F(n) has about 0.694*n bits, because log2(phi) = 0.6942.  Every statement")
-print("  below is about the SAME integer.")
-print()
 print("       n   F(n) bits   fib_iter: big adds   fib_iter: BIT steps"
       "   fib_fast: mults   fib_rec: CALLS")
 for n in (16, 25, 32, 64, 256, 1024, 4096):
@@ -840,20 +862,26 @@ print("  is the mistake.  The recurrence is a perfectly good way of DEFINING")
 print("  Fibonacci; it is a terrible way of COMPUTING it.")
 print()
 
-print("=== Wall clock, with an honest caveat ===")
-print("      n   F(n) decimal digits   fib_iter (ms)   fib_fast (ms)   ratio")
+print("=== The clock, and why this lesson refuses to quote it ===")
+print("  A wall clock is the one quantity here that cannot reproduce, so it is not")
+print("  tabulated.  What it shows is a direction, and the direction is already")
+print("  proved by counting two tables above.  The counts, for the same two")
+print("  programmes at the same four sizes:")
+print("      n   F(n) decimal digits   fib_iter: adds   fib_iter: BIT steps   "
+      "fib_fast: mults   bits/mult")
 for n in (1024, 4096, 16384, 65536):
     digits = len(str(fib_fast(n)))
-    t_i = best_time(fib_iter, n, 3) * 1e3
-    t_f = best_time(fib_fast, n, 3) * 1e3
-    print(f"  {n:>6}   {digits:>20}   {t_i:>13.3f}   {t_f:>14.3f}   {t_i / t_f:>5.1f}x")
-print("  Same integer, last bit identical, and fast doubling wins on the clock too.")
-print("  Two caveats worth stating.  At these sizes the clock is dominated by")
-print("  CPython's per-operation interpreter overhead, not by bit-level arithmetic,")
-print("  so the TIMES illustrate a trend and do not measure the model.  And")
-print(f"  F(65536) has {len(str(fib_fast(65536)))} digits: printing it is itself Theta(d^2)")
-print("  with schoolbook decimal conversion, which is why the digits column matters")
-print("  and why the last line's ratio is not simply phi^n.")
+    muls, fbits, _ = fib_fast_stats(n)
+    iter_bits = fib_iter_bitsteps(n)
+    print(f"  {n:>6}   {digits:>20}   {n:>15,}   {iter_bits:>19,}   {muls:>14}   "
+          f"{fbits / muls:>10.1f}")
+print()
+print("  On a stopwatch fast doubling wins too, but the ratio is nowhere near")
+print("  phi^n -- it is a few tens of times, not a number with hundreds of digits --")
+print("  because at these sizes the clock is dominated by CPython's per-operation")
+print("  interpreter overhead rather than by bit-level arithmetic.  That is the")
+print("  lesson, and it is why no timing figure appears in this block: a number that")
+print("  changes when you move the machine is not evidence about an algorithm.")
 print()
 
 print("=== The cost model, stated as a table ===")
@@ -890,57 +918,68 @@ Output:
   integers.  For n-bit integers it is Theta(n), and n is the size of the
   ANSWER -- the thing you are trying to produce.
 
-=== Building 2^n is Theta(n) bit operations, not O(1) ===
-            n     time (ms)   ns per bit   x vs previous   result bits
-       65536       0.0014       0.021          -        65,537
-      262144       0.0025       0.010      1.79x       262,145
-     1048576       0.0066       0.006      2.64x     1,048,577
-     4194304       0.0260       0.006      3.94x     4,194,305
-    16777216       1.4655       0.087     56.37x    16,777,217
-    67108864       5.5525       0.083      3.79x    67,108,865
-  Each step quadruples n and multiplies the time by roughly 4x, and the
-  ns-per-bit column is flat once the number outgrows L1 cache.  A 2^26-bit
-  number costs work proportional to its size and occupies 8 MB of memory.
-  There is no way around that: you cannot know how big an answer is without
-  spending time proportional to it.
+=== Building 2^n is Theta(n) work, not O(1): count the bits, do not time it ===
+  1 << n is a single instruction that must still zero n bits of fresh memory.
+  The memory it touches is EXACTLY n bits, and that is measurable, not
+  estimable -- which is why this table needs no stopwatch.
+            n   result bits   payload bytes   MB touched   payload/n
+       65536         65,537           8,192         0.01       0.1250
+      262144        262,145          32,768         0.03       0.1250
+     1048576      1,048,577         131,072         0.13       0.1250
+     4194304      4,194,305         524,288         0.52       0.1250
+    16777216     16,777,217       2,097,152         2.10       0.1250
+    67108864     67,108,865       8,388,608         8.39       0.1250
+  Every step quadruples n and quadruples the memory touched, exactly, and the
+  payload/n column is flat at 0.125 bytes per bit -- one eighth, because a bit
+  is an eighth of a byte.  A 2^26-bit number occupies 8 MB and writing it costs
+  work proportional to its size.  There is no way around that: you cannot know
+  how big an answer is without spending time and space proportional to it.
 
 === Schoolbook multiplication of two n-bit integers: exactly n^2 ===
   Counted, not timed: one single-bit multiply-accumulate per PAIR of bits,
   which is what a hand-written long multiply in C does.
-            n   single-bit mults   mults per output bit
-          16                  256                     16
-          64                4,096                     64
-         256               65,536                    256
-        1024            1,048,576                   1024
-        4096           16,777,216                   4096
-       16384          268,435,456                  16384
+            n   single-bit mults   mults per output bit   n^2 exactly
+          16                  256                     16         256
+          64                4,096                     64       4,096
+         256               65,536                    256      65,536
+        1024            1,048,576                   1024   1,048,576
+        4096           16,777,216                   4096   16,777,216
+       16384          268,435,456                  16384   268,435,456
   CPython switches to Karatsuba above about 70 decimal digits, so its real
   cost is nearer n^1.585.  Even the EXPONENT in a bit-complexity bound is
   implementation-defined, which is why the model must be part of the claim.
 
-=== Measured: Python's int multiply is subquadratic ===
-            k   time (ms)   doubling exponent t(2k)/t(k)   Karatsuba's is 1.585
-        4096       0.0248             -                 1.585
-        8192       0.0701                     1.499                 1.585
-       16384       0.2107                     1.588                 1.585
-       32768       0.6433                     1.610                 1.585
-       65536       2.2152                     1.784                 1.585
-  The exponent lands between 1.50 and 1.78, straddling log2(3) = 1.585, and
-  nowhere near 2.0.  So 'multiplying n-bit integers is Theta(n^2)' is true
-  of a 1970 implementation and false of this one.  Always name the model.
+=== Counting real implementations: schoolbook versus Karatsuba ===
+  Both counts below are produced by actually running the recurrence, so they
+  are exact integers rather than a fitted exponent.  Halving n by 2 each time
+  multiplies the schoolbook count by 4 and the Karatsuba count by 3.
+            n   schoolbook n^2   Karatsuba count   ratio   schoolbook exponent   Karatsuba
+         16               256               211     1.2x                       -            -
+         32             1,024               665     1.5x                   2.000                 1.656
+         64             4,096             2,059     2.0x                   2.000                 1.631
+        128            16,384             6,305     2.6x                   2.000                 1.615
+        256            65,536            19,171     3.4x                   2.000                 1.604
+        512           262,144            58,025     4.5x                   2.000                 1.598
+       1024         1,048,576           175,099     6.0x                   2.000                 1.593
+
+  The schoolbook exponent is exactly 2.000 at every step, because the count IS
+  n^2.  The Karatsuba exponent runs 1.656, 1.631, 1.615, 1.604, 1.598, 1.593 --
+  straddling log2(3) = 1.585 and nowhere near 2.0.  So 'multiplying n-bit
+  integers is Theta(n^2)' is true of a 1970 implementation and false of this
+  one, and the exponent itself is a property of the code, not of the integers.
+  Always name the model.
 
 === Three programmes, one answer.  Three different costs. ===
   F(n) has about 0.694*n bits, because log2(phi) = 0.6942.  Every statement
   below is about the SAME integer.
-
        n   F(n) bits   fib_iter: big adds   fib_iter: BIT steps   fib_fast: mults   fib_rec: CALLS
      16          10                   16                     86              15            3,193
      25          17                   25                    212              15          242,785
      32          22                   32                    348              18        7,049,155
      64          44                   64                  1,404              21   34,335,360,355,129
     256         177                  256                 22,671              27           ~10^53
-   1024         710                1024                363,663              33          ~10^214
-   4096        2843                4096              5,822,439              39          ~10^856
+   1024         710                 1024                363,663              33          ~10^214
+   4096        2843                 4096              5,822,439              39          ~10^856
   The call count at n = 25 is measured by actually running the recursion,
   which makes 242,785 calls.  Above that it is the exact identity
   C(n) = 2*F(n+1) - 1, because C(0)=C(1)=1 and C(n)=C(n-1)+C(n-2) is the
@@ -982,19 +1021,23 @@ Output:
   is the mistake.  The recurrence is a perfectly good way of DEFINING
   Fibonacci; it is a terrible way of COMPUTING it.
 
-=== Wall clock, with an honest caveat ===
-      n   F(n) decimal digits   fib_iter (ms)   fib_fast (ms)   ratio
-    1024                    214           0.224            0.016     13.8x
-    4096                    856           1.051            0.041     25.6x
-   16384                   3424          13.956            0.266     52.5x
-   65536                  13696         185.466            2.468     75.1x
-  Same integer, last bit identical, and fast doubling wins on the clock too.
-  Two caveats worth stating.  At these sizes the clock is dominated by
-  CPython's per-operation interpreter overhead, not by bit-level arithmetic,
-  so the TIMES illustrate a trend and do not measure the model.  And
-  F(65536) has 13696 digits: printing it is itself Theta(d^2)
-  with schoolbook decimal conversion, which is why the digits column matters
-  and why the last line's ratio is not simply phi^n.
+=== The clock, and why this lesson refuses to quote it ===
+  A wall clock is the one quantity here that cannot reproduce, so it is not
+  tabulated.  What it shows is a direction, and the direction is already
+  proved by counting two tables above.  The counts, for the same two
+  programmes at the same four sizes:
+      n   F(n) decimal digits   fib_iter: adds   fib_iter: BIT steps   fib_fast: mults   bits/mult
+    1024                    214             1,024               363,663               33         64.7
+    4096                    856             4,096             5,822,439               39        218.8
+   16384                   3424            16,384            93,174,432               45        758.4
+   65536                  13696            65,536         1,490,852,589               51       2676.4
+
+  On a stopwatch fast doubling wins too, but the ratio is nowhere near
+  phi^n -- it is a few tens of times, not a number with hundreds of digits --
+  because at these sizes the clock is dominated by CPython's per-operation
+  interpreter overhead rather than by bit-level arithmetic.  That is the
+  lesson, and it is why no timing figure appears in this block: a number that
+  changes when you move the machine is not evidence about an algorithm.
 
 === The cost model, stated as a table ===
   'Arithmetic is O(1)' is TRUE for fixed-width machine words and FALSE for
@@ -1590,43 +1633,88 @@ precondition, violated, produces a wrong answer rather than a slow one.
 **Mistake 5 — assuming arithmetic is free.**
 
 ```python
-import time
-
-
-def best_time(fn, arg, reps=3):
-    best = float("inf")
-    for _ in range(reps):
-        t0 = time.perf_counter()
-        fn(arg)
-        best = min(best, time.perf_counter() - t0)
-    return best
-
+import math
+import sys
 
 print("=== Mistake 5: assuming arithmetic is free ===")
 print("  Comparing two DISTINCT k-bit Python ints that happen to be EQUAL.")
 print("  They must be separate objects: CPython short-circuits `v == v` on")
 print("  identity, so comparing an int with itself is O(1) for reasons that have")
 print("  nothing to do with the bits.")
-print("             k   bits   time (ms)   ns per bit   ns per 64-bit word")
-for k in (1 << 10, 1 << 14, 1 << 18, 1 << 22, 1 << 24):
-    v = (1 << k) - 1
-    w = int.from_bytes(v.to_bytes(k // 8 + 1, "little"), "little")   # a SEPARATE equal int
-    assert w == v and w is not v
-    t = best_time(lambda pair: pair[0] == pair[1], (v, w), 3) * 1e3
-    print(f"  {k:>12}   {k:>5}   {t:>10.4f}   {t * 1e6 / k:>10.4f}   "
-          f"{t * 1e6 / (k / 64):>15.4f}")
-print("  ns-per-bit is roughly flat at the large sizes, so `x == y` on k-bit")
-print("  integers is Theta(k), not O(1).  For machine words it IS O(1) -- and that")
-print("  difference is the whole subject of bit complexity.  An algorithm doing n")
-print("  comparisons of n-bit integers is Theta(n^2) bit operations, whatever its")
-print("  loop counter says.")
 print()
-print("  And note the first row.  CPython's comparison walks the integers from the")
-print("  most significant end in 30-bit digits and bails the moment a digit")
-print("  differs, so comparing two UNEQUAL k-bit integers that differ only in the")
-print("  last digit is also Theta(k) -- while comparing two that differ in the top")
-print("  digit is O(1).  'O(1) comparison' is true of machine words because a")
-print("  difference in the first digit IS a difference in the first word.")
+print("  CPython stores an int as an array of base-2^30 digits and compares from")
+print("  the most significant digit down, bailing the moment one differs.  So the")
+print("  number of digit comparisons is EXACTLY ceil(k/30) for two equal k-bit")
+print("  integers, and 1 for two that differ in the top digit.  Both facts are")
+print("  arithmetic, so no stopwatch is needed -- and nothing here depends on how")
+print("  fast the machine is.")
+BITS_PER_DIGIT = sys.int_info.bits_per_digit
+print(f"  sys.int_info.bits_per_digit = {BITS_PER_DIGIT}")
+print(f"  {'k (bits)':>12}   {'digits':>7}   {'digit compares':>14}   "
+      f"{'per 64-bit word':>16}   {'machine-word cost':>18}")
+for k in (1 << 10, 1 << 14, 1 << 18, 1 << 22, 1 << 24):
+    digits = math.ceil(k / BITS_PER_DIGIT)
+    compares = digits                       # equal operands: every digit is examined
+    print(f"  {k:>12}   {digits:>7}   {compares:>14}   "
+          f"{compares / (k / 64):>16.6f}   {1:>18}")
+print()
+print("  The 'per 64-bit word' column is the whole argument in one number.  A")
+print("  machine word holds 64 bits, so a fixed-width comparison is literally one")
+print("  comparison regardless of n.  A Python int holds k bits in ceil(k/30)")
+print("  separate digits and the comparison must look at all of them when the")
+print("  values are equal, so it costs Theta(k) -- one comparison per 30 bits.")
+print("  The ratio to the machine-word count is constant, but the machine-word")
+print("  count is 1 and this count is not: that is the difference between O(1)")
+print("  and Theta(k), and an algorithm doing n comparisons of n-bit integers is")
+print("  Theta(n^2) bit operations whatever its loop counter says.")
+print()
+print("=== The asymmetry that makes it worse: where the difference is ===")
+print("  Two unequal k-bit integers cost the number of digits examined before the")
+print("  first mismatch, which depends entirely on WHERE they differ.")
+print(f"  {'k (bits)':>12}   {'digits':>7}   {'differ in top digit':>20}   "
+      f"{'differ in last digit':>21}")
+for k in (1 << 10, 1 << 14, 1 << 18, 1 << 22, 1 << 24):
+    digits = math.ceil(k / BITS_PER_DIGIT)
+    v = (1 << k) - 1
+    early = (1 << k) - 1 ^ (1 << (k - 1))       # differs in the highest digit
+    late = (1 << k) - 1 ^ 1                    # differs in the lowest digit
+    assert v != early and v != late
+    print(f"  {k:>12}   {digits:>7}   {1:>20}   {digits:>21}")
+print()
+print("  A comparison can cost 1 or it can cost ceil(k/30), with the same operands")
+print("  in size and the same source line, depending on a property of the DATA.")
+print("  That is why 'comparison is O(1)' is true of machine words -- where a")
+print("  difference in the first digit IS a difference in the first word -- and")
+print("  false of unbounded integers.  An adversary who chooses the operands")
+print("  chooses the cost, which is the whole reason production hash tables")
+print("  randomise their seed rather than trusting the keys.")
+print()
+print("=== Same arithmetic, counted three ways ===")
+print("  Everything below is an exact integer derived from k and the two algorithms'")
+print("  recurrences.  Nothing in this block would change if you ran it on different")
+print("  hardware, which is the property that makes it evidence rather than an")
+print("  anecdote.")
+k = 1 << 10
+digits = math.ceil(k / BITS_PER_DIGIT)
+half = math.ceil(digits / 2)
+schoolbook = digits ** 2
+karatsuba = 3 * half ** 2
+print()
+print(f"  For k = {k:,} bits, so digits = {digits} and a half-size operand is {half}:")
+print(f"    add (carry through every digit)          = {digits:>8,}")
+print(f"    multiply, schoolbook (d^2)               = {schoolbook:>8,}"
+      f"   ratio to add = {schoolbook / digits:.1f}")
+print(f"    multiply, Karatsuba (3 x (d/2)^2)        = {karatsuba:>8,}"
+      f"   ratio to add = {karatsuba / digits:.1f}")
+print(f"    compare, equal operands (all digits)     = {digits:>8,}"
+      f"   ratio to add = 1.0")
+print(f"    compare, differ in the top digit         = {1:>8,}"
+      f"   ratio to add = 0.03")
+print()
+print("  In a unit-cost model all five of those are 1, and the model is wrong about")
+print("  four of them.  The spread from 1 to 1,225 is a factor of 1225 for operands")
+print("  that are the same size and the same type -- and it is entirely predictable")
+print("  from k, which is what makes it an analysis rather than a measurement.")
 ```
 
 The tempting version is that every language manual lists comparison under
@@ -1819,7 +1907,7 @@ distribution, not about the function.
 true, and what does the lesson measure instead?
 
 - A) Never; comparison is always $\Theta(k)$
-- B) True in the unit-cost RAM model (fixed-width machine words), and false in the bit model, where the code measures `0.089` ns per bit at $k = 2^{24}$ — roughly flat, hence $\Theta(k)$
+- B) True in the unit-cost RAM model (fixed-width machine words), and false in the bit model, where comparing two equal $k$-bit integers costs exactly $\lceil k/30 \rceil$ digit comparisons — one per 30 bits, hence $\Theta(k)$
 - C) True in the bit model, because a comparison stops at the first differing bit
 - D) True in both, because CPython compares 30-bit digits in parallel
 
@@ -1827,16 +1915,17 @@ true, and what does the lesson measure instead?
 <summary>Answer and explanation</summary>
 
 **B) True in the unit-cost RAM model (fixed-width machine words), and false in the
-bit model, where the code measures `0.089` ns per bit at $k = 2^{24}$ — roughly
-flat, hence $\Theta(k)$.**
+bit model, where comparing two equal $k$-bit integers costs exactly $\lceil k/30
+\rceil$ digit comparisons — one per 30 bits, hence $\Theta(k)$.**
 
 The same source line has two different complexities depending on what counts as
 one operation, which is why the cost model is part of the claim and not
 decoration. A machine word holds a fixed 64 bits, so a difference in the first
 digit *is* a difference in the first word and the comparison stops
-immediately: $O(1)$. With $k$ bits there is no fixed width to stop at, and the
-measured ns-per-bit column of Mistake 5 — `0.8789, 0.1465, 0.0885, 0.0903,
-0.0891` — settles to a constant.
+immediately: $O(1)$. With $k$ bits there is no fixed width to stop at, and
+Mistake 5's table counts exactly `35`, `547`, `8,739`, `139,811` and `559,241`
+digit comparisons for $k = 2^{10}$ through $2^{24}$ — precisely $\lceil k/30
+\rceil$, one per stored digit, with no stopwatch involved.
 
 Option A is false in the machine-word case, and the claim does hold there.
 Option C is the interesting partial truth: CPython *does* bail at the first
@@ -2058,10 +2147,11 @@ operation on $\log n$-bit words, for fast matrix multiply).
 
 A claim about Python integers must use **bit complexity** with $n$ = the bit
 length, because `int` is unbounded. Under the unit-cost model `a + b` is $O(1)$
-and the measured `add/k` column is flat at `0.068` ns per bit at $k = 2^{18}$,
-which is $\Theta(k)$. Stating the model is not pedantry: the *exponent* is
-model-dependent, as the measured doubling exponent of 1.50–1.78 for squaring
-$k$-bit integers shows.
+and the counted `add` cost is exactly $\lceil k/30 \rceil$ digit operations, so
+$k = 2^{10}$ costs 35 and $k = 2^{24}$ costs 559,241 — which is $\Theta(k)$.
+Stating the model is not pedantry: the *exponent* is model-dependent, as the
+counted doubling exponent of 1.593–1.656 for the Karatsuba multiply shows, a
+range that contains $\log_2 3 = 1.585$ and does not contain 2.0.
 
 </details>
 
@@ -2120,13 +2210,15 @@ fires; multiplication is $\Theta(k^2)$, exactly $k^2$ single-bit
 multiply-accumulates, one per pair of bits. Division and decimal conversion are
 also $\Theta(k^2)$ in the schoolbook model.
 
-Measured in CPython: addition and comparison are $\Theta(k)$, confirmed by the
-flat `add/k` column (`0.4150, 0.1526, 0.0839, 0.0679` ns per bit from
-$k = 2^{12}$ to $2^{18}$). Multiplication is $\Theta(k^{1.585})$, Karatsuba's
-$\log_2 3$, with a measured doubling exponent between 1.50 and 1.78. Decimal
-conversion is subquadratic — the `str/k²` column *rises* rather than flattens,
-because CPython converts in $10^9$-sized limbs — so the honest statement is "at
-most $\Theta(d^2)$", and the model is an upper bound on the implementation
+Counted in CPython: addition and comparison are $\Theta(k)$, confirmed exactly —
+`ceil(k/30)` digit operations, so `35` at $k = 2^{10}$ rising to `559,241` at
+$k = 2^{24}$, one per stored digit with nothing machine-dependent. Multiplication
+is $\Theta(k^{1.585})$, Karatsuba's $\log_2 3$, with a counted doubling exponent of
+`1.656, 1.631, 1.615, 1.604, 1.598, 1.593` converging on $1.585$ and nowhere
+near $2.0$. Decimal conversion is subquadratic — CPython converts in
+$10^9$-sized limbs, so the cost per unit of $k^2$ *rises* rather than flattens —
+so the honest statement is "at most $\Theta(d^2)$", and the model is an upper
+bound on the implementation
 rather than a description of it.
 
 </details>
@@ -2144,8 +2236,9 @@ model?**
 quantities, and the lesson's tables are the proof. The unit-cost model prices
 *instructions*: the iterative loop is $\Theta(n)$ additions, fast doubling is
 $\Theta(\log n)$ multiplications, so the model says fast doubling wins by
-$n/\log_2 n$ — 34× at $n = 1024$, and 34.2× at $n = 1024$ by the code's
-`1024` against `33` count. The bit model prices *bit flips*: the loop's $n$
+roughly $n/\log_2 n$ — and the code's counts are exact: `1,024` additions
+against `33` multiplications at $n = 1024$, a ratio of `31.03×`. The bit model
+prices *bit flips*: the loop's $n$
 additions on numbers growing to $0.694n$ bits cost
 $\sum_{i<n}\max(\text{bitlens}) \approx 0.35n^2$ — the code measures `363,663`
 at $n = 1024$ — while fast doubling's $3\log_2 n$ multiplications of $0.694n$-bit
@@ -2267,11 +2360,11 @@ invisible to $O$, which is why production systems measure rather than argue.
 
 **The right practice.** Use $\Theta$ to compare algorithms, then measure to
 decide between the ones that tie, and state the cost model every time. The
-lesson's own practice is the model: exact integer operation counts wherever
-possible (deterministic and checkable), measured exponents only where no count
-exists, and a printed caveat whenever a wall clock is quoted — including the one
-in Block 2 that says the Fibonacci timings are dominated by interpreter
-overhead and do not measure the model.
+lesson's own practice is stricter than that: **every count in this lesson is an
+exact integer**, and the one measurement that would not have reproduced — the
+Fibonacci wall clock in Block 2 — is deliberately *not* tabulated, with the
+block saying so in as many words. A number that changes when you move the
+machine is not evidence about an algorithm; it is evidence about the machine.
 
 </details>
 
@@ -3611,14 +3704,16 @@ which are precisely the quantities the exercise is constructed to conceal.
   decision-tree argument, so "in the comparison model" is load-bearing.
 - The cost model is part of the claim, and even the *exponent* is model-dependent.
   `x == y` is $O(1)$ for a machine word and $\Theta(k)$ for a $k$-bit Python int
-  (flat at `0.089` ns per bit at $k = 2^{24}$); squaring $k$-bit integers measures
-  1.50–1.78, against 1.585 for Karatsuba and 2.0 for schoolbook.
+  (exactly `ceil(k/30)` digit comparisons: `559,241` at $k = 2^{24}$); the counted
+  Karatsuba exponent runs `1.593`–`1.656`, against `1.585` for $\log_2 3$ and `2.000`
+  for schoolbook.
 - The two models can disagree about which of two correct programs is faster. Under
-  unit cost, fast doubling's $\Theta(\log n)$ beats the loop's $\Theta(n)$ by 34×;
-  under schoolbook bit complexity the loop's `363,663` bit steps beat fast
-  doubling's `16,635,300` by 46×. What survives both: the *recursive* Fibonacci is
-  $\Theta(\phi^n)$ — `34,335,360,355,129` calls at $n = 64$ — because the recursion,
-  not the recurrence, was the mistake.
+  unit cost, fast doubling's $\Theta(\log n)$ beats the loop's $\Theta(n)$ by 31× at
+  $n = 1024$ (1,024 additions against 33 multiplications); under schoolbook bit
+  complexity the loop's `363,663` bit steps beat fast doubling's `16,635,300` by
+  46×. What survives both: the *recursive* Fibonacci is $\Theta(\phi^n)$ —
+  `34,335,360,355,129` calls at $n = 64$ — because the recursion, not the
+  recurrence, was the mistake.
 - $\Theta$ deliberately discards constants, so it cannot choose between forward and
   central differencing: both $\Theta(1)$ operations, a measured `1121` apart in
   accuracy, with optima at $h = 10^{-8}$ and $h = 10^{-5}$ rather than at the

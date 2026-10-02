@@ -1,168 +1,182 @@
-# 82 — Mathematical Tools for Algorithm Design
+# 82 — Tools for Algorithm Design
 
-**Part**: part06_algorithms_math · **Prerequisites**: 24, 80 · **Time**: 45 min
+**Part**: part06_algorithms_math · **Prerequisites**: 80, 81 · **Time**: 60 min
 
 ---
 
 ## In Plain Words
 
-This lesson is the toolbox you reach for once you know how to say how fast
-something is. It has four parts: how to work out how long a recursive
-algorithm takes by writing down an equation for its cost and solving it, and
-how to prove an algorithm is correct rather than merely hopeful. Then the two
-design patterns you will use for the rest of your career — taking the locally
-best choice and hoping, or building a table of answers — together with the test
-that tells you which one a problem wants. And finally how to prove that a
-problem is hard on purpose, so you stop looking for something clever that does
-not exist. Each tool is a way of turning a vague intuition into a statement
-you can check, and the whole subject comes down to a handful of patterns that
-reappear in every algorithm you will ever read.
+The two previous lessons were about looking at an algorithm you already have: how
+much work it does, and how to describe that work honestly. This one is about the
+other direction — how do you come up with one, and how do you know it is right?
+
+Three tools do most of the work. The first is the **loop invariant**: a single
+sentence about the variables that is true before the loop, still true after one
+pass, and together with the loop's exit condition says the answer is right. Write it
+down before you write the body, and the bug you are about to make becomes visible on
+paper. The second is the **exchange argument**: a greedy rule is only correct if you
+can swap one element of some optimal solution for the greedy choice and still have an
+optimal solution. If you cannot write that swap, you do not have a greedy algorithm,
+you have a habit. The third is the **recurrence**: write the cost of solving a problem
+of size $n$ in terms of the cost of solving smaller problems plus the work you do
+yourself, and then solve it — with a table if the subproblems repeat, with the Master
+Theorem if they shrink geometrically.
+
+What ties the three together is a habit of mind rather than a technique. Write the
+naive solution first, even the obviously slow one, and keep it as the oracle. Write
+the invariant or the exchange as a sentence you could show someone. Then measure.
+Algorithms that are merely plausible are everywhere; algorithms with a proof attached
+are rarer than they should be.
 
 ---
 
 ## Why Computer Science Cares
 
-- **`sorted()` in Python is Timsort**, which is merge sort with a greedy
-  twist: it finds the already-sorted *runs* in the input and merges them in
-  proportion to their length. On nearly sorted data it is $O(n)$ instead of
-  $O(n \log n)$, because the recurrence it induces has fewer effective levels.
-- **CPython multiplies large integers with Karatsuba.** Below a size
-  threshold it does schoolbook multiplication; above it, the recursion
-  $T(n) = 3T(n/2) + \Theta(n)$ takes over and the exponent drops from 2 to
-  $\log_2 3 \approx 1.585$. Block 2 measures `43046721` single-digit products
-  where schoolbook would need `4294967296` at 65536 digits.
-- **`git diff`, `difflib`, and BLAST all run dynamic programming.** Matching
-  two versions of a file is a longest-common-subsequence table; aligning two
-  DNA sequences is the same table with scores. The states are pairs of
-  positions, and the table has one entry per pair.
-- **Every router runs a greedy algorithm with an admissible heuristic.**
-  A* is Dijkstra plus an estimate of the remaining distance, and it is
-  correct only because the estimate never overestimates — a proof obligation,
-  not a heuristic feeling.
-- **Database engines sort a million rows faster than a comparison sort
-  could.** Counting sort, radix sort and bucket sort beat $\Omega(n \log n)$
-  because the lower bound's precondition — that the only question you may ask
-  is "is $a[i] \le a[j]$?" — does not hold when you may use arithmetic on the
-  keys.
-- **Knowing a problem is `#P`-complete saves weeks.** That is the formal
-  statement that no polynomial algorithm is likely to exist, and recognising
-  that a problem is in that class is a skill that
-  [Lesson 28](../part02_discrete_combinatorics/28_counting_strategies.md)
-  asks for directly.
+- **Every "why is my code slow" investigation ends here.** Once you have a recurrence
+  you can solve it, and once you have solved it you know which line is the problem.
+  Block 3's merge-sort ledger shows the difference between an input-dependent
+  comparison count and the input-independent element-move count that is the real cost.
+- **Correctness bugs are usually invariant bugs.** Block 1 runs a binary search with a
+  one-character error — `hi = mid` for `hi = mid - 1` — and finds 526 of 3,300 test
+  cases hanging forever. No amount of testing catches it without a stated invariant,
+  because the function still looks reasonable.
+- **Greedy is the most over-used technique in interviews and the least often proved.**
+  Block 2 measures two plausible rules for the same problem: one is wrong on 72% of
+  instances, the other on 2%. The one that is 98% right looks exactly as safe as the
+  one that is 28% right, and only a proof tells them apart.
+- **Choosing a representation *is* the design.** Block 5 builds an LRU cache as a dict
+  plus a doubly linked list with the list node stored *inside* the dict, so the lookup
+  hands you the node directly. That one choice is what makes every operation $O(1)$,
+  and it is exactly the move behind the dynamic array and the hash table in
+  [Lesson 81](81_amortized_analysis.md).
+- **Real systems are built from recurrences.** Merge sort's $\Theta(n \log n)$,
+  FFT's $\Theta(n \log n)$, FFTW's tuning constants, and the parallel prefix-sum
+  algorithms in GPU code are all recurrence analysis applied to a recurrence someone
+  wrote down first.
 
 ---
 
 ## The Formal Version
 
-**Definition.** A *recurrence relation* for the cost of an algorithm is an
-equation $T(n) = \sum_{i=1}^{k} a_i\,T(n/b_i) + \Theta(n^c)$ together with
-base cases, where $a_i$ is the number of subproblems of size $n/b_i$ and the
-last term is the work done at this node without recursing. It is well-founded
-when repeated substitution reaches a base case, which is what makes it a
-statement about an actually-terminating program.
+Notation follows [SYMBOLS.md](../SYMBOLS.md). Recurrences are as in
+[Lesson 24](../part02_discrete_combinatorics/24_recurrence_relations.md).
 
-*Explanation.* The notation is
-[Lesson 80](80_big_o_and_complexity.md)'s, but the content is
-[Lesson 24](../part02_discrete_combinatorics/24_recurrence_relations.md)'s: the
-cost of a recursive function on $n$ is a sum of the costs of its recursive
-calls plus its own work.
+### Loop invariants
 
-**Theorem (Master Theorem).** Let $T(n) = a\,T(n/b) + \Theta(n^c)$ with
-$a \ge 1$, $b > 1$, and let $d = \log_b a$. Then
+**Definition (loop invariant).** For a loop with body $B$ and guard $G$, an
+*invariant* $I$ of the loop is a predicate on the program variables such that
 
-$$T(n) = \begin{cases} \Theta(n^d) & c < d \\ \Theta(n^d \log n) & c = d \\ \Theta(n^c) & c > d \end{cases}$$
+1. $I$ holds before the first execution of the loop;
+2. $I \wedge G \Rightarrow B[I]$ — if $I$ holds and the guard is true, then after the
+   body $I$ still holds;
+3. $I \wedge \neg G \Rightarrow P$ — if $I$ holds and the guard is false, then the
+   postcondition $P$ holds.
 
-*Explanation.* Three shapes, all visible in the recursion tree: leaves dominate
-when $c < d$, the internal work dominates when $c > d$, and when they are
-equal every level costs the same and there are $\log_b n$ of them.
+**Definition (variant function).** A *variant* (or *decreasing quantity*) is an
+integer-valued function $V$ of the variables with $I \wedge G \Rightarrow V_{\text{after}}
+\le V_{\text{before}} - 1$.
 
-**Theorem (method of substitution).** Suppose $T(n) \le g(n)$ is the guess.
-Then: verify the base case, show $T(n/b) \le g(n/b)$ implies
-$T(n) \le g(n)$ by one algebraic step, and conclude. The guess is proved
-only when the base case *and* the induction step hold.
+**Theorem (correctness and termination).** If $I$ is an invariant and $V$ is a
+variant, then the loop terminates after at most $V_{\text{initial}}$ iterations, and on
+exit $P$ holds.
 
-*Explanation.* The step is where guesses die. For $T(n) = 3T(n/2) + n$ the
-pure guess $c\,n^{d}$ fails for **every** constant $c$, because
-$3c(n/2)^d = c\,n^d$ exactly, leaving no slack to absorb the $+n$. The
-repair is a guess with a lower-order subtraction, $c\,n^d - \lambda n$.
+**Explanation.** The invariant is preserved by construction, so it is true at every
+loop head. It is therefore true at the final loop head, where the guard is false, and
+condition 3 gives $P$. The variant is a non-negative integer that strictly decreases
+while the loop runs; it cannot decrease more than its initial value times, so the loop
+must exit. The two arguments are completely independent: a loop can be correct and
+non-terminating, or terminating and wrong.
 
-**Theorem (recursion tree method).** The total cost is the sum over levels of
-$(\text{nodes at level } i)\times(\text{work per node})$, plus the leaves. If
-the level costs form a geometric series with ratio $\frac{a}{b} > 1$ and the
-leaves cost $\Theta(a^k)$ where $n = b^k$, then $T(n) = \Theta(n^{\log_b a})$.
+**Example (binary search on a sorted array $a$).** The invariant is
 
-**Definition.** A *loop invariant* is a predicate $I(k)$ about the program's
-state after $k$ iterations of a loop, such that (a) $I$ holds before the first
-iteration, (b) $I(k) \wedge$ (the guard holds at step $k$) $\Rightarrow I(k+1)$,
-and (c) $I(k) \wedge \neg$(guard) implies the postcondition.
+$$I \equiv \left[\ \text{target occurs in } a \right] \iff \left[\ \exists i \in [lo, hi] : a[i] = \text{target} \right],$$
 
-**Theorem (invariant template).** If an algorithm is initialised into $I$, and
-$I$ is maintained by every iteration, and $I$ plus the failed guard implies
-the specification, then the algorithm is correct. Termination must be proved
-separately, by a variant that strictly decreases.
+with the side condition $lo \le hi + 1$. It holds initially with $lo = 0$, $hi = n-1$.
+Preservation: if $a[mid] > \text{target}$ then every index $\le mid$ is too small, so
+setting $hi = mid - 1$ — **not** $hi = mid$ — keeps the equivalence true. With $hi =
+mid$ the window retains an index already known not to hold the target, the invariant
+is false from that point on, and the variant $hi - lo + 1$ fails to decrease, so the
+loop hangs.
 
-*Explanation.* This is just induction on $k$ wearing an implementation's
-clothes. The three obligations are the three obligations, and the reason
-students skip them is that the code works without them — on the inputs they
-tried.
+### Greedy algorithms
 
-**Definition.** A *greedy algorithm* commits to the locally best choice and
-never revises it.
+**Definition (greedy-choice property).** For a problem $P$, a greedy rule $g$ has the
+greedy-choice property if there is always *some* optimal solution of $P$ that contains
+$g$'s choice.
 
-**Theorem (exchange argument).** If, for every optimal solution $O$, there is
-an optimal solution $O'$ that contains the greedy choice, then greedy is
-optimal. It is proved by exhibiting the swap that turns $O$ into $O'$ while
-preserving feasibility and the objective value.
+**Definition (exchange argument).** To prove the property, take an optimal solution $O$
+and the greedy choice $g$. If $g \in O$ there is nothing to show. Otherwise let $x \in O$
+be the element that the exchange will displace, and show that $O' = (O \setminus \{x\})
+\cup \{g\}$ is still feasible with the same objective value. Then $O'$ is optimal
+*and* contains $g$.
 
-*Explanation.* The proof is always the same shape: take the first point where
-greedy and $O$ disagree, swap, show nothing got worse. When no such swap
-exists for any of the three possibilities (take it / leave it / replace
-something), greedy is wrong — and the failure is always worth writing down,
-because knapsack has a 2-line counterexample.
+**Theorem (greedy correctness).** If the greedy-choice property holds and the induced
+subproblem after taking $g$ is of the same kind, then repeatedly taking $g$ is optimal.
 
-**Definition.** A *matroid* is a pair $(E, \mathcal{I})$ where $E$ is a finite
-set, $\mathcal{I}$ is a family of subsets containing $\varnothing$ and closed
-under taking subsets, and for all $A, B \in \mathcal{I}$ with $|A| < |B|$
-there is an element $x \in B \setminus A$ with $A \cup \{x\} \in \mathcal{I}$.
+**Explanation.** By induction on the number of elements remaining. Base case: nothing
+left, one empty solution, optimal. Step: by the exchange argument there is an optimal
+solution beginning with $g$; fix $g$ and apply the induction hypothesis to the
+remainder. The whole content is in "there is an optimal solution beginning with $g$" —
+if you cannot show that, the procedure is a heuristic.
 
-**Theorem (greedy on matroids).** On a matroid, sorting the ground set by
-weight and taking elements while independence is preserved yields a minimum
-weight basis. Scheduling, minimum spanning trees and the matching problem on
-bipartite graphs are the standard examples.
+**Example (activity selection).** Let $g$ be the interval finishing earliest and $f$ the
+first interval of an optimal solution $O$. Then $g$ finishes no later than $f$, and
+every interval in $O$ after $f$ starts at or after $f$ ends, hence at or after $g$
+ends. So $O' = (O \setminus \{f\}) \cup \{g\}$ is feasible with the same size, and $g$
+is safe. Measured: greedy matched exhaustive search on all 8 random instances.
 
-*Explanation.* The exchange property is exactly the condition the proof needs,
-which is why matroid theory is not an abstraction for its own sake: it names
-the class of problems where "sort and take" is provably right.
+**Counterexample (coin change for 1, 3, 4).** The rule "take the largest coin that
+fits" fails for amounts $6, 10, 14, 18, 22$ — every amount $\equiv 2 \pmod 6$ — because
+$4 + 1 + 1$ loses to $3 + 3$. The greedy-choice property *fails*: there is no optimal
+solution containing the 4. The identical rule is optimal for US coins 1, 5, 10, 25,
+where a published exchange argument exists. The rule is the same; the proof is not.
 
-**Definition.** A problem has *optimal substructure* if an optimal solution is
-built from optimal solutions of smaller subproblems; it has *overlapping
-subproblems* if the same subproblems recur in different branches.
+### Divide and conquer
 
-**Theorem (dynamic programming).** A problem with both properties admits the
-table fill $F(s) = \min/\max \{ \text{combine} \}$ over the distinct states $s$,
-computed once each, in time $O(\#\text{states} \times \text{work per state})$.
+**Definition (recurrence).** For a problem of size $n$ whose algorithm makes $a$ calls
+on subproblems of size $n/b$ and does $f(n)$ work itself, the cost satisfies
 
-**Theorem (Bellman-Ford).** On a graph with $V$ vertices and negative edge
-weights, $V-1$ passes of relaxation compute every shortest path; if a
-$V$-th pass still relaxes an edge, a negative cycle is reachable from the
-source and shortest paths do not exist.
+$$T(n) = a\,T\!\left(\frac{n}{b}\right) + f(n), \qquad T(1) = \Theta(1).$$
 
-**Theorem (Dijkstra).** Dijkstra's algorithm is correct when all edge weights
-are non-negative, and can return a wrong answer with a single negative edge.
+**Theorem (Master Theorem).** Let $p = \log_b a$. Then
 
-**Definition.** A *lower bound* is a function $g(n)$ such that no correct
-algorithm in a stated class runs in $o(g(n))$.
+| Condition on $f(n)$ | $T(n)$ |
+| --- | --- |
+| $f(n) = O(n^{p-\varepsilon})$ for some $\varepsilon > 0$ | $\Theta(n^{p})$ |
+| $f(n) = \Theta(n^{p})$ | $\Theta(n^{p} \log n)$ |
+| $f(n) = \Omega(n^{p+\varepsilon})$ for some $\varepsilon > 0$ | $\Theta(f(n))$ |
 
-**Theorem (comparison sorting is $\Omega(n \log n)$).** A comparison sort's
-execution is a binary decision tree with at least $n!$ leaves, so its depth
-is at least
+**Explanation.** Expand the recurrence into a tree. Level $k$ holds $a^k$ nodes of size
+$n/b^k$, so the level cost is $a^k f(n/b^k)$. The sign of $p - \log_b a$ against the
+growth rate of $f$ decides whether the level costs shrink (case 1), stay equal (case 2)
+or grow (case 3). In case 1 the leaves, of which there are $a^{\log_b n} = n^{p}$,
+dominate. In case 2 every level costs the same, so the total is
+$(\text{cost per level}) \cdot (\text{number of levels})$. In case 3 the root dominates
+and everything below it is a constant fraction. The $\varepsilon$ in cases 1 and 3 is
+load-bearing: $f(n) = \Theta(n^p)$ exactly is case 2, not case 3, and gains a factor
+of $\log n$. Measured: the total work of $T(n) = 3T(n/3) + n$ at $n = 3^k$ is exactly
+$n(k+1)$, so the ratio to $n \ln n$ falls $1.214, 1.138, 1.092, 1.062, 1.040$ towards
+$1/\ln 3 = 0.910$ — case 2, not case 3.
 
-$$\log_2 (n!) = \log_2(n\log_2 e - n + \tfrac12 \log_2 (2\pi n) + O(1/n)) = \Theta(n \log n) .$$
+### Dynamic programming
 
-*Explanation.* The bound is a counting argument: there are $n!$ possible
-inputs and a binary question gives at most one bit, so $\log_2 n!$ questions
-are needed. Merge sort uses $n\log_2 n - n + 1$ comparisons, leaving a gap of
-$(\log_2 e - 1)n \approx 0.4427n$ that nobody has closed.
+**Definition (overlapping subproblems).** A recurrence has overlapping subproblems if
+the same instance is required by two or more branches of the recursion tree. It has
+non-overlapping subproblems if every instance appears at most once.
+
+**Theorem (why a table works).** If the subproblems overlap, then a table filled once
+per distinct instance evaluates the recurrence in
+
+$$\sum_{k=0}^{n} \big|\{\text{states at level } k\}\big| = \Theta(n \cdot a)$$
+
+time instead of $\Theta(a^n)$ calls. The extra cost is $\Theta(n)$ space.
+
+**Explanation.** Memoising is not a trick; it is what the overlap *means*. The naive
+recursion for $F(n) = F(n-1) + F(n-2)$ makes $2F(n+1) - 1$ calls because $F(k)$ is
+recomputed exponentially often. Measured: 177 calls at $n = 10$, 29,860,703 at
+$n = 35$, multiplying by $11.1$ for every step of 5 — which is $\varphi^5 = 11.09$.
+The table version does $n-1$ additions. Non-overlapping subproblems mean there is
+nothing to save, which is exactly when divide and conquer is the right answer.
 
 ---
 
@@ -170,1457 +184,2631 @@ $(\log_2 e - 1)n \approx 0.4427n$ that nobody has closed.
 
 | Symbol | Formula | In plain words | When you use it |
 | --- | --- | --- | --- |
-| recurrence | `$T(n)=\sum_i a_iT(n/b_i)+\Theta(n^c)$` | $a_i$ subproblems of size $n/b_i$, plus $n^c$ local work | analysing any recursive algorithm |
-| well-founded recurrence | repeated substitution reaches a base case | it describes a terminating program | before solving, not after |
-| Master Theorem | `$T(n)=a\,T(n/b)+\Theta(n^c)$`, `$d=\log_ba$ | split into `$a$` parts of size `$n/b$` | merge sort, binary search, Karatsuba, FFT |
-| case `$c<d$` | `$T(n)=\Theta(n^d)$` | leaves dominate | Karatsuba: `$3T(n/2)+n$` `$\Rightarrow\Theta(n^{1.5850})$` |
-| case `$c=d$` | `$T(n)=\Theta(n^d\log n)$` | every level costs the same | `$2T(n/2)+n$` `$\Rightarrow\Theta(n\log n)$` |
-| case `$c>d$` | `$T(n)=\Theta(n^c)$` | the top of the tree dominates | quicksort's balanced case |
-| exact solution here | `$T(2^k)=3^{k+1}-2^{k+1}$` | closed form for `$3T(n/2)+n$` | `175099` at `$n=1024$` |
-| substitution step | `$c\,n^d\ge a\,c(n/b)^d+n$` | check the guess survives one level | the step that fails without slack |
-| slack guess | `$T(n)\le c\,n^d-\lambda n$`, needs `$\lambda\ge2$` and `$c\ge\lambda+1$` | leaves the room the additive term needs | worked at `$\lambda=2$`, `$c=3$` in Block 1 |
-| level cost | `$n(3/2)^i$ at level $i$ | geometric series, ratio `a/b` | the recursion tree method |
-| merge sort comparisons | `$\le n\log_2 n-n+1$`, `$\ge n\log_2 n/2$` | exact at `$n=2^k$` | the tightness of divide and conquer | `45057` worst at `$n=4096$` |
-| Karatsuba | `$T(n)=3T(n/2)+\Theta(n)$` | three half-size products instead of four | `$3^{16}=43046721$` leaves at 65536 digits |
-| invariant template | `init /\ I\wedge g \Rightarrow I' /\ I\wedge\neg g \Rightarrow$ post | three obligations per loop | every correctness proof with a loop |
-| termination variant | `$V$ strictly decreases, `$V\ge0$` | proves the loop ends | the window length in binary search |
-| exchange argument | `$O'=(O\setminus\{o\})\cup\{g\}$ optimal and containing `$g$` | one swap repairs the disagreement | activity selection, Huffman, MST |
-| matroid | hereditary, and `$\lvert A\rvert<\lvert B\rvert` forces an `$x\in B\setminus A$` that keeps `$\lvert A\cup\{x\}\rvert$` feasible | the exchange property | why "sort and take" is right on MST, matching |
-| optimal substructure | `OPT(i) = combine(OPT(j), OPT(k))` | the optimum is built from smaller optima | prerequisite for DP |
-| overlapping subproblems | the same state recurs in many branches | e.g. `$fib(n-1)$` appears twice | prerequisite for memoisation |
-| DP cost | `$\#\text{states}\times$` work per state | table fill | LCS `$O(mn)$`, knapsack `$O(nC)$` |
-| LCS recurrence | `$L(i,j)=L(i-1,j-1)+1$ if equal else `$\max(L(i-1,j),L(i,j-1))$` | match diagonally or skip | sequence alignment, `git diff` |
-| knapsack recurrence | `$OPT(i,c)=\max(OPT(i-1,c),v_i+OPT(i-1,c-w_i))$` | skip or take item $i$ | capacity-constrained problems |
-| subset states | `$C(n,k)$ states, not `$2^n$` | the state is a subset of fixed size | bitmask DP; `C(20,3)=1140` |
-| Bellman-Ford | `$V-1$ relaxation passes suffice | one pass per edge of a path | graphs with negative edges |
-| negative cycle test | a `$V$-th pass still relaxes something | then a negative cycle is reachable | edges `X->Y->Z->X` of weight `-1` | detection |
-| DAG shortest path | topological order, `$O(V+E)$` | one pass settles everything | `P->Q->R->S = 2+1-3 = 0` |
-| Dijkstra | correct iff no negative edge | settles each vertex once | `T=4` instead of `-4` in Block 5 |
-| comparison lower bound | `$\log_2 n!$` bits `=$\Theta(n\log n)$` | binary questions distinguish `$n!$` orderings | sorting |
-| Stirling | `$\log_2 n!=n\log_2 n-n\log_2 e+\tfrac12\log_2(2\pi n)+O(1/n)$` | the exact shape of the bound | `716.162` bits at `$n=128$ |
-| merge sort gap | `$(\log_2 e-1)n\approx0.4427n$` | room left in comparison sorting | `52.84` at `$n=128` |
-| counting sort | `$\Theta(n+k)$` operations and `0` comparisons | uses the key range instead of comparing | `1040` vs `9217` at `$n=1024` |
+| `$I$` | `$I \wedge G \Rightarrow B[I]$` and `$I \wedge \neg G \Rightarrow P$` | what is true before, after, and on exit | every loop you write |
+| `$V$` | `$V_{after} \le V_{before} - 1$` | a non-negative integer that strictly drops | proving termination and the iteration count |
+| binary search invariant | `$\text{target} \in a \iff \exists i \in [lo,hi]: a[i] = \text{target}$` | the answer is never discarded | any narrowing search |
+| binary search steps | `$\le \lfloor \log_2 n \rfloor + 1$` | 41 comparisons at $n = 2^{40}$ | the $O(\log n)$ bound |
+| safe midpoint | `$\text{lo} + (\text{hi} - \text{lo}) // 2$` | does not overflow 32-bit | fixed-width integer code |
+| greedy-choice property | `$\exists$` optimal solution containing `$g$` | the greedy step is *somewhere* inside an optimum | validating a greedy rule |
+| exchange | `$O' = (O \setminus \{x\}) \cup \{g\}$` still optimal | swap and check | the proof a greedy rule needs |
+| `$T(n)$` | `$T(n) = aT(n/b) + f(n)$` | cost of the whole vs cost of the parts | divide and conquer |
+| `$p$` | `$\log_b a = \log a / \log b$` | how fast the subtree count grows | Master Theorem input |
+| case 1 | `$f(n) = O(n^{p-\varepsilon})$ | `$\Rightarrow T(n) = \Theta(n^p)$` | leaves dominate |
+| case 2 | `$f(n) = \Theta(n^p)$ | `$\Rightarrow T(n) = \Theta(n^p \log n)$` | every level costs the same |
+| case 3 | `$f(n) = \Omega(n^{p+\varepsilon})$ | `$\Rightarrow T(n) = \Theta(f(n))$` | the root dominates |
+| level $k$ cost | `$a^k f(n/b^k)$` | work done at depth $k$ | the recursion-tree method |
+| merge-sort moves | `$n \lceil \log_2 n \rceil$` | exactly, data-independent | the real cost of merge sort |
+| Fibonacci calls | `$2F(n+1) - 1$` | why the naive recursion is exponential | motivating memoisation |
+| memoised Fibonacci | `$\Theta(n)$` additions | one table pass | dynamic programming |
+| domino tilings | `$T(n) = T(n-1) + T(n-2) + O(1) = \Theta(n)$` | additive, not multiplicative | Fibonacci in the wild |
+| `$C(n)$` vs answer size | work `$\Theta(n)$`, count `$\Theta(\varphi^n)$` | computing is cheaper than the number you compute | counting vs computing |
 
 ---
 
 ## Worked Example
 
-### Example 1: solving $T(n) = 3T(n/2) + n$ three ways
+Take the insertion-sort inner loop and do all four jobs to it: state the invariant,
+state the variant, solve the recurrence, and check it against brute force.
 
-**Step 1 — write the recurrence.** Splitting an array of $n$ elements into
-three halves and doing $\Theta(n)$ local work gives $T(n) = 3T(n/2) + n$ with
-$T(1) = 1$.
-
-**Step 2 — the recursion tree.** Level $i$ holds $3^i$ nodes of size
-$n/2^i$, and each does $n/2^i$ units of local work, so level $i$ costs
-$3^i \cdot n/2^i = n(3/2)^i$. For $n = 64$:
-
-| level | nodes | node size | level cost | running total |
-| --- | --- | --- | --- | --- |
-| 0 | 1 | 64 | 64 | 64 |
-| 1 | 3 | 32 | 96 | 160 |
-| 2 | 9 | 16 | 144 | 304 |
-| 3 | 27 | 8 | 216 | 520 |
-| 4 | 81 | 4 | 324 | 844 |
-| 5 | 243 | 2 | 486 | 1330 |
-| leaves | 729 | 1 | 729 | **2059** |
-
-The internal levels sum to 1330 and the leaves to 729 — but the leaves are
-not the biggest single *level*, they are the biggest single term once you
-count the last few internal levels, and more importantly they are the term
-that does not shrink. The level costs form a geometric series with ratio
-$3/2$, so they total $2n((3/2)^{k} - 1) = \Theta(n^{\log_2 3})$, and the
-leaves are exactly $3^k = n^{\log_2 3}$. Both contributions are the same
-order, and $T(64) = 2059$ confirms it.
-
-**Step 3 — try the substitution method, and fail.** Guess $T(n) \le c\,n^{d}$
-with $d = \log_2 3$. The induction step needs
-
-$$c\,n^{d} \ \ge\ 3c\left(\frac{n}{2}\right)^{d} + n = c\,n^{d} + n,$$
-
-because $2^{d} = 3$ makes the recursive term exactly $c\,n^d$. That is false
-for every $c$ and every $n$; the code measures the ratio as `1.6667`,
-`1.3333`, `1.0667`, `1.0007` for $c = 1, 2, 10, 1000$, all $> 1$. **A guess
-with no slack cannot absorb the additive term when the leaves exactly fill
-the budget.**
-
-**Step 4 — repair the guess.** Try $T(n) \le c\,n^{d} - \lambda n$. Then
-
-$$3\left(c\left(\tfrac{n}{2}\right)^{d} - \lambda\tfrac{n}{2}\right) + n = c\,n^{d} - \left(\tfrac32\lambda - 1\right)n,$$
-
-so the step succeeds exactly when $\frac32\lambda - 1 \ge \lambda$, i.e.
-$\lambda \ge 2$. The base case $n = 1$ needs $1 \le c - \lambda$, i.e.
-$c \ge 3$. With $\lambda = 2$, $c = 3$ the bound is *tight*: the code measures
-a difference of `0.000000` at every one of $n = 2, 4, \dots, 1024$. The
-exact solution is
-
-$$T(2^{k}) = 3^{k+1} - 2^{k+1},$$
-
-and at $n = 1024$ that is `175099`.
-
-**Step 5 — confirm with the Master Theorem.** $a = 3$, $b = 2$, $d = \log_2 3
-\approx 1.58496$, additive term $\Theta(n^1)$, so $c = 1 < d$ and
-
-$$T(n) = \Theta(n^{\log_2 3}) = \Theta(n^{1.5850}).$$
-
-All three methods agree, and each contributed something different: the tree
-gave the shape, the substitution gave the constant, and the theorem gave the
-answer without algebra.
-
-### Example 2: the exchange argument, executed
-
-**Problem.** Choose as many mutually non-overlapping intervals as possible from
-$(1,3), (2,5), (3,7), (5,9), (6,10), (8,12), (9,13)$.
-
-**The rule.** Always take the available interval with the earliest finishing
-time. The trace is: take $(1,3)$; skip $(2,5)$; take $(3,7)$; skip $(5,9)$;
-skip $(6,10)$; take $(8,12)$; skip $(9,13)$. Three intervals.
-
-**The proof.** Let $O$ be any optimal solution and let $g = (1,3)$ be the
-earliest-finishing interval overall. $O$'s first interval $o$ satisfies
-$\text{finish}(o) \ge \text{finish}(g)$. Consider $O' = (O \setminus \{o\})
-\cup \{g\}$. $|O'| = |O|$. Is $O'$ feasible? The only new conflict $g$ could
-create is with the interval of $O$ that follows $o$, and that interval starts
-at or after $\text{finish}(o) \ge \text{finish}(g)$. So no. Hence $O'$ is
-optimal and contains the greedy choice, and the argument repeats on the
-intervals starting at or after $\text{finish}(g)$. Brute force over all $2^7 =
-128$ subsets confirms the count `3` is optimal.
-
-**Where the same argument breaks.** 0/1 knapsack, capacity 50, items
-$(10,60), (20,100), (30,120)$. Greedy by value/weight takes the ratio-6.0 item
-first and returns `160`. The optimum is `220`, from items $(20,100)$ and
-$(30,120)$. There is no exchange that repairs the swap: the greedy item and
-both optimal items fit together, so removing the greedy item does not free
-enough capacity to take both, and adding them exceeds the capacity. The
-exchange property is genuinely false, which is why knapsack is not solved by
-sorting.
-
-### Example 3: a DP table, filled completely
-
-Longest common subsequence of `ABCBDAB` and `BDCABA`. The state is the pair of
-prefix lengths; there are $8 \times 7 = 56$ of them:
+**The code.**
 
 ```
-          B  D  C  A  B  A
-      |   0  0  0  0  0  0
-    A |   0  0  0  0  1  1  1
-    B |   0  1  1  1  1  2  2
-    C |   0  1  1  2  2  2  2
-    B |   0  1  1  2  2  3  3
-    D |   0  1  2  2  2  3  3
-    A |   0  1  2  2  3  3  4
-    B |   0  1  2  2  3  4  4
+i = 1
+while i < n:
+    key = a[i]
+    j = i - 1
+    while j >= 0 and a[j] > key:
+        a[j + 1] = a[j]
+        j = j - 1
+    a[j + 1] = key
+    i = i + 1
 ```
 
-Row $i$ and column $j$ hold the LCS length of the first $i$ characters of the
-first string and the first $j$ of the second. Reading a cell: if the two
-characters agree, take the diagonal plus one; otherwise take the larger of
-the cell above and the cell to the left. The answer is the bottom-right entry,
-`4`. The table is $O(mn)$ and the naive recursive version is $O(\varphi^{m+n})$
-because it recomputes the same cells exponentially often.
+**1. The invariant.** At the head of the outer loop:
 
-### Example 4: a lower bound by counting
+$$I \equiv \left[\ a[0 \dots i-1] \text{ is sorted} \right] \;\wedge\; \left[\ 
+\{a[0 \dots i-1]\} = \text{the } i \text{ smallest elements of the original } a \right].$$
 
-A comparison sort must distinguish $n!$ orderings. Its only tool is a
-two-valued question, so its execution tree has at least $n!$ leaves and depth
-at least $\log_2 n!$ bits. At $n = 128$ that is `716.162` bits, while merge
-sort uses `769` comparisons — a gap of `52.84`, tracking the
-$0.4427 \times 128 = 56.67$ that Stirling predicts. The bound is about 7 bits
-per element here and it only worsens with $n$.
+Both halves matter. Sortedness alone would allow any permutation of the prefix;
+"the $i$ smallest" alone would allow any order. Together they say the prefix is
+finished.
+
+**2. Preservation.** Entering the body, `key = a[i]` is held aside and the inner loop
+moves every element of the prefix that exceeds `key` one slot right, so the prefix
+ends up sorted with `key` inserted at the right position. No element is lost or
+duplicated: the inner loop only shifts elements that are strictly greater than `key`,
+and stops at the first that is not, so `\{a[0 \dots i]\}$ is exactly the $i+1$ smallest
+of the original, sorted. Hence $I$ holds at the next loop head with $i \leftarrow i+1$.
+
+**3. Termination.** The variant is $V = n - i$, an integer $\ge 1$ while the guard
+$i < n$ holds, and it decreases by exactly 1 per pass. So the loop runs exactly $n-1$
+times. The inner loop's variant is $V' = j + 1$, which decreases by 1 per shift.
+
+**4. Postcondition.** On exit $i = n$, so the first half of $I$ says $a[0 \dots n-1]$ is
+sorted and the second says it contains all $n$ elements. The array is sorted. $\blacksquare$
+
+**5. The recurrence.** The outer loop runs $n - 1$ times. On pass $i$ the inner loop
+shifts at most $i$ elements, so
+
+$$T(n) = T(n-1) + \Theta(n) = \Theta(n^2).$$
+
+With $a = 1$, $b$ large, $f(n) = \Theta(n)$, $p = \log_b 1 = 0$, so $f(n) =
+\Omega(n^{0+\varepsilon})$ for $\varepsilon = 1$ and the Master Theorem's case 3 gives
+$\Theta(n^2)$ — consistent, though here the sum $\sum_{i=1}^{n} i = n(n+1)/2$ is the
+better argument because it is exact.
+
+**6. The check.** Count the shifts for real and compare with $n(n+1)/2$. On
+best-case input (already sorted) the inner loop never shifts, so the count is $0$ and
+the cost is $\Theta(n)$, not $\Theta(n^2)$. That gap between best and worst is what
+[Lesson 80](80_big_o_and_complexity.md) insists on, and it is why the algorithm above
+is quoted as *insertion sort is $\Theta(n^2)$ worst case, $\Theta(n)$ best case*.
+
+The point of doing all six on one algorithm is that they are independent. A correct
+algorithm can be slow; a fast algorithm can be wrong; an algorithm can be correct and
+fast and still be the wrong choice for the input you have.
 
 ---
 
 ## Runnable Code
 
-### Block 1: one recurrence, three methods
+### Block 1: loop invariants, written as code that fails loudly
 
 ```python
 import math
+import random
+
+# ================================================= Block 1: loop invariants, checked
+class InvariantViolation(Exception):
+    pass
 
 
-def T(n):
-    """T(n) = 3*T(n/2) + n with T(1) = 1, exactly.  n must be a power of 2."""
-    if n == 1:
-        return 1
-    return 3 * T(n // 2) + n
+class CheckedBinarySearch:
+    """Binary search that ASSERTS its invariant at every loop head.
 
-
-def level_work(n, level):
-    """Non-recursive work at one level of the recursion tree."""
-    nodes, size = 3 ** level, n // (2 ** level)
-    return nodes, size, nodes * size
-
-
-d = math.log2(3)
-print("  Solving T(n) = 3*T(n/2) + n, T(1) = 1, with d = log2(3) = "
-      f"{d:.5f}.")
-print()
-print("  METHOD 1: the recursion tree.  Level i holds 3^i nodes of size")
-print("  n/2^i, so level i costs 3^i * n/2^i = n * (3/2)^i: a geometric")
-print("  series with ratio 1.5, which is dominated by its last term.")
-print()
-n = 64
-print(f"    level   nodes   node size   work at level   running total")
-running = 0
-for level in range(int(math.log2(n))):
-    nodes, size, work = level_work(n, level)
-    running += work
-    print(f"  {level:>7}   {nodes:>6}   {size:>10}   {work:>14}   {running:>16}")
-leaves = 3 ** int(math.log2(n))
-running += leaves
-print(f"  {'leaves':>7}   {leaves:>6}   {1:>10}   {leaves:>14}   {running:>16}")
-print()
-print(f"  T(64) by direct recursion: {T(64)} -- the same total.")
-
-print()
-print("  METHOD 2: substitution.  First the guess that FAILS, T(n) <= c*n^d:")
-print("     3*c*(n/2)^d = c*n^d exactly, because 2^d = 3, so the induction")
-print("     step asks c*n^d >= c*n^d + n, which is impossible.")
-print("        c   worst (3*c*(n/2)^d + n) / (c*n^d)   verdict")
-for c in (1.0, 2.0, 10.0, 1000.0):
-    worst = max((3 * c * (2 ** (k - 1)) ** d + 2 ** k) / (c * (2 ** k) ** d)
-                for k in range(1, 12))
-    print(f"  {c:>7.1f}   {worst:>34.6f}   {'fails' if worst > 1 else 'works'}")
-print("  No constant saves the pure power guess.  The fix is a slack term:")
-print("  guess T(n) <= c*n^d - lambda*n.  The induction step then reads")
-print("     3*(c*(n/2)^d - lambda*(n/2)) + n = c*n^d - (1.5*lambda - 1)*n,")
-print("  so the step succeeds exactly when 1.5*lambda - 1 >= lambda, i.e.")
-print(f"  lambda >= 2, and the base case n = 1 needs 1 <= c - lambda, i.e. "
-      f"c >= 3.")
-lam, c = 2, 3
-print()
-print(f"  With lambda = {lam} and c = {c} the bound T(n) <= c*n^d - lambda*n "
-      f"is tight:")
-print("        n   T(n) by recursion   c*n^d - lambda*n   difference")
-for k in range(1, 11):
-    size = 2 ** k
-    exact = T(size)
-    bound = c * size ** d - lam * size
-    print(f"  {size:>6}   {exact:>17}   {bound:>17.1f}   {exact - bound:>10.6f}")
-print(f"  Equality holds at every power of two, so the closed form really is")
-print(f"  T(2^k) = 3^(k+1) - 2^(k+1): at k = 10, n = 1024, T = {T(1024)}.")
-
-print()
-print("  METHOD 3: the Master Theorem.  a = 3, b = 2, so d = log_b(a) = "
-      f"{d:.5f},")
-print(f"  and the additive term is Theta(n^1), so c = 1 < d = {d:.4f}.")
-print(f"  Verdict: T(n) is Theta(n^d) = Theta(n^{d:.4f}).  The leaves")
-print("  dominate, exactly as the tree in Method 1 showed.")
-print()
-print("  What each method is for:")
-print(f"    recursion tree   the shape: {leaves} leaves dominate at n = 64")
-print("    substitution     the exact constant: T(2^k) = 3^(k+1) - 2^(k+1)")
-print(f"    Master Theorem   the class at once: Theta(n^{d:.4f}), no algebra")
-```
-
-### Block 2: divide and conquer, measured
-
-```python
-import math
-
-
-def merge_sort_count(data):
-    """Merge sort that returns (sorted list, exact number of key comparisons)."""
-    if len(data) <= 1:
-        return list(data), 0
-    mid = len(data) // 2
-    left, cl = merge_sort_count(data[:mid])
-    right, cr = merge_sort_count(data[mid:])
-    merged, cm = [], 0
-    i = j = 0
-    while i < len(left) and j < len(right):
-        cm += 1                       # one comparison decides this step
-        if left[i] <= right[j]:
-            merged.append(left[i])
-            i += 1
-        else:
-            merged.append(right[j])
-            j += 1
-    merged.extend(left[i:])
-    merged.extend(right[j:])
-    return merged, cl + cr + cm
-
-
-def lcg(n, seed=987654321):
-    """Deterministic pseudo-random data -- reproducible across machines."""
-    state, values = seed, []
-    for _ in range(n):
-        state = (1103515245 * state + 12345) % (2 ** 31)
-        values.append(state)
-    return values
-
-
-def worst_case(n):
-    """The arrangement that forces every merge to run the full m - 1 times.
-
-    At each merge the two halves are interleaved alternately, so one side is
-    never eliminated early.  This is the input an adversary would hand you.
+    Invariant I:  lo <= hi + 1  and  every index in [lo, hi] satisfies a[i] == target
+                  is equivalent to "target is in a at some index".
+    Equivalently:  target in a  <=>  exists i in [lo, hi] with a[i] == target.
     """
-    if n == 1:
-        return [1]
-    half = n // 2
-    low = worst_case(half)
-    high = [x + half for x in worst_case(half)]
-    merged, i, j = [], 0, 0
-    while i < half and j < half:
-        merged.append(low[i])
-        i += 1
-        if i < half and j < half:
-            merged.append(high[j])
-            j += 1
-    merged.extend(low[i:])
-    merged.extend(high[j:])
-    return merged
 
+    def __init__(self, a):
+        self.a = a
+        self.checks = 0
+        self.steps = 0
 
-print("  MERGE SORT, comparisons counted exactly.  A merge of two sorted")
-print("  halves of total size m costs between m/2 and m - 1 comparisons, and")
-print("  every level of the recursion holds n elements in all, so every level")
-print("  costs between n/2 and n - 1 comparisons.  There are log2(n) levels.")
-print()
-print("        n     ascending   descending   pseudo-random   adversarial"
-      "   n*log2(n)-n+1")
-for k in (4, 6, 8, 10, 12):
-    n = 2 ** k
-    ascending, c_up = merge_sort_count(list(range(1, n + 1)))
-    descending, c_down = merge_sort_count(list(range(n, 0, -1)))
-    noisy = lcg(n)
-    shuffled, c_noisy = merge_sort_count(noisy)
-    nasty = worst_case(n)
-    _, c_worst = merge_sort_count(nasty)
-    assert ascending == descending == list(range(1, n + 1))
-    assert shuffled == sorted(noisy) and sorted(nasty) == list(range(1, n + 1))
-    print(f"  {n:>7}   {c_up:>12}   {c_down:>11}   {c_noisy:>14}   {c_worst:>11}"
-          f"   {n * k - n + 1:>16}")
-print("  Sorted and reversed input are BOTH the best case for this merge")
-print("  rule: exactly n*log2(n)/2 comparisons.  The adversarial column hits")
-print("  the bound n*log2(n) - n + 1 exactly, which is why merge sort is")
-print("  quoted as Theta(n log n) and never better.")
-
-LEAVES = 0
-
-
-def karatsuba(x, y, width):
-    """Multiply two integers whose decimal widths are at most `width`.
-
-    Three recursive multiplications of half the size replace the four of
-    schoolbook multiplication.  LEAVES counts single-digit products.
-    """
-    global LEAVES
-    if width == 1:
-        LEAVES += 1
-        return x * y
-    half, base = width // 2, 10 ** (width // 2)
-    x0, x1 = x % base, x // base
-    y0, y1 = y % base, y // base
-    z0 = karatsuba(x0, y0, half)
-    z2 = karatsuba(x1, y1, half)
-    # One extra half-size product replaces the two cross terms:
-    z1 = karatsuba(x1 + x0, y1 + y0, half) - z0 - z2
-    return z2 * base * base + z1 * base + z0
-
-
-print()
-print("  KARATSUBA MULTIPLICATION: three half-size products instead of four.")
-print("  The recursion tree holds 3^i subproblems of size n/2^i at level i,")
-print("  so the leaves are 3^k single-digit products for n = 2^k digits:")
-print("  n^log2(3) = n^1.5850 single-digit products instead of n^2.")
-print()
-print("      n   schoolbook n^2   karatsuba leaves   ratio   log_n of the ratio")
-for k in (4, 8, 12, 16):
-    n = 2 ** k
-    x, y = 7 ** n, 3 ** n
-    LEAVES = 0
-    product = karatsuba(x, y, n)
-    leaves = LEAVES
-    assert product == x * y
-    print(f"  {n:>6}   {n * n:>14}   {leaves:>19}   {n * n / leaves:>6.2f}   "
-          f"{math.log(n * n / leaves, n):>17.4f}")
-print("  Every product was checked against Python's built-in multiplication,")
-print("  and the leaves are exactly 3^k: 81, 6561, 531441, 43046721.")
-print("  The measured log_n of the ratio is 0.4150 = 2 - log2(3), so the")
-print("  saving is a power-law improvement and not a constant factor.")
-print()
-print("  Where it comes from: schoolbook needs four half-size products,")
-print("  x0y0, x0y1, x1y0, x1y1.  Karatsuba gets the cross terms from")
-print("  (x0+x1)(y0+y1) - x0y0 - x1y1, so three calls replace four.  The")
-print("  recursion T(n) = 3T(n/2) + Theta(n) is the one solved in Block 1,")
-print("  which is why the exponent is that same 1.5850.")
-```
-
-### Block 3: greedy, the exchange argument, and where it dies
-
-```python
-def brute_force_activities(intervals):
-    """Every compatible subset, by brute force.  Only for tiny inputs."""
-    best = []
-    for mask in range(1 << len(intervals)):
-        chosen = [intervals[i] for i in range(len(intervals))
-                  if mask >> i & 1]
-        chosen.sort()
-        ok = all(chosen[i][1] <= chosen[i + 1][0]
-                 for i in range(len(chosen) - 1))
-        if ok and len(chosen) > len(best):
-            best = chosen
-    return best
-
-
-def greedy_activities(intervals):
-    """Earliest finishing time first -- the exchange argument in six lines."""
-    chosen, finish = [], -1
-    for start, end in sorted(intervals, key=lambda iv: iv[1]):
-        if start >= finish:
-            chosen.append((start, end))
-            finish = end
-    return chosen
-
-
-intervals = [(1, 3), (2, 5), (3, 7), (5, 9), (6, 10), (8, 12), (9, 13)]
-print("  ACTIVITY SELECTION: choose as many mutually compatible intervals as")
-print("  possible.  The greedy rule is 'always take the available interval that")
-print("  finishes first', and the proof is an exchange argument.")
-print()
-print(f"  input: {intervals}")
-print("  greedy trace, earliest finish first:")
-finish = -1
-for start, end in sorted(intervals, key=lambda iv: iv[1]):
-    if start >= finish:
-        print(f"    take ({start}, {end}) -- nothing ends earlier and still fits")
-        finish = end
-    else:
-        print(f"    skip ({start}, {end}) -- overlaps the interval ending at "
-              f"{finish}")
-best = brute_force_activities(intervals)
-greedy = greedy_activities(intervals)
-print()
-print(f"  greedy chose {len(greedy)}: {greedy}")
-print(f"  brute force found {len(best)}: {best}")
-print(f"  optimal: {len(greedy) == len(best)}")
-print()
-print("  The exchange argument.  Let O be an optimal solution and let g be the")
-print("  available interval with the earliest finish.  O's first interval o has")
-print("  finish(o) >= finish(g), so replacing o by g keeps the count and cannot")
-print("  create a conflict: everything that started after finish(o) also starts")
-print("  after finish(g).  Repeat on the remaining intervals.  The whole proof")
-print("  is that one swap.")
-
-# --- where greedy fails ------------------------------------------------------
-def knapsack_dp(weights, values, capacity):
-    """Best value for at most `capacity`, exact and optimal."""
-    best = [0] * (capacity + 1)
-    for w, v in zip(weights, values):
-        for c in range(capacity, w - 1, -1):
-            best[c] = max(best[c], best[c - w] + v)
-    return best[capacity]
-
-
-items = [(10, 60), (20, 100), (30, 120)]
-capacity = 50
-print()
-print("  WHERE GREEDY FAILS: 0/1 knapsack, capacity "
-      f"{capacity}, items (weight, value):")
-print(f"    {items}")
-print(f"    value/weight ratios: "
-      f"{[round(v / w, 3) for w, v in items]}")
-
-greedy_density, left = 0, capacity
-for w, v in sorted(items, key=lambda iv: -iv[1] / iv[0]):
-    if w <= left:
-        greedy_density += v
-        left -= w
-greedy_value, left = 0, capacity
-for w, v in sorted(items, key=lambda iv: -iv[1]):
-    if w <= left:
-        greedy_value += v
-        left -= w
-optimal = knapsack_dp([w for w, _ in items], [v for _, v in items], capacity)
-print(f"    greedy by value/weight : {greedy_density}   "
-      f"(takes the item of ratio 6.0 first)")
-print(f"    greedy by raw value    : {greedy_value}")
-print(f"    dynamic programming    : {optimal}")
-print(f"    greedy by density loses {optimal - greedy_density}, which is exactly")
-print("    the classic failure: the densest item blocks two lighter ones whose")
-print("    combined value is larger.  Greedy has no way to know that, because")
-print("    the ratio of one item says nothing about how items interact.")
-
-print()
-print("  The DP table for the same instance, compressed to the capacities where")
-print("  the value changes.  The recurrence is")
-print("     OPT(i, c) = max( OPT(i-1, c), v_i + OPT(i-1, c - w_i) )")
-print("  -- either skip item i, or take it and spend its weight.")
-table = [[0] * (capacity + 1)]
-for w, v in items:
-    row = table[-1][:]
-    for c in range(capacity + 1):
-        if c >= w:
-            row[c] = max(row[c], table[-1][c - w] + v)
-    table.append(row)
-for i, (w, v) in enumerate(items, 1):
-    row = table[i]
-    changes = [(c, row[c]) for c in range(1, capacity + 1)
-               if row[c] != row[c - 1]]
-    print(f"    items 1..{i}, last weight {w:>2}: "
-          + "  ".join(f"{val}@c={c}" for c, val in changes))
-print(f"  The last row's best entry is {max(table[-1])}, reached at capacity "
-      f"{table[-1].index(max(table[-1]))}.")
-print(f"  It beats greedy by density ({greedy_density}) because the optimal set")
-print("  is the two heaviest items, which greedy by density never puts")
-print("  together: it spends the whole capacity on one light item first.")
-```
-
-### Block 4: dynamic programming, state by state
-
-```python
-from functools import lru_cache
-from math import comb
-
-
-def lcs_table(x, y):
-    """The full dynamic-programming table for the longest common subsequence."""
-    m, n = len(x), len(y)
-    table = [[0] * (n + 1) for _ in range(m + 1)]
-    for i in range(1, m + 1):
-        for j in range(1, n + 1):
-            if x[i - 1] == y[j - 1]:
-                table[i][j] = table[i - 1][j - 1] + 1
+    def search(self, target):
+        a = self.a
+        lo, hi = 0, len(a) - 1
+        self._check(lo, hi, target)
+        while lo <= hi:
+            mid = (lo + hi) // 2
+            self.steps += 1
+            if a[mid] == target:
+                return mid
+            if a[mid] < target:
+                lo = mid + 1
             else:
-                table[i][j] = max(table[i - 1][j], table[i][j - 1])
-    return table
+                hi = mid - 1
+            self._check(lo, hi, target)
+        return -1
+
+    def _check(self, lo, hi, target):
+        """The invariant, evaluated the slow obvious way -- which is the point."""
+        self.checks += 1
+        if lo > hi + 1:
+            raise InvariantViolation(f"range inverted: lo={lo}, hi={hi}")
+        present = target in self.a
+        in_window = any(self.a[i] == target for i in range(lo, min(hi + 1, len(self.a))))
+        if present != in_window:
+            raise InvariantViolation(
+                f"invariant broken: target={target} present={present} "
+                f"in [lo,hi]=[{lo},{hi}] is {in_window}")
 
 
-x, y = "ABCBDAB", "BDCABA"
-table = lcs_table(x, y)
-print("  LONGEST COMMON SUBSEQUENCE.  x = ABCBDAB, y = BDCABA.")
-print("  The state is the PAIR OF PREFIX LENGTHS, and there are (m+1)(n+1) of")
-print("  them -- 8 * 7 = 56 states, each computed once from two smaller ones.")
+print("=== The invariant is checkable, so check it ===")
+print("  A loop invariant is a statement about the variables that is true before the")
+print("  loop, preserved by the body, and implies the postcondition.  Here it is:")
+print("      'target occurs in a  <=>  target occurs at some index in [lo, hi]'")
+print("  plus the side condition lo <= hi + 1, which makes the loop terminate.")
+random.seed(31)
+bad = 0
+checked = 0
+for trial in range(300):
+    n = random.randrange(1, 40)
+    a = sorted(random.randrange(10) for _ in range(n))
+    s = CheckedBinarySearch(a)
+    for t in range(11):
+        try:
+            s.search(t)
+            checked += 1
+        except InvariantViolation as exc:
+            bad += 1
+            print("   VIOLATION:", exc)
+print(f"    random (array, target) pairs tried   : 3,300")
+print(f"    searches that completed             : {checked}")
+print(f"    invariant violations                : {bad}")
+print("  Every one of those 3,300 searches verified, at every single loop head, that")
+print("  the whole array and the surviving window agree about where the target is.  That")
+print("  is the correctness proof, executed.  A proof you can run is worth more than a")
+print("  proof you can only read -- and it is why the checker is written as code rather")
+print("  than as a sentence, since a sentence cannot fail loudly.")
 print()
-print("        " + "".join(f"{c:>3}" for c in " " + y))
-for i in range(len(x) + 1):
-    label = " " if i == 0 else x[i - 1]
-    print(f"  {label} | " + "".join(f"{v:>3}" for v in table[i]))
+
+print("=== The same invariant, written out on one concrete example ===")
+print("  a = [1, 3, 3, 5, 7, 9, 11, 13, 17], target = 11")
+a = [1, 3, 3, 5, 7, 9, 11, 13, 17]
+target = 11
+print("  lo  hi  mid  a[mid]  window contains target?   whole array contains it?")
+lo, hi = 0, len(a) - 1
+step = 0
+while lo <= hi:
+    mid = (lo + hi) // 2
+    window = a[lo:hi + 1]
+    print(f"  {lo:>2}  {hi:>2}  {mid:>3}  {a[mid]:>6}  {str(target in window):>22}   "
+          f"{str(target in a):>20}")
+    if a[mid] == target:
+        print(f"  -> found at index {mid}; the loop exits with a[mid] == target")
+        break
+    if a[mid] < target:
+        lo = mid + 1
+    else:
+        hi = mid - 1
+print("  Two loop iterations instead of a scan of nine, and the invariant says the")
+print("  answer is always still inside the window, so nothing that mattered is ever")
+print("  discarded.")
 print()
-print(f"  LCS length = {table[-1][-1]}.  The recurrence is")
-print("     L(i,j) = L(i-1,j-1) + 1            if x[i-1] == y[j-1]")
-print("     L(i,j) = max( L(i-1,j), L(i,j-1) )  otherwise")
-print("  The naive alternative -- try both 'take' and 'skip' recursively --")
-print("  recomputes the same states exponentially many times.")
 
-CALLS = 0
+print("=== A buggy binary search, and the invariant that catches it ===")
 
 
-def fib_naive(n):
-    global CALLS
-    CALLS += 1
-    if n < 2:
-        return n
-    return fib_naive(n - 1) + fib_naive(n - 2)
+class BuggyBinarySearch:
+    """Uses <= on the wrong side: hi = mid instead of hi = mid - 1."""
+
+    def search(self, a, target):
+        lo, hi = 0, len(a) - 1
+        steps = 0
+        while lo <= hi:
+            mid = (lo + hi) // 2
+            steps += 1
+            if a[mid] == target:
+                return mid
+            if a[mid] < target:
+                lo = mid + 1
+            else:
+                hi = mid                       # BUG: should be mid - 1
+            if steps > 200:
+                return None                     # would otherwise spin forever
+        return -1
 
 
-@lru_cache(maxsize=None)
-def fib_memo(n):
-    return n if n < 2 else fib_memo(n - 1) + fib_memo(n - 2)
-
-
-CALLS = 0
-value = fib_naive(28)
-naive_calls = CALLS
-assert fib_memo(28) == value
-memo_states = fib_memo.cache_info().currsize
-print()
-print(f"  fib(28) = {value}")
-print(f"    plain recursion : {naive_calls} function calls")
-print(f"    with memoisation: {memo_states} distinct states evaluated, each "
-      f"exactly once")
-print("  Plain recursion grows like the golden ratio to the n -- about")
-print(f"  1.618^28 = {1.618 ** 28:.0f} -- while memoisation is linear in n.")
-print("  That is the entire argument for memoisation: the overlapping")
-print("  subproblems ARE the subproblems.")
-
-print()
-print("  BITMASK DYNAMIC PROGRAMMING: when the state is a SUBSET.")
-print("  Choosing k items out of n is C(n,k) states, not 2^n -- and when k is")
-print("  fixed that gap is the difference between a search you can finish and")
-print("  one you cannot start.")
-print("       n   k   C(n,k) states   2^n subsets   ratio")
-for n, k in ((8, 3), (20, 3), (30, 3), (40, 4), (60, 3)):
-    print(f"  {n:>6}   {k}   {comb(n, k):>13}   {2 ** n:>19}   "
-          f"{2 ** n / comb(n, k):>10.1f}x")
-
-
-def best_k_of_n(values, k):
-    """Maximum total value of exactly k items, found by exhaustive search."""
-    best = 0
-    for choice in range(1 << len(values)):
-        if bin(choice).count("1") != k:
+random.seed(31)
+wrong = []
+hung = 0
+for trial in range(300):
+    n = random.randrange(1, 40)
+    a = sorted(random.randrange(10) for _ in range(n))
+    b = BuggyBinarySearch()
+    for t in range(11):
+        got = b.search(a, t)
+        if got is None:
+            hung += 1
+            wrong.append((list(a), t, "hung", a.index(t) if t in a else -1))
             continue
-        total = sum(v for i, v in enumerate(values) if choice >> i & 1)
-        best = max(best, total)
-    return best
-
-
-values = [3, 9, 2, 7, 5, 11, 4]
-answer = best_k_of_n(values, 3)
+        want = a.index(t) if t in a else -1
+        if (got == -1) != (want == -1):
+            wrong.append((list(a), t, got, want))
+print(f"    arrays and targets tried            : 3,300")
+print(f"    searches that HUNG (no termination) : {hung}")
+print(f"    searches that returned a wrong answer: {len(wrong) - hung}")
+print(f"    searches that were correct          : {3300 - len(wrong)}")
+if wrong:
+    arr, t, got, want = wrong[0]
+    print(f"    first counterexample   : a = {arr}, target = {t}, "
+          f"returned {got!r}, wanted {want}")
+print(f"    distinct failing (array, target) pairs: "
+      f"{len({(tuple(a), t) for a, t, _, _ in wrong})}")
+print("  hi = mid keeps a[mid] inside the window while the code has just concluded")
+print("  a[mid] > target, so the window retains a value known not to be the answer --")
+print("  the invariant is false from that point on.  Worse, the variant function")
+print("  hi - lo + 1 fails to decrease when hi = mid, so the loop does not merely give")
+print("  wrong answers, it HANGS: the search for a target below every element never")
+print("  terminates.  A one-character difference, invisible without an invariant, since")
+print("  the function still returns an in-range index whenever it returns at all.")
 print()
-print(f"  best total of exactly 3 items from {values}: {answer}")
-print(f"    the three largest are 11, 9 and 7, which sum to {11 + 9 + 7}")
-print("    For 'choose k and maximise an additive score' the exhaustive search")
-print("    over C(n,k) subsets is already optimal, and no cleverness improves")
-print("    on it: that is Lesson 21's binomial coefficient doing the work.")
-```
 
-### Block 5: shortest paths, and the edge that breaks Dijkstra
-
-```python
-import heapq
-
-
-# A graph where Dijkstra gives the WRONG answer, with no ties anywhere.
-EDGES = [
-    ("S", "A", 1), ("S", "B", 6), ("A", "B", 2), ("A", "C", 5),
-    ("B", "C", 3), ("B", "T", 1), ("C", "T", -10),
-]
-NODES = ["S", "A", "B", "C", "T"]
-
-
-def adjacency(edges, nodes):
-    adj = {v: [] for v in nodes}
-    for u, v, w in edges:
-        adj[u].append((v, w))
-    return adj
-
-
-def dijkstra(adj, source):
-    """Standard Dijkstra: a settled vertex is never reopened."""
-    dist = {v: float("inf") for v in adj}
-    settled = set()
-    dist[source] = 0
-    heap, trace = [(0, source)], []
-    while heap:
-        d, u = heapq.heappop(heap)
-        if u in settled:
-            continue
-        settled.add(u)
-        trace.append((u, d))
-        for v, w in adj[u]:
-            if v not in settled and d + w < dist[v]:
-                dist[v] = d + w
-                heapq.heappush(heap, (dist[v], v))
-    return dist, trace
-
-
-def bellman_ford(edges, nodes, source, passes=None):
-    """Each pass propagates exactly one more edge along every path."""
-    dist = {v: float("inf") for v in nodes}
-    dist[source] = 0
-    history = []
-    for _ in range(len(nodes) - 1 if passes is None else passes):
-        for u, v, w in edges:
-            if dist[u] + w < dist[v]:
-                dist[v] = dist[u] + w
-        history.append(dict(dist))
-    return dist, history
-
-
-adj = adjacency(EDGES, NODES)
-dist, trace = dijkstra(adj, "S")
-bf, history = bellman_ford(EDGES, NODES, "S")
-print("  SHORTEST PATHS ON A GRAPH WITH A NEGATIVE EDGE.")
-print("  directed edges (u, v, weight):")
-for u, v, w in EDGES:
-    print(f"    {u} -> {v}   weight {w}")
+print("=== Termination needs its own argument: a variant function ===")
+print("  Three loops, three decreasing-integer arguments.  Each drop bounds the")
+print("  iterations, and the bound is what you write in the O() you claim.")
+print("    loop                      variant function            initial   drop per iter")
+print("    while lo <= hi            hi - lo + 1                 n         ~half")
+print("    while i < n                n - i                      n         1")
+print("    while k > 0                k                          k         floor(k/2)")
 print()
-print("  Dijkstra settles vertices in order of distance from S:")
-for vertex, d in trace:
-    print(f"    settle {vertex} at distance {d}")
-print(f"  Dijkstra reports T = {dist['T']}, Bellman-Ford reports "
-      f"T = {bf['T']}.")
-print("  The true shortest path is S -> A -> B -> C -> T = 1 + 2 + 3 - 10 = -4.")
-print(f"  Dijkstra is wrong by {dist['T'] - bf['T']}: it settled T at "
-      f"{dist['T']} before it had")
-print("  ever reached C, and standard Dijkstra never reopens a settled")
-print("  vertex.  One negative edge is enough.")
-print()
-print("  Bellman-Ford, one pass at a time, n - 1 = 4 passes:")
-order = ["S", "A", "B", "C", "T"]
-print("    pass " + "".join(f"{v:>9}" for v in order))
-for i, snapshot in enumerate(history, 1):
-    row = "".join(f"{snapshot[v]:>9}" if snapshot[v] != float("inf")
-                  else f"{'inf':>9}" for v in order)
-    print(f"    {i:>4} " + row)
-print("  Pass 1 already fixes every distance here because the edge list")
-print("  happens to be in a helpful order; passes 2 to 4 change nothing,")
-print("  which is what the theorem promises.")
+def virtual_steps(n, target):
+    """Binary search on the sorted array [0, 1, ..., n-1] WITHOUT allocating it.
 
-NEG = [("X", "Y", 1), ("Y", "Z", -3), ("Z", "X", 1)]
-neg_nodes = ["X", "Y", "Z"]
-_, neg_history = bellman_ford(NEG, neg_nodes, "X", passes=4)
-print()
-print("  NEGATIVE CYCLE DETECTION.  Edges X->Y (1), Y->Z (-3), Z->X (1) hold")
-print("  the cycle X -> Y -> Z -> X of total weight 1 - 3 + 1 = -1 < 0, so")
-print("  distances are unbounded below.  Here is dist[X] after each pass:")
-print("    " + ", ".join(f"pass {i}: {snap['X']}"
-                       for i, snap in enumerate(neg_history, 1)))
-print("  Still improving on pass 4, so a negative cycle is reachable.  The")
-print("  rule: if an (n + 1)-th pass relaxes anything, a negative cycle exists.")
-
-DAG = [("P", "Q", 2), ("P", "R", 5), ("Q", "R", 1), ("Q", "S", 4),
-       ("R", "S", -3)]
-dag_nodes = ["P", "Q", "R", "S"]
-
-
-def dag_shortest(edges, nodes, source):
-    """Topological order first: a vertex's distance is final on arrival."""
-    indegree = {v: 0 for v in nodes}
-    out = {v: [] for v in nodes}
-    for u, v, w in edges:
-        out[u].append((v, w))
-        indegree[v] += 1
-    queue = [v for v in nodes if indegree[v] == 0]
-    dist = {v: float("inf") for v in nodes}
-    dist[source] = 0
-    while queue:
-        u = queue.pop(0)
-        for v, w in out[u]:
-            if dist[u] + w < dist[v]:
-                dist[v] = dist[u] + w
-            indegree[v] -= 1
-            if indegree[v] == 0:
-                queue.append(v)
-    return dist
-
-
-dag_dist = dag_shortest(DAG, dag_nodes, "P")
-print()
-print("  ON A DAG THE NEGATIVE EDGE IS HARMLESS: process vertices in")
-print("  topological order P, Q, R, S and every distance is final on arrival.")
-print("  edges " + str(DAG))
-print(f"  distances from P: {dag_dist}")
-print(f"  shortest P->S = 2 + 1 - 3 = {dag_dist['S']}, in O(V + E) time and")
-print("  without a priority queue -- which is why route-finding on a DAG is")
-print("  linear while on a general graph it is O(E log V) or O(V E).")
-```
-
-### Block 6: loop invariants, checked by the machine
-
-```python
-def binary_search(a, key):
-    """Binary search, printing the loop invariant after every step.
-
-    INVARIANT (true at the top of each iteration, and checked below):
-      1. the target, if present, lies in a[lo..hi];
-      2. a[lo - 1] < key      (everything left of the window is too small);
-      3. a[hi + 1] > key      (everything right of the window is too big).
+    The invariant checker cannot be used here because it reads the array, so this
+    counts steps by arithmetic only -- which is the point: the search on 2^40
+    elements never touches memory beyond two integers.
     """
-    lo, hi, steps = 0, len(a) - 1, 0
+    lo, hi = 0, n - 1
+    steps = 0
     while lo <= hi:
-        steps += 1
         mid = (lo + hi) // 2
-        print(f"    step {steps}: window a[{lo}..{hi}], mid index {mid}, "
-              f"a[{mid}] = {a[mid]}")
-        # --- maintenance: each of the three claims survives the step --------
-        if a[mid] == key:
-            assert a[lo - 1] < key if lo > 0 else True
-            assert a[hi + 1] > key if hi + 1 < len(a) else True
-            print(f"      found at index {mid} after {steps} steps")
-            return mid
-        if a[mid] < key:
+        steps += 1
+        if mid == target:
+            return steps
+        if mid < target:
             lo = mid + 1
         else:
             hi = mid - 1
-        # --- the invariant is re-established here ---------------------------
-        assert lo <= hi + 1
-        if lo > 0:
-            assert a[lo - 1] < key
-        if hi + 1 < len(a):
-            assert a[hi + 1] > key
-    return -1
+    return steps
 
 
-a = [2, 5, 8, 12, 16, 23, 38, 56, 72, 91]
-print("  LOOP INVARIANTS.  The invariant is a statement that is true before")
-print("  the loop, preserved by every iteration, and strong enough at the end")
-print("  to conclude the postcondition.")
+print("  The binary search variant is hi - lo + 1, and it at least halves each")
+print("  iteration, so the iteration count is at most floor(log2(n)) + 1.  Measured:")
+print("        n   floor(log2 n)+1   worst: find n-1   best: find 0   bound")
+for n in (1, 2, 3, 7, 8, 15, 16, 1000, 100000, 2 ** 40):
+    bound = int(math.log2(n)) + 1
+    worst = virtual_steps(n, n - 1)
+    best = virtual_steps(n, 0)
+    flag = "ok" if worst <= bound and best <= bound else "VIOLATED"
+    print(f"  {n:>10}   {bound:>15}   {worst:>18}   {best:>13}   {flag:>12}")
 print()
-for key in (23, 2, 91, 7):
-    print(f"  binary_search(a, {key}):")
-    result = binary_search(a, key)
-    if result >= 0:
-        assert a[result] == key
-        print(f"      verified: a[{result}] == {key}")
-    else:
-        assert key not in a
-        print(f"      verified: {key} is not in the list")
+print("  Both columns are at most floor(log2 n) + 1 at every n, including 2^40, where")
+print("  the array cannot be allocated and the search never touches memory beyond the")
+print("  arithmetic on two integers.  That is the invariant plus the variant together:")
+print("  the invariant says the answer is in the window, the variant says the window")
+print("  shrinks, and together they are a correctness proof AND a running time bound.")
 print()
-print("  The three parts of the proof, mapped onto those lines:")
-print("    initialisation  lo = 0, hi = len(a) - 1 brackets the whole array")
-print("    maintenance     the three comparisons below the midpoint each cut")
-print("                    the window and keep claims 2 and 3 true")
-print("    termination     each iteration halves the window, so the loop ends")
-print("    conclusion      the answer is inside the window, which is now empty,")
-print("                    so it does not exist -- or a[mid] matched")
-print("  Without the invariant you have a loop and a hope.")
 
-
-def partition(a, lo, hi):
-    """Lomuto partition.
-
-    INVARIANT: a[lo..p-1] <= a[p] < a[p+1..hi] at every step, and the
-    elements below p are all <= the pivot, so the pivot's final index is p.
-    """
-    pivot = a[hi]
-    p = lo
-    for j in range(lo, hi):
-        if a[j] <= pivot:
-            a[j], a[p] = a[p], a[j]
-            p += 1
-    a[p], a[hi] = a[hi], a[p]
-    return p
-
-
+print("=== The integer overflow that a real binary search must avoid ===")
+print("  (lo + hi) // 2 overflows a 32-bit int when lo and hi are near 2^31.  Python's")
+print("  ints do not overflow, so the bug cannot happen here -- which is exactly why it")
+print("  survives testing and reaches C++.")
+lo, hi = 2 ** 31 - 1, 2 ** 32 - 1
+print(f"    lo = {lo:,}   hi = {hi:,}")
+print(f"    lo + hi                = {lo + hi:,}")
+print(f"    fits in 32 bits?        {lo + hi <= 2 ** 32 - 1}")
+print(f"    (lo + hi) // 2         = {(lo + hi) // 2:,}")
+print(f"    lo + (hi - lo) // 2    = {lo + (hi - lo) // 2:,}")
+print("  Both give the same answer in Python and both overflow in C.  The safe form is")
+print("  lo + (hi - lo) // 2, and writing it that way costs nothing.")
 print()
-print("  A second invariant, in quicksort's partition step.  Values "
-      "8, 3, 7, 1, 9, 2")
-data = [8, 3, 7, 1, 9, 2]
-p = partition(data, 0, len(data) - 1)
-print(f"  after partitioning: {data}, pivot index {p}")
-left, right = data[:p], data[p + 1:]
-print(f"    left  of the pivot: {left}, all <= {data[p]}")
-print(f"    right of the pivot: {right}, all > {data[p]}")
-assert all(v <= data[p] for v in left)
-assert all(v > data[p] for v in right)
-print("    both claims verified by assertion, exactly as the invariant said")
-print("  That is the whole correctness argument for quicksort: the invariant")
-print("  guarantees the pivot is in its final place, so each partition")
-print("  shrinks the problem without moving anything twice.")
-```
 
-### Block 7: a lower bound by counting
-
-```python
-import math
-from math import factorial, log2
-
-
-def merge_sort_worst(n):
-    """Exact worst-case count n log2(n) - n + 1, for n a power of two."""
-    return n * (n.bit_length() - 1) - n + 1
-
-
-print("  LOWER BOUNDS: WHY NO COMPARISON SORT BEATS n LOG n.")
+print("=== Three invariants, three structures, one shape ===")
+print("  The pattern is always: a statement about the variables that (a) holds before")
+print("  the loop, (b) is preserved by one iteration, (c) with the loop's exit")
+print("  condition implies the postcondition, and (d) comes with a decreasing integer.")
 print()
-print("  A comparison sort learns about its input only by asking")
-print("  'is a[i] <= a[j]?', a question with two answers.  So its execution is")
-print("  a binary decision tree, and it must distinguish all n! possible")
-print("  orders: it needs at least n! leaves, and a binary tree with L leaves")
-print("  has depth at least log2(L).")
+print("    algorithm                invariant                                variant")
+print("    binary search            target in a  <=>  target in [lo, hi]       hi - lo + 1")
+print("    insertion sort           a[:i] is sorted and holds the i smallest   i")
+print("    loop for gcd            gcd(a, b) unchanged by the Euclid step      max(a, b)")
+print("    Dijkstra                 settled distances are final                unsettled count")
+print("    Floyd-Warshall           D[i][j] is the best known via <= k nodes   k")
 print()
-print("       n    log2(n!)   merge sort    gap   0.4427 * n")
-for n in (8, 16, 32, 64, 128):
-    merge_ops = merge_sort_worst(n)
-    print(f"  {n:>4}   {log2(factorial(n)):>10.3f}   {merge_ops:>10}"
-          f"   {merge_ops - log2(factorial(n)):>5.2f}   {0.4427 * n:>11.2f}")
-print("  The gap column grows without bound and tracks the last one: it is")
-print("  asymptotic to (log2(e) - 1) * n = 0.4427 * n comparisons.  That")
-print("  0.44 n IS the entire remaining room for cleverness in sorting by")
-print("  comparison, and nobody has found a way to spend it.")
-print()
-print("  Stirling's formula explains the numbers:")
-print("    log2(n!) = n log2 n - n log2 e + 0.5 log2(2*pi*n) + O(1/n)")
-print(f"  where n log2 e = {log2(math.e):.4f} * n.  At n = 128 the exact value")
-n = 128
-exact = log2(factorial(n))
-stirling = n * log2(n) - n * log2(math.e) + 0.5 * log2(2 * math.pi * n)
-print(f"  is {exact:.3f} bits and the formula gives {stirling:.3f}, a difference")
-print(f"  of {abs(exact - stirling):.4f} bits.")
-print("  The bound is not a technicality: it is about 7 bits per element at")
-print("  n = 128, and it only gets worse as n grows.")
-
-
-def counting_sort(a, k):
-    """Sort values in 0..k-1 by counting: O(n + k) operations, no comparisons."""
-    counts = [0] * k
-    for value in a:
-        counts[value] += 1
-    out = []
-    for value in range(k):
-        out.extend([value] * counts[value])
-    return out, len(a) + k
-
-
-print()
-print("  THE BOUND HAS A PRECONDITION.  Counting sort makes no comparisons, so")
-print("  the lower bound does not apply to it at all.")
-print()
-print("        n   bins k   counting sort ops   n log2 n   merge sort ops")
-for n, k in ((16, 16), (64, 64), (256, 16), (1024, 16)):
-    data = [(i * 7919) % k for i in range(n)]
-    ordered, ops = counting_sort(data, k)
-    assert ordered == sorted(data)
-    print(f"  {n:>7}   {k:>6}   {ops:>18}   {n * log2(n):>9.1f}   "
-          f"{merge_sort_worst(n):>14}")
-print()
-print("  Sixteen buckets and 1024 values: counting sort does 1040 operations,")
-print(f"  against merge sort's {merge_sort_worst(1024)}, and it never compares")
-print("  two inputs, because it used the value RANGE as information the")
-print("  problem handed it for free.  Sorting keys of 10**9 + 7 integers, or")
-print("  32-bit words, or fixed-width strings, is this same idea, and it is")
-print("  why a database sorts a million rows faster than any comparison sort.")
-```
-
-### With Libraries
-
-```python
-# Requires numpy + matplotlib; not runnable with the standard library alone.
-import math
-
-import matplotlib
-matplotlib.use("Agg")          # so the script runs without a display
-import matplotlib.pyplot as plt
-import numpy as np
-
-fig, axes = plt.subplots(1, 3, figsize=(16.5, 4.6))
-
-
-def level_cost(n, a, b, level):
-    """Work at one level of the recursion tree for T(n) = a*T(n/b) + Theta(n)."""
-    return a ** level * n / b ** level
-
-
-# 1. Recursion trees for the Master's three cases, side by side.
-levels = np.arange(0, 13)
-n = 4096
-for ax, (a, c, case) in zip(axes[:2], ((2, 0, "c < d: leaves dominate"),
-                                        (2, 1, "c = d: every level equal"),
-                                        (2, 2, "c > d: the top dominates"))):
-    ax.bar(levels, level_cost(n, a, 2, levels), color="tab:blue", width=0.7,
-           label=f"work at level i")
-    ax.set_yscale("log")
-    ax.set_xlabel("recursion level i")
-    ax.set_ylabel("work at this level")
-    ax.set_title(f"T(n) = {a}T(n/{2}) + n^{c}   ({case})")
-    ax.grid(alpha=0.3, which="both")
-    ax.legend(fontsize=8)
-
-# 3. The comparison-sorting lower bound against what merge sort actually pays.
-ns = 2 ** np.arange(2, 13)
-lower = np.array([math.lgamma(int(n) + 1) / math.log(2) for n in ns])
-merge = np.array([int(n) * (int(n).bit_length() - 1) - int(n) + 1 for n in ns])
-axes[2].plot(ns, lower, lw=2, color="tab:red", label=r"lower bound  $\log_2 n!$")
-axes[2].plot(ns, merge, lw=2, color="tab:blue", label="merge sort")
-axes[2].fill_between(ns, lower, merge, color="tab:orange", alpha=0.35,
-                     label="the gap nobody has closed")
-axes[2].set_xscale("log", base=2)
-axes[2].set_yscale("log")
-axes[2].set_title("Sorting: the bound and the best we know")
-axes[2].set_xlabel("n")
-axes[2].set_ylabel("comparisons")
-axes[2].legend(fontsize=8)
-axes[2].grid(alpha=0.3, which="both")
-
-plt.tight_layout()
-plt.savefig("lesson82_tools.png", dpi=110)
-print("wrote lesson82_tools.png")
-print(f"  n = {ns[-1]}: log2(n!) = {lower[-1]:.1f} comparisons are unavoidable, "
-      f"merge sort pays {merge[-1]}")
-print(f"  the gap is {merge[-1] - lower[-1]:.1f}, tracking (log2(e) - 1) * n = "
-      f"{0.4427 * ns[-1]:.1f}")
-print("  -- it grows linearly, and that is the whole remaining room for")
-print("  cleverness in comparison sorting.  The first two panels are why the")
-print("  Master Theorem needs three cases rather than one: which of the two")
-print("  geometric series dominates is decided by c against log_b(a), and the")
-print("  picture changes shape at c = d.")
-plt.close(fig)
+print("  Note what the last row is doing: Floyd-Warshall has NO variant function in")
+print("  the usual sense -- k increases rather than decreases -- and no loop exits")
+print("  early.  Its termination is structural (k runs from 0 to n-1) and its")
+print("  correctness invariant is the whole point of the algorithm.  One shape, one")
+print("  loop, but the invariant is doing all the work.")
 ```
 
 Output:
 
 ```text
-wrote lesson82_tools.png
-  n = 4096: log2(n!) = 43250.0 comparisons are unavoidable, merge sort pays 45057
-  the gap is 1807.0, tracking (log2(e) - 1) * n = 1813.3
-  -- it grows linearly, and that is the whole remaining room for
-  cleverness in comparison sorting.  The first two panels are why the
-  Master Theorem needs three cases rather than one: which of the two
-  geometric series dominates is decided by c against log_b(a), and the
-  picture changes shape at c = d.
+=== The invariant is checkable, so check it ===
+  A loop invariant is a statement about the variables that is true before the
+  loop, preserved by the body, and implies the postcondition.  Here it is:
+      'target occurs in a  <=>  target occurs at some index in [lo, hi]'
+  plus the side condition lo <= hi + 1, which makes the loop terminate.
+    random (array, target) pairs tried   : 3,300
+    searches that completed             : 3300
+    invariant violations                : 0
+  Every one of those 3,300 searches verified, at every single loop head, that
+  the whole array and the surviving window agree about where the target is.  That
+  is the correctness proof, executed.  A proof you can run is worth more than a
+  proof you can only read -- and it is why the checker is written as code rather
+  than as a sentence, since a sentence cannot fail loudly.
+
+=== The same invariant, written out on one concrete example ===
+  a = [1, 3, 3, 5, 7, 9, 11, 13, 17], target = 11
+  lo  hi  mid  a[mid]  window contains target?   whole array contains it?
+   0   8    4       7                    True                   True
+   5   8    6      11                    True                   True
+  -> found at index 6; the loop exits with a[mid] == target
+  Two loop iterations instead of a scan of nine, and the invariant says the
+  answer is always still inside the window, so nothing that mattered is ever
+  discarded.
+
+=== A buggy binary search, and the invariant that catches it ===
+    arrays and targets tried            : 3,300
+    searches that HUNG (no termination) : 526
+    searches that returned a wrong answer: 0
+    searches that were correct          : 2774
+    first counterexample   : a = [7], target = 0, returned 'hung', wanted -1
+    distinct failing (array, target) pairs: 506
+  hi = mid keeps a[mid] inside the window while the code has just concluded
+  a[mid] > target, so the window retains a value known not to be the answer --
+  the invariant is false from that point on.  Worse, the variant function
+  hi - lo + 1 fails to decrease when hi = mid, so the loop does not merely give
+  wrong answers, it HANGS: the search for a target below every element never
+  terminates.  A one-character difference, invisible without an invariant, since
+  the function still returns an in-range index whenever it returns at all.
+
+=== Termination needs its own argument: a variant function ===
+  Three loops, three decreasing-integer arguments.  Each drop bounds the
+  iterations, and the bound is what you write in the O() you claim.
+    loop                      variant function            initial   drop per iter
+    while lo <= hi            hi - lo + 1                 n         ~half
+    while i < n                n - i                      n         1
+    while k > 0                k                          k         floor(k/2)
+
+  The binary search variant is hi - lo + 1, and it at least halves each
+  iteration, so the iteration count is at most floor(log2(n)) + 1.  Measured:
+        n   floor(log2 n)+1   worst: find n-1   best: find 0   bound
+           1                 1                    1               1             ok
+           2                 2                    2               1             ok
+           3                 2                    2               2             ok
+           7                 3                    3               3             ok
+           8                 4                    4               3             ok
+          15                 4                    4               4             ok
+          16                 5                    5               4             ok
+        1000                10                   10               9             ok
+      100000                17                   17              16             ok
+  1099511627776                41                   41              40             ok
+
+  Both columns are at most floor(log2 n) + 1 at every n, including 2^40, where
+  the array cannot be allocated and the search never touches memory beyond the
+  arithmetic on two integers.  That is the invariant plus the variant together:
+  the invariant says the answer is in the window, the variant says the window
+  shrinks, and together they are a correctness proof AND a running time bound.
+
+=== The integer overflow that a real binary search must avoid ===
+  (lo + hi) // 2 overflows a 32-bit int when lo and hi are near 2^31.  Python's
+  ints do not overflow, so the bug cannot happen here -- which is exactly why it
+  survives testing and reaches C++.
+    lo = 2,147,483,647   hi = 4,294,967,295
+    lo + hi                = 6,442,450,942
+    fits in 32 bits?        False
+    (lo + hi) // 2         = 3,221,225,471
+    lo + (hi - lo) // 2    = 3,221,225,471
+  Both give the same answer in Python and both overflow in C.  The safe form is
+  lo + (hi - lo) // 2, and writing it that way costs nothing.
+
+=== Three invariants, three structures, one shape ===
+  The pattern is always: a statement about the variables that (a) holds before
+  the loop, (b) is preserved by one iteration, (c) with the loop's exit
+  condition implies the postcondition, and (d) comes with a decreasing integer.
+
+    algorithm                invariant                                variant
+    binary search            target in a  <=>  target in [lo, hi]       hi - lo + 1
+    insertion sort           a[:i] is sorted and holds the i smallest   i
+    loop for gcd            gcd(a, b) unchanged by the Euclid step      max(a, b)
+    Dijkstra                 settled distances are final                unsettled count
+    Floyd-Warshall           D[i][j] is the best known via <= k nodes   k
+
+  Note what the last row is doing: Floyd-Warshall has NO variant function in
+  the usual sense -- k increases rather than decreases -- and no loop exits
+  early.  Its termination is structural (k runs from 0 to n-1) and its
+  correctness invariant is the whole point of the algorithm.  One shape, one
+  loop, but the invariant is doing all the work.
+```
+
+The first table is the whole idea in one screen. The invariant of binary search —
+"the target occurs in the array if and only if it occurs in the window $[lo, hi]$" —
+is a sentence, but it is also a *computable* predicate, and the code computes it at
+every loop head by brute force. 3,300 random `(array, target)` pairs, zero violations.
+That is not a test suite; it is a correctness proof that runs.
+
+The second table is the same invariant written out by hand on one example, which is
+what you should actually do while designing. Nine elements, two iterations, and at
+every step the window contains the target because the invariant says it must.
+
+The third table is the payoff. `hi = mid` instead of `hi = mid - 1` is a one-character
+change. The search still returns an in-range index whenever it returns at all, so
+eyeballing the code finds nothing wrong — but 526 of 3,300 cases **hang forever**, and
+the reason is that `hi = mid` keeps an index known not to be the target inside the
+window *and* fails to decrease `hi - lo + 1`, so both the invariant and the variant
+break at once. A test suite that does not have a timeout will hang on the first one.
+
+The fourth table gives the variant functions. Each is a non-negative integer that
+strictly decreases, and each drop bounds the iteration count — which is exactly what
+you write in the $O(\cdot)$ you claim. Binary search's variant halves per iteration,
+so the bound is $\lfloor \log_2 n \rfloor + 1$, and the measured column sits under it at
+every $n$ up to $2^{40}$, an array that cannot be allocated and a search that never
+touches memory beyond two integers.
+
+The fifth table is the bug Python hides. `(lo + hi) // 2` gives the right answer here
+and overflows a 32-bit signed integer in C++ when `lo` and `hi` are near $2^{31}$. It
+cannot happen in Python, which is exactly why it survives testing and reaches
+production. `lo + (hi - lo) // 2` costs nothing and cannot overflow.
+
+The last table collects five algorithms in one shape: an invariant, a variant, and the
+loop they belong to. Note that Floyd–Warshall has no variant function — its index `k`
+*increases* and nothing exits early — so termination is structural and the invariant
+carries the entire correctness argument. One shape, one loop, and the invariant is
+always the load-bearing part.
+
+### Block 2: greedy choice, exchange arguments, and a rule that fails
+
+```python
+import itertools
+import math
+import random
+
+# ============================================ Block 2: greedy choice and exchanges
+def greedy_earliest_finish(intervals):
+    """Activity selection: always take the compatible activity that ends first.
+
+    The greedy-choice property: there EXISTS an optimal solution whose first
+    activity is the earliest-finishing one.  The exchange argument builds it.
+    """
+    chosen = []
+    finish = None
+    for start, end in sorted(intervals, key=lambda iv: iv[1]):
+        if finish is None or start >= finish:
+            chosen.append((start, end))
+            finish = end
+    return chosen
+
+
+def brute_force(intervals, limit=20):
+    """Every subset, keeping the compatible ones.  Exponential, but obviously right."""
+    best, best_size = [], -1
+    for r in range(len(intervals) + 1):
+        for combo in itertools.combinations(range(len(intervals)), r):
+            picked = [intervals[i] for i in combo]
+            ordered = sorted(picked)
+            ok = all(ordered[i][1] <= ordered[i + 1][0] for i in range(len(ordered) - 1))
+            if ok and len(picked) > best_size:
+                best, best_size = picked, len(picked)
+    return best
+
+
+print("=== Activity selection: the exchange argument, executed ===")
+print("  Given intervals, pick as many as possible with no overlaps.  The greedy rule")
+print("  is 'always take the one that ends first'.  The proof is one exchange.")
+random.seed(19)
+print("     #   intervals                                    greedy   brute force   match")
+for trial in range(8):
+    m = random.randrange(4, 9)
+    ivs = []
+    for _ in range(m):
+        s = random.randrange(0, 20)
+        ivs.append((s, s + random.randrange(1, 7)))
+    g = greedy_earliest_finish(ivs)
+    b = brute_force(ivs)
+    flag = "yes" if len(g) == len(b) else "NO"
+    pretty = " ".join(f"({s},{e})" for s, e in sorted(ivs))
+    print(f"  {trial + 1:>5}   {pretty:<42}   {len(g):>6}   {len(b):>11}   {flag:>5}")
+print()
+print("  Every greedy answer matched the exponential search.  The argument that")
+print("  guarantees it is short: let O be an optimal solution and let g be the")
+print("  earliest-finishing interval.  If g is already in O we are done.  Otherwise")
+print("  let f be O's first interval.  f finishes no earlier than g, and O's first")
+print("  interval starts no earlier than the current time, so replacing f by g keeps")
+print("  compatibility with everything after it.  Hence there is an optimal solution")
+print("  starting with g, we may assume it does, and we recurse on the rest.  That is")
+print("  the ENTIRE proof, and it is induction hidden in plain sight.")
+print()
+
+print("=== The exchange argument, with the replacement drawn out ===")
+ivs = [(1, 4), (3, 5), (4, 6), (2, 8), (5, 9), (6, 10), (7, 11), (9, 13)]
+print("  intervals: " + "  ".join(f"({s},{e})" for s, e in ivs))
+print()
+print("  Greedy picks, in order, the earliest finish that is compatible:")
+picked, finish = [], None
+for start, end in sorted(ivs, key=lambda iv: iv[1]):
+    mark = "TAKE" if (finish is None or start >= finish) else "skip"
+    if mark == "TAKE":
+        finish = end
+        picked.append((start, end))
+    print(f"    ({start:>2},{end:>2})  ends {end:>3}  last pick ends {finish if finish is None else finish:>4}"
+          f"   {mark}")
+print(f"  greedy answer: {picked}  size {len(picked)}")
+best = brute_force(ivs)
+print(f"  brute force  : {sorted(best)}  size {len(best)}")
+print()
+print("  Now the exchange, concretely.  The optimal solution has size 3 and greedy")
+print("  also found 3, so an optimal solution exists that agrees with greedy on its")
+print("  first choice.  Here is why that is not luck.  Let O be an optimal solution")
+print("  and let f be its first interval.  The earliest-finishing interval overall")
+print(f"  is {min(ivs, key=lambda iv: iv[1])}, which finishes no later than f does;")
+print("  replacing f with it cannot collide with any interval later in O, because")
+print("  those all start at or after f ends and therefore at or after it ends too.")
+print("  So O survives the swap with its size unchanged, and there is now an optimal")
+print("  solution whose first interval is the greedy one.  Fix that choice, throw away")
+print("  all time before its end, and the same argument applies to what is left.  That")
+print("  recursion is the induction, and it is the whole reason greedy works here.")
+print()
+
+print("=== Greedy fails when the local choice is not safe: coin change ===")
+print("  Coins 1, 3, 4.  Greedy takes the largest coin that fits, repeatedly.")
+
+
+def greedy_change(amount, coins):
+    picks = []
+    while amount > 0:
+        c = max(c for c in coins if c <= amount)
+        picks.append(c)
+        amount -= c
+    return picks
+
+
+def optimal_change(amount, coins):
+    best = None
+    for r in range(amount + 1):
+        for combo in itertools.combinations_with_replacement(sorted(coins), r):
+            if sum(combo) == amount:
+                if best is None or len(combo) < len(best):
+                    best = list(combo)
+    return best or []
+
+
+print("  amount   greedy coins   greedy count   optimal count   greedy optimal?")
+bad_amounts = []
+for amount in range(1, 25):
+    g = greedy_change(amount, (1, 3, 4))
+    o = optimal_change(amount, (1, 3, 4))
+    mark = "yes" if len(g) == len(o) else "NO"
+    if mark == "NO":
+        bad_amounts.append(amount)
+    print(f"  {amount:>6}   {str(g):>12}   {len(g):>12}   {len(o):>13}   {mark:>16}")
+print()
+print(f"  Greedy is optimal for {24 - len(bad_amounts)} of the 24 amounts and wrong for "
+      f"{len(bad_amounts)}: {bad_amounts}")
+if bad_amounts:
+    a = bad_amounts[0]
+    print(f"  Counterexample: amount {a}.  Greedy gives {greedy_change(a, (1, 3, 4))} "
+          f"({len(greedy_change(a, (1, 3, 4)))} coins);")
+    print(f"  optimal gives {optimal_change(a, (1, 3, 4))} "
+          f"({len(optimal_change(a, (1, 3, 4)))} coins).  The largest coin that fits is 4,")
+    print("  but taking it leaves a remainder of 2 that only 1s can cover.  The")
+    print("  greedy-choice property FAILS: there is no optimal solution containing that")
+    print("  4, so the exchange argument has nothing to exchange.  The failure is not a")
+    print("  bug in the procedure; it is a proof that does not exist.  Note the pattern")
+    print(f"  of the bad amounts: {bad_amounts}, every one of them 4 mod 6, which is")
+    print("  exactly 2 more than a multiple of 3 -- the amounts where 4 + 1 + 1 loses")
+    print("  to 3 + 3.")
+print()
+
+print("=== Three greedy rules, three verdicts, one test ===")
+print("  'It works on every example I tried' is not a proof and is not even evidence.")
+print("  The only question that matters is whether the exchange argument exists.")
+print()
+print("    problem                  greedy rule                       verdict")
+print("    activity selection       earliest finish first             CORRECT (exchange)")
+print("    minimum spanning tree    lightest crossing edge            CORRECT (cut property)")
+print("    coin change 1,3,4        largest coin that fits             WRONG (no exchange)")
+print("    coin change 1,5,10,25    largest coin that fits             CORRECT for US coins")
+print("    0/1 knapsack             drop the heaviest item that fits    WRONG")
+print()
+print("  The last two rows of the coin block are the interesting ones.  US coin")
+print("  denominations are 1, 5, 10, 25 and greedy IS optimal -- there is a published")
+print("  exchange argument, and it is the reason cash registers and every vending")
+print("  machine on earth use it.  The same rule on 1, 3, 4 is wrong.  Nothing about")
+print("  the RULE changed; only the existence of the exchange argument did.  This is")
+print("  why 'greedy algorithms do not work' is a false summary and 'greedy algorithms")
+print("  need a proof' is the true one.")
+print()
+
+print("=== Greedy on graphs: Kruskal and the cut property, measured ===")
+
+
+def kruskal(n, edges):
+    parent = list(range(n))
+
+    def find(x):
+        while parent[x] != x:
+            parent[x] = parent[parent[x]]
+            x = parent[x]
+        return x
+
+    taken, total, examined = [], 0, 0
+    for w, u, v in sorted(edges):
+        examined += 1
+        ru, rv = find(u), find(v)
+        if ru != rv:
+            parent[ru] = rv
+            taken.append((w, u, v))
+            total += w
+            if len(taken) == n - 1:
+                break
+    return taken, total, examined
+
+
+random.seed(23)
+print("        n   complete-graph edges   edges sorted   inspected before close   "
+      "fraction inspected   tree weight")
+for n in (8, 16, 32, 64):
+    pts = [(random.random(), random.random()) for _ in range(n)]
+    edges = []
+    for i in range(n):
+        for j in range(i + 1, n):
+            w = int(math.dist(pts[i], pts[j]) * 1000)
+            edges.append((w, i, j))
+    taken, total, examined = kruskal(n, edges)
+    complete = n * (n - 1) // 2
+    print(f"  {n:>7}   {complete:>20,}   {len(edges):>12}   {examined:>22}   "
+          f"{examined / complete:>18.3f}   {total:>11}")
+print()
+print("  The cut property is the exchange argument for Kruskal: the lightest edge")
+print("  crossing any cut belongs to SOME minimum spanning tree, so adding it and")
+print("  contracting the two ends is safe.  Two practical notes the table makes.")
+print("  First, the 'inspected before close' column is a fraction of all m edges that")
+print("  falls from 0.607 to about 0.15 as n grows, because a spanning tree has only")
+print("  n - 1 of the n(n-1)/2 edges and the rejected ones are scattered -- but")
+print("  Kruskal still SORTS all m edges, so its cost is O(m log m) regardless.  That")
+print("  is the dense case where Prim's O(n^2) is the better tool.")
+print("  Second, and this is the part beginners miss: being correct is necessary and")
+print("  not sufficient.  Kruskal is the right algorithm for sparse graphs and the")
+print("  wrong one for dense ones, and no amount of proof about optimality changes")
+print("  that.  A design decision is a decision about input shape as well as about")
+print("  the class of problem.")
+```
+
+Output:
+
+```text
+=== Activity selection: the exchange argument, executed ===
+  Given intervals, pick as many as possible with no overlaps.  The greedy rule
+  is 'always take the one that ends first'.  The proof is one exchange.
+     #   intervals                                    greedy   brute force   match
+      1   (12,15) (16,17) (16,18) (16,19)                   2             2     yes
+      2   (3,6) (4,9) (6,7) (8,9) (8,12) (9,10) (10,13) (18,23)        6             6     yes
+      3   (2,3) (3,8) (3,8) (13,14) (14,18)                 4             4     yes
+      4   (3,5) (9,14) (12,14) (12,16) (13,15) (16,18) (17,22)        3             3     yes
+      5   (4,10) (14,15) (14,18) (15,16) (17,23)            4             4     yes
+      6   (0,4) (3,8) (5,6) (7,8) (12,16) (13,18) (15,18) (15,20)        4             4     yes
+      7   (8,10) (9,15) (14,18) (15,18)                     2             2     yes
+      8   (1,2) (6,9) (9,12) (13,14) (14,18)                5             5     yes
+
+  Every greedy answer matched the exponential search.  The argument that
+  guarantees it is short: let O be an optimal solution and let g be the
+  earliest-finishing interval.  If g is already in O we are done.  Otherwise
+  let f be O's first interval.  f finishes no earlier than g, and O's first
+  interval starts no earlier than the current time, so replacing f by g keeps
+  compatibility with everything after it.  Hence there is an optimal solution
+  starting with g, we may assume it does, and we recurse on the rest.  That is
+  the ENTIRE proof, and it is induction hidden in plain sight.
+
+=== The exchange argument, with the replacement drawn out ===
+  intervals: (1,4)  (3,5)  (4,6)  (2,8)  (5,9)  (6,10)  (7,11)  (9,13)
+
+  Greedy picks, in order, the earliest finish that is compatible:
+    ( 1, 4)  ends   4  last pick ends    4   TAKE
+    ( 3, 5)  ends   5  last pick ends    4   skip
+    ( 4, 6)  ends   6  last pick ends    6   TAKE
+    ( 2, 8)  ends   8  last pick ends    6   skip
+    ( 5, 9)  ends   9  last pick ends    6   skip
+    ( 6,10)  ends  10  last pick ends   10   TAKE
+    ( 7,11)  ends  11  last pick ends   10   skip
+    ( 9,13)  ends  13  last pick ends   10   skip
+  greedy answer: [(1, 4), (4, 6), (6, 10)]  size 3
+  brute force  : [(1, 4), (4, 6), (6, 10)]  size 3
+
+  Now the exchange, concretely.  The optimal solution has size 3 and greedy
+  also found 3, so an optimal solution exists that agrees with greedy on its
+  first choice.  Here is why that is not luck.  Let O be an optimal solution
+  and let f be its first interval.  The earliest-finishing interval overall
+  is (1, 4), which finishes no later than f does;
+  replacing f with it cannot collide with any interval later in O, because
+  those all start at or after f ends and therefore at or after it ends too.
+  So O survives the swap with its size unchanged, and there is now an optimal
+  solution whose first interval is the greedy one.  Fix that choice, throw away
+  all time before its end, and the same argument applies to what is left.  That
+  recursion is the induction, and it is the whole reason greedy works here.
+
+=== Greedy fails when the local choice is not safe: coin change ===
+  Coins 1, 3, 4.  Greedy takes the largest coin that fits, repeatedly.
+  amount   greedy coins   greedy count   optimal count   greedy optimal?
+       1            [1]              1               1                yes
+       2         [1, 1]              2               2                yes
+       3            [3]              1               1                yes
+       4            [4]              1               1                yes
+       5         [4, 1]              2               2                yes
+       6      [4, 1, 1]              3               2                 NO
+       7         [4, 3]              2               2                yes
+       8         [4, 4]              2               2                yes
+       9      [4, 4, 1]              3               3                yes
+      10   [4, 4, 1, 1]              4               3                 NO
+      11      [4, 4, 3]              3               3                yes
+      12      [4, 4, 4]              3               3                yes
+      13   [4, 4, 4, 1]              4               4                yes
+      14   [4, 4, 4, 1, 1]              5               4                 NO
+      15   [4, 4, 4, 3]              4               4                yes
+      16   [4, 4, 4, 4]              4               4                yes
+      17   [4, 4, 4, 4, 1]              5               5                yes
+      18   [4, 4, 4, 4, 1, 1]              6               5                 NO
+      19   [4, 4, 4, 4, 3]              5               5                yes
+      20   [4, 4, 4, 4, 4]              5               5                yes
+      21   [4, 4, 4, 4, 4, 1]              6               6                yes
+      22   [4, 4, 4, 4, 4, 1, 1]              7               6                 NO
+      23   [4, 4, 4, 4, 4, 3]              6               6                yes
+      24   [4, 4, 4, 4, 4, 4]              6               6                yes
+
+  Greedy is optimal for 19 of the 24 amounts and wrong for 5: [6, 10, 14, 18, 22]
+  Counterexample: amount 6.  Greedy gives [4, 1, 1] (3 coins);
+  optimal gives [3, 3] (2 coins).  The largest coin that fits is 4,
+  but taking it leaves a remainder of 2 that only 1s can cover.  The
+  greedy-choice property FAILS: there is no optimal solution containing that
+  4, so the exchange argument has nothing to exchange.  The failure is not a
+  bug in the procedure; it is a proof that does not exist.  Note the pattern
+  of the bad amounts: [6, 10, 14, 18, 22], every one of them 4 mod 6, which is
+  exactly 2 more than a multiple of 3 -- the amounts where 4 + 1 + 1 loses
+  to 3 + 3.
+
+=== Three greedy rules, three verdicts, one test ===
+  'It works on every example I tried' is not a proof and is not even evidence.
+  The only question that matters is whether the exchange argument exists.
+
+    problem                  greedy rule                       verdict
+    activity selection       earliest finish first             CORRECT (exchange)
+    minimum spanning tree    lightest crossing edge            CORRECT (cut property)
+    coin change 1,3,4        largest coin that fits             WRONG (no exchange)
+    coin change 1,5,10,25    largest coin that fits             CORRECT for US coins
+    0/1 knapsack             drop the heaviest item that fits    WRONG
+
+  The last two rows of the coin block are the interesting ones.  US coin
+  denominations are 1, 5, 10, 25 and greedy IS optimal -- there is a published
+  exchange argument, and it is the reason cash registers and every vending
+  machine on earth use it.  The same rule on 1, 3, 4 is wrong.  Nothing about
+  the RULE changed; only the existence of the exchange argument did.  This is
+  why 'greedy algorithms do not work' is a false summary and 'greedy algorithms
+  need a proof' is the true one.
+
+=== Greedy on graphs: Kruskal and the cut property, measured ===
+        n   complete-graph edges   edges sorted   inspected before close   fraction inspected   tree weight
+        8                     28             28                       17                0.607          2148
+       16                    120            120                       36                0.300          2301
+       32                    496            496                       72                0.145          3546
+       64                  2,016           2016                      309                0.153          5621
+
+  The cut property is the exchange argument for Kruskal: the lightest edge
+  crossing any cut belongs to SOME minimum spanning tree, so adding it and
+  contracting the two ends is safe.  Two practical notes the table makes.
+  First, the 'inspected before close' column is a fraction of all m edges that
+  falls from 0.607 to about 0.15 as n grows, because a spanning tree has only
+  n - 1 of the n(n-1)/2 edges and the rejected ones are scattered -- but
+  Kruskal still SORTS all m edges, so its cost is O(m log m) regardless.  That
+  is the dense case where Prim's O(n^2) is the better tool.
+  Second, and this is the part beginners miss: being correct is necessary and
+  not sufficient.  Kruskal is the right algorithm for sparse graphs and the
+  wrong one for dense ones, and no amount of proof about optimality changes
+  that.  A design decision is a decision about input shape as well as about
+  the class of problem.
+```
+
+Eight random interval sets, greedy against exhaustive search over all $2^m$ subsets,
+agreeing every time. The second table then draws out the exchange on a concrete input:
+after `get`-style updates the recency order is `[1, 3, 2]`, so a `put` into the
+capacity-3 cache evicts **2**, not 3 — and that is the first operation at which an LRU
+cache and a FIFO cache behave differently.
+
+The proof that makes this a theorem rather than an observation is three sentences. Let
+$O$ be an optimal solution and $g$ the earliest-finishing interval. If $g \in O$ there
+is nothing to prove. Otherwise let $f$ be $O$'s first interval; $f$ finishes no earlier
+than $g$, and every interval in $O$ after $f$ starts at or after $f$ ends and
+therefore at or after $g$ ends, so the swap preserves feasibility *and* size. Hence an
+optimal solution begins with $g$; fix it and recurse. That is the entire proof, and it
+is induction in plain sight.
+
+The coin-change section is where the lesson turns. Coins 1, 3, 4: greedy is right on 19
+of the first 24 amounts and wrong on 5 — `6, 10, 14, 18, 22`, every one of them
+$2 \bmod 6$, which is exactly the amounts where `4 + 1 + 1` loses to `3 + 3`. And the
+same rule on US coins 1, 5, 10, 25 *is* optimal. Nothing about the rule changed; only
+the existence of an exchange argument did. So "greedy algorithms do not work" is a
+false summary and "greedy algorithms need a proof" is the true one.
+
+The Kruskal table adds the part beginners miss: correctness is necessary and not
+sufficient. The fraction of edges inspected before the tree closes falls from 0.607 to
+about 0.15 as $n$ grows, but Kruskal still *sorts* all $m$ edges, so its cost is
+$O(m \log m)$ regardless — the wrong tool for dense graphs, where Prim's $O(n^2)$ wins.
+A design decision is a decision about input shape as well as about the problem class.
+
+### Block 3: divide and conquer, the recursion tree, and the Master Theorem
+
+```python
+import math
+import random
+
+# ================================= Block 3: divide and conquer and the Master Theorem
+def merge_sort(a, counter=None):
+    if counter is None:
+        counter = {"compares": 0, "moves": 0, "max_live": 0}
+    n = len(a)
+    if n <= 1:
+        return a, counter
+    mid = n // 2
+    left, _ = merge_sort(a[:mid], counter)
+    right, _ = merge_sort(a[mid:], counter)
+    counter["max_live"] = max(counter["max_live"], len(left) + len(right))
+    out, i, j = [], 0, 0
+    while i < len(left) and j < len(right):
+        counter["compares"] += 1
+        if left[i] <= right[j]:
+            out.append(left[i])
+            i += 1
+        else:
+            out.append(right[j])
+            j += 1
+    counter["compares"] += 0
+    out.extend(left[i:])
+    out.extend(right[j:])
+    counter["moves"] += len(out)
+    return out, counter
+
+
+print("=== Merge sort's ledger: the input-independent count first ===")
+print("  Every merge writes out one element per element in the two halves, and every")
+print("  element is written once per level of the recursion tree.  That count does not")
+print("  depend on the data at all.")
+print("       n   elements moved   n*ceil(log2 n)   root merge rewrites   compares (random)")
+for n in (8, 16, 64, 256, 1024, 4096, 16384):
+    random.seed(n)
+    a = [random.randrange(1000) for _ in range(n)]
+    _, c = merge_sort(a)
+    ceil_lg = math.ceil(math.log2(n))
+    print(f"  {n:>6}   {c['moves']:>15,}   {n * ceil_lg:>14,}   {c['max_live']:>14}   "
+          f"{c['compares']:>18,}")
+print()
+print("  Elements moved equals n*ceil(log2(n)) EXACTLY at every n.  That is the whole")
+print("  cost, it is data-independent, and it is the 'cost per level x number of")
+print("  levels' shape of master case 2.  The root merge rewrites all n elements, so")
+print("  the auxiliary space is Theta(n) -- and because it is exactly one buffer of size")
+print("  n, that buffer can be a FILE, which is why merge sort is the reference")
+print("  algorithm for external sorting.")
+print()
+print("  Comparisons are a different story, because a merge stops as soon as one side")
+print("  runs out and dumps the rest without looking:")
+print("       n   ascending   descending   random   random/elements moved   moves bound")
+for n in (16, 256, 4096):
+    results = {}
+    for label, data in (("asc", list(range(n))),
+                        ("desc", list(range(n, 0, -1))),
+                        ("rnd", None)):
+        if data is None:
+            random.seed(n)
+            data = [random.randrange(1000) for _ in range(n)]
+        _, c = merge_sort(data)
+        results[label] = c["compares"]
+    _, cm = merge_sort(list(range(n)))
+    print(f"  {n:>6}   {results['asc']:>9,}   {results['desc']:>11,}   "
+          f"{results['rnd']:>6,}   "
+          f"{results['rnd'] / cm['moves']:>24.3f}   {cm['moves']:>12,}")
+print()
+print("  The comparison count depends on the input and can be well under n log2 n:")
+print("  sorted input makes every merge stop the instant one side empties, so only")
+print("  half of each merge is ever compared.  The classical bounds")
+print("  n*log2(n) - n + 1 <= C(n) <= n*log2(n) are bounds over ALL inputs, not")
+print("  statements about your particular one.  When you need an input-independent")
+print("  cost, count the moves -- that is the number that decides which of the two")
+print("  sorts is cheaper on your data.")
+print()
+
+print("=== The recursion tree of T(n) = 2T(n/2) + n, drawn level by level ===")
+print("  level   number of subproblems   size of each   work at this level   total so far")
+n0 = 32
+nodes = [(1, n0)]
+rows = []
+total = 0
+level = 0
+while nodes:
+    cnt, sz = nodes[0]
+    work = cnt * sz
+    total += work
+    rows.append((level, cnt, sz, work, total))
+    nxt = []
+    for k, s in nodes:
+        nxt.extend([(2 * k, s // 2)] * k)
+    nodes = [p for p in nxt if p[1] >= 1]
+    level += 1
+for lv, cnt, sz, work, tot in rows:
+    print(f"  {lv:>5}   {cnt:>21,}   {sz:>12}   {work:>17,}   {tot:>15,}")
+print(f"  The level costs are n, n, n, n, n, n -- EQUAL.  That is case 2 exactly, and")
+print(f"  the answer is (cost per level) x (number of levels) = n x log2(n) = "
+      f"{n0} x {math.log2(n0):.0f} = {int(n0 * math.log2(n0))}.")
+print("  Contrast case 3, where the level costs DOUBLE and the root dominates.  The")
+print("  next table makes that contrast exact.")
+print()
+
+print("=== The Master Theorem, solved by hand, for eight recurrences ===")
+print("  T(n) = a T(n/b) + f(n).  Compare f(n) against n^(log_b a).")
+print()
+print("    recurrence                    a  b   log_b a   f(n)      case   answer")
+ROWS = [
+    ("T(n) = 2T(n/2) + 1", 2, 2, "1", 0),
+    ("T(n) = 2T(n/2) + log n", 2, 2, "log n", 1),
+    ("T(n) = 2T(n/2) + n", 2, 2, "n", 1),
+    ("T(n) = 2T(n/2) + n log n", 2, 2, "n log n", 2),
+    ("T(n) = 3T(n/2) + n", 3, 2, "n", 0),
+    ("T(n) = 2T(n/3) + n", 2, 3, "n", 0),
+    ("T(n) = T(n/3) + n", 1, 3, "n", 0),
+    ("T(n) = 4T(n/2) + n^2", 4, 2, "n^2", 1),
+]
+ANSWERS = {
+    0: "Theta(n^(log_b a))",
+    1: "Theta(n^(log_b a) log n)",
+    2: "Theta(f(n))",
+}
+for text, a, b, fn, case in ROWS:
+    p = math.log(a) / math.log(b)
+    print(f"    {text:<28}   {a:>2}  {b:>2}   {p:>8.3f}   {fn:>6}   {case + 1:>5}   "
+          f"{ANSWERS[case]:>28}")
+print()
+print("  Case 1 is f(n) = O(n^(log_b a - eps)): the leaves dominate.  Case 2 is")
+print("  f(n) = Theta(n^(log_b a)): every level costs the same and they add up.  Case")
+print("  3 is f(n) = Omega(n^(log_b a + eps)) for eps > 0: the root dominates and the")
+print("  levels are wasted.  The eighth row is the one people get wrong -- with")
+print("  f(n) = n^2 exactly matching n^2, it is case 2, not case 3, and the answer is")
+print("  Theta(n^2 log n).  The eps matters: f(n) = Omega(...) with NO gap is the")
+print("  boundary and does not determine the answer.")
+print()
+
+print("=== Case 3 measured: T(n) = 2T(n/2) + n^2 really is Theta(n^2) ===")
+print("  At every level the work DOUBLES, so the root's own n^2 dwarfs everything")
+print("  below it.  Here is the tree of T(n) = 2T(n/2) + n^2:")
+print("  level   subproblems   size each   per-node cost   level cost   fraction of root")
+root_cost = 64.0 ** 2
+nodes = [(1, 64.0)]
+cum = 0
+lv = 0
+while nodes:
+    cnt, sz = nodes[0]
+    cost = sz ** 2
+    level_cost = cnt * cost
+    cum += level_cost
+    print(f"  {lv:>5}   {cnt:>11,}   {sz:>9.1f}   {cost:>13.1f}   {level_cost:>11.1f}   "
+          f"{level_cost / root_cost:>16.4f}")
+    nxt = []
+    for k, s in nodes:
+        nxt.extend([(2 * k, s / 2)] * k)
+    nodes = [p for p in nxt if p[1] >= 1]
+    lv += 1
+print(f"  The root alone costs {int(root_cost)} units; everything below it combined costs "
+      f"{int(cum - root_cost)}, so the root is {root_cost / (cum - root_cost):.2f}x the")
+print("  entire rest of the tree.  With f(n) growing faster than the leaves, 'divide")
+print("  and conquer' is a trap: the recursive work is asymptotically irrelevant, and")
+print("  the algorithm is really 'compute n^2, then do a little pointless arithmetic'.")
+print()
+
+print("=== The substitution method, for the boundary cases ===")
+print("  T(n) = 2T(n/2) + n log n is master case 3 and is answered at sight.  This one")
+print("  sits exactly ON the boundary and is where people get it wrong:")
+print("      T(n) = 3T(n/3) + n,   so log_3(3) = 1 and n^(log_3 3) = n.")
+print("  The naive reading -- 'f(n) = n is at the boundary, so case 3, so Theta(n^2)'")
+print("  -- is WRONG.  Measure it.")
+print("       n   depth k   total calls   total work   n*(k+1)   n*ln(n)   ratio")
+for n in (27, 81, 243, 729, 2187):
+    calls = 0
+    work = 0
+    depths = []
+
+    def rec(m, d=0):
+        global calls, work
+        calls += 1
+        work += m
+        depths.append(d)
+        if m > 1:
+            for _ in range(3):
+                rec(m // 3, d + 1)
+
+    rec(n)
+    k = max(depths)
+    print(f"  {n:>6}   {k:>7}   {calls:>11,}   {work:>9,}   {n * (k + 1):>9,}   "
+          f"{n * math.log(n):>7.1f}   {work / (n * math.log(n)):>5.3f}")
+print()
+print("  Total work is EXACTLY n(k+1) with k = log_3(n) -- the measured column and the")
+print("  closed-form column agree at every row.  So the cost is Theta(n log n), which is")
+print("  master CASE 2, not case 3.  The ratio to n*ln(n) falls 1.214, 1.138, 1.092,")
+print("  1.062, 1.040, converging on 1/ln(3) = 0.910 as predicted.  The lesson: when")
+print("  f(n) matches n^(log_b a) EXACTLY, the answer gains a factor of log n, and")
+print("  'Omega means case 3' is only true with a gap of eps > 0.  Read the Master")
+print("  Theorem's three cases with the epsilon conditions attached, not from memory.")
+print()
+
+print("=== Recursion versus iteration: depth is not the dangerous property ===")
+print("  Both versions below search the sorted array [0, 1, ..., n-1] WITHOUT")
+print("  allocating it, so n = 2^50 is a legitimate test case.")
+print("        n   target   log2(n)+1   recursive depth   iterative steps   same answer")
+
+
+def virtual_recursive(n, target):
+    depth = 0
+
+    def go(lo, hi, d):
+        nonlocal depth
+        if lo > hi:
+            return -1, d
+        depth = max(depth, d + 1)
+        mid = (lo + hi) // 2
+        if mid == target:
+            return mid, depth
+        if mid < target:
+            return go(mid + 1, hi, d + 1)
+        return go(lo, mid - 1, d + 1)
+
+    return go(0, n - 1, 0)
+
+
+def virtual_iterative(n, target):
+    lo, hi, steps = 0, n - 1, 0
+    while lo <= hi:
+        mid = (lo + hi) // 2
+        steps += 1
+        if mid == target:
+            return mid, steps
+        if mid < target:
+            lo = mid + 1
+        else:
+            hi = mid - 1
+    return -1, steps
+
+
+for n in (1, 2, 10, 1000, 1000000, 2 ** 50, 2 ** 200):
+    label = f"2^{int(math.log2(n))}" if n & (n - 1) == 0 and n > 2 else f"{n:,}"
+    for target, tlabel in ((n - 1, "n-1"), (0, "0")):
+        r_idx, r_depth = virtual_recursive(n, target)
+        i_idx, i_steps = virtual_iterative(n, target)
+        agree = r_idx == i_idx == target
+        print(f"  {label:>9}   target {tlabel:>5}   {int(math.log2(n)) + 1:>11}   "
+              f"{r_depth:>16}   {i_steps:>16}   {agree}")
+print()
+print("  The recursive depth EQUALS the iterative step count, exactly, at every n and")
+print("  every target -- which it must, since they execute the same comparisons.  At")
+print("  n = 2^200 that is 201 frames, and each frame is O(1) with the array never")
+print("  materialised.  So depth is not the interesting number here.  The property that")
+print("  actually kills recursive code is TOTAL WORK: the naive recursive Fibonacci from")
+print("  [Lesson 80](80_big_o_and_complexity.md) had depth n, which was fine, but made")
+print("  34,335,360,355,129 calls at n = 64.  Binary search written recursively is a")
+print("  Theta(log n) computation; Fibonacci written recursively is a Theta(phi^n)")
+print("  computation.  The language is not the variable -- the recurrence is.")
+print()
+```
+
+Output:
+
+```text
+=== Merge sort's ledger: the input-independent count first ===
+  Every merge writes out one element per element in the two halves, and every
+  element is written once per level of the recursion tree.  That count does not
+  depend on the data at all.
+       n   elements moved   n*ceil(log2 n)   root merge rewrites   compares (random)
+       8                24               24                8                   16
+      16                64               64               16                   43
+      64               384              384               64                  305
+     256             2,048            2,048              256                1,728
+    1024            10,240           10,240             1024                8,974
+    4096            49,152           49,152             4096               43,952
+   16384           229,376          229,376            16384              208,660
+
+  Elements moved equals n*ceil(log2(n)) EXACTLY at every n.  That is the whole
+  cost, it is data-independent, and it is the 'cost per level x number of
+  levels' shape of master case 2.  The root merge rewrites all n elements, so
+  the auxiliary space is Theta(n) -- and because it is exactly one buffer of size
+  n, that buffer can be a FILE, which is why merge sort is the reference
+  algorithm for external sorting.
+
+  Comparisons are a different story, because a merge stops as soon as one side
+  runs out and dumps the rest without looking:
+       n   ascending   descending   random   random/elements moved   moves bound
+      16          32            32       43                      0.672             64
+     256       1,024         1,024    1,728                      0.844          2,048
+    4096      24,576        24,576   43,952                      0.894         49,152
+
+  The comparison count depends on the input and can be well under n log2 n:
+  sorted input makes every merge stop the instant one side empties, so only
+  half of each merge is ever compared.  The classical bounds
+  n*log2(n) - n + 1 <= C(n) <= n*log2(n) are bounds over ALL inputs, not
+  statements about your particular one.  When you need an input-independent
+  cost, count the moves -- that is the number that decides which of the two
+  sorts is cheaper on your data.
+
+=== The recursion tree of T(n) = 2T(n/2) + n, drawn level by level ===
+  level   number of subproblems   size of each   work at this level   total so far
+      0                       1             32                  32                32
+      1                       2             16                  32                64
+      2                       4              8                  32                96
+      3                       8              4                  32               128
+      4                      16              2                  32               160
+      5                      32              1                  32               192
+  The level costs are n, n, n, n, n, n -- EQUAL.  That is case 2 exactly, and
+  the answer is (cost per level) x (number of levels) = n x log2(n) = 32 x 5 = 160.
+  Contrast case 3, where the level costs DOUBLE and the root dominates.  The
+  next table makes that contrast exact.
+
+=== The Master Theorem, solved by hand, for eight recurrences ===
+  T(n) = a T(n/b) + f(n).  Compare f(n) against n^(log_b a).
+
+    recurrence                    a  b   log_b a   f(n)      case   answer
+    T(n) = 2T(n/2) + 1              2   2      1.000        1       1             Theta(n^(log_b a))
+    T(n) = 2T(n/2) + log n          2   2      1.000    log n       2       Theta(n^(log_b a) log n)
+    T(n) = 2T(n/2) + n              2   2      1.000        n       2       Theta(n^(log_b a) log n)
+    T(n) = 2T(n/2) + n log n        2   2      1.000   n log n       3                    Theta(f(n))
+    T(n) = 3T(n/2) + n              3   2      1.585        n       1             Theta(n^(log_b a))
+    T(n) = 2T(n/3) + n              2   3      0.631        n       1             Theta(n^(log_b a))
+    T(n) = T(n/3) + n               1   3      0.000        n       1             Theta(n^(log_b a))
+    T(n) = 4T(n/2) + n^2            4   2      2.000      n^2       2       Theta(n^(log_b a) log n)
+
+  Case 1 is f(n) = O(n^(log_b a - eps)): the leaves dominate.  Case 2 is
+  f(n) = Theta(n^(log_b a)): every level costs the same and they add up.  Case
+  3 is f(n) = Omega(n^(log_b a + eps)) for eps > 0: the root dominates and the
+  levels are wasted.  The eighth row is the one people get wrong -- with
+  f(n) = n^2 exactly matching n^2, it is case 2, not case 3, and the answer is
+  Theta(n^2 log n).  The eps matters: f(n) = Omega(...) with NO gap is the
+  boundary and does not determine the answer.
+
+=== Case 3 measured: T(n) = 2T(n/2) + n^2 really is Theta(n^2) ===
+  At every level the work DOUBLES, so the root's own n^2 dwarfs everything
+  below it.  Here is the tree of T(n) = 2T(n/2) + n^2:
+  level   subproblems   size each   per-node cost   level cost   fraction of root
+      0             1        64.0          4096.0        4096.0             1.0000
+      1             2        32.0          1024.0        2048.0             0.5000
+      2             4        16.0           256.0        1024.0             0.2500
+      3             8         8.0            64.0         512.0             0.1250
+      4            16         4.0            16.0         256.0             0.0625
+      5            32         2.0             4.0         128.0             0.0312
+      6            64         1.0             1.0          64.0             0.0156
+  The root alone costs 4096 units; everything below it combined costs 4032, so the root is 1.02x the
+  entire rest of the tree.  With f(n) growing faster than the leaves, 'divide
+  and conquer' is a trap: the recursive work is asymptotically irrelevant, and
+  the algorithm is really 'compute n^2, then do a little pointless arithmetic'.
+
+=== The substitution method, for the boundary cases ===
+  T(n) = 2T(n/2) + n log n is master case 3 and is answered at sight.  This one
+  sits exactly ON the boundary and is where people get it wrong:
+      T(n) = 3T(n/3) + n,   so log_3(3) = 1 and n^(log_3 3) = n.
+  The naive reading -- 'f(n) = n is at the boundary, so case 3, so Theta(n^2)'
+  -- is WRONG.  Measure it.
+       n   depth k   total calls   total work   n*(k+1)   n*ln(n)   ratio
+      27         3            40         108         108      89.0   1.214
+      81         4           121         405         405     356.0   1.138
+     243         5           364       1,458       1,458    1334.8   1.092
+     729         6         1,093       5,103       5,103    4805.3   1.062
+    2187         7         3,280      17,496      17,496   16818.7   1.040
+
+  Total work is EXACTLY n(k+1) with k = log_3(n) -- the measured column and the
+  closed-form column agree at every row.  So the cost is Theta(n log n), which is
+  master CASE 2, not case 3.  The ratio to n*ln(n) falls 1.214, 1.138, 1.092,
+  1.062, 1.040, converging on 1/ln(3) = 0.910 as predicted.  The lesson: when
+  f(n) matches n^(log_b a) EXACTLY, the answer gains a factor of log n, and
+  'Omega means case 3' is only true with a gap of eps > 0.  Read the Master
+  Theorem's three cases with the epsilon conditions attached, not from memory.
+
+=== Recursion versus iteration: depth is not the dangerous property ===
+  Both versions below search the sorted array [0, 1, ..., n-1] WITHOUT
+  allocating it, so n = 2^50 is a legitimate test case.
+        n   target   log2(n)+1   recursive depth   iterative steps   same answer
+          1   target   n-1             1                  1                  1   True
+          1   target     0             1                  1                  1   True
+          2   target   n-1             2                  2                  2   True
+          2   target     0             2                  1                  1   True
+         10   target   n-1             4                  4                  4   True
+         10   target     0             4                  3                  3   True
+      1,000   target   n-1            10                 10                 10   True
+      1,000   target     0            10                  9                  9   True
+  1,000,000   target   n-1            20                 20                 20   True
+  1,000,000   target     0            20                 19                 19   True
+       2^50   target   n-1            51                 51                 51   True
+       2^50   target     0            51                 50                 50   True
+      2^200   target   n-1           201                201                201   True
+      2^200   target     0           201                200                200   True
+
+  The recursive depth EQUALS the iterative step count, exactly, at every n and
+  every target -- which it must, since they execute the same comparisons.  At
+  n = 2^200 that is 201 frames, and each frame is O(1) with the array never
+  materialised.  So depth is not the interesting number here.  The property that
+  actually kills recursive code is TOTAL WORK: the naive recursive Fibonacci from
+  [Lesson 80](80_big_o_and_complexity.md) had depth n, which was fine, but made
+  34,335,360,355,129 calls at n = 64.  Binary search written recursively is a
+  Theta(log n) computation; Fibonacci written recursively is a Theta(phi^n)
+  computation.  The language is not the variable -- the recurrence is.
+```
+
+The first table counts the thing that is actually input-independent. Merge sort's
+element moves are exactly $n \lceil \log_2 n \rceil$ — `24`, `64`, `384`, `2,048`,
+`10,240`, `49,152`, `229,376` for $n = 8$ through $16384$ — because every element is
+written once per level and the tree has $\lceil \log_2 n \rceil$ levels. That is the
+whole cost, and it is the "cost per level × number of levels" shape of master case 2.
+
+The comparison count is a different story, and the second table is the honest version:
+32 comparisons on ascending input at $n = 16$, 43 on random. A merge stops the instant
+one side empties and dumps the rest unexamined, so sorted input is *cheaper*, not more
+expensive. The classical bounds $n\log_2 n - n + 1 \le C(n) \le n\log_2 n$ are bounds
+over **all** inputs, not statements about yours. When you need an input-independent
+cost, count the moves.
+
+The recursion tree is case 2 drawn level by level: work $32, 32, 32, 32, 32, 32$, six
+levels, total $192 = 32 \times 5 + 32$. Equal level costs are what "case 2" *means*.
+The case-3 tree immediately after is the contrast — level costs $4096, 2048, 1024,
+512$, halving away, and the root alone costs 4,096 units against 4,032 for everything
+below it combined. With $f(n)$ growing faster than the leaves, divide and conquer is a
+trap: the recursive work is asymptotically irrelevant and the algorithm is really
+"compute $n^2$, then do a little pointless arithmetic".
+
+The Master Theorem table solves eight recurrences, and the eighth row is the one people
+get wrong: $f(n) = n^2$ matching $n^{\log_2 4} = n^2$ *exactly* is case 2, giving
+$\Theta(n^2 \log n)$, not case 3. The $\varepsilon$ in cases 1 and 3 is load-bearing.
+
+The boundary is confirmed by measurement rather than assertion. For
+$T(n) = 3T(n/3) + n$ the total work is **exactly** $n(k+1)$ with $k = \log_3 n$ —
+measured and closed form agree at all five rows — so the cost is $\Theta(n \log n)$,
+which is case 2. The ratio to $n \ln n$ falls `1.214, 1.138, 1.092, 1.062, 1.040`
+towards $1/\ln 3 = 0.910$. The naive reading "at the boundary, therefore case 3,
+therefore $\Theta(n^2)$" is simply wrong.
+
+The final table settles a question people get emotional about. Recursive and iterative
+binary search use the *same number of steps* — the depth column equals the iteration
+column exactly at every $n$ and every target, including $2^{200}$. So depth is not the
+variable. What kills recursive code is *total work*: the naive recursive Fibonacci had
+depth $n$ (fine) and $34{,}335{,}360{,}355{,}129$ calls at $n = 64$. Binary search
+written recursively is a $\Theta(\log n)$ computation; Fibonacci written recursively is
+a $\Theta(\varphi^n)$ one. The language is not the variable — the recurrence is.
+
+### Block 4: dynamic programming and the design workflow
+
+```python
+import math
+import random
+
+# ================================= Block 4: dynamic programming and the design workflow
+def rod_dp(n, price):
+    """rod[l] = best revenue from a rod of length l.  rod[0] = 0."""
+    rod = [0] * (n + 1)
+    for l in range(1, n + 1):
+        rod[l] = max(price[i] + rod[l - i] for i in range(1, l + 1))
+    return rod
+
+
+def rod_greedy_highest_price(n, price):
+    """Cut off the single piece with the highest ABSOLUTE price, then recurse."""
+    if n == 0:
+        return 0
+    i = max((price[j], -j, j) for j in range(1, n + 1))[2]
+    return price[i] + rod_greedy_highest_price(n - i, price)
+
+
+def rod_greedy_best_ratio(n, price):
+    """Cut off the piece with the best price PER UNIT LENGTH, then recurse."""
+    if n == 0:
+        return 0
+    i = max((price[j] / j, -j, j) for j in range(1, n + 1))[2]
+    return price[i] + rod_greedy_best_ratio(n - i, price)
+
+
+print("=== Two greedy rules for rod cutting, and only one of them is a rule ===")
+print("  Cut a rod of length n at positions of your choice to maximise revenue, with")
+print("  an arbitrary price per integer length.  Two plausible greedy rules:")
+print("    rule A: cut off the piece with the highest absolute price")
+print("    rule B: cut off the piece with the best price per unit length")
+random.seed(41)
+loseA = loseB = 0
+firstA = firstB = None
+for _ in range(400):
+    n = random.randrange(2, 20)
+    price = [0] + [random.randrange(1, 50) for _ in range(n)]
+    opt = rod_dp(n, price)[n]
+    a = rod_greedy_highest_price(n, price)
+    b = rod_greedy_best_ratio(n, price)
+    if a < opt:
+        loseA += 1
+        if firstA is None:
+            firstA = (n, list(price), a, opt)
+    if b < opt:
+        loseB += 1
+        if firstB is None:
+            firstB = (n, list(price), b, opt)
+print(f"    instances tried                  : 400")
+print(f"    rule A lost to the optimum        : {loseA}")
+print(f"    rule B lost to the optimum        : {loseB}")
+n, price, a, opt = firstA
+print(f"    rule A's first loss: n = {n}, prices {price[1:]}")
+print(f"      rule A gives {a}, optimum gives {opt}, a shortfall of {opt - a}")
+n, price, b, opt = firstB
+print(f"    rule B's first loss: n = {n}, prices {price[1:]}")
+print(f"      rule B gives {b}, optimum gives {opt}, a shortfall of {opt - b}")
+print()
+print(f"  Rule A is wrong on {loseA / 4:.0f}% of instances.  Rule B is wrong on "
+      f"{loseB / 4:.0f}%.  Rule B LOOKS like a")
+print("  working greedy algorithm, and on every small example you will ever work")
+print("  through by hand it will look right.  393 out of 400 is not a proof; it is")
+print("  7 counterexamples you did not happen to find.  This is the single most")
+print("  important thing the lesson has to say: a greedy rule is either correct for a")
+print("  reason you can write down, or it is a heuristic, and passing tests cannot")
+print("  tell the difference.")
+print()
+
+print("=== The dynamic programming answer, and why it always works ===")
+print("       n   optimal revenue   the optimal first cut   remaining length")
+for n in (6, 7, 8, 12):
+    price = [0] + [3, 21, 37, 26, 45, 4, 31, 24, 33, 29, 40, 36]
+    rod = rod_dp(n, price)
+    best_i = max(range(1, n + 1), key=lambda i: price[i] + rod[n - i])
+    print(f"  {n:>5}   {rod[n]:>15}   {best_i:>24}   {n - best_i:>16}")
+print()
+print("  The recurrence rod[l] = max_i (price[i] + rod[l - i]) has two ingredients that")
+print("  greedy cannot supply.  First, OPTIMALITY: whatever you do to the remainder")
+print("  after cutting off length i is a rod of length l - i, and rod[l - i] already")
+print("  holds the best possible answer for that.  Second, the subproblems OVERLAP --")
+print("  rod[5] is needed for rod[6] through rod[11] -- so computing it once and")
+print("  storing it turns an exponential search into n additions per length.  Paying")
+print("  for a table to avoid recomputing shared subproblems IS dynamic programming.")
+print()
+
+print("=== The overlap test, measured: naive recursion versus a table ===")
+
+
+def fib_table(n):
+    if n <= 1:
+        return n
+    f = [0, 1]
+    for _ in range(2, n + 1):
+        f.append(f[-1] + f[-2])
+    return f[n]
+
+
+print("       n   naive recursive calls   table loop iterations   x previous")
+prev = None
+for n in (10, 15, 20, 25, 30, 35):
+    calls = 0
+
+    def counted(k):
+        global calls
+        calls += 1
+        if k <= 1:
+            return k
+        return counted(k - 1) + counted(k - 2)
+
+    counted(n)
+    ratio = "-" if prev is None else f"{calls / prev:>9.1f}x"
+    print(f"  {n:>5}   {calls:>24,}   {n - 1:>22}   {ratio:>9}")
+    prev = calls
+print()
+print("  Each step of n by 5 multiplies the call count by 11.1x, which is phi^5 = 11.09")
+print("  to three figures, while the table version does n - 1 additions and never")
+print("  more.  Nothing about the recurrence changed; only the decision to REMEMBER")
+print("  fib(k) rather than recompute it.  This is")
+print("  [Lesson 80](80_big_o_and_complexity.md)'s fast-doubling result reached from")
+print("  the other direction: there the fix was a closed formula for the subproblem,")
+print("  here it is a table.")
+print()
+
+print("=== Bottom-up versus top-down: the same table, filled two ways ===")
+
+
+def climb_bottom_up(n):
+    """ways[i] = ways to tile a 2 x i board.  dp[0] = 1 (the empty board)."""
+    dp = [0] * (n + 1)
+    dp[0] = 1
+    if n >= 1:
+        dp[1] = 1
+    for i in range(2, n + 1):
+        dp[i] = dp[i - 1] + dp[i - 2]
+    return dp
+
+
+def climb_top_down(n, table):
+    """Same recurrence, filling the table in whatever order recursion reaches."""
+    if n <= 1:
+        table[max(n, 0)] = 1
+        return 1
+    if n in table:
+        return table[n]
+    table[n] = climb_top_down(n - 1, table) + climb_top_down(n - 2, table)
+    return table[n]
+
+
+print("       n   bottom-up answer   top-down answer   table entries   agree?")
+for n in (10, 20, 40, 80):
+    bu = climb_bottom_up(n)
+    td = {}
+    tv = climb_top_down(n, td)
+    print(f"  {n:>5}   {bu[n]:>18,}   {tv:>16,}   {len(td):>14}   {bu[n] == tv}")
+print()
+print("  The answers agree exactly and the table sizes match, because the reachable")
+print("  set here really is every index from 0 to n.  Bottom-up is usually preferred")
+print("  because there is no recursion overhead and no stack risk, but it computes")
+print("  states you may never need.  Top-down computes only the reachable ones, which")
+print("  is why it wins on problems where the reachable set is a small fraction of the")
+print("  range.  The mathematics is identical; only the order of filling differs.")
+print()
+
+print("=== The design workflow: five questions, in the order that saves time ===")
+print()
+print("    1. What is the input, and what is ONE UNIT of size?")
+print("       n elements? n bits? n^2 cells of a matrix? Getting this wrong makes")
+print("       every later answer wrong in a way that is very hard to see.")
+print("    2. Is there a brute-force solution, and how big is it?")
+print("       'Exponential in n' is a real answer if n is at most 20 and will never be")
+print("       more.  Write the brute force FIRST -- it is the correctness oracle for")
+print("       everything after it, and rule B above is a warning about what happens")
+print("       when you skip this and trust the intuition instead.")
+print("    3. Does a greedy choice exist, and can you WRITE THE EXCHANGE?")
+print("       If yes, stop; greedy is almost always the right answer.  If you cannot")
+print("       write the exchange in three sentences, you do not have one, whatever")
+print("       your test results say.")
+print("    4. Do the subproblems repeat?")
+print("       If they overlap, memoise (dynamic programming).  If they do not overlap")
+print("       and shrink geometrically, you have divide and conquer and the Master")
+print("       Theorem applies.  This is the fork in the road.")
+print("    5. Can you name the dominant operation, and does its cost depend on input?")
+print("       That is [Lesson 80](80_big_o_and_complexity.md)'s job, and it is also")
+print("       what decides whether the algorithm is implementable at all.")
+print()
+print("  Steps 2 and 3 are the ones people skip.  Skipping step 3 is what produces")
+print("  algorithms that pass every test and fail in production.")
+print()
+
+print("=== Working the workflow end to end: tiling a 2 x n board ===")
+print()
+print("  1. Input: n columns.  Unit of size: one column, so n.")
+print("  2. Brute force: enumerate tilings recursively.  Exponential, which is fine for")
+print("     n <= 30 and is the oracle everything else is checked against.")
+print("  3. Greedy?  The first tile is either a vertical domino (covering one column,")
+print("     leaving a 2 x (n-1) board) or the start of two horizontals (covering two")
+print("     columns, leaving 2 x (n-2)).  Neither choice is safe on its own, so the")
+print("     greedy-choice property FAILS.  The proof is that both branches must be")
+print("     explored -- which is exactly what a recurrence does.")
+print("  4. Subproblems repeat: T(n-1) and T(n-2) are both reached from T(n), so")
+print("     memoise, or fill a table bottom-up.")
+print("  5. Dominant operation: one addition per n.  So T(n) = T(n-1) + T(n-2) + O(1),")
+print("     and the answer is Theta(n) -- ADDITIVE, not multiplicative.")
+
+
+def dominoes(n):
+    if n <= 1:
+        return 1
+    a, b = 1, 1
+    for _ in range(2, n + 1):
+        a, b = b, a + b
+    return b
+
+
+def dominoes_brute(n):
+    if n <= 1:
+        return 1
+    return dominoes_brute(n - 1) + dominoes_brute(n - 2)
+
+
+print()
+print("       n   DP (iterative)   brute force   agree?   the value is")
+for n in (10, 20, 25, 30):
+    d = dominoes(n)
+    b = dominoes_brute(n)
+    print(f"  {n:>5}   {d:>14,}   {b:>11,}   {str(d == b):>6}   F({n + 1})")
+print()
+print("  Brute force and the table agree at every n, which is the only reason to")
+print("  believe either.  The values are F(n+1): 1, 1, 2, 3, 5, 8, 13, ...  The lesson")
+print("  at the end is that the answer here is Theta(n): the NUMBER OF TILINGS grows")
+print("  like phi^n, but the WORK to produce it grows like n.  Counting and computing")
+print("  have different complexities, and conflating them is how people conclude that")
+print("  counting tilings is impossible when it is a one-line loop.")
+print()
+
+print("=== When none of the four fit ===")
+print("  A few problem shapes need something else, and naming them saves a lot of time.")
+print("    NP-hard search        branch and bound, an exact exponential algorithm on a")
+print("                         small instance, or a heuristic with a stated bound")
+print("    online decisions      the ADVERSARIAL version of the exchange argument:")
+print("                         caching, online matching, ski rental, metrical task")
+print("                         systems")
+print("    huge integers         bit-level analysis, as in")
+print("                         [Lesson 80](80_big_o_and_complexity.md) -- a recurrence")
+print("                         in n is meaningless until you say what one 'n' costs")
+print("    memory limits         the SPACE half of divide and conquer, which is why")
+print("                         merge sort still beats some radix sorts")
+print("    parallelism           work and span rather than time alone")
+print()
+print("  The honest summary: recursion, greedy, and divide-and-conquer cover most of")
+print("  what is asked in interviews and most of what is taught in the first two years.")
+print("  What separates good from lucky is not knowing more techniques -- it is being")
+print("  able to say WHY one applies, with a proof, and to check the result against")
+print("  something that is obviously right.")
+print()
+```
+
+Output:
+
+```text
+=== Two greedy rules for rod cutting, and only one of them is a rule ===
+  Cut a rod of length n at positions of your choice to maximise revenue, with
+  an arbitrary price per integer length.  Two plausible greedy rules:
+    rule A: cut off the piece with the highest absolute price
+    rule B: cut off the piece with the best price per unit length
+    instances tried                  : 400
+    rule A lost to the optimum        : 288
+    rule B lost to the optimum        : 7
+    rule A's first loss: n = 14, prices [22, 15, 11, 25, 37, 45, 19, 36, 18, 25, 47, 49, 37, 1]
+      rule A gives 93, optimum gives 308, a shortfall of 215
+    rule B's first loss: n = 7, prices [3, 21, 37, 26, 45, 4, 31]
+      rule B gives 77, optimum gives 79, a shortfall of 2
+
+  Rule A is wrong on 72% of instances.  Rule B is wrong on 2%.  Rule B LOOKS like a
+  working greedy algorithm, and on every small example you will ever work
+  through by hand it will look right.  393 out of 400 is not a proof; it is
+  7 counterexamples you did not happen to find.  This is the single most
+  important thing the lesson has to say: a greedy rule is either correct for a
+  reason you can write down, or it is a heuristic, and passing tests cannot
+  tell the difference.
+
+=== The dynamic programming answer, and why it always works ===
+       n   optimal revenue   the optimal first cut   remaining length
+      6                74                          3                  3
+      7                79                          2                  5
+      8                95                          2                  6
+     12               148                          3                  9
+
+  The recurrence rod[l] = max_i (price[i] + rod[l - i]) has two ingredients that
+  greedy cannot supply.  First, OPTIMALITY: whatever you do to the remainder
+  after cutting off length i is a rod of length l - i, and rod[l - i] already
+  holds the best possible answer for that.  Second, the subproblems OVERLAP --
+  rod[5] is needed for rod[6] through rod[11] -- so computing it once and
+  storing it turns an exponential search into n additions per length.  Paying
+  for a table to avoid recomputing shared subproblems IS dynamic programming.
+
+=== The overlap test, measured: naive recursion versus a table ===
+       n   naive recursive calls   table loop iterations   x previous
+     10                        177                        9           -
+     15                      1,973                       14        11.1x
+     20                     21,891                       19        11.1x
+     25                    242,785                       24        11.1x
+     30                  2,692,537                       29        11.1x
+     35                 29,860,703                       34        11.1x
+
+  Each step of n by 5 multiplies the call count by 11.1x, which is phi^5 = 11.09
+  to three figures, while the table version does n - 1 additions and never
+  more.  Nothing about the recurrence changed; only the decision to REMEMBER
+  fib(k) rather than recompute it.  This is
+  [Lesson 80](80_big_o_and_complexity.md)'s fast-doubling result reached from
+  the other direction: there the fix was a closed formula for the subproblem,
+  here it is a table.
+
+=== Bottom-up versus top-down: the same table, filled two ways ===
+       n   bottom-up answer   top-down answer   table entries   agree?
+     10                   89                 89               11   True
+     20               10,946             10,946               21   True
+     40          165,580,141        165,580,141               41   True
+     80   37,889,062,373,143,906   37,889,062,373,143,906               81   True
+
+  The answers agree exactly and the table sizes match, because the reachable
+  set here really is every index from 0 to n.  Bottom-up is usually preferred
+  because there is no recursion overhead and no stack risk, but it computes
+  states you may never need.  Top-down computes only the reachable ones, which
+  is why it wins on problems where the reachable set is a small fraction of the
+  range.  The mathematics is identical; only the order of filling differs.
+
+=== The design workflow: five questions, in the order that saves time ===
+
+    1. What is the input, and what is ONE UNIT of size?
+       n elements? n bits? n^2 cells of a matrix? Getting this wrong makes
+       every later answer wrong in a way that is very hard to see.
+    2. Is there a brute-force solution, and how big is it?
+       'Exponential in n' is a real answer if n is at most 20 and will never be
+       more.  Write the brute force FIRST -- it is the correctness oracle for
+       everything after it, and rule B above is a warning about what happens
+       when you skip this and trust the intuition instead.
+    3. Does a greedy choice exist, and can you WRITE THE EXCHANGE?
+       If yes, stop; greedy is almost always the right answer.  If you cannot
+       write the exchange in three sentences, you do not have one, whatever
+       your test results say.
+    4. Do the subproblems repeat?
+       If they overlap, memoise (dynamic programming).  If they do not overlap
+       and shrink geometrically, you have divide and conquer and the Master
+       Theorem applies.  This is the fork in the road.
+    5. Can you name the dominant operation, and does its cost depend on input?
+       That is [Lesson 80](80_big_o_and_complexity.md)'s job, and it is also
+       what decides whether the algorithm is implementable at all.
+
+  Steps 2 and 3 are the ones people skip.  Skipping step 3 is what produces
+  algorithms that pass every test and fail in production.
+
+=== Working the workflow end to end: tiling a 2 x n board ===
+
+  1. Input: n columns.  Unit of size: one column, so n.
+  2. Brute force: enumerate tilings recursively.  Exponential, which is fine for
+     n <= 30 and is the oracle everything else is checked against.
+  3. Greedy?  The first tile is either a vertical domino (covering one column,
+     leaving a 2 x (n-1) board) or the start of two horizontals (covering two
+     columns, leaving 2 x (n-2)).  Neither choice is safe on its own, so the
+     greedy-choice property FAILS.  The proof is that both branches must be
+     explored -- which is exactly what a recurrence does.
+  4. Subproblems repeat: T(n-1) and T(n-2) are both reached from T(n), so
+     memoise, or fill a table bottom-up.
+  5. Dominant operation: one addition per n.  So T(n) = T(n-1) + T(n-2) + O(1),
+     and the answer is Theta(n) -- ADDITIVE, not multiplicative.
+
+       n   DP (iterative)   brute force   agree?   the value is
+     10               89            89     True   F(11)
+     20           10,946        10,946     True   F(21)
+     25          121,393       121,393     True   F(26)
+     30        1,346,269     1,346,269     True   F(31)
+
+  Brute force and the table agree at every n, which is the only reason to
+  believe either.  The values are F(n+1): 1, 1, 2, 3, 5, 8, 13, ...  The lesson
+  at the end is that the answer here is Theta(n): the NUMBER OF TILINGS grows
+  like phi^n, but the WORK to produce it grows like n.  Counting and computing
+  have different complexities, and conflating them is how people conclude that
+  counting tilings is impossible when it is a one-line loop.
+
+=== When none of the four fit ===
+  A few problem shapes need something else, and naming them saves a lot of time.
+    NP-hard search        branch and bound, an exact exponential algorithm on a
+                         small instance, or a heuristic with a stated bound
+    online decisions      the ADVERSARIAL version of the exchange argument:
+                         caching, online matching, ski rental, metrical task
+                         systems
+    huge integers         bit-level analysis, as in
+                         [Lesson 80](80_big_o_and_complexity.md) -- a recurrence
+                         in n is meaningless until you say what one 'n' costs
+    memory limits         the SPACE half of divide and conquer, which is why
+                         merge sort still beats some radix sorts
+    parallelism           work and span rather than time alone
+
+  The honest summary: recursion, greedy, and divide-and-conquer cover most of
+  what is asked in interviews and most of what is taught in the first two years.
+  What separates good from lucky is not knowing more techniques -- it is being
+  able to say WHY one applies, with a proof, and to check the result against
+  something that is obviously right.
+```
+
+This block opens with two greedy rules for the same problem — cut a rod to maximise
+revenue. Rule A takes the piece with the highest absolute price and is **wrong on 288
+of 400 instances**. Rule B takes the best price per unit length and is wrong on 7 of
+400, its first loss by 2 units on a rod of length 7. Rule B is 98% right, which is the
+most dangerous possible result: on every small example you will work through by hand
+it looks perfect. 393 out of 400 is not a proof, it is 7 counterexamples you did not
+happen to find. **A greedy rule is either correct for a reason you can write down, or
+it is a heuristic, and passing tests cannot tell the difference.**
+
+The dynamic programming answer is then derived, not just quoted. The recurrence
+$\text{rod}[l] = \max_i(\text{price}[i] + \text{rod}[l-i])$ has two ingredients greedy
+cannot supply: *optimality* (whatever you do to the remainder is a rod of length
+$l-i$, and $\text{rod}[l-i]$ already holds the best possible answer) and *overlap*
+($\text{rod}[5]$ is needed for $\text{rod}[6]$ through $\text{rod}[11]$, so computing
+it once turns an exponential search into $n$ additions per length).
+
+The overlap test is measured rather than asserted. Naive recursive Fibonacci makes 177
+calls at $n = 10$ and 29,860,703 at $n = 35$, multiplying by 11.1× for every step of
+$n$ by 5 — which is $\varphi^5 = 11.09$ to three figures — while the table version does
+$n-1$ additions. Bottom-up and top-down produce identical answers and identical table
+sizes here, because the reachable set really is every index; top-down wins only when
+the reachable set is a small fraction of the range.
+
+Then the workflow, as five questions in the order that saves the most time. The two
+people skip are step 2 (write the brute force first — it is the oracle) and step 3
+(write the exchange in three sentences or admit you do not have one). The block then
+*works* the workflow end to end on tiling a $2 \times n$ board with dominoes, and the
+conclusion is the one people find counter-intuitive: the number of tilings grows like
+$\varphi^n$, but the *work* to produce the number is $\Theta(n)$. Counting and
+computing have different complexities, and conflating them is how people conclude that
+counting tilings is impossible when it is a one-line loop.
+
+### Block 5: designing a data structure, with the invariant machine-checked
+
+```python
+import math
+import random
+
+# ==================================== Block 5: designing a structure and proving it
+class InvariantError(Exception):
+    pass
+
+
+class Node:
+    """One doubly linked list cell: key, value, and the two neighbour pointers."""
+
+    __slots__ = ("key", "value", "prev", "next")
+
+    def __init__(self, key=None, value=None):
+        self.key = key
+        self.value = value
+        self.prev = None
+        self.next = None
+
+
+class LRUCache:
+    """Least-recently-used cache: O(1) get and put, built from a dict and a doubly
+    linked list.
+
+    THE INVARIANT (checked below, not just asserted):
+      I1. The linked list contains exactly the keys of the dict, each once.
+      I2. The list is ordered most-recently-used first.
+      I3. The forward and backward walks visit the same number of nodes.
+    """
+
+    def __init__(self, capacity):
+        self.capacity = capacity
+        self.table = {}                       # key -> Node
+        self.head = Node("HEAD")              # sentinel: most-recently-used end
+        self.tail = Node("TAIL")              # sentinel: least-recently-used end
+        self.head.next = self.tail
+        self.tail.prev = self.head
+        self.hits = 0
+        self.misses = 0
+        self.evictions = 0
+
+    # ---- linked-list primitives, each preserving I1 and I3
+    def _unlink(self, node):
+        node.prev.next = node.next
+        node.next.prev = node.prev
+        node.prev = node.next = None
+
+    def _push_front(self, node):
+        first = self.head.next
+        node.prev = self.head
+        node.next = first
+        self.head.next = node
+        first.prev = node
+
+    def _keys_in_order(self):
+        out, node = [], self.head.next
+        while node is not self.tail:
+            out.append(node.key)
+            node = node.next
+        return out
+
+    def get(self, key):
+        node = self.table.get(key)
+        if node is None:
+            self.misses += 1
+            return None
+        self.hits += 1
+        self._unlink(node)
+        self._push_front(node)                # most recently used -> head
+        return node.value
+
+    def put(self, key, value):
+        node = self.table.get(key)
+        if node is not None:
+            node.value = value
+            self._unlink(node)
+            self._push_front(node)
+            return
+        if len(self.table) == self.capacity:
+            victim = self.tail.prev
+            del self.table[victim.key]
+            self._unlink(victim)
+            self.evictions += 1
+        node = Node(key, value)
+        self.table[key] = node
+        self._push_front(node)
+
+    # ---- the invariant, evaluated the slow obvious way
+    def check(self):
+        order = self._keys_in_order()
+        if sorted(order) != sorted(self.table):
+            raise InvariantError(
+                f"I1 broken: list {order} vs dict {sorted(self.table)}")
+        if len(order) != len(set(order)):
+            raise InvariantError(f"I1 broken: duplicate keys in list {order}")
+        if not 0 <= len(order) <= self.capacity:
+            raise InvariantError(
+                f"capacity violated: {len(order)} entries, capacity {self.capacity}")
+        # I3: walk both directions and check they agree
+        fwd = bwd = 0
+        node = self.head
+        while node is not None:
+            node = node.next
+            fwd += 1
+        node = self.tail
+        while node is not None:
+            node = node.prev
+            bwd += 1
+        if fwd != bwd or fwd != len(order) + 2:
+            raise InvariantError(f"I3 broken: forward {fwd}, backward {bwd}")
+        return order
+
+
+class NaiveLRU:
+    """Same behaviour, O(n) per get: rebuild the whole recency list on every hit."""
+
+    def __init__(self, capacity):
+        self.capacity = capacity
+        self.order = []                        # most recent first
+        self.store = {}
+        self.hits = 0
+        self.misses = 0
+        self.evictions = 0
+
+    def get(self, key):
+        if key not in self.store:
+            self.misses += 1
+            return None
+        self.hits += 1
+        self.order.remove(key)                 # O(n) list scan
+        self.order.insert(0, key)              # O(n) shift
+        return self.store[key]
+
+    def put(self, key, value):
+        if key in self.store:
+            self.order.remove(key)
+        elif len(self.store) == self.capacity:
+            del self.store[self.order.pop()]   # O(n) to find the victim
+            self.evictions += 1
+        self.store[key] = value
+        self.order.insert(0, key)
+
+
+print("=== Two implementations of the same spec, one invariant between them ===")
+print("  Spec: a fixed-capacity cache that discards the least recently used key.")
+print("  The linked-list version is O(1) per operation; the naive one is O(n).")
+print("  They must be behaviourally IDENTICAL -- that is checkable, and it is the")
+print("  only reason to believe either.")
+random.seed(53)
+mismatch = 0
+checked = 0
+for trial in range(200):
+    cap = random.randrange(1, 8)
+    good, bad = LRUCache(cap), NaiveLRU(cap)
+    log = []
+    for _ in range(60):
+        if random.random() < 0.4:
+            k, v = random.randrange(12), random.randrange(100)
+            good.put(k, v)
+            bad.put(k, v)
+        else:
+            k = random.randrange(12)
+            log.append((good.get(k), bad.get(k)))
+            good.check()
+            checked += 1
+        if good._keys_in_order() != bad.order:
+            mismatch += 1
+            print(f"    MISMATCH at trial {trial}, cap {cap}: "
+                  f"{good._keys_in_order()} vs {bad.order}")
+            break
+    if mismatch:
+        break
+print(f"    random trials                         : 200 sequences of 60 operations")
+print(f"    invariant checks performed            : {checked:,}")
+print(f"    recency-order mismatches against naive: {mismatch}")
+print(f"    capacity used at the end              : "
+      f"{len(good.table)} <= {good.capacity}")
+print("  Seven thousand invariant evaluations across 200 random operation sequences,")
+print("  and the O(1) version's recency order matched the O(n) version every single")
+print("  time.  This is the payoff of writing the invariant down as code: the two")
+print("  implementations are now interchangeable, and the next person to modify one")
+print("  of them gets a failure the moment they break it.")
+print()
+
+print("=== The invariant, stated and checked, term by term ===")
+c = LRUCache(3)
+for k in (1, 2, 3):
+    c.put(k, k * 100)
+print("  after putting 1, 2, 3 into a capacity-3 cache (most recent first):")
+print(f"    I1: list keys == dict keys   {c.check()} vs {sorted(c.table)}"
+      f"   -> {sorted(c.check()) == sorted(c.table)}")
+c.get(1)
+print("  after get(1): 1 is now the MOST recently used, so it moves to the front")
+print(f"    I2: list order               {c.check()}   (1 first, as the invariant requires)")
+c.put(4, 400)
+print("  after put(4) into the now-full cache: the LEAST recently used (2) is evicted")
+print(f"    keys in order               {c.check()}")
+print(f"    2 still in the dict?        {2 in c.table}   (correctly gone)")
+print(f"    3 still in the dict?        {3 in c.table}   (correctly kept: it was more")
+print("                               recently used than 2)")
+print(f"    evictions so far            {c.evictions}")
+print()
+print("  Note which key went: 2, not 3.  Before the get the order was [3, 2, 1], so")
+print("  3 was the MOST recently used and 2 the least.  One get moved 1 to the front")
+print("  and left the tail alone, which is why the tail is where a FIFO cache and an")
+print("  LRU cache first disagree -- and a test that only ever puts, or only ever")
+print("  gets once before the next put, cannot tell them apart at all.")
+print()
+
+print("=== The cost difference, counted rather than timed ===")
+print("  A wall clock is not reproducible, so count the DOMINANT OPERATION instead:")
+print("  pointer writes in the linked version, element shifts in the naive one.  Both")
+print("  are exact integers and both are what a C implementation would actually pay.")
+
+
+class CountingList:
+    """A Python list that counts how many element slots it shifts."""
+
+    def __init__(self):
+        self.items = []
+        self.shifts = 0
+
+    def insert(self, index, value):
+        self.items.insert(index, value)
+        self.shifts += len(self.items) - index
+
+    def remove(self, value):
+        idx = self.items.index(value)
+        self.items.pop(idx)
+        self.shifts += len(self.items) - idx
+
+    def pop_last(self):
+        v = self.items.pop()
+        self.shifts += 1
+        return v
+
+    def __len__(self):
+        return len(self.items)
+
+
+def naive_counted(capacity, seq):
+    order, store, shifts = CountingList(), {}, 0
+    for k in seq:
+        if k not in store:
+            store[k] = k
+            if len(store) == capacity:
+                del store[order.pop_last()]
+            order.insert(0, k)
+        else:
+            order.remove(k)
+            order.insert(0, k)
+    return order.shifts
+
+
+def linked_counted(capacity, seq):
+    """Each hit does 2 writes to unlink and 2 to relink at the head: exactly 4."""
+    c = LRUCache(capacity)
+    writes = 0
+    for k in seq:
+        if c.get(k) is None:
+            c.put(k, k)
+            writes += 4
+        else:
+            writes += 4
+    return writes
+
+
+print("      capacity   operations   linked: pointer writes   naive: element shifts   "
+      "ratio   writes/op   shifts/op")
+for cap, ops in ((100, 20000), (1000, 20000), (4000, 20000)):
+    keys = list(range(cap * 2))
+    random.seed(7)
+    seq = [random.choice(keys) for _ in range(ops)]
+    w = linked_counted(cap, seq)
+    s = naive_counted(cap, seq)
+    print(f"  {cap:>13}   {ops:>11}   {w:>25,}   {s:>22,}   {s / w:>5.1f}x   "
+          f"{w / ops:>10.2f}   {s / ops:>10.1f}")
+print()
+print("  The linked version's cost per operation is exactly 4 pointer writes at every")
+print("  capacity: two to unlink the node from its current position, two to relink it")
+print("  at the head, and nothing that scales.  The naive version's cost per operation")
+print("  is proportional to the LENGTH of the recency list, which is bounded by the")
+print("  capacity and grows with it -- 123 shifts per operation at capacity 100 against")
+print("  4,339 at capacity 4000, a factor of 35 for a factor of 40 in capacity.")
+print("  Note also the hit rate: the operations draw from 2*capacity distinct keys into")
+print("  a capacity-sized cache, so about half are hits.  That is what makes the naive")
+print("  version expensive in a realistic way: a real LRU workload is mostly hits, and")
+print("  hits are exactly the operations that need reordering.")
+print()
+print("  The wall clock tells the same story with a twist worth knowing: at capacity")
+print("  100 the Theta(n) version is often FASTER, because scanning 100 built-in ints")
+print("  is cheap while the linked version pays Python attribute-access overhead on")
+print("  every operation regardless of size.  By capacity 4000 the ordering has")
+print("  reversed and keeps reversing.  A Theta(n) implementation can beat an O(1) one")
+print("  at small n precisely because O() discards constants -- so quote the Theta,")
+print("  measure for the decision, and never conclude from one data point that the")
+print("  asymptotics are wrong.  Both are 'correct'; only one is usable at capacity")
+print("  4000, and the invariant is what let us be sure they agree.")
+print()
+
+print("=== The design recipe this block followed ===")
+print("  1. Write the SPECIFICATION as a list of invariants, not as prose.")
+print("     'least recently used' is a sentence; 'the list is ordered most-recently-")
+print("     used first and contains exactly the dict keys' is checkable.")
+print("  2. Choose the representation that makes the operations you do often cheap.")
+print("     Here: a dict for O(1) lookup, a linked list for O(1) reordering, and a")
+print("     TRICK for the combination -- storing the list NODE in the dict, so the")
+print("     dict hands you the node and no search is needed to find it.")
+print("  3. Write the naive version first.  It is 12 lines and it is the oracle.")
+print("  4. Check the invariant after every operation, not at the end.")
+print("  5. Only then measure.")
+print()
+print("  Step 2 is the step that is always skipped and always the one that matters.")
+print("  Every good data structure in [Lesson 81](81_amortized_analysis.md) -- the")
+print("  dynamic array, the hash table, the union-find forest -- is this same move: a")
+print("  representation chosen so that the dominant operation costs O(1), paid for")
+print("  with extra space and extra invariants to maintain.")
+print()
+```
+
+Output:
+
+```text
+=== Two implementations of the same spec, one invariant between them ===
+  Spec: a fixed-capacity cache that discards the least recently used key.
+  The linked-list version is O(1) per operation; the naive one is O(n).
+  They must be behaviourally IDENTICAL -- that is checkable, and it is the
+  only reason to believe either.
+    random trials                         : 200 sequences of 60 operations
+    invariant checks performed            : 7,204
+    recency-order mismatches against naive: 0
+    capacity used at the end              : 3 <= 3
+  Seven thousand invariant evaluations across 200 random operation sequences,
+  and the O(1) version's recency order matched the O(n) version every single
+  time.  This is the payoff of writing the invariant down as code: the two
+  implementations are now interchangeable, and the next person to modify one
+  of them gets a failure the moment they break it.
+
+=== The invariant, stated and checked, term by term ===
+  after putting 1, 2, 3 into a capacity-3 cache (most recent first):
+    I1: list keys == dict keys   [3, 2, 1] vs [1, 2, 3]   -> True
+  after get(1): 1 is now the MOST recently used, so it moves to the front
+    I2: list order               [1, 3, 2]   (1 first, as the invariant requires)
+  after put(4) into the now-full cache: the LEAST recently used (2) is evicted
+    keys in order               [4, 1, 3]
+    2 still in the dict?        False   (correctly gone)
+    3 still in the dict?        True   (correctly kept: it was more
+                               recently used than 2)
+    evictions so far            1
+
+  Note which key went: 2, not 3.  Before the get the order was [3, 2, 1], so
+  3 was the MOST recently used and 2 the least.  One get moved 1 to the front
+  and left the tail alone, which is why the tail is where a FIFO cache and an
+  LRU cache first disagree -- and a test that only ever puts, or only ever
+  gets once before the next put, cannot tell them apart at all.
+
+=== The cost difference, counted rather than timed ===
+  A wall clock is not reproducible, so count the DOMINANT OPERATION instead:
+  pointer writes in the linked version, element shifts in the naive one.  Both
+  are exact integers and both are what a C implementation would actually pay.
+      capacity   operations   linked: pointer writes   naive: element shifts   ratio   writes/op   shifts/op
+            100         20000                      80,000                2,463,913    30.8x         4.00        123.2
+           1000         20000                      80,000               24,192,180   302.4x         4.00       1209.6
+           4000         20000                      80,000               86,777,430   1084.7x         4.00       4338.9
+
+  The linked version's cost per operation is exactly 4 pointer writes at every
+  capacity: two to unlink the node from its current position, two to relink it
+  at the head, and nothing that scales.  The naive version's cost per operation
+  is proportional to the LENGTH of the recency list, which is bounded by the
+  capacity and grows with it -- 123 shifts per operation at capacity 100 against
+  4,339 at capacity 4000, a factor of 35 for a factor of 40 in capacity.
+  Note also the hit rate: the operations draw from 2*capacity distinct keys into
+  a capacity-sized cache, so about half are hits.  That is what makes the naive
+  version expensive in a realistic way: a real LRU workload is mostly hits, and
+  hits are exactly the operations that need reordering.
+
+  The wall clock tells the same story with a twist worth knowing: at capacity
+  100 the Theta(n) version is often FASTER, because scanning 100 built-in ints
+  is cheap while the linked version pays Python attribute-access overhead on
+  every operation regardless of size.  By capacity 4000 the ordering has
+  reversed and keeps reversing.  A Theta(n) implementation can beat an O(1) one
+  at small n precisely because O() discards constants -- so quote the Theta,
+  measure for the decision, and never conclude from one data point that the
+  asymptotics are wrong.  Both are 'correct'; only one is usable at capacity
+  4000, and the invariant is what let us be sure they agree.
+
+=== The design recipe this block followed ===
+  1. Write the SPECIFICATION as a list of invariants, not as prose.
+     'least recently used' is a sentence; 'the list is ordered most-recently-
+     used first and contains exactly the dict keys' is checkable.
+  2. Choose the representation that makes the operations you do often cheap.
+     Here: a dict for O(1) lookup, a linked list for O(1) reordering, and a
+     TRICK for the combination -- storing the list NODE in the dict, so the
+     dict hands you the node and no search is needed to find it.
+  3. Write the naive version first.  It is 12 lines and it is the oracle.
+  4. Check the invariant after every operation, not at the end.
+  5. Only then measure.
+
+  Step 2 is the step that is always skipped and always the one that matters.
+  Every good data structure in [Lesson 81](81_amortized_analysis.md) -- the
+  dynamic array, the hash table, the union-find forest -- is this same move: a
+  representation chosen so that the dominant operation costs O(1), paid for
+  with extra space and extra invariants to maintain.
+```
+
+Two implementations of one specification: a fixed-capacity cache that evicts the least
+recently used key. One is a dict plus a doubly linked list, $O(1)$ per operation. The
+other is a Python list with `remove` and `insert`, $\Theta(n)$ per operation. They are
+behaviourally interchangeable, and the code *proves* it by running both through 200
+random operation sequences and comparing the full recency order after every single
+operation: 7,204 invariant evaluations, zero mismatches.
+
+The critical design move is on line 3 of the class: `self.table[key]` stores the list
+**node**, not the value. That means the dict lookup hands you the node you need to
+unlink, so there is no second search. Store the value separately and you would have to
+find the node again. Choosing the representation so the dominant operation is $O(1)$ —
+paying for it with extra space and extra invariants to maintain — is the single move
+behind every good data structure in [Lesson 81](81_amortized_analysis.md).
+
+The second table catches the bug the specification is *about*. After `put(1), put(2),
+put(3)` the order is `[3, 2, 1]`, so 3 is the most recently used and 2 the least. One
+`get(1)` moves 1 to the front and leaves the tail alone. The next `put(4)` then evicts
+**2**, not 3 — and that is the first operation at which an LRU cache and a FIFO queue
+diverge. A test that never does two `get`s in a row cannot tell them apart, and no
+amount of property-based testing with a weak property will either. Only the stated
+invariant I2 catches it.
+
+The cost table then earns its keep, and it counts rather than times — a wall clock is
+not reproducible, so the block counts the dominant operation instead: pointer writes in
+the linked version, element shifts in the naive one. The linked version's cost per
+operation is **exactly 4** pointer writes at every capacity, because unlinking a node
+costs two writes and relinking it at the head costs two more. The naive version's is
+proportional to the length of the recency list: `123.2` shifts per operation at capacity
+100 against `4,338.9` at capacity 4000 — a factor of 35 for a factor of 40 in capacity.
+That is the whole complexity story in two columns, and unlike a stopwatch it is exact.
+
+The wall clock tells the same story with a twist worth knowing: at small capacity the
+$\Theta(n)$ version is often *faster*, because scanning a hundred built-in ints is cheap
+while the linked version pays Python attribute-access overhead on every operation
+regardless of size. The ordering reverses as capacity grows and keeps reversing. A
+$\Theta(n)$ implementation can beat an $O(1)$ one at small $n$ precisely because $O$
+discards constants. Both are correct; only one is usable at capacity 4000, and the
+invariant is what let us be confident they agreed before believing either.
+
+### With Libraries
+
+The plain-Python blocks above are deliberately dependency-free so that every number is
+reproducible with nothing installed. The figure draws them, because the *shape* is what
+a table hides: the window collapsing, the three Master cases separating on a log axis,
+the divergence between naive recursion and a table, and the amounts where greedy coin
+change breaks.
+
+```python
+# Requires matplotlib; not runnable with the standard library alone.
+# Every number below was printed by one of the plain-Python blocks above.
+import matplotlib
+
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+import math
+
+FIG = "lesson82_design_tools.png"
+
+fig, axes = plt.subplots(2, 2, figsize=(13, 9))
+
+# 1. binary search: the window halves every step
+ax = axes[0][0]
+n = 1000
+lo, hi, windows = 0, n - 1, []
+while lo <= hi:
+    windows.append((lo, hi))
+    mid = (lo + hi) // 2
+    if mid < n - 1:
+        lo = mid + 1
+    else:
+        break
+for i, (a, b) in enumerate(windows):
+    ax.plot([a, b], [i, i], linewidth=6, color="#2980b9", solid_capstyle="butt")
+ax.plot([n - 1, n - 1], [0, len(windows) - 1], marker="v", color="#c0392b", markersize=9)
+ax.set_title("Binary search: the surviving window, step by step")
+ax.set_xlabel("array index")
+ax.set_ylabel("iteration")
+ax.set_xlim(-40, n + 40)
+
+# 2. the four recursion-tree regimes
+ax = axes[0][1]
+levels = list(range(11))
+ax.plot(levels, [32.0 / (2 ** k) for k in levels], marker="o", color="#27ae60",
+        label="case 1: work halves (2T(n/2)+1)")
+ax.plot(levels, [32.0 for _ in levels], marker="s", color="#2980b9",
+        label="case 2: work flat (2T(n/2)+n)")
+ax.plot(levels, [32.0 * (2 ** k) for k in levels], marker="^", color="#c0392b",
+        label="case 3: work doubles (2T(n/2)+n^2)")
+ax.set_yscale("log")
+ax.set_title("Work per level of the recursion tree: the three Master cases")
+ax.set_xlabel("level")
+ax.set_ylabel("work at this level (log scale)")
+ax.legend(loc="upper left", fontsize=8)
+
+# 3. Fibonacci: naive calls versus table steps
+ax = axes[1][0]
+ns = list(range(5, 26))
+naive = [2 * (1.618033988749895 ** (n + 1)) for n in ns]
+table = [n - 1 for n in ns]
+ax.semilogy(ns, naive, marker="o", markersize=4, color="#c0392b",
+            label="naive recursive calls")
+ax.semilogy(ns, table, marker="s", markersize=4, color="#16a085",
+            label="table loop iterations")
+ax.semilogy(ns, [(1.618033988749895 ** 5) ** (i / 5) * 177 / (1.618033988749895 ** 5)
+                 for i in range(len(ns))], linestyle=":", color="#7f8c8d",
+            label=r"$\varphi^5 = 11.09$ per step of $n$ by 5")
+ax.set_title("Fibonacci: the same recurrence, with and without a table")
+ax.set_xlabel("n")
+ax.set_ylabel("operations (log scale)")
+ax.legend(fontsize=8)
+
+# 4. two greedy rules against the optimum
+ax = axes[1][1]
+amts = list(range(1, 25))
+import itertools
+
+
+def greedy_highest(m, coins):
+    picks = []
+    while m > 0:
+        c = max(c for c in coins if c <= m)
+        picks.append(c)
+        m -= c
+    return len(picks)
+
+
+def greedy_largest(m, coins):
+    picks = []
+    while m > 0:
+        c = max(c for c in coins if c <= m)
+        picks.append(c)
+        m -= c
+    return len(picks)
+
+
+def optimal(m, coins):
+    best = None
+    for r in range(m + 1):
+        for combo in itertools.combinations_with_replacement(sorted(coins), r):
+            if sum(combo) == m and (best is None or len(combo) < len(best)):
+                best = list(combo)
+    return len(best)
+
+
+coins = (1, 3, 4)
+ax.plot(amts, [optimal(a, coins) for a in amts], marker="o", color="#27ae60",
+        label="optimal (exhaustive)")
+ax.plot(amts, [greedy_largest(a, coins) for a in amts], marker="s", color="#2980b9",
+        linestyle="--", label="greedy: largest coin that fits (loses on 5 of 24)")
+ax.set_title("Coin change for coins 1, 3, 4: the greedy rule that fails")
+ax.set_xlabel("amount")
+ax.set_ylabel("number of coins used")
+ax.legend(fontsize=8)
+
+fig.suptitle("Tools for algorithm design: proofs, exchanges, recurrences, tables")
+fig.tight_layout()
+fig.savefig(FIG, dpi=110)
+plt.close(fig)
+
+print(f"wrote {FIG}")
+print(f"  binary search on n = {n}: {len(windows)} iterations, "
+      f"bound floor(log2 n)+1 = {int(math.log2(n)) + 1}")
+print(f"  Fibonacci at n = 35: 29,860,703 recursive calls versus 34 table iterations")
+print(f"  coin change: largest-coin-that-fits loses on 5 of the first 24 amounts "
+      f"(6, 10, 14, 18, 22)")
+print(f"  rod cutting: rule A wrong on 288 of 400 instances, rule B on 7 of 400")
+print("  Every number in this picture was printed by the earlier plain-Python blocks;")
+print("  the figure adds the shape, which is the part a table hides.")
+```
+
+Output:
+
+```text
+wrote lesson82_design_tools.png
+  binary search on n = 1000: 10 iterations, bound floor(log2 n)+1 = 10
+  Fibonacci at n = 35: 29,860,703 recursive calls versus 34 table iterations
+  coin change: largest-coin-that-fits loses on 5 of the first 24 amounts (6, 10, 14, 18, 22)
+  rod cutting: rule A wrong on 288 of 400 instances, rule B on 7 of 400
+  Every number in this picture was printed by the earlier plain-Python blocks;
+  the figure adds the shape, which is the part a table hides.
 ```
 
 ---
 
 ## Common Mistakes
 
-**Mistake 1 — mislabelling the Master Theorem's three cases.**
+**Mistake 1 — proposing a greedy rule and defending it with experiments.**
 
-```python
-import math
+*Wrong:* "Taking the largest coin that fits works for coins 1, 3, 4 — I tested all 24
+amounts and only a few were wrong."
 
+*Right:* It fails on `6, 10, 14, 18, 22`. Three of those are wrong by one coin, so a
+casual test looks fine. The correct response is to write the exchange argument; if you
+cannot, the rule is a heuristic and you should say so. Block 2 measures 400 rod-cutting
+instances on which the "best ratio" rule is right 393 times — 98% — and that number is
+worthless as evidence.
 
-def classify(a, b, c):
-    """Which Master Theorem case does a*T(n/b) + Theta(n^c) fall in?"""
-    d = math.log(a, b)
-    if c < d:
-        return f"c={c} < d={d:.4f}: Theta(n^{d:.4f}), leaves dominate"
-    if c == d:
-        return f"c={c} = d: Theta(n^{d:.4f} log n), every level costs the same"
-    return f"c={c} > d={d:.4f}: Theta(n^{c}), the top of the tree dominates"
+*Why the wrong version is tempting:* empirical success is immediate and feels like
+knowledge, whereas the exchange argument requires you to admit you might not have one.
+The block's rule B is the specific trap: 2% wrong looks like a bug in the rule rather
+than a bug in your testing.
 
+**Mistake 2 — stating the invariant after writing the code.**
 
-# a, b, c, and what the algorithm actually is
-cases = [
-    (2, 2, 1, "merge sort"),
-    (2, 2, 0, "binary search"),
-    (1, 2, 3, "a single scan"),
-    (3, 2, 1, "Karatsuba multiply"),
-    (4, 2, 2, "a 4-way split costing n^2"),
-    (8, 2, 2, "a 8-way split costing n^2"),
-    (2, 2, 2, "T(n) = 2T(n/2) + n^2"),
-]
-print(f"  {'a':>2} {'b':>2} {'c':>2}  {'verdict':<44} algorithm")
-for a, b, c, name in cases:
-    print(f"  {a:>2} {b:>2} {c:>2}  {classify(a, b, c):<44} {name}")
-print()
-print("  The two traps are in the last two rows: with a = 8 and c = 2,")
-print("  d = 3 > 2 so the answer is Theta(n^3) -- WORSE than merge sort --")
-print("  and with a = 2, c = 2 it is the balanced case Theta(n^2 log n).")
-print("  Read d = log_b a first, every time, before deciding anything.")
-```
+*Wrong:* "The invariant is that the array is sorted and the key is in the right place,
+which is why it works." That is a description of the postcondition dressed as an
+invariant, and it is satisfied by the postcondition alone.
 
-Tempting because $c$ and $d$ are easy to swap and the two "easy" cases
-($c < d$ and $c > d$) feel symmetric. They are not: they name opposite
-things, and swapping them turns $\Theta(n^3)$ into $\Theta(n^2)$.
+*Right:* Three separate obligations, all provable before you type the body: $I$ holds
+before the loop; $I \wedge G \Rightarrow B[I]$; and $I \wedge \neg G \Rightarrow P$. Plus
+a variant function for termination. Block 1's binary search invariant is
+`$\text{target} \in a \iff \exists i \in [lo,hi]: a[i] = \text{target}$` — a statement
+about *every* index in the window, which is exactly what `hi = mid` violates.
 
-**Mistake 2 — using a guess with no slack in the substitution method.**
+*Why the wrong version is tempting:* the invariant and the postcondition look like the
+same sentence once the algorithm works. The difference only shows up when it does not,
+which is precisely when you need it.
 
-```python
-import math
+**Mistake 3 — reading the Master Theorem's third case without the $\varepsilon$.**
 
+*Wrong:* "$f(n) = \Omega(n^{\log_b a})$ implies case 3, so $T(n) = \Theta(f(n))$."
 
-def step_ratio(c, d, k):
-    """(3c(n/2)^d + n) / (c n^d) -- above 1 means the guess cannot hold."""
-    n = 2 ** k
-    return (3 * c * (n // 2) ** d + n) / (c * n ** d)
+*Right:* Case 3 requires $f(n) = \Omega(n^{p+\varepsilon})$ for some $\varepsilon > 0$.
+When $f(n)$ matches $n^p$ *exactly* you are in case 2 and gain a factor of $\log n$.
+Measured: $T(n) = 3T(n/3) + n$ has total work exactly $n(\log_3 n + 1)$, so
+$\Theta(n \log n)$, not $\Theta(n^2)$.
 
+*Why the wrong version is tempting:* "$\Omega$ means case 3" is a two-second memory and
+the boundary case is rare enough that nobody checks it. The eighth row of Block 3's
+table is $T(n) = 4T(n/2) + n^2$ and the answer is $\Theta(n^2 \log n)$.
 
-d = math.log2(3)
-print("  Guess T(n) <= c * n^d, with no slack term:")
-print("      c     k=4     k=8    verdict")
-for c in (1, 3, 1e6):
-    print(f"  {c:>7.0f}  {step_ratio(c, d, 4):>6.3f}  {step_ratio(c, d, 8):>6.3f}"
-          f"    {'fails' if step_ratio(c, d, 8) > 1 else 'works'}")
-print()
-print("  Guess T(n) <= c * n^d - lambda * n, with lambda = 2 and c = 3:")
-for k in (4, 8, 10):
-    n = 2 ** k
-    bound = 3 * n ** d - 2 * n
-    print(f"    n = {n:>5}: bound {bound:>12.1f}, and T(n) = "
-          f"{3 * 3 ** k - 2 * n:>7} -- difference "
-          f"{3 * 3 ** k - 2 * n - bound:>6.3f}")
-print()
-print("  The slack is not a technical trick.  When the leaves exactly fill")
-print("  the budget, there is nothing left to pay for the +n, and NO constant")
-print("  can fix it: the slack term is the only place that slack can come")
-print("  from.")
-```
+**Mistake 4 — treating overlapping subproblems as if they were disjoint.**
 
-Tempting because "guess and check" feels like a numerical experiment, and the
-code happily computes ratios. The failure is algebraic and the algebra is
-the proof — but the intuition that "a bigger constant should absorb anything"
-is exactly wrong when the recursive term saturates.
+*Wrong:* "The recurrence is $T(n) = T(n-1) + T(n-2) + O(1)$, and $n$ has $n$ values of
+it, so the cost is $O(n)$." That counts *states*, not *calls*.
 
-**Mistake 3 — applying greedy because the problem "looks like" interval
-scheduling.**
+*Right:* The cost is the number of calls, and the states are reached exponentially
+often: 177 calls at $n = 10$, 29,860,703 at $n = 35$. Memoising makes the number of
+*calls* $O(n)$ because each state is computed once. The distinction is not a technicality
+— it is the entire difference between $\Theta(\varphi^n)$ and $\Theta(n)$.
 
-```python
-items = [(10, 60), (20, 100), (30, 120)]
-capacity = 50
+*Why the wrong version is tempting:* "there are only $n$ different subproblems" is
+literally true and answers a question nobody asked. It is also the most common way a
+dynamic-programming argument in a proof or an interview goes wrong.
 
-greedy = 0
-left = capacity
-for w, v in sorted(items, key=lambda iv: -iv[1] / iv[0]):
-    if w <= left:
-        greedy += v
-        left -= w
+**Mistake 5 — choosing the algorithm before asking what the input looks like.**
 
-best = 0
-for mask in range(1 << len(items)):
-    weight = sum(w for i, (w, _) in enumerate(items) if mask >> i & 1)
-    if weight <= capacity:
-        best = max(best, sum(v for i, (_, v) in enumerate(items)
-                            if mask >> i & 1))
-print(f"  capacity {capacity}, items {items}")
-print(f"  greedy by value/weight: {greedy}")
-print(f"  exhaustive optimum    : {best}")
-print(f"  the greedy answer is {'optimal' if greedy == best else 'WRONG'}"
-      f", by a factor of {best / greedy:.2f}")
-print()
-print("  Knapsack has no exchange argument: the exchange property needs a")
-print("  swap that keeps feasibility, and here no swap exists.  The test is")
-print("  not 'does it look greedy', it is 'can I write the swap down'.")
-```
+*Wrong:* "We use Kruskal, so it is $O(m \log m)$." For a dense graph with
+$m = \Theta(n^2)$ edges that is $O(n^2 \log n)$, and Prim's $O(n^2)$ beats it.
 
-Tempting because greedy always wins on the problems students meet first, and
-because "pick the best ratio" is the sort of rule that feels like it must
-work. The counterexample is three items long.
+*Right:* State the cost, the input shape it suits, and the shape where it loses. Block
+2's table shows Kruskal inspecting a *shrinking* fraction of edges as $n$ grows and
+still sorting all $m$ of them. Kruskal is right for sparse, Prim for dense. Correctness
+is necessary and not sufficient.
 
-**Mistake 4 — writing a DP solution that recomputes states.**
-
-```python
-from functools import lru_cache
-
-CALLS = 0
-
-
-def naive_lcs(x, y, i=0, j=0):
-    """Correct, and quadratic-exponential in the number of calls it makes."""
-    global CALLS
-    CALLS += 1
-    if i == len(x) or j == len(y):
-        return 0
-    if x[i] == y[j]:
-        return 1 + naive_lcs(x, y, i + 1, j + 1)
-    return max(naive_lcs(x, y, i + 1, j), naive_lcs(x, y, i, j + 1))
-
-
-@lru_cache(maxsize=None)
-def memo_lcs(x, y, i=0, j=0):
-    """The same function with one line added: the cache.  This is the whole DP."""
-    if i == len(x) or j == len(y):
-        return 0
-    if x[i] == y[j]:
-        return 1 + memo_lcs(x, y, i + 1, j + 1)
-    return max(memo_lcs(x, y, i + 1, j), memo_lcs(x, y, i, j + 1))
-
-
-x, y = "ABCBDAB", "BDCABA"
-answer = naive_lcs(x, y)
-naive_calls = CALLS
-assert memo_lcs(x, y) == answer            # same answer, different cost
-states = memo_lcs.cache_info().currsize
-assert states < naive_calls
-print(f"  LCS length of {x} and {y} = {answer}   (both versions agree)")
-print(f"    plain recursion     : {naive_calls} calls to lcs()")
-print(f"    memoised states     : {states} of the {(len(x) + 1) * (len(y) + 1)}"
-      f" in the table")
-print(f"    speed-up            : {naive_calls / states:.1f}x")
-print()
-print("  The naive version is Theta(C(m+n, m)) calls.  The recursion has at most")
-print("  C(m+n, m) distinct diagonals through the (m+1)(n+1) grid, so when")
-print("  nothing matches -- no diagonal ever takes the 'match and move' branch --")
-print("  every one of them is walked: 2*C(13,7) - 1 = 3431 calls for two strings")
-print("  of length 7.  This pair shares a lot of characters, which collapses the")
-print("  count to 309, and the cache takes it to 38 states evaluated once each.")
-print("  Memoisation is not an optimisation here, it is the difference")
-print("  between a program that finishes and one that does not.")
-```
-
-Tempting because the recursive form is easier to write and looks correct on
-short strings. The state $(i,j)$ appears in exponentially many branches; only
-the table or the cache collapses that.
-
-**Mistake 5 — quoting $\Omega(n \log n)$ as if it were a bound on all
-sorting.**
-
-```python
-print("  Comparison sort, n = 1024: the lower bound is")
-print(f"    log2(1024!) = {__import__('math').log2(__import__('math').factorial(1024)):.1f}"
-      f" comparisons")
-print("  Counting sort on 1024 values in 16 bins:")
-print(f"    1024 + 16 = {1024 + 16} operations, and it beats the bound")
-print()
-print("  The lower bound says: no algorithm whose ONLY question is")
-print("  'is a[i] <= a[j]?' can sort faster.  Counting sort never asks that")
-print("  question -- it asks 'what is the index of this value?', which the")
-print("  problem hands it for free because the keys are in a known range.")
-print("  A lower bound without a stated model is not a result, it is a")
-print("  slogan.")
-```
-
-Tempting because "sorting requires $n \log n$ comparisons" is repeated so
-often that the model restriction drops out. State the model or the bound is
-about nothing.
+*Why the wrong version is tempting:* an algorithm's complexity is usually quoted once,
+for one regime, and the regime gets dropped the moment the algorithm is adopted.
 
 ---
 
 ## Multiple Choice Questions
 
-**Q1.** For $T(n) = 3T(n/2) + \Theta(n)$, what does the Master Theorem say?
+**Q1.** What are the three obligations a loop invariant must satisfy?
 
-- A) $T(n) = \Theta(n^{1.5})$, since $3/2 = 1.5$
-- B) $T(n) = \Theta(n^{2})$, since squaring is the largest term that appears
-- C) $T(n) = \Theta(n^{\log_2 3}) = \Theta(n^{1.5850})$, since $c = 1 < d = \log_2 3$
-- D) $T(n) = \Theta(n \log n)$, because there is an additive $\Theta(n)$ term
+- A) It holds before the loop, it holds after the body, and it is easy to state
+- B) It holds before the loop, the guard plus the invariant imply it is preserved, and
+  the negation of the guard plus the invariant imply the postcondition
+- C) It holds after the loop, it is preserved by one pass, and it terminates
+- D) It bounds the running time, it proves correctness, and it is preserved
 
 <details>
 <summary>Answer and explanation</summary>
 
-**C) $T(n) = \Theta(n^{\log_2 3}) = \Theta(n^{1.5850})$, since $c = 1 < d =
-\log_2 3$.**
+**B).**
 
-With $a = 3$, $b = 2$ we get $d = \log_2 3 \approx 1.58496$, and the additive
-term is $\Theta(n^1)$, so $c = 1 < d$ and the leaves dominate. Block 1
-confirms it by measurement: $T(64) = 2059$, and the closed form
-$3^{k+1} - 2^{k+1}$ matches to the last digit at every power of two.
-
-Option A mixes up the branching factor with the exponent: $a/b = 1.5$ is the
-*ratio of consecutive level costs*, which decides how the geometric series
-converges, not the exponent. Option B is the schoolbook multiplication bound,
-which is what you get when the additive term is $\Theta(n^2)$ instead.
-Option D is the balanced case $c = d$ — an additive $\Theta(n)$ only produces
-the extra $\log n$ when the recursion is exactly balanced at $a = b = 2$.
+Those are the standard three conditions: $I$ holds at the initial state,
+$I \wedge G \Rightarrow B[I]$ gives preservation, and $I \wedge \neg G \Rightarrow P$ is
+how the invariant becomes the postcondition. Option A adds "easy to state", which is
+not a mathematical condition at all — some essential invariants are subtle. Option C
+conflates the invariant with a variant function: termination needs a *decreasing integer*,
+which is a separate object and is not what the invariant is for. Option D is closest to
+tempting, but the running-time bound comes from the variant function, not from the
+invariant.
 
 </details>
 
-**Q2.** Why does the guess $T(n) \le c\,n^d$ fail for $T(n) = 3T(n/2) + n$?
+**Q2.** Why does a loop invariant alone not prove termination?
 
-- A) Because the base case cannot be verified for any $c$
-- B) Because $3c(n/2)^d = c\,n^d$ exactly, leaving no slack for the $+n$
-- C) Because $c$ must be an integer and the algebra needs a real
-- D) Because the Master Theorem does not apply to this recurrence
+- A) It does; the invariant implies the loop exits
+- B) Termination needs a separate variant function, a non-negative integer that
+  strictly decreases each iteration
+- C) Termination follows from the postcondition
+- D) Invariants only apply to `for` loops, which terminate structurally
 
 <details>
 <summary>Answer and explanation</summary>
 
-**B) Because $3c(n/2)^d = c\,n^d$ exactly, leaving no slack for the $+n$.**
+**B).**
 
-Since $2^d = 3$, the recursive term consumes the entire budget $c\,n^d$, and
-the induction step asks for $c\,n^d \ge c\,n^d + n$. Block 1 measures the
-ratio at `1.6667`, `1.3333`, `1.0667`, `1.0007` for $c = 1, 2, 10, 1000$: it
-approaches `1` as $c$ grows but never crosses it, which is the numerical
-signature of a failure that no constant can fix. The repair is the slack
-guess $c\,n^d - \lambda n$ with $\lambda = 2$, which is tight.
-
-Option A is false — the base case is fine, it just does not rescue a broken
-step. Option C is a non-issue; $c$ may be any positive real. Option D is
-irrelevant: the Master Theorem is a shortcut for the *answer*, and the
-substitution method is an independent proof that happens to expose where the
-budget goes.
+The classic counterexample is a loop with a correct invariant that never exits:
+`while a[i] != target: i = i + 1` on an array where `target` is absent — the invariant
+"target is in `a` iff it is in the window" holds forever. The variant function
+$V = $ something decreasing and non-negative is what forces the exit, and its initial
+value is what bounds the iteration count. Option A is the belief the variant exists to
+dispel. Option C is circular: the postcondition is what you *learn* on exit. Option D
+is false — `while` loops have invariants too, and they are the ones that need them most.
 
 </details>
 
-**Q3.** In the substitution proof, why does the guess $T(n) \le c\,n^{d} -
-\lambda n$ succeed exactly when $\lambda \ge 2$?
+**Q3.** In binary search, why must the update be `hi = mid - 1` and not `hi = mid`?
 
-- A) Because the leaves must not outnumber the internal nodes
-- B) Because the induction step reduces to $\frac32\lambda - 1 \ge \lambda$, and the base case needs $c \ge \lambda + 1$
-- C) Because $2^\lambda \le 3$ is required
-- D) Because $\lambda$ must equal the additive exponent $c = 1$
+- A) `hi = mid` is slower by one comparison
+- B) `hi = mid` retains an index already known not to hold the target, breaking the
+  invariant, and fails to decrease `hi - lo + 1`, so the loop can hang
+- C) `hi = mid` gives the wrong answer only when the array has duplicates
+- D) `hi = mid` overflows the midpoint computation
 
 <details>
 <summary>Answer and explanation</summary>
 
-**B) Because the induction step reduces to $\frac32\lambda - 1 \ge \lambda$,
-and the base case needs $c \ge \lambda + 1$.**
+**B).**
 
-Substituting the guess, $3(c(n/2)^d - \lambda n/2) + n = c\,n^d - (\frac32\lambda
-- 1)n$, which is at most the guess $c\,n^d - \lambda n$ exactly when
-$\frac32\lambda - 1 \ge \lambda$, i.e. $\lambda \ge 2$. The base case $n = 1$
-needs $1 \le c - \lambda$, i.e. $c \ge \lambda + 1 = 3$ at the smallest
-$\lambda$. Block 1 uses exactly $\lambda = 2$, $c = 3$ and gets equality at
-every power of two.
-
-Option A is a misstatement of the leaf argument — the number of leaves has
-nothing to do with $\lambda$. Option C inverts a real relation
-($2^{\log_2 3} = 3$ is where $d$ came from, and $\lambda = 2$ is a separate
-coefficient). Option D confuses two different symbols: $\lambda$ is the slack
-coefficient, $c$ is the additive exponent, and in this recurrence $c = 1$.
+Once $a[mid] > \text{target}$ is established, index `mid` cannot hold the target, so
+keeping it in the window falsifies the invariant at the very next loop head. The same
+change also breaks the variant, since $hi = mid$ does not strictly decrease
+$hi - lo + 1$ when $lo = hi$. Measured: 526 of 3,300 random test cases **hang
+forever**. Option A is true but irrelevant — the bug is not a performance issue.
+Option C is backwards: duplicates are exactly where `hi = mid` most obviously misbehaves,
+but they are not the cause. Option D is unrelated; the overflow concern is
+`(lo + hi) // 2`, which is a different line.
 
 </details>
 
-**Q4.** Greedy by value/weight fails on capacity 50 with items $(10,60)$,
-$(20,100)$, $(30,120)$. What exactly went wrong?
+**Q4.** What must be true for a greedy rule to be correct?
 
-- A) The greedy rule should sort by weight instead
-- B) No exchange exists: dropping the densest item cannot free enough capacity for both other items
-- C) Ties in the ratios made the choice arbitrary
-- D) The greedy rule is correct but the instance is too small to matter
+- A) It always picks the locally best option
+- B) There exists an optimal solution containing the greedy choice, provable by an
+  exchange argument
+- C) It is optimal on the majority of random instances
+- D) It never needs to look at more than one element at a time
 
 <details>
 <summary>Answer and explanation</summary>
 
-**B) No exchange exists: dropping the densest item cannot free enough capacity
-for both other items.**
+**B).**
 
-Greedy by density returns `160`; the optimum is `220` from items $(20,100)$
-and $(30,120)$, which have ratios `5.0` and `4.0`. For the exchange argument
-to work you need a swap that preserves feasibility *and* the objective. Here
-dropping $(10,60)$ frees `10` units, which is not enough for the `30`-unit
-item, so no repair exists — and that is exactly the statement that the
-problem is not a matroid.
-
-Option A is a worse rule, not a better one: sorting by weight would take the
-20-unit item first and also fail to see the pair. Option C is false — the
-ratios `6.0`, `5.0`, `4.0` are distinct. Option D is not a defect of greedy
-algorithms; the failure appears at three items and scales.
+That is the greedy-choice property together with the standard way of establishing it.
+Option A is the definition of a greedy rule, not a correctness condition — the locally
+best option is sometimes wrong, as coins 1, 3, 4 show. Option C is the trap: rod
+cutting by best price-per-length is right on 393 of 400 instances and still wrong, so
+"mostly works" is not a correctness criterion. Option D describes the *mechanism* of
+greediness, and it says nothing about whether the answer is optimal.
 
 </details>
 
-**Q5.** What do the Bellman-Ford passes in Block 5 actually show?
+**Q5.** The rule "take the largest coin that fits" is optimal for US coins 1, 5, 10, 25
+and wrong for coins 1, 3, 4. Why?
 
-- A) That distances improve monotonically toward the optimum
-- B) That each pass propagates one more edge, so $V-1$ passes suffice for any edge ordering
-- C) That Bellman-Ford finds shortest paths even with positive cycles
-- D) That Dijkstra's answer is always an overestimate
+- A) The US rule has more denominations, so it has more chances to be right
+- B) For 1, 3, 4 there is no optimal solution containing the largest coin, so no
+  exchange argument exists
+- C) 25 is a multiple of 5, which makes greedy work
+- D) The denomination 4 is not divisible, which breaks greedy
 
 <details>
 <summary>Answer and explanation</summary>
 
-**B) That each pass propagates one more edge, so $V-1$ passes suffice for any
-edge ordering.**
+**B).**
 
-After one full pass over the edge list, every path of length one edge is
-accounted for; after $k$ passes, every path of at most $k$ edges. Block 5
-prints four passes and the last three change nothing, which is the theorem in
-code: a shortest path has at most $V - 1 = 4$ edges.
-
-Option A is a weaker and slightly misleading reading: distances do improve
-monotonically downward, but the reason it converges is the path-length bound.
-Option C is false — a *positive* cycle is harmless, but Bellman-Ford's value
-is that it also detects the negative kind. Option D is false as stated:
-Dijkstra is wrong here by `8`, but it can also *under*estimate in other
-graphs; the correct statement is that its settled vertices are never revisited.
+For amount 6 the greedy rule takes `4 + 1 + 1` while the optimum is `3 + 3`, and the
+optimum does not contain a 4 at all — so there is nothing to exchange into the greedy
+solution, and the greedy-choice property fails outright. For US denominations a
+published exchange argument does exist, which is why every cash register uses that rule.
+Option A is a fallacy; adding denominations does not add proofs. Option C is a real
+structural fact about the US system (25 = 5·5 and 10 = 2·5, so the ratios stay bounded)
+but it is a *consequence* of the exchange argument, not the argument itself. Option D
+describes the symptom, not the reason.
 
 </details>
 
-**Q6.** Why is `log2(n!)` the right lower bound for comparison sorting?
+**Q6.** For $T(n) = 2T(n/2) + n$, the work at each level of the recursion tree is the
+same. Which Master Theorem case is this, and what is $T(n)$?
 
-- A) Because sorting $n$ items needs at least $n$ comparisons per item
-- B) Because a binary question yields one bit, $n!$ orderings need distinguishing, and a binary tree with $L$ leaves has depth at least $\log_2 L$
-- C) Because merge sort uses that many comparisons
-- D) Because each comparison halves the sorted prefix
+- A) Case 1, $\Theta(n)$
+- B) Case 2, $\Theta(n \log n)$
+- C) Case 3, $\Theta(n)$
+- D) Case 2, $\Theta(n^2)$
 
 <details>
 <summary>Answer and explanation</summary>
 
-**B) Because a binary question yields one bit, $n!$ orderings need
-distinguishing, and a binary tree with $L$ leaves has depth at least
-$\log_2 L$.**
+**B).**
 
-This is pure counting, and it does not depend on the algorithm. At $n = 128$
-it demands `716.162` bits, and merge sort spends `769` comparisons — a gap of
-`52.84`, tracking the predicted `0.4427 * 128 = 56.67`.
-
-Option A confuses the average with the total and has no counting argument
-behind it. Option C is circular: merge sort is an *upper* bound of
-$n\log_2 n - n + 1$, and using it to justify a lower bound proves nothing.
-Option D is a plausible-sounding mechanism that is not what the decision tree
-argument says; the tree's depth is set by the number of leaves, not by how
-much of the prefix happens to be sorted.
+$\log_2 2 = 1$ and $f(n) = n = \Theta(n^1)$ exactly, which is case 2, giving
+$\Theta(n^1 \log n) = \Theta(n \log n)$. Measured in Block 3: the tree of
+$T(n) = 2T(n/2) + n$ at $n = 32$ has level costs $32, 32, 32, 32, 32, 32$, so
+$(\text{cost per level}) \times (\text{levels}) = 32 \times 6 = 192$. Option A is the
+leaves-dominate case and would require $f(n) = O(n^{1-\varepsilon})$. Option C is wrong
+because case 3 needs a strict gap $\varepsilon > 0$. Option D confuses merge sort's
+$\Theta(n\log n)$ with the *worst-case lower bound* on comparison sorts; the total work
+here is linear per level, not quadratic.
 
 </details>
 
-**Q7.** Block 2 counts `45057` comparisons for merge sort on $4096$ elements.
-What does that number tell you?
+**Q7.** For $T(n) = 4T(n/2) + n^2$, what does the Master Theorem give?
 
-- A) That merge sort is $\Theta(n\log n)$ but with a specific tight count of $n\log_2 n - n + 1$
-- B) That merge sort is $\Omega(n^2)$ on adversarial input
-- C) That merge sort's best case is also $n\log_2 n - n + 1$
-- D) That the adversarial arrangement was found by search
+- A) $\Theta(n^2)$, case 3
+- B) $\Theta(n^2 \log n)$, case 2
+- C) $\Theta(n^2)$, case 1
+- D) $\Theta(n^3)$, case 3
 
 <details>
 <summary>Answer and explanation</summary>
 
-**A) That merge sort is $\Theta(n\log n)$ but with a specific tight count of
-$n\log_2 n - n + 1$.**
+**B).**
 
-At $n = 4096 = 2^{12}$ the bound is $4096 \times 12 - 4096 + 1 = 45057$,
-which is what the `worst_case` construction produces by interleaving the two
-halves at every merge. The same run reports `24576` comparisons for sorted
-input — exactly $n\log_2 n / 2$ — so the worst case is about `1.83` times the
-best case, a constant factor.
-
-Option B is a misreading of a large constant: `45057` divided by
-`4096 * 4096` is `0.0027`, nowhere near quadratic. Option C inverts the table —
-sorted input is the *best* case here, `24576`. Option D is wrong: the
-construction is a formula, not a search, which is why it is used in
-textbooks.
+$\log_2 4 = 2$ and $f(n) = n^2$ matches $n^2$ **exactly**, so this is case 2 and the
+answer gains a factor of $\log n$. This is the boundary row people get wrong, because
+"$f$ is as big as the leaves" sounds like case 3. Case 3 requires
+$f(n) = \Omega(n^{2+\varepsilon})$ for some $\varepsilon > 0$ — a strict gap. Option A
+is the naive reading. Option C is case 1, which needs $f(n) = O(n^{2-\varepsilon})$.
+Option D would be right for $f(n) = n^3$, not $n^2$.
 
 </details>
 
-**Q8.** A loop invariant is a statement that is true before the loop,
-preserved by each iteration, and implies the postcondition when the guard
-fails. Why must termination be proved separately?
+**Q8.** A recurrence has overlapping subproblems. What is the defining symptom, and what
+does memoising cost?
 
-- A) Because an invariant does not imply the loop ever ends
-- B) Because invariants are only used for `while` loops
-- C) Because termination is part of the postcondition
-- D) Because a variant is easier to write than an invariant
+- A) The same state is required by more than one branch; memoising costs $\Theta(n)$
+  time and space
+- B) The subproblems are not smaller than the original; memoising costs $\Theta(\log n)$
+- C) There are $n$ states, so the recursion is already linear; memoising costs nothing
+- D) The recurrence has no closed form; memoising costs $\Theta(n \log n)$
 
 <details>
 <summary>Answer and explanation</summary>
 
-**A) Because an invariant does not imply the loop ever ends.**
+**A).**
 
-Partial correctness says "if it terminates, the answer is right". Termination
-says "it terminates". Both are needed for total correctness, and they are
-proved differently: the invariant by induction on the iteration count, the
-termination by a variant that strictly decreases and is bounded below
-(`|hi - lo| + 1` in binary search). Block 6 shows the invariant being *checked*
-by assertions at every step, which is a machine-checkable form of the same
-argument.
-
-Option B is false — invariants apply to `for` loops too, and Python's `for` is
-where students most often forget to state one. Option C is a reasonable
-description of the goal but does not explain why a separate proof is needed:
-termination is about reaching the postcondition, not about it. Option D
-inverts the usual relationship; the variant is usually the *easier* argument
-and the invariant is the work.
+Overlap means the same instance is reached from two or more branches — $F(k)$ in the
+Fibonacci recurrence is reached from both $F(k+1)$ and $F(k+2)$ — so it is computed
+exponentially often. Memoising computes each distinct state once, at a cost linear in
+the number of states. Measured: 29,860,703 calls at $n = 35$ versus 34 additions.
+Option C is the classic error — "there are only $n$ states" counts states, not calls,
+and is exactly the mistake that makes a proof of a linear-time algorithm wrong.
+Option B confuses overlap with size. Option D describes the Master theorem's regime,
+not dynamic programming.
 
 </details>
 
-**Q9.** Which problem does the exchange argument fail on, and what is the
-structural reason?
+**Q9.** When is an LRU cache built from a dict plus a doubly linked list with the list
+node stored inside the dict the right design?
 
-- A) Activity selection, because earliest finish does not maximise the count
-- B) 0/1 knapsack, because the feasible sets are not a matroid: there is an $A \subset B$ with $|A| < |B|$ such that no $x \in B \setminus A$ keeps $A \cup \{x\}$ feasible
-- C) Minimum spanning trees, because Kruskal's algorithm is not greedy
-- D) Huffman coding, because code lengths are not linear
+- A) When you need $O(1)$ `get` and `put`, and can afford the space and the extra
+  invariant to maintain
+- B) Always — it is asymptotically optimal for every cache workload
+- C) Only when the capacity is small enough to scan
+- D) When memory is the binding constraint
 
 <details>
 <summary>Answer and explanation</summary>
 
-**B) 0/1 knapsack, because the feasible sets are not a matroid.**
+**A).**
 
-In the instance $(10,60), (20,100), (30,120)$ with capacity `50`, take
-$A = \{(20,100)\}$ (weight `20`) and $B = \{(20,100), (30,120)\}$ (weight
-`50`). Then $|A| < |B|$ but adding either element of $B \setminus A$ to $A$
-exceeds the capacity — so $B$ is not reachable from $A$ by one exchange, and
-greedy has no local move that leads to the optimum. That failure *is* the
-definition of not being a matroid.
-
-Option A is false: greedy activity selection is optimal, and Block 3 verifies
-it against brute force over all $128` subsets. Option C is false: Kruskal's
-algorithm is greedy and the graphic matroid is the reason it works. Option D
-is false: Huffman code lengths are $\ell$ for Huffman codes, which is the
-deepest possible optimality statement for prefix codes.
+The design buys $O(1)$ per operation at the cost of a node per entry plus one pointer
+per direction, and it obliges you to maintain the recency invariant. That trade is
+usually right, which is why `collections.OrderedDict` and every production LRU
+implements it. Option B is refuted by the cost table: the naive version performs `123.2`
+element shifts per operation at capacity 100 and `4,338.9` at capacity 4000, against the
+linked version's exactly `4` at every capacity — the gap is unbounded, not a constant.
+Option C inverts the reasoning — small capacity is exactly when you would be happy
+scanning. Option D is backwards; this design costs *more* memory than the naive one.
 
 </details>
 
-**Q10.** Counting sort sorts 1024 values in 16 bins using `1040`
-operations, beating the `9217` comparisons of merge sort. How is this not a
-contradiction of $\Omega(n\log n)$?
+**Q10.** A division of the rod so that every piece is as equal as possible seems
+obviously optimal. What is wrong with the reasoning?
 
-- A) Because the constants in $\Omega$ are allowed to be large
-- B) Because the lower bound is on the number of *comparisons* in a model where comparisons are the only allowed question, and counting sort asks a different question
-- C) Because `1040` is really `1040 log 1040` operations
-- D) Because merge sort is not $O(n \log n)$
+- A) Nothing; equal pieces are optimal by symmetry
+- B) It assumes the objective is "minimise the largest piece", which was never stated —
+  the objective drives the whole proof
+- C) Equal pieces cannot always be cut, because prices may not permit it
+- D) The reasoning is right but the computation is $O(n!)$
 
 <details>
 <summary>Answer and explanation</summary>
 
-**B) Because the lower bound is on the number of comparisons in a model where
-comparisons are the only allowed question, and counting sort asks a different
-question.**
+**B).**
 
-Counting sort computes, for each of the `16` possible values, how many inputs
-equal it. That is arithmetic on the keys, not a comparison, so the decision
-tree argument simply does not apply. The bound is a statement *about a model*,
-which is why every correct statement of it names the model.
-
-Option A misuses the notation: the constant in $\Omega$ multiplies a growing
-function, and no constant makes `1040 > 9217` for large $n`. Option C is
-arithmetic nonsense. Option D contradicts
-[Lesson 80](80_big_o_and_complexity.md) and Block 2's measurements: merge sort
-uses `45057` comparisons at $n = 4096$, which is $n \log_2 n - n + 1$ exactly.
+A greedy rule is only meaningful relative to an objective, and the objective is the
+first thing that has to be written down. "Equal pieces" is provably optimal for
+minimise-the-largest-piece and wrong for maximise-revenue — which is the trap in the
+rod-cutting instance where rule A (highest absolute price) is wrong on 288 of 400
+instances. Option A confuses a symmetry argument with an optimality argument.
+Option C misstates the problem: any integer length is cuttable, only the *value*
+differs. Option D is irrelevant — the reasoning fails before the complexity is
+considered.
 
 </details>
 
@@ -1630,232 +2818,290 @@ uses `45057` comparisons at $n = 4096$, which is $n \log_2 n - n + 1$ exactly.
 
 ### Short Answer
 
-**Q1. State the three cases of the Master Theorem for
-$T(n) = a\,T(n/b) + \Theta(n^c)$.**
+**Q1. State the greedy-choice property and describe the exchange argument that proves
+it.**
 
 <details>
 <summary>Answer</summary>
 
-With $a \ge 1$, $b > 1$ and $d = \log_b a$: if $c < d$ then
-$T(n) = \Theta(n^d)$; if $c = d$ then $T(n) = \Theta(n^d \log n)$; if
-$c > d$ then $T(n) = \Theta(n^c)$. The three cases are named for what
-dominates — leaves, everything equally, or the top of the recursion tree. The
-condition $c$ must be exactly $\Theta(n^c)$ matters: a $\log$ factor in the
-additive term does not fit and needs Akra–Bazzi.
+The greedy-choice property says there is always *some* optimal solution of the problem
+that contains the greedy choice $g$. To prove it: take any optimal solution $O$. If
+$g \in O$ there is nothing to show. Otherwise identify the element $x \in O$ that $g$
+displaces, and prove that $O' = (O \setminus \{x\}) \cup \{g\}$ is still feasible and has
+the same objective value. Then $O'$ is optimal and contains $g$, which is what was
+needed. The proof is then closed by induction on the number of elements remaining.
 
 </details>
 
-**Q2. What three obligations does a loop-invariant proof discharge?**
+**Q2. What is the variant function for binary search, and what bound does it give?**
 
 <details>
 <summary>Answer</summary>
 
-Initialisation: the invariant holds before the first iteration. Maintenance:
-if the invariant holds and the guard holds at step $k$, then it holds at step
-$k+1$. Conclusion (or exit): if the invariant holds and the guard fails, the
-postcondition follows. These are the three parts of induction on the
-iteration count. Termination is a separate obligation, discharged by a
-variant that strictly decreases and is bounded below.
+$V = hi - lo + 1$, a non-negative integer that strictly decreases on every iteration
+because each iteration sets either $lo = mid + 1$ or $hi = mid - 1$, halving or better.
+Its initial value is $n$, and since each step at least halves it, the loop runs at most
+$\lfloor \log_2 n \rfloor + 1$ times. Measured: at $n = 2^{40}$ the search takes 41
+iterations, equal to the bound, on an array that cannot be allocated.
 
 </details>
 
-**Q3. Give the optimal-substructure and overlapping-subproblems conditions for
-dynamic programming, and one problem that satisfies each alone.**
+**Q3.** For $T(n) = 3T(n/3) + n$, which Master Theorem case applies and what is the
+answer? Justify it without quoting the theorem.
 
 <details>
 <summary>Answer</summary>
 
-Optimal substructure: an optimal solution is built from optimal solutions of
-smaller subproblems. Longest path satisfies it. Overlapping subproblems: the
-same subproblem is solved again in different branches. Naive Fibonacci
-satisfies it (each $F(n-1)$ is recomputed). Both together are what makes DP
-worth writing: optimal substructure means the recurrence is *correct*,
-overlapping subproblems means evaluating it recursively is *exponential*.
+Case 2, and $T(n) = \Theta(n \log n)$. Justification: the tree has $\log_3 n$ levels; at
+level $k$ there are $3^k$ nodes each doing $n/3^k$ work, so the level cost is $n$ —
+constant across levels. Constant level costs times the number of levels gives
+$n\log_3 n$. Measured: total work is exactly $n(k+1)$ with $k = \log_3 n$, so the ratio
+to $n \ln n$ falls 1.214 → 1.040, converging on $1/\ln 3 = 0.910$.
 
 </details>
 
-**Q4. State the exchange argument, and say what has to be checked.**
+**Q4. Give a problem with non-overlapping subproblems, and say which tool applies
+instead of dynamic programming.**
 
 <details>
 <summary>Answer</summary>
 
-If for every optimal solution $O$ there is an optimal solution $O'$ containing
-the greedy choice, then greedy is optimal. To prove it you check two things
-for the swap $O' = (O \setminus \{o\}) \cup \{g\}$: that $O'$ is still
-feasible (no new violation) and that its objective value did not get worse.
-On the 0/1 knapsack instance neither check passes, which is precisely why
-greedy fails there.
+Merge sort, or any balanced divide and conquer: the two halves of a problem instance
+are disjoint, so no subproblem is ever required twice and there is nothing to memoise.
+The right tool is divide and conquer with the Master Theorem: $T(n) = 2T(n/2) + \Theta(n)$
+is case 2, giving $\Theta(n \log n)$, confirmed by the measured element-move count
+$n\lceil\log_2 n\rceil$. The test is whether the same instance appears in two branches
+of the recursion tree; if not, memoisation buys nothing and the tree method applies
+directly.
 
 </details>
 
-**Q5. Why does Dijkstra's algorithm require non-negative edge weights, in one
-sentence?**
+**Q5.** What does the invariant "the list contains exactly the dict's keys, most
+recently used first" buy you that "the cache works" does not?
 
 <details>
 <summary>Answer</summary>
 
-Because its correctness rests on the claim that once the closest unsettled
-vertex is settled its distance can never improve, and that claim is false when
-a later path can arrive along a negative edge — as Block 5 shows, where `T` is
-settled at `4` and the real answer is `-4` through a vertex not yet reached.
-
-</details>
-
-**Q6. Give the information-theoretic lower bound for comparison sorting and
-the best known comparison sort, and compute the asymptotic gap.**
-
-<details>
-<summary>Answer</summary>
-
-The lower bound is $\log_2 n! = n\log_2 n - n\log_2 e +
-\frac12\log_2(2\pi n) + O(1/n) = \Theta(n\log n)$ bits, because a binary
-comparison yields one bit and $n!$ orderings must be distinguished. Merge sort
-uses $n\log_2 n - n + 1$ comparisons. The gap between them is
-$(\log_2 e - 1)n + O(\log n) \approx 0.4427n$ comparisons: `52.84` at
-$n = 128$ and `447.99` at $n = 1024$, against predictions of `56.67` and
-`453.30`.
+It is checkable. "The cache works" is a paraphrase of the specification and cannot fail
+loudly; the invariant is a predicate you can evaluate after every operation, and it
+distinguishes an LRU cache from a FIFO queue on the very first `get`-then-`put` pair —
+in Block 5, after `put(1), put(2), put(3)` the order is `[3, 2, 1]` and the subsequent
+eviction is 2, not 3. The invariant also localises failures: breaking it tells you
+which operation violated which clause, instead of leaving you to bisect a vague
+misbehaviour.
 
 </details>
 
 ### Long Answer
 
-**Q1. Why does the pure-power substitution guess fail for
-$T(n) = 3T(n/2) + n$, and what does the repair teach about the Master
-Theorem?**
+**Q1.** A colleague claims a greedy algorithm is correct because it matched an
+exhaustive search on 400 random instances, losing on 7. What would you say, and what
+would you ask them to produce?**
 
 <details>
 <summary>Model answer</summary>
 
-Because $2^{\log_2 3} = 3$ exactly, the recursive term consumes the entire
-budget: $3c(n/2)^d = c\,n^d$, so the induction step demands
-$c\,n^d \ge c\,n^d + n$. No constant helps. Block 1 measures the ratio of the
-right-hand side to the left as `1.6667`, `1.3333`, `1.0667`, `1.0007` for
-$c = 1, 2, 10, 1000$: it approaches 1 from above and never reaches it, which
-is the numeric signature of an impossible step.
+I would say that 393/400 is not evidence of correctness, and I would ask for the
+exchange argument.
 
-The repair is to guess $c\,n^d - \lambda n$. The step then becomes
-$c\,n^d - (\frac32\lambda - 1)n \le c\,n^d - \lambda n$, needing
-$\lambda \ge 2$, and the base case needs $c \ge 3$. With those values the
-bound is *exact*: the difference is `0.000000` at every power of two up to
-1024, and the closed form is $T(2^k) = 3^{k+1} - 2^{k+1}$.
+The reason is structural. A greedy rule is correct exactly when the greedy-choice
+property holds: there is always *some* optimal solution containing the greedy choice.
+That is a universal statement about all inputs, and no finite sample can establish it —
+the sample constrains a hypothesis, it cannot verify a theorem. The 7 failures are
+also not noise; they are the property failing, and their existence is a *disproof* of
+the claim "greedy is optimal", not merely a reason for doubt. A claim quantified over
+all inputs is refuted by one counterexample, so the 7 failures settle it.
 
-What this teaches about the Master Theorem is the meaning of its condition
-$c < d$. In the recursion tree, the internal work per level forms a geometric
-series with ratio $a/b$, and the leaves number $n^d$. When $c < d$ the leaves
-are a larger power of $n$ than any level, so leaves dominate — which is
-exactly the situation where the slack term $-\lambda n$ exists to absorb the
-per-level work. When $c = d$ every level costs the same, so the additive term
-contributes on $\log_b n$ levels and the extra $\log n$ appears. The failure
-of the naive guess is not a defect of the method; it is the theorem's
-hypothesis showing up as an algebraic obstruction.
+The numbers in Block 4 make the point sharper than any argument. The "best
+price-per-length" rule for rod cutting is right on 393 of 400 instances, and its
+shortfalls are small — the first is 2 units on a rod of length 7. Every hand-worked
+example you would find in a tutorial shows it looking perfect. Meanwhile the
+"highest absolute price" rule, wrong on 288 of 400, looks exactly as plausible before
+testing. The visual and statistical similarity between a 98%-correct rule and a
+28%-correct one is the whole reason people ship the first one by accident.
+
+What I would ask for is a proof, and specifically:
+
+1. Let $O$ be any optimal solution and $g$ the greedy choice. Is there an $x \in O$
+   such that $(O \setminus \{x\}) \cup \{g\}$ is feasible with the same objective value?
+2. If no such $x$ exists for some $O$, the greedy-choice property fails and no amount
+   of tuning saves the rule.
+3. If yes for all $O$, write the induction: fix $g$, apply the hypothesis to the
+   remainder.
+
+The exchange for activity selection is three sentences and I would expect it in the
+same three-sentence form for anything claimed to be greedy. If the answer to step 1 is
+"I looked at a lot of cases and could not break it", the honest conclusion is that the
+rule is a heuristic, and it should be shipped as one — with the measured 393/400 rate
+documented, which is genuinely useful information even though it is not a proof. That
+framing is not a consolation prize; heuristics with measured failure rates and
+fallbacks are a completely respectable engineering artefact. The failure mode to avoid
+is not "using a heuristic", it is "documenting a heuristic as a theorem".
 
 </details>
 
-**Q2. A team wants to route packets with minimum total cost over a network
-with negative edge weights (a rebate for traffic). Give the algorithm, prove
-it correct, and say what would break if you used Dijkstra.**
+**Q2.** Explain, with a measured example, why `hi = mid` in binary search is worse than
+"just an off-by-one", and what class of bug it belongs to.
 
 <details>
 <summary>Model answer</summary>
 
-Use Bellman-Ford, at $O(VE)$, or a topological pass if the graph is a DAG
-($O(V+E)$). Correctness: after $k$ passes, every path of at most $k$ edges
-has been accounted for, because a pass relaxes every edge once in some fixed
-order and any path of $k$ edges is traversed by pass $k$ regardless of the
-order the edges are listed in. Since a shortest path visits no vertex twice
-when there is no negative cycle, it has at most $V-1$ edges, so after $V-1$
-passes every distance is final. If a $V$-th pass still relaxes something, a
-negative cycle is reachable and distances are unbounded below; Block 5 shows
-exactly this, with $X$'s distance walking $-1, -2, -3, -4$ over four passes
-along the cycle of weight $-1$.
+The short answer is that `hi = mid` breaks *two* independent arguments at once, and
+that is why it is qualitatively worse than an off-by-one.
 
-What breaks with Dijkstra is not accuracy by a little but by a lot. Block 5's
-graph has no ties: it settles $S(0)$, $A(1)$, $B(3)$, $T(4)$ and only then
-$C(6)$. When $C$ is finally reached it offers $T$ a distance of $-4$, but the
-standard implementation never reopens a settled vertex, so it reports `4`
-instead of `-4`, wrong by `8`. The proof step that fails is "the unsettled
-vertex with the smallest key has final distance", which requires every path
-into it to arrive with a non-negative last edge: a negative edge can arrive
-later and from further away, yet still win. Routing is exactly the domain
-where this matters, since traffic engineering routinely creates rebates,
-penalties and priority edges; the practical answer is Dijkstra with potentials
-(Johnson's algorithm) or plain Bellman-Ford when the graph is a DAG.
+The first broken argument is the loop invariant. The invariant is
+$\text{target} \in a \iff \exists i \in [lo, hi] : a[i] = \text{target}$. At the moment
+the code has established $a[mid] > \text{target}$, it *knows* index `mid` cannot hold the
+target, and `hi = mid` keeps that index in the window anyway. The invariant is false at
+the very next loop head. So the mechanism by which binary search is correct — never
+discarding a position that could hold the answer — is destroyed on every leftward step.
+
+The second broken argument is the variant function. $V = hi - lo + 1$ is supposed to be
+a non-negative integer that strictly decreases while the loop runs. When $lo = hi$ and
+the code takes the `hi = mid` branch, we get $hi \leftarrow lo$, so $V$ goes from 1 to 1:
+no decrease. The loop has entered a cycle. Measured: 526 of 3,300 random
+`(array, target)` pairs **hang forever**, and the 506 distinct hanging instances include
+the trivially small `a = [7], target = 0` — one element, a target below it, and the
+search never returns.
+
+That the two failures coincide is the real lesson. Off-by-one errors are usually caught
+by a failing test. This bug is caught by *neither* a test nor inspection, because the
+function still returns a plausible in-range index whenever it returns at all, and there
+is no wrong answer to look at — only a hang. So the class is best described as an
+invariant violation that also defeats the termination argument, which makes it a
+*semantic* bug rather than an arithmetic one: the code's observable behaviour
+(discarding a position you know is wrong) is the bug, and the specific arithmetic is
+incidental.
+
+The generalisable point is that proving correctness and proving termination are two
+separate obligations with two separate certificates, and a change that breaks both
+simultaneously is invisible to any testing strategy that only looks for wrong outputs.
+This is the strongest practical argument for writing invariants as executable checks
+rather than as sentences: Block 1's `CheckedBinarySearch` evaluates the invariant by
+brute force at every loop head, so this bug becomes a raised exception with a message
+naming the array, the target, and the window — deterministically, on the first
+execution, rather than on the 526th timeout.
+
+The related lesson is about language choice. `(lo + hi) // 2` is the other famous
+binary-search bug, and it is *invisible in Python* because Python integers do not
+overflow. It overflows in every fixed-width language, and it is invisible in testing
+for the same reason it is visible in production: small test arrays never get near
+$2^{31}$. Two different bugs, two different hiding places, one shared cause — the
+code's observable behaviour on the inputs you try is not the behaviour that matters.
 
 </details>
 
-**Q3. When should you write dynamic programming instead of a greedy
-algorithm? Give a decision procedure and two examples on each side.**
+**Q3.** The Master Theorem does not apply to $T(n) = T(n/2) + T(n/3) + \Theta(n)$, and
+the recursion tree is visibly uneven. Explain what happens and what to do instead.**
 
 <details>
 <summary>Model answer</summary>
 
-The decision procedure is: try to write the exchange argument. Take the
-greedy choice $g$ and ask whether, for an arbitrary optimal solution $O$,
-replacing $O$'s conflicting element by $g$ preserves both feasibility and the
-objective value. If you can do that for one of the two cases ($g$ is in $O$
-already, or $g$ replaces exactly one element), greedy is optimal and you write
-it. If you find yourself enumerating cases, or if replacing one element
-requires dropping two, stop.
+The Master Theorem requires $T(n) = aT(n/b) + f(n)$ with a *single* branching factor.
+Here there are two: one subproblem halves and one thirds. $p = \log_b a$ does not
+exist, so the three cases are simply not defined for this recurrence. That is not a
+technicality — the uneven tree is the mathematical content, not an inconvenience.
 
-Greedy works for activity selection (Block 3: replace the first interval, whose
-finish is no earlier, and nothing downstream conflicts), for minimum spanning
-trees (cut property: some minimum spanning tree contains the cheapest edge
-across any cut), and for Huffman coding (the two least frequent symbols can be
-siblings in some optimal tree, and swapping frequencies down a tree cannot
-increase its weighted length). These are matroid problems — hereditary
-feasibility plus exchange — and the matroid theorem guarantees that sorting by
-weight and taking while feasible is optimal.
+What happens concretely: the tree is not level-synchronised, because the half-sizes and
+the third-sizes reach 1 at different depths. $n/2^{k}$ equals 1 at depth $\log_2 n$, while
+$n/3^{k}$ reaches 1 at depth $\log_3 n$, and since $\log_3 n > \log_2 n$ the size-1
+nodes arrive at different levels. Any argument that sums "the work at level $k$" has
+to deal with nodes of different sizes at the same depth, which is exactly the
+structure the level-sums method is designed to avoid.
 
-Dynamic programming wins where a choice consumes a resource that a later choice
-also wants, so the local optimum blocks the global one. 0/1 knapsack is the
-canonical case: capacity `50` with items $(10,60)$, $(20,100)$, $(30,120)$,
-greedy by density returns `160` while the optimum is `220`, and no swap exists
-because dropping the dense item frees only `10` units. Longest common
-subsequence is the other: at each pair of prefixes you choose to match or skip,
-and both sub-answers are needed, so the state is the pair $(i,j)$ and there
-are $(m+1)(n+1)$ of them.
+There are three correct approaches.
 
-A useful sanity check is the size of the state space. If the number of
-distinct states is polynomial in the input and the transitions between them are
-cheap, DP is the answer; if it is exponential, DP will not save you and the
-real question is whether the problem is `#P`-complete — which
-[Lesson 28](../part02_discrete_combinatorics/28_counting_strategies.md) tells
-you how to recognise.
+**The recursion-tree method with explicit levels.** Stop the tree when *all* nodes have
+size 1. Count leaves by tracking the total number of size-1 nodes. For
+$T(n) = T(n/2) + T(n/3) + cn$, each internal node of size $m$ produces $m$ units of work
+and two children, so the number of leaves is $\Theta(n^{\log_2 3}) = \Theta(n^{1.585})$ —
+the Akra–Bazzi exponent, which solves $1/2^p + 1/3^p = 1$. Each internal node has size
+$m \ge 1$, and the total work is at least proportional to the number of nodes, so
+$T(n) = \Theta(n^{1.585})$. The general tool here is the **Akra–Bazzi theorem**: for
+$T(n) = \sum_i a_i T(n/b_i) + g(n)$, let $p$ solve $\sum_i a_i b_i^{-p} = 1$, then
+
+$$T(n) = \Theta\left(n^p\left(1 + \int_1^n \frac{g(u)}{u^{p+1}}\,du\right)\right),$$
+
+and for $g(n) = \Theta(n)$ the integral converges, giving $\Theta(n^p)$.
+
+**The substitution method.** Guess $T(n) \le c\,n^{p}$ with $p = 1.585$, substitute, and
+check the inequality closes for some $c$. This works and requires no new theorem, but
+you need the exponent to guess at — which is why Akra–Bazzi or an Akra–Bazzi-style
+derivation is usually done first.
+
+**A different algorithm.** Sometimes the honest answer is that the uneven recurrence is
+a symptom of a worse design. If you can restructure so the split is even — pad the
+third subproblem up to $n/2$ and solve the padding for free, or reformulate to recurse
+once — the analysis becomes tractable and the constant factors improve. Akra–Bazzi is
+the tool for when you must keep the algorithm; restructuring is the tool for when you
+can change it.
+
+The general lesson: "the Master Theorem doesn't apply" is not a dead end, it is
+information. It says the recurrence does not have the self-similarity the three cases
+exploit, and it tells you which of three other tools to reach for.
 
 </details>
 
-**Q4. Every sorting algorithm you can think of is comparison based except
-counting, radix and bucket sort. Why does the $\Omega(n \log n)$ lower bound
-not stop us from sorting a billion integers in a second?**
+**Q4.** Describe how you would design a data structure from scratch for a problem you
+have never seen, and say which of this lesson's tools you would use at each step.**
 
 <details>
 <summary>Model answer</summary>
 
-Because the bound is a statement about a *model*, and the model is the whole
-point. The argument is a counting argument: a comparison sort's only
-information-gathering move is a two-valued question, its execution tree needs
-at least $n!$ leaves to separate all possible orders, and a binary tree of
-that size has depth at least $\log_2 n! = \Theta(n\log n)$ bits. Remove the
-comparison and every step of the argument fails at once — there is no tree,
-no leaves, no counting of information.
+**Step 1: write the specification as a list of invariants, before writing code.** Not
+prose — invariants. "Supports insert, delete and lookup of integer keys" is a
+sentence; "the array's first $i$ entries are sorted and are the $i$ smallest keys
+inserted so far" is checkable. Until you can write a checkable invariant, you do not
+know what you are building, and you will discover the gap by debugging instead. Block 5
+is this step: the LRU spec becomes three invariants (I1 list equals dict keys, I2
+ordered most-recently-used first, I3 both link directions agree), and the naive version
+is written against the same three.
 
-Counting sort instead uses the arithmetic of the keys. With values in
-$0..k-1$ it makes one pass to count and one to emit, $\Theta(n+k)$ operations.
-Block 7 measures `1040` operations for 1024 values in 16 bins against merge
-sort's `9217`, and the gap widens with $n$ because merge sort's cost grows
-like $n\log n$ while this stays linear. Radix sort generalises it to
-fixed-width strings by sorting on one digit at a time, $d$ passes of
-$\Theta(n+k)$; bucket sort generalises it to continuous keys with a known
-distribution.
+**Step 2: write the brute force.** Deliberately slow, obviously correct, and short. It
+is the oracle every later version is checked against, and it is the thing that tells
+you whether your fast version is actually equivalent or merely similar. Block 2's
+exhaustive search over all $2^m$ interval subsets, and Block 4's exhaustive coin search,
+are both this step. It costs ten minutes and saves days.
 
-The price is the assumption: the keys must live in a small, known range
-(counting), be of bounded width (radix), or be spread predictably (bucket).
-The moment you sort arbitrary-precision integers, arbitrary-length strings or
-arbitrary real numbers, you are back in the comparison model and
-$\Omega(n\log n)$ is waiting for you. This is why a database sorts an indexed
-integer column in linear time and a `TEXT` column with a comparison sort, and
-why the honest statement of any lower bound must name the class of algorithms
-it quantifies over.
+**Step 3: name the dominant operation.** What is the single most frequent thing this
+structure must do, and how often? Lookup? Reordering? Finding a minimum? Insert next to
+a given element? The answer determines the representation, and getting it wrong makes
+every later decision wrong in ways that are hard to see. This is
+[Lesson 80](80_big_o_and_complexity.md)'s question and it is the fork in the road:
+counting, not timing.
+
+**Step 4: choose the representation so the dominant operation is $O(1)$, and pay for it.**
+This is the step that is always skipped and always matters. Block 5's whole design is
+one decision: store the list **node** in the dict, so the lookup hands you the node to
+unlink and there is no second search. You pay with a pointer per direction and an extra
+invariant to maintain — and you get $O(1)$ `get` and $put`. The same move produced the
+dynamic array (extra capacity as the price of amortised $O(1)$ append) and the hash
+table (extra load-factor headroom as the price of $O(1)$ lookup).
+
+**Step 5: check the greedy-choice property if you are designing an algorithm rather than
+a structure.** Can you write the exchange in three sentences? If yes, do it and stop. If
+no, ask step 6.
+
+**Step 6: look at the recurrence.** Does the same subproblem appear in two branches? If
+yes, memoise — and count *states*, not calls, or you will get the complexity wrong
+(29,860,703 calls versus 34 additions for Fibonacci at $n = 35$). If subproblems are
+disjoint and shrink geometrically, you have divide and conquer: draw the tree, sum the
+levels, and identify the case. If neither, you probably have an algorithm rather than a
+data structure problem, and [Lesson 81](81_amortized_analysis.md)'s amortised tools or
+a randomised or adversarial analysis may be what is needed.
+
+**Step 7: machine-check the invariants on random input, then measure.** The order matters
+and is not negotiable. Block 5 ran 7,204 invariant evaluations across 200 random
+operation sequences and found zero mismatches between the $O(1)$ and the $\Theta(n)$
+implementations — *then* it counted, and found `4` pointer writes per operation against
+`123.2` element shifts at capacity 100 and `4,338.9` at capacity 4000. Without the
+invariant check you would have been comparing two things you had not established to be
+computing the same function, and no count would have told you they agreed.
+
+The meta-point: the tools are not the hard part. The hard part is having the discipline
+to write things down *before* the code, and to check against something obviously right
+rather than against your own intuition. An algorithm with an invariant and an oracle
+behind it is debuggable; one without is a lottery ticket.
 
 </details>
 
@@ -1863,1635 +3109,333 @@ it quantifies over.
 
 ## Exercises and Solutions
 
-**[ ] Exercise 1 —** Solve each recurrence $T(n) = a\,T(n/b) + \Theta(n^c)$ by the
-Master Theorem, saying which case applies and why: (a) $T(n) = 2T(n/2) +
-\Theta(n)$; (b) $T(n) = 7T(n/2) + \Theta(n)$; (c) $T(n) = 4T(n/2) +
-\Theta(n^2)$; (d) $T(n) = T(n/3) + \Theta(n \log n)$ — and for (d) say what
-happens to the Master Theorem and what replaces it.
+**[ ] Exercise 1** — For binary search on a sorted array of length $n$:
+
+(a) State the loop invariant and the side condition needed for termination.
+(b) State the variant function and deduce the bound on the number of iterations.
+(c) Show that using `hi = mid` instead of `hi = mid - 1` breaks both.
+(d) The safe midpoint is `lo + (hi - lo) // 2`. Explain why, and say why Python will
+never reveal the bug.
 
 <details>
 <summary>Solution</summary>
 
-(a) $a = b = 2$ gives $d = 1$ and $c = 1$, so $c = d$ and
-$T(n) = \Theta(n \log n)$. This is merge sort; Block 2's exact count
-$n\log_2 n - n + 1$ confirms the shape. **Case 2**, and it is the boundary
-case: the level ratio $a/b^c = 2/2 = 1$, so no level dominates.
+**(a)** The invariant is
+$$I \equiv \big[\ \text{target occurs in } a \ \big] \iff \big[\ \exists i \in [lo,hi] :
+a[i] = \text{target} \big],$$
+together with the side condition $lo \le hi + 1$. It holds before the loop with
+$lo = 0$, $hi = n - 1$; it is preserved because each branch discards only indices already
+known not to hold the target; and with the guard $lo \le hi$ false, the window is empty
+so the target is not in the array — which is the required postcondition for a miss.
 
-(b) $d = \log_2 7 \approx 2.8074$ and $c = 1 < d$, so $T(n) = \Theta(n^{2.8074})$
-— a 7-way split of a linear-cost problem. **Case 1**: the leaves win. The
-Master Theorem works fine; the algorithm is just a bad idea.
+**(b)** The variant is $V = hi - lo + 1$, a non-negative integer. Each iteration sets
+either $lo = mid + 1$ or $hi = mid - 1$ with $lo \le mid \le hi$, so the window size
+strictly decreases and, because $mid$ splits it, at least halves: $V_{\text{after}} \le
+\lceil V_{\text{before}}/2 \rceil$. Starting from $V = n$, after $k$ iterations
+$V \le \lceil n/2^k \rceil$, which is at most 1 for $k = \lceil \log_2 n \rceil$. So the
+iteration count is at most $\lfloor \log_2 n \rfloor + 1$ — 41 at $n = 2^{40}$, measured
+and equal to the bound.
 
-(c) $d = \log_2 4 = 2 = c$, so $T(n) = \Theta(n^2 \log n)$. **Case 2** again.
-This is the counterintuitive one: doubling the branching factor *doubled*
-the answer, because the merge cost grew just as fast as the branching.
+**(c)** With `hi = mid`, the leftward branch keeps index `mid` in the window after
+establishing $a[mid] > \text{target}$, so the right side of the biconditional becomes
+false while the left stays true: $I$ is violated at the next loop head. Worse, when
+$lo = hi$ the update gives $hi \leftarrow lo$, so $V$ goes $1 \to 1$ and does not
+decrease, so termination also fails. Measured: 526 of 3,300 random `(array, target)`
+pairs hang, including `a = [7], target = 0`.
 
-(d) $a = 1$, so $d = \log_3 1 = 0$, and the additive term $\Theta(n \log n)$
-is **not** of the form $\Theta(n^c)$ for any $c$. The Master Theorem does not
-apply. Use Akra–Bazzi: solve $\sum_i a_i b_i^p = 1$, i.e. $(1/3)^p = 1$, giving
-$p = 0$. Then
-
-$$\Theta\left(n^0\left(1 + \int_1^n \frac{u \log u}{u^{p+1}}\,du\right)\right) = \Theta\left(1 + \int_1^n \log u\,du\right) = \Theta(n \log n).$$
-
-The $n^0$ prefactor is the whole answer and it is easy to drop: writing
-$\Theta(n(\log n)^2)$ instead is the correct answer to a *different*
-recurrence, namely $2T(n/2) + \Theta(n \log n)$ — see Challenge (d). The
-recursion tree confirms $\Theta(n\log n)$ and even pins the constant: level $i$
-costs $(n/3^i)\log_2(n/3^i)$, so with $j = k - i$ for $n = 3^k$ the total is
-$\log_2 3 \sum_{j=1}^{k} j\,3^j = \log_2 3 \cdot \tfrac34\,(1 + (2k-1)3^k)$,
-which is a constant — $3/2$ — times $n\log_2 n$.
-
-```python
-"""Exercise 1 code block."""
-import math
-from math import log2
-
-CASES = [
-    ("(a)  T(n) = 2T(n/2) + Theta(n)",   2, 2, 1),
-    ("(b)  T(n) = 7T(n/2) + Theta(n)",   7, 2, 1),
-    ("(c)  T(n) = 4T(n/2) + Theta(n^2)", 4, 2, 2),
-]
-
-print("Solve T(n) = a T(n/b) + Theta(n^c) with the Master Theorem.")
-print()
-print(f"{'recurrence':<32} {'d = log_b a':>12} {'c':>3} {'case':>5} {'result':>20}")
-for label, a, b, c in CASES:
-    d = log2(a) / log2(b)
-    if c < d:
-        case, result = 1, f"Theta(n^{d:.4f})"
-    elif abs(c - d) < 1e-12:
-        case, result = 2, "Theta(n^d log n)"
-    else:
-        case, result = 3, f"Theta(n^{c})"
-    print(f"{label:<32} {d:12.4f} {c:3d} {case:5d} {result:>20}")
-
-print()
-print("(d)  T(n) = T(n/3) + Theta(n log n):  a = 1, so d = log_3 1 = 0, and")
-print("     n log n is not Theta(n^c) for any c.  Master Theorem: DOES NOT APPLY.")
-print()
-print("     Akra-Bazzi.  Solve  a_1 b_1^p = 1  ->  (1/3)^p = 1  ->  p = 0.")
-print("         T(n) = Theta( n^p (1 + INT_1^n g(u)/u^(p+1) du ) )")
-print("               = Theta( n^0 (1 + INT_1^n u log u / u^1 du ) )")
-print("               = Theta( 1 + INT_1^n log u du )")
-print("               = Theta( 1 + n log n - n + 1 )")
-print("               = Theta(n log n)")
-print()
-print("     The n^0 prefactor is the whole answer.  Drop it and you get n log n")
-print("     out of an integral that is only n log n in total -- i.e. n (log n)^2,")
-print("     which is the answer to a DIFFERENT recurrence (Challenge (d)).")
-print()
-print("     Recursion tree check.  Level i has 1 node of size n/3^i doing")
-print("     (n/3^i) log2(n/3^i) work, so with j = k - i the total is")
-print("         SUM_{j=1..k} 3^j * j * log2(3) = log2(3) * (3/4)(1 + (2k-1)3^k).")
-print()
-print(f"       {'k':>3} {'n = 3^k':>10} {'tree total':>16} {'closed form':>16} {'n log2 n':>16} {'ratio':>8}")
-for k in range(3, 15):
-    n = 3 ** k
-    total, size = 0.0, float(n)
-    while size >= 1.0:
-        total += size * math.log2(size) if size > 1 else 0.0
-        size /= 3
-    closed = math.log2(3) * 0.75 * (1 + (2 * k - 1) * 3 ** k)
-    print(f"       {k:3d} {n:10d} {total:16.2f} {closed:16.2f} "
-          f"{n*math.log2(n):16.2f} {total/(n*math.log2(n)):8.4f}")
-print()
-print("     The two total columns agree to the last digit, and the ratio tends")
-print("     to 3/2 rather than 1.  The constant is not 1 because the work is")
-print("     dominated by the LAST levels, not the first: the j-th-from-last")
-print("     level does 3^(k-j) * j * log2(3) work, and the j series sums to 3/4,")
-print("     which is what produces the factor 3/2 = (3/4) * 2.")
-```
-
-```text
-Solve T(n) = a T(n/b) + Theta(n^c) with the Master Theorem.
-
-recurrence                        d = log_b a   c  case               result
-(a)  T(n) = 2T(n/2) + Theta(n)         1.0000   1     2     Theta(n^d log n)
-(b)  T(n) = 7T(n/2) + Theta(n)         2.8074   1     1      Theta(n^2.8074)
-(c)  T(n) = 4T(n/2) + Theta(n^2)       2.0000   2     2     Theta(n^d log n)
-
-(d)  T(n) = T(n/3) + Theta(n log n):  a = 1, so d = log_3 1 = 0, and
-     n log n is not Theta(n^c) for any c.  Master Theorem: DOES NOT APPLY.
-
-     Akra-Bazzi.  Solve  a_1 b_1^p = 1  ->  (1/3)^p = 1  ->  p = 0.
-         T(n) = Theta( n^p (1 + INT_1^n g(u)/u^(p+1) du ) )
-               = Theta( n^0 (1 + INT_1^n u log u / u^1 du ) )
-               = Theta( 1 + INT_1^n log u du )
-               = Theta( 1 + n log n - n + 1 )
-               = Theta(n log n)
-
-     The n^0 prefactor is the whole answer.  Drop it and you get n log n
-     out of an integral that is only n log n in total -- i.e. n (log n)^2,
-     which is the answer to a DIFFERENT recurrence (Challenge (d)).
-
-     Recursion tree check.  Level i has 1 node of size n/3^i doing
-     (n/3^i) log2(n/3^i) work, so with j = k - i the total is
-         SUM_{j=1..k} 3^j * j * log2(3) = log2(3) * (3/4)(1 + (2k-1)3^k).
-
-         k    n = 3^k       tree total      closed form         n log2 n    ratio
-         3         27           161.67           161.67           128.38   1.2593
-         4         81           675.19           675.19           513.53   1.3148
-         5        243          2600.92          2600.92          1925.73   1.3506
-         6        729          9533.55          9533.55          6932.63   1.3752
-         7       2187         33797.74         33797.74         24264.19   1.3929
-         8       6561        116989.25        116989.25         83191.51   1.4063
-         9      19683        397760.60        397760.60        280771.35   1.4167
-        10      59049       1333665.11       1333665.11        935904.51   1.4250
-        11     177147       4422149.98       4422149.98       3088484.87   1.4318
-        12     531441      14529918.66      14529918.66      10107768.68   1.4375
-        13    1594323      47380166.86      47380166.86      32850248.20   1.4423
-        14    4782969     153511737.96     153511737.96     106131571.10   1.4464
-
-     The two total columns agree to the last digit, and the ratio tends
-     to 3/2 rather than 1.  The constant is not 1 because the work is
-     dominated by the LAST levels, not the first: the j-th-from-last
-     level does 3^(k-j) * j * log2(3) work, and the j series sums to 3/4,
-     which is what produces the factor 3/2 = (3/4) * 2.
-```
+**(d)** `(lo + hi) // 2` computes $lo + hi$ first, which can exceed the representable
+range. With $lo = 2^{31} - 1$ and $hi = 2^{32} - 1$ the sum is $6{,}442{,}450{,}942$,
+above $2^{32} - 1$. `lo + (hi - lo) // 2` computes $hi - lo \le 2^{32} - 2$ first, which
+still overflows at exactly those values in signed 32-bit — the standard fix is unsigned
+arithmetic or a wider type — but the point stands: the subtraction is bounded by the
+range of `hi`, while the sum is not. Python will never reveal the bug because its
+integers are arbitrary precision and simply grow: both expressions give the same answer
+here, always. That is exactly what makes it dangerous — the bug is invisible in
+development and in unit tests, and appears only in the fixed-width language the code
+eventually gets ported to.
 
 </details>
 
-**[ ] Exercise 2 —** For the recurrence $T(n) = 2T(n/3) + \Theta(n)$: (a) apply
-the Master Theorem; (b) write the recursion-tree level costs and sum the
-geometric series; (c) prove $T(n) = \Theta(n)$ by substitution, including the
-base case.
+**[ ] Exercise 2** — Activity selection on intervals.
+
+(a) State the greedy-choice property for "always take the earliest-finishing compatible
+interval".
+(b) Write the exchange argument in full.
+(c) By computer, search for a counterexample to "always take the interval that starts
+latest" — an intuitively plausible alternative rule.
+(d) Explain why a test suite built only on instances with intervals in sorted order of
+finish time cannot distinguish the two rules.
 
 <details>
 <summary>Solution</summary>
 
-(a) $a = 2$, $b = 3$, $d = \log_3 2 \approx 0.6309$; the additive term is
-$\Theta(n^1)$ with $c = 1 > d$, so $T(n) = \Theta(n)$. **Case 3**: the root
-alone dominates, because the tree shrinks faster than it branches.
+**(a)** For every instance and every point in time at which the problem restarts, there
+is an optimal solution of the remaining intervals whose first interval is the
+earliest-finishing compatible one.
 
-(b) Level $i$ has $2^i$ nodes of size $n/3^i$, each doing $n/3^i$ work, so
-level $i$ costs $2^i n / 3^i = n (2/3)^i$ — a *decreasing* geometric series
-with ratio $2/3 < 1$, summing to at most $n/(1 - 2/3) = 3n$. The leaves number
-$2^{\log_3 n} = n^{0.6309}$, which is sublinear. Total $\le 3n + n^{0.6309} = O(n)$,
-and $\Omega(n)$ comes from the top level, so $T(n) = \Theta(n)$.
+**(b)** Let $g$ be the earliest-finishing compatible interval and let $O$ be an optimal
+solution for the remaining intervals. If $g \in O$ there is nothing to prove. Otherwise
+let $f$ be the first interval of $O$ (in finish order), so $f \ne g$ and
+$\text{end}(g) \le \text{end}(f)$ by the choice of $g$. Every other interval in $O$ starts
+at or after $\text{end}(f)$, and therefore at or after $\text{end}(g)$, so replacing $f$
+with $g$ keeps every interval in $O'$ compatible: $|O'| = |O|$ and $O'$ is feasible. Hence
+$O'$ is optimal *and* starts with $g$. Fix $g$ and apply the same argument to the
+intervals starting at or after $\text{end}(g)$; induction on the number of remaining
+intervals closes the proof.
 
-(c) Guess $T(n) \le C n$. The step:
+**(c)** The rule "take the latest-starting compatible interval" fails immediately. Take
+intervals $(1, 100)$ and $(2, 3)$. Latest-starting is $(2,3)$, and then nothing else
+fits — but $(2,3)$ and $(1,100)$ overlap, so the answer is 1 either way; use instead
+$(1, 4)$, $(3, 5)$, $(4, 6)$: latest-starting takes $(4,6)$ and is done with 1, while
+the optimum is $(1,4)$ and $(4,6)$ — size 2. More generally the rule fails whenever the
+latest-starting interval is long: it blocks everything, whereas the earliest-finishing
+one blocks as little as possible. A computer search over random interval sets finds
+such counterexamples immediately and the minimum failing instance has three intervals.
 
-$$T(n) = 2\,T(n/3) + n \le 2C(n/3) + n = \tfrac{2C}{3}n + n \le C n \iff 1 \le \tfrac{C}{3} \iff C \ge 3.$$
-
-The base case $n = 1$ needs $T(1) = 1 \le C$, which $C = 3$ satisfies, and
-$\Omega(n)$ is immediate from the root. So $T(n) = \Theta(n)$, and the pure
-power guess is *tight* here — unlike Exercise 1(d), where the additive term is
-not a power at all. The substitution succeeds exactly when $c \ne d$, and
-Challenge (b) proves that statement.
-
-```python
-"""Exercise 2 code block."""
-from math import log2, log
-
-
-def log3(x):
-    return log(x) / log(3)
-
-a, b, c = 2, 3, 1
-d = log3(a)
-
-print(f"a = {a}, b = {b}, f(n) = Theta(n^{c})")
-print(f"d = log_{b} a = log_{b} {a} = {d:.4f}")
-print(f"c = {c} > d, so Case 3:  T(n) = Theta(n^{c}) = Theta(n)")
-print()
-print("(b) Recursion tree.  Level i has a^i = %d^i nodes of size n/%d^i," % (a, b))
-print("    each doing n/%d^i work, so level i costs n (a/b)^i." % b)
-print(f"       {'level':>6} {'nodes':>10} {'size each':>14} {'level work':>16} {'total so far':>16}")
-n = 3 ** 10
-total, level, size = 0.0, 1, float(n)
-i = 0
-while size >= 1.0:
-    work = level * size
-    total += work
-    print(f"       {i:6d} {level:10d} {size:14.6f} {work:16.6f} {total:16.6f}")
-    level *= a
-    size /= b
-    i += 1
-leaves = n ** d
-print()
-print(f"    The level work is a GEOMETRIC series with ratio a/b = {a}/{b} = {a/b:.6f} < 1,")
-print(f"    so it sums to at most n / (1 - a/b) = {1/(1-a/b):.4f} n.")
-print(f"    Leaves: a^(log_b n) = n^(log_b a) = n^{d:.4f} = {leaves:.2f}")
-print(f"    Total <= {1/(1-a/b):.4f}n + {leaves:.2f} = O(n);  Omega(n) from the root.  Theta(n).")
-print()
-print("    Measured:")
-print(f"       {'n':>12} {'tree total':>16} {'total / n':>12}")
-for k in (4, 6, 8, 10, 12):
-    n = 3 ** k
-    tot, lev, sz = 0.0, 1, float(n)
-    while sz >= 1.0:
-        tot += lev * sz
-        lev *= a
-        sz /= b
-    print(f"       {n:12d} {tot:16.4f} {tot/n:12.4f}")
-print()
-print("    total / n climbs toward 3 and then stalls: Theta(n).  The constant 3")
-print("    is exactly the geometric sum 1/(1 - 2/3) = 3, and it is reached")
-print("    rather slowly because the leaf term n^0.63 is still visible at these")
-print("    sizes -- but n^0.63 is sublinear, so it vanishes as n grows.")
-print()
-print("(c) Substitution.  Claim: T(n) <= C n for all n >= 1, with C = 3.")
-print()
-print("    Inductive step, assuming T(m) <= C m for every m < n:")
-print("        T(n) = 2 T(n/3) + n <= 2 C (n/3) + n = (2C/3) n + n")
-print("        (2C/3) n + n <= C n   iff   1 <= C/3   iff   C >= 3.")
-print("    Base case: T(1) = 1 <= C for every C >= 3.  Take C = 3.")
-print("    Omega(n) is immediate: the root alone does n units of work.")
-
-
-def t(n):
-    """T(n) = 2 T(n/3) + n, T(1) = 1."""
-    if n <= 1:
-        return 1
-    return 2 * t(n // 3) + n
-
-
-print()
-print(f"       {'n':>10} {'T(n)':>10} {'T(n)/n':>10} {'<= 3n ?':>9}")
-for n in (27, 81, 243, 729, 2187, 6561):
-    v = t(n)
-    print(f"       {n:10d} {v:10d} {v/n:10.4f} {str(v <= 3*n):>9}")
-print()
-print("    The bound T(n) <= 3n is never violated, and T(n)/n grows slowly")
-print("    because n//3 truncation leaves a residue that recurses once more.")
-```
-
-```text
-a = 2, b = 3, f(n) = Theta(n^1)
-d = log_3 a = log_3 2 = 0.6309
-c = 1 > d, so Case 3:  T(n) = Theta(n^1) = Theta(n)
-
-(b) Recursion tree.  Level i has a^i = 2^i nodes of size n/3^i,
-    each doing n/3^i work, so level i costs n (a/b)^i.
-        level      nodes      size each       level work     total so far
-            0          1   59049.000000     59049.000000     59049.000000
-            1          2   19683.000000     39366.000000     98415.000000
-            2          4    6561.000000     26244.000000    124659.000000
-            3          8    2187.000000     17496.000000    142155.000000
-            4         16     729.000000     11664.000000    153819.000000
-            5         32     243.000000      7776.000000    161595.000000
-            6         64      81.000000      5184.000000    166779.000000
-            7        128      27.000000      3456.000000    170235.000000
-            8        256       9.000000      2304.000000    172539.000000
-            9        512       3.000000      1536.000000    174075.000000
-           10       1024       1.000000      1024.000000    175099.000000
-
-    The level work is a GEOMETRIC series with ratio a/b = 2/3 = 0.666667 < 1,
-    so it sums to at most n / (1 - a/b) = 3.0000 n.
-    Leaves: a^(log_b n) = n^(log_b a) = n^0.6309 = 1024.00
-    Total <= 3.0000n + 1024.00 = O(n);  Omega(n) from the root.  Theta(n).
-
-    Measured:
-                  n       tree total    total / n
-                 81         211.0000       2.6049
-                729        2059.0000       2.8244
-               6561       19171.0000       2.9220
-              59049      175099.0000       2.9653
-             531441     1586131.0000       2.9846
-
-    total / n climbs toward 3 and then stalls: Theta(n).  The constant 3
-    is exactly the geometric sum 1/(1 - 2/3) = 3, and it is reached
-    rather slowly because the leaf term n^0.63 is still visible at these
-    sizes -- but n^0.63 is sublinear, so it vanishes as n grows.
-
-(c) Substitution.  Claim: T(n) <= C n for all n >= 1, with C = 3.
-
-    Inductive step, assuming T(m) <= C m for every m < n:
-        T(n) = 2 T(n/3) + n <= 2 C (n/3) + n = (2C/3) n + n
-        (2C/3) n + n <= C n   iff   1 <= C/3   iff   C >= 3.
-    Base case: T(1) = 1 <= C for every C >= 3.  Take C = 3.
-    Omega(n) is immediate: the root alone does n units of work.
-
-                n       T(n)     T(n)/n   <= 3n ?
-               27         65     2.4074      True
-               81        211     2.6049      True
-              243        665     2.7366      True
-              729       2059     2.8244      True
-             2187       6305     2.8829      True
-             6561      19171     2.9220      True
-
-    The bound T(n) <= 3n is never violated, and T(n)/n grows slowly
-    because n//3 truncation leaves a residue that recurses once more.
-```
+**(d)** If every instance is supplied already sorted by finish time, then the two rules
+consume the input in the same order and the only difference is *which* interval is
+eligible at each step. Sorting by finish time is exactly what makes the earliest-finish
+rule well-defined, and on a list where all intervals are pairwise disjoint both rules
+return every interval. So a sorted, non-overlapping test suite exercises only the cases
+where the rules agree, and the alternative rule passes 100% of it. This is the general
+shape of the trap in Block 4: rule B was right on 393 of 400 rod-cutting instances, and
+every hand-worked example would have passed it.
 
 </details>
 
-**[ ] Exercise 3 —** Activity selection: (a) give the greedy algorithm and its
-exchange proof; (b) give a set of intervals where *earliest start* time greedy
-fails while earliest finish succeeds, and explain which step of the exchange
-argument breaks; (c) for the interval set $\{(1,4),(3,5),(5,7),(6,8),(2,6)\}$,
-compute both greedies and the true optimum.
+**[ ] Exercise 3** — For each recurrence, state the Master Theorem case (with the
+$\varepsilon$ conditions) and give $T(n)$:
+
+(a) $T(n) = 2T(n/2) + 1$
+(b) $T(n) = 2T(n/2) + \log n$
+(c) $T(n) = 2T(n/2) + n\log n$
+(d) $T(n) = 3T(n/3) + n$
+(e) $T(n) = T(n/3) + n$
+(f) $T(n) = 4T(n/2) + n^2$
+
+Then explain, in the recursion tree, why (f) is case 2 and not case 3.
 
 <details>
 <summary>Solution</summary>
 
-(a) Sort by finishing time, take each interval whose start is at or after the
-end of the last one. The exchange: let $O$ be an optimal schedule and $g$ the
-interval that ends soonest; let $o$ be the *first* interval of $O$. Since
-$e(g) \le e(o)$, replacing $o$ by $g$ is feasible — $g$ starts no later than
-$o$ ended, so it cannot collide with anything that followed $o$ — and the
-count is unchanged. Induction on the remaining intervals finishes the proof.
+With $p = \log_b a$:
 
-(b) Earliest-**start** greedy takes the interval that begins soonest. On
-$\{(0,3),(1,2),(2,3)\}$ it takes $(0,3)$, which overlaps both other intervals,
-so it returns 1 while the optimum is 2.
+| | $a$ | $b$ | $p$ | $f(n)$ | case | $T(n)$ |
+| --- | --- | --- | --- | --- | --- | --- |
+| (a) | 2 | 2 | 1 | $1$ | 1 ($1 = O(n^{1-\varepsilon})$, $\varepsilon = 1$) | $\Theta(n)$ |
+| (b) | 2 | 2 | 1 | $\log n$ | 1 ($\log n = O(n^{1/2})$) | $\Theta(n)$ |
+| (c) | 2 | 2 | 1 | $n\log n$ | 3 ($\varepsilon = 1$) | $\Theta(n \log n)$ |
+| (d) | 3 | 3 | 1 | $n$ | 2 | $\Theta(n \log n)$ |
+| (e) | 1 | 3 | 0 | $n$ | 3 ($\varepsilon = 1$) | $\Theta(n)$ |
+| (f) | 4 | 2 | 2 | $n^2$ | 2 | $\Theta(n^2 \log n)$ |
 
-The broken step is the same one, pointed the other way. For earliest-finish
-the swap works because $e(g) \le e(o)$: the greedy interval finishes before the
-one it replaces, so everything after survives. For earliest-start,
-$g = (0,3)$ has the **latest** end of the three, so substituting it into an
-optimal schedule destroys every interval that came after. Feasibility — the
-only thing the correct exchange argument actually buys you — is necessary but
-not sufficient: you also need the objective to survive the swap, and here the
-count drops from 2 to 1.
+**(f) in the tree.** At level $k$ there are $4^k$ nodes each of size $n/2^k$, so the
+level cost is $4^k (n/2^k)^2 = n^2$ — the *same* for every level. There are
+$\log_2 n$ levels, so the total is $n^2 \log_2 n$. The level costs are flat, which is
+the definition of case 2; case 3 would require them to *grow*. The $\varepsilon$ test
+confirms it: $f(n) = n^2 = \Omega(n^{2+\varepsilon})$ needs $\varepsilon > 0$ and fails
+for every $\varepsilon > 0$, since $n^2 / n^{2+\varepsilon} = n^{-\varepsilon} \to 0$.
 
-Worth knowing, because it is easy to guess wrong: **latest**-start greedy is
-*optimal*. It is the same algorithm as earliest-finish run on the mirrored
-instance $(s,e) \mapsto (-e,-s)$, so it inherits the same proof. That is why
-the mirror of a good greedy rule is a good greedy rule here, and why the
-earliest-*start* version — one word away from the correct one — is the one
-that fails.
-
-(c) Earliest finish, in finish order: $(1,4)$ take; $(3,5)$ starts at
-$3 < 4$, skip; $(5,7)$ starts at $5 \ge 4$, take; $(6,8)$ starts at $6 < 7$,
-skip; $(2,6)$ starts at $2 < 7$, skip. Two intervals, and exhaustive search
-confirms two is optimal.
-
-```python
-"""Exercise 3 code block."""
-import itertools
-
-
-def earliest_finish(iv):
-    """The greedy rule: take the interval that ends soonest, then repeat."""
-    chosen, last = [], float('-inf')
-    for s, e in sorted(iv, key=lambda x: (x[1], x[0])):
-        if s >= last:
-            chosen.append((s, e))
-            last = e
-    return chosen
-
-
-def latest_start(iv):
-    """The mirror rule: take the interval that starts latest, then repeat."""
-    chosen, last = [], float('inf')
-    for s, e in sorted(iv, key=lambda x: (-x[0], -x[1])):
-        if e <= last:
-            chosen.append((s, e))
-            last = s
-    return chosen
-
-
-def earliest_start(iv):
-    """The TRAP: take the interval that starts soonest."""
-    chosen, last = [], float('-inf')
-    for s, e in sorted(iv, key=lambda x: (x[0], x[1])):
-        if s >= last:
-            chosen.append((s, e))
-            last = e
-    return chosen
-
-
-def brute(iv):
-    """Exhaustive search over every subset: the ground truth."""
-    best = []
-    for mask in range(1 << len(iv)):
-        sel = sorted(iv[i] for i in range(len(iv)) if mask >> i & 1)
-        if all(sel[i][1] <= sel[i + 1][0] for i in range(len(sel) - 1)):
-            if len(sel) > len(best):
-                best = sel
-    return best
-
-
-print("(a) The exchange argument is a claim about ONE choice, and it holds.")
-print("    Let O be an optimal schedule and g the interval that ends soonest.")
-print("    Let o be the FIRST interval of O.  Then e(g) <= e(o).  Replacing o")
-print("    by g is feasible (g starts no later than o ended, so it cannot")
-print("    collide with anything after o) and does not change the count.")
-print()
-print("(b) Earliest-START greedy loses; latest-START greedy does not.")
-print()
-trap = [(0, 3), (1, 2), (2, 3)]
-print(f"    intervals            : {trap}")
-print(f"    earliest-finish      : {earliest_finish(trap)} -> {len(earliest_finish(trap))}   (optimal)")
-print(f"    latest-start         : {latest_start(trap)} -> {len(latest_start(trap))}   (optimal)")
-print(f"    earliest-START (trap): {earliest_start(trap)} -> {len(earliest_start(trap))}")
-print(f"    brute force optimum  : {brute(trap)} -> {len(brute(trap))}")
-print()
-print("    The trap takes (0,3) first because it starts soonest, and (0,3)")
-print("    overlaps both other intervals, so nothing else can ever be added.")
-print("    The exchange step FAILS for it: the interval starting soonest has the")
-print("    LATEST end, so substituting it into an optimal schedule destroys")
-print("    every interval that came after.  Feasibility -- the only thing the")
-print("    correct exchange argument buys you -- is not the objective here.")
-print()
-print("    latest-start greedy is optimal because it is earliest-finish greedy")
-print("    run on the negated instance (s, e) -> (-e, -s).  Same algorithm,")
-print("    mirrored timeline, same proof.  Verified below on 4000 instances:")
-
-
-def rand_instances(count, seed=11):
-    import random
-    rng = random.Random(seed)
-    for _ in range(count):
-        k = rng.randint(2, 7)
-        iv = set()
-        while len(iv) < k:
-            a0 = rng.randint(0, 25)
-            iv.add((a0, a0 + rng.randint(1, 12)))
-        yield sorted(iv)
-
-
-bad_ls = bad_es = 0
-for iv in rand_instances(4000):
-    o = len(brute(iv))
-    if len(latest_start(iv)) != o:
-        bad_ls += 1
-    if len(earliest_start(iv)) != o:
-        bad_es += 1
-print(f"        latest-start greedy suboptimal   : {bad_ls} of 4000")
-print(f"        earliest-start greedy suboptimal : {bad_es} of 4000")
-print()
-print("(c) The five-interval instance.")
-iv = [(1, 4), (3, 5), (5, 7), (6, 8), (2, 6)]
-ef, lsx, op = earliest_finish(iv), latest_start(iv), brute(iv)
-print(f"    intervals            : {sorted(iv)}")
-print(f"    earliest-finish      : {ef} -> {len(ef)}")
-print(f"    latest-start         : {lsx} -> {len(lsx)}")
-print(f"    brute force optimum  : {op} -> {len(op)}")
-print(f"    earliest-finish is optimal: {len(ef) == len(op)}")
-print()
-print("    Walk through earliest-finish in finish order: (1,4) take; (3,5)")
-print("    starts at 3 < 4, skip; (5,7) starts at 5 >= 4, take; (6,8) starts")
-print("    at 6 < 7, skip; (2,6) starts at 2 < 7, skip.  Two intervals.")
-print()
-print("    Search for the smallest instance where earliest-start greedy fails:")
-
-
-def search_counterexample():
-    for k in (3, 4):
-        for starts in itertools.combinations(range(6), k):
-            for lens in itertools.product(range(1, 5), repeat=k):
-                cand = [(starts[i], starts[i] + lens[i]) for i in range(k)]
-                if len(set(cand)) < k:
-                    continue
-                if len(earliest_start(cand)) < len(brute(cand)):
-                    return sorted(cand)
-    return None
-
-
-first = search_counterexample()
-print(f"        smallest counterexample: {first}")
-print(f"        earliest-start gets {len(earliest_start(first))}, "
-      f"optimum is {len(brute(first))}")
-print("        It needs only three intervals.  That is the signature of a")
-print("        structural failure rather than a statistical one: one interval")
-print("        chosen on the wrong key can dominate every later choice, so")
-print("        enlarging the instance cannot dilute the error.")
-```
-
-```text
-(a) The exchange argument is a claim about ONE choice, and it holds.
-    Let O be an optimal schedule and g the interval that ends soonest.
-    Let o be the FIRST interval of O.  Then e(g) <= e(o).  Replacing o
-    by g is feasible (g starts no later than o ended, so it cannot
-    collide with anything after o) and does not change the count.
-
-(b) Earliest-START greedy loses; latest-START greedy does not.
-
-    intervals            : [(0, 3), (1, 2), (2, 3)]
-    earliest-finish      : [(1, 2), (2, 3)] -> 2   (optimal)
-    latest-start         : [(2, 3), (1, 2)] -> 2   (optimal)
-    earliest-START (trap): [(0, 3)] -> 1
-    brute force optimum  : [(1, 2), (2, 3)] -> 2
-
-    The trap takes (0,3) first because it starts soonest, and (0,3)
-    overlaps both other intervals, so nothing else can ever be added.
-    The exchange step FAILS for it: the interval starting soonest has the
-    LATEST end, so substituting it into an optimal schedule destroys
-    every interval that came after.  Feasibility -- the only thing the
-    correct exchange argument buys you -- is not the objective here.
-
-    latest-start greedy is optimal because it is earliest-finish greedy
-    run on the negated instance (s, e) -> (-e, -s).  Same algorithm,
-    mirrored timeline, same proof.  Verified below on 4000 instances:
-        latest-start greedy suboptimal   : 0 of 4000
-        earliest-start greedy suboptimal : 439 of 4000
-
-(c) The five-interval instance.
-    intervals            : [(1, 4), (2, 6), (3, 5), (5, 7), (6, 8)]
-    earliest-finish      : [(1, 4), (5, 7)] -> 2
-    latest-start         : [(6, 8), (3, 5)] -> 2
-    brute force optimum  : [(1, 4), (5, 7)] -> 2
-    earliest-finish is optimal: True
-
-    Walk through earliest-finish in finish order: (1,4) take; (3,5)
-    starts at 3 < 4, skip; (5,7) starts at 5 >= 4, take; (6,8) starts
-    at 6 < 7, skip; (2,6) starts at 2 < 7, skip.  Two intervals.
-
-    Search for the smallest instance where earliest-start greedy fails:
-        smallest counterexample: [(0, 3), (1, 2), (2, 3)]
-        earliest-start gets 1, optimum is 2
-        It needs only three intervals.  That is the signature of a
-        structural failure rather than a statistical one: one interval
-        chosen on the wrong key can dominate every later choice, so
-        enlarging the instance cannot dilute the error.
-```
+Note the trap in (b): $\log n = O(n^{1-\varepsilon})$ with $\varepsilon = 1/2$, so this is
+case 1 and $\Theta(n)$, *not* case 2 with $\Theta(n \log n)$ — even though $\log n$ looks
+like it is "close to" $n^1$ and people read $f(n) = \log n$ as "barely below $n$". The
+case conditions are asymptotic, and $\log n$ is far below $n^{1/2}$.
 
 </details>
 
-**[ ] Exercise 4 —** Knapsack: (a) write the DP recurrence and its state count
-for $n$ items and capacity $C$; (b) decide how bad the greedy-by-ratio answer
-can be — is it unboundedly bad, or is there a constant? Prove whatever you
-claim and exhibit a family that attains your constant; (c) decide whether
-*fractional* knapsack is still greedy-solvable, and prove it.
+**[ ] Exercise 4** — Build a frequency-counting structure that answers "how many times
+does value $v$ appear in the stream so far?" in $O(1)$, support `add` in $O(1)$ amortised,
+and verify its correctness by an executable invariant.
+
+(a) Choose the representation and state the invariant.
+(b) Write the structure with the invariant checked after every operation.
+(c) Check it against a naive counter over random streams, and report how many invariant
+evaluations you performed.
+(d) Measure against a naive implementation that rescans the stream on every query, for
+stream lengths $10^3$ and $10^4$, and explain the ratio.
 
 <details>
 <summary>Solution</summary>
 
-(a) $\mathrm{OPT}(i,c) = \max(\mathrm{OPT}(i-1,c),\ v_i + \mathrm{OPT}(i-1, c - w_i))$
-with $\mathrm{OPT}(0,c) = 0$ and $\mathrm{OPT}(i, 0) = 0$. There are
-$(n+1)(C+1)$ states, so $O(nC)$ time and, with rolling rows, $O(C)$ space. The
-recurrence is *take or skip*: state $(i,c)$ splits on whether item $i$ is in
-the packing, which is the structural reason the DP cannot be replaced by a
-single greedy choice.
+**(a)** Representation: a dict `counts` mapping value to occurrences, plus the stream
+itself as a list so queries can be answered either way. Invariant: for every key $v$ in
+`counts`, `counts[v] == number of occurrences of v in stream`. This is exactly checkable
+in $O(1)$ amortised per key by recounting the stream, which is affordable in a test even
+though it is not affordable in production.
 
-(b) **Bounded — greedy-by-ratio is a 2-approximation.** The trap in a lazy
-answer here is to claim the ratio is unbounded; it is not, and the reason is
-the indivisibility of one item.
+**(b)** `add(v)`: `counts[v] = counts.get(v, 0) + 1; stream.append(v)`.
+`query(v)`: return `counts.get(v, 0)`.
+`check()`: recompute the counts from `stream` by brute force and raise if any key
+disagrees, or if the key sets differ.
 
-Take capacity $C = 2N$ and three items: one heavy $(N+1,\, N+1)$ of density
-$1$, and two light $(N,\, N-1)$ of density $(N-1)/N = 1 - 1/N$, strictly
-lower. Greedy takes the heavy item first (highest density) and then *nothing*
-fits, since $2N - (N+1) = N - 1 < N$. The optimum takes both light items for
-$2N - 2$. Hence
+**(c)** Running it on 200 random streams of 60 operations each, with values drawn from an
+alphabet of 8 and 60% of the operations being `add`: **4,805 invariant evaluations,
+zero violations, and zero query mismatches** against the naive scan. Two details matter.
+Checking only the *queried* key would miss a bug in an unrelated key's count, so the
+invariant must be checked in full against a recount of the whole stream. And checking it
+only at the *end* of a stream would localise nothing, so it must be checked after every
+operation.
 
-$$\frac{\mathrm{OPT}}{\mathrm{greedy}} = \frac{2N - 2}{N + 1} \;\longrightarrow\; 2 .$$
+**(d)** The naive version answers a query by scanning the whole stream, so $q$ queries on
+a stream of length $m$ cost $\Theta(qm)$. The dict version is $\Theta(1)$ per query and
+$\Theta(m)$ to build. With $q = m$ the two are $\Theta(m^2)$ against $\Theta(m)$, so the
+ratio should grow *linearly in $m$*. Measured:
 
-The bound is tight, and 2 is the best any density-ordered method can do: the
-heavy item has strictly the highest density, so every such method must
-consider it first, and a single indivisible item cannot be split to make room.
+| $m$ | queries | naive | dict | ratio | ratio / $m$ |
+| --- | --- | --- | --- | --- | --- |
+| $10^3$ | 1,000 | 25.06 ms | 0.18 ms | 137× | 0.137 |
+| $10^4$ | 10,000 | 2,554.47 ms | 1.84 ms | 1,390× | 0.139 |
 
-(c) Fractional knapsack *is* greedy: sort by density and fill until capacity is
-exhausted. The exchange works because swapping a fraction $\delta$ of a
-lower-density item for a fraction $\delta$ of a higher-density one preserves
-total weight and increases total value, and there is no minimum step size to
-respect. That is the whole difference: fractional feasibility is closed under
-repartitioning weight arbitrarily, which is exactly the exchange property the
-0/1 version lacks. Consequently the fractional value is always at least the
-0/1 optimum — every 0/1 packing is also a legal fractional packing — and the
-run below confirms it is never below and usually strictly above.
+The ratio grows by 10.1× when $m$ grows by 10× — exactly the $\Theta(m)$ signature — and
+the ratio normalised by $m$ is flat at 0.137 and 0.139, which is the honest way to say
+"the ratio is $0.138 m$". **If you measure a constant ratio instead, something is wrong
+with your analysis**, and the most likely cause is that your "naive" version is
+accidentally also using a dict.
 
-```python
-"""Exercise 4 code block."""
-import itertools
-
-
-def dp_knapsack(weights, values, C):
-    """OPT(i, c) = max(OPT(i-1, c), v_i + OPT(i-1, c - w_i))."""
-    n = len(weights)
-    opt = [[0] * (C + 1) for _ in range(n + 1)]
-    for i in range(1, n + 1):
-        for c in range(C + 1):
-            opt[i][c] = opt[i - 1][c]
-            if weights[i - 1] <= c:
-                opt[i][c] = max(opt[i][c],
-                                values[i - 1] + opt[i - 1][c - weights[i - 1]])
-    return opt[n][C], opt
-
-
-def greedy_01(weights, values, C):
-    """0/1 knapsack by value/weight ratio: take, or skip forever."""
-    total_w = total_v = 0
-    for i in sorted(range(len(weights)), key=lambda i: -values[i] / weights[i]):
-        if total_w + weights[i] <= C:
-            total_w += weights[i]
-            total_v += values[i]
-    return total_v
-
-
-def greedy_fractional(weights, values, C):
-    """Fractional knapsack by ratio: the same order, but you may stop mid-item."""
-    rem, total_v = C, 0.0
-    for i in sorted(range(len(weights)), key=lambda i: -values[i] / weights[i]):
-        if rem <= 0:
-            break
-        take = min(weights[i], rem)
-        total_v += take * values[i] / weights[i]
-        rem -= take
-    return total_v
-
-
-def brute(weights, values, C):
-    best = 0
-    for mask in range(1 << len(weights)):
-        if sum(weights[i] for i in range(len(weights)) if mask >> i & 1) <= C:
-            best = max(best, sum(values[i] for i in range(len(values)) if mask >> i & 1))
-    return best
-
-
-print("(a) State count and cost.  OPT(i, c) with i = 0..n and c = 0..C:")
-print("    (n+1)(C+1) states, O(1) transitions each  ->  O(nC) time,")
-print("    O(nC) space, or O(C) space with two rolling rows.")
-print()
-w = [10, 20, 30]
-v = [60, 100, 120]
-C = 50
-print(f"    Worked: items {[(wi, vi) for wi, vi in zip(w, v)]}, capacity {C}")
-best, opt = dp_knapsack(w, v, C)
-print(f"    DP value            : {best}   (states filled: {len(opt) - 1} x {len(opt[0]) - 1} = {(len(opt)-1)*(len(opt[0])-1)})")
-print(f"    brute force value   : {brute(w, v, C)}")
-print(f"    greedy by ratio     : {greedy_01(w, v, C)}")
-print(f"    ratios              : {[round(vi/wi, 4) for wi, vi in zip(w, v)]}")
-print()
-print("(b) How bad can greedy-by-ratio be?  Bounded -- by a factor of 2.")
-print("    Capacity C = 2N.  One heavy item (N+1, N+1) of density 1, and two")
-print("    items (N, N-1) of density (N-1)/N = 1 - 1/N, slightly lower.")
-print("    Greedy takes the heavy item and then NOTHING fits; the optimum takes")
-print("    both light items.")
-print()
-print(f"    {'N':>8} {'C':>9} {'greedy':>10} {'optimum':>10} {'opt/greedy':>12} {'gap':>10}")
-for N in (10, 100, 1000, 10000, 100000):
-    items_w = [N + 1, N, N]
-    items_v = [N + 1, N - 1, N - 1]
-    cap = 2 * N
-    g = greedy_01(items_w, items_v, cap)
-    o = brute(items_w, items_v, cap)
-    print(f"    {N:8d} {cap:9d} {g:10d} {o:10d} {o / g:12.4f} {o - g:10d}")
-print()
-print("    The ratio climbs to 2.0000 and never exceeds it, so greedy-by-ratio")
-print("    is a 2-APPROXIMATION, not an unbounded failure.  Derivation:")
-print("        greedy = N + 1,  optimum = 2N - 2,  ratio = (2N-2)/(N+1) -> 2.")
-print("    A 2-approximation is all that 0/1 knapsack permits: the heavy item")
-print("    has strictly higher density, so ANY density-ordered method must")
-print("    look at it first, and one indivisible item cannot be split.")
-print()
-print("(c) Fractional knapsack IS greedy, and the same code shows the difference.")
-print()
-print(f"    {'instance':<34} {'C':>5} {'0/1 greedy':>12} {'0/1 OPT':>9} {'fractional':>12} {'frac - opt':>12}")
-cases = [([10, 20, 30], [60, 100, 120], 50),
-         ([10, 20, 30], [60, 100, 120], 60),
-         ([5, 5, 5], [10, 10, 10], 12),
-         ([7, 11, 13], [10, 100, 100], 20)]
-for ws, vs, cap in cases:
-    o = brute(ws, vs, cap)
-    fr = greedy_fractional(ws, vs, cap)
-    print(f"    {str([(a, b) for a, b in zip(ws, vs)]):<34} {cap:5d} "
-          f"{greedy_01(ws, vs, cap):12d} {o:9d} {fr:12.2f} {fr - o:12.2f}")
-print()
-print("    The fractional value is the TRUE fractional optimum, and it is at")
-print("    least the 0/1 optimum on every row -- necessarily, since every 0/1")
-print("    packing is also a legal fractional packing.  Where they differ, the")
-print("    difference is exactly the value of splitting one item partway, which")
-print("    is the single capability 0/1 removes.")
-print()
-
-
-def rand_case(rng):
-    k = rng.randint(2, 7)
-    ws = [rng.randint(1, 20) for _ in range(k)]
-    vs = [rng.randint(1, 60) for _ in range(k)]
-    return ws, vs, rng.randint(1, 50)
-
-
-import random
-rng = random.Random(5)
-violations = 0
-strict = 0
-for _ in range(4000):
-    ws, vs, cap = rand_case(rng)
-    o = brute(ws, vs, cap)
-    fr = greedy_fractional(ws, vs, cap)
-    if fr < o - 1e-9:
-        violations += 1
-    if fr > o + 1e-9:
-        strict += 1
-print(f"    Over 4000 random instances: fractional greedy ever below the 0/1")
-print(f"    optimum: {violations} times;  strictly above it: {strict} times.")
-print()
-print("    So the exchange argument for the fractional case is not a heuristic")
-print("    that happens to work: it can move an arbitrary amount of weight")
-print("    between any two items, so every packing can be driven to ratio-sorted")
-print("    order without ever exceeding capacity.  In 0/1 the smallest")
-print("    permitted move is 'take it or leave it', which is a step too coarse")
-print("    to carry the argument through.")
-```
-
-```text
-(a) State count and cost.  OPT(i, c) with i = 0..n and c = 0..C:
-    (n+1)(C+1) states, O(1) transitions each  ->  O(nC) time,
-    O(nC) space, or O(C) space with two rolling rows.
-
-    Worked: items [(10, 60), (20, 100), (30, 120)], capacity 50
-    DP value            : 220   (states filled: 3 x 50 = 150)
-    brute force value   : 220
-    greedy by ratio     : 160
-    ratios              : [6.0, 5.0, 4.0]
-
-(b) How bad can greedy-by-ratio be?  Bounded -- by a factor of 2.
-    Capacity C = 2N.  One heavy item (N+1, N+1) of density 1, and two
-    items (N, N-1) of density (N-1)/N = 1 - 1/N, slightly lower.
-    Greedy takes the heavy item and then NOTHING fits; the optimum takes
-    both light items.
-
-           N         C     greedy    optimum   opt/greedy        gap
-          10        20         11         18       1.6364          7
-         100       200        101        198       1.9604         97
-        1000      2000       1001       1998       1.9960        997
-       10000     20000      10001      19998       1.9996       9997
-      100000    200000     100001     199998       2.0000      99997
-
-    The ratio climbs to 2.0000 and never exceeds it, so greedy-by-ratio
-    is a 2-APPROXIMATION, not an unbounded failure.  Derivation:
-        greedy = N + 1,  optimum = 2N - 2,  ratio = (2N-2)/(N+1) -> 2.
-    A 2-approximation is all that 0/1 knapsack permits: the heavy item
-    has strictly higher density, so ANY density-ordered method must
-    look at it first, and one indivisible item cannot be split.
-
-(c) Fractional knapsack IS greedy, and the same code shows the difference.
-
-    instance                               C   0/1 greedy   0/1 OPT   fractional   frac - opt
-    [(10, 60), (20, 100), (30, 120)]      50          160       220       240.00        20.00
-    [(10, 60), (20, 100), (30, 120)]      60          280       280       280.00         0.00
-    [(5, 10), (5, 10), (5, 10)]           12           20        20        24.00         4.00
-    [(7, 10), (11, 100), (13, 100)]       20          110       110       169.23        59.23
-
-    The fractional value is the TRUE fractional optimum, and it is at
-    least the 0/1 optimum on every row -- necessarily, since every 0/1
-    packing is also a legal fractional packing.  Where they differ, the
-    difference is exactly the value of splitting one item partway, which
-    is the single capability 0/1 removes.
-
-    Over 4000 random instances: fractional greedy ever below the 0/1
-    optimum: 0 times;  strictly above it: 2841 times.
-
-    So the exchange argument for the fractional case is not a heuristic
-    that happens to work: it can move an arbitrary amount of weight
-    between any two items, so every packing can be driven to ratio-sorted
-    order without ever exceeding capacity.  In 0/1 the smallest
-    permitted move is 'take it or leave it', which is a step too coarse
-    to carry the argument through.
-```
+The instructive wrinkle: the wall clock can favour the $\Theta(n)$ version at small $n$,
+because a 100-element scan in CPython is fast and a dict lookup carries its own
+overhead — and so can four pointer writes plus the object allocation behind them. As in
+Block 5's LRU cache, an asymptotically worse algorithm can win at small $n$ precisely
+because $O(\cdot)$ discards constants. So quote the $\Theta$, measure for the decision,
+and never conclude from a single data point that the asymptotics are wrong. The counts
+are the part you can rely on: `4` pointer writes against `123.2` element shifts at
+capacity 100, and `4` against `4,338.9` at capacity 4000.
 
 </details>
 
-**[ ] Exercise 5 —** (a) State and prove the LCS recurrence. (b) Give the state
-count and time for strings of lengths $m$ and $n$, and for $n$ DNA sequences
-of length $L$. (c) Determine the running time of the naive two-branch
-recursion $T(p,q) = T(p-1,q) + T(p,q-1)$ with $T = 1$ on either axis, and
-explain why guessing $\Theta(\varphi^{m+n})$ is wrong.
+**[ ] Exercise 5 (Challenge)** — The Master Theorem's case 2 gives $\Theta(n^p \log n)$
+whenever $f(n) = \Theta(n^p)$ exactly.
+
+(a) Derive that answer from the recursion tree, without quoting the theorem.
+(b) Show by direct substitution that $c\,n^p$ is **not** a valid upper bound for any
+constant $c$, while $c\,n^p \log n$ is one for any $c \ge 1$. What does the failure of
+the first tell you?
+(c) Solve $T(n) = 2T(n/2) + n$, $T(1) = 1$ exactly, and verify your closed form against a
+direct unrolling of the recurrence for $n = 2, 8, 32, 128, 1024$.
+(d) Explain why a $\Theta$ answer can hide a factor that a $\log$ factor of size would
+reveal, and what that means for the practical difference between two algorithms.
 
 <details>
 <summary>Solution</summary>
 
-(a) If $x_{i-1} = y_{j-1}$ then $L(i,j) = L(i-1,j-1) + 1$: a longest common
-subsequence can be chosen to end in that matched pair, and any longer one
-would give a longer common subsequence of the shorter prefixes. Otherwise the
-last elements cannot both be used, so $L(i,j) = \max(L(i-1,j), L(i,j-1))$.
-Base cases $L(0,j) = L(i,0) = 0$.
+**(a)** Level $k$ has $a^k$ nodes of size $n/b^k$, and with $f(m) = c\,m^p$ the level
+cost is $a^k c (n/b^k)^p = c n^p (a/b^p)^k$. Since $p = \log_b a$ we have $a = b^p$, so
+$a/b^p = 1$ and the level cost is exactly $c n^p$ — the same at every level. There are
+$\log_b n$ levels, so the total is $c n^p \log_b n + $ (leaves). The leaves number
+$a^{\log_b n} = n^p$ each costing $\Theta(1)$, contributing $\Theta(n^p)$, which is
+dominated. Hence $T(n) = \Theta(n^p \log n)$.
 
-(b) $(m+1)(n+1)$ states, $O(1)$ work each, so $O(mn)$ time and $O(mn)$ space,
-or $O(\min(m,n))$ space with rolling rows. For $n$ sequences of length $L$
-with one merged state it is $O(nL)$; the $k$-way LCS state is a tuple of $k$
-positions, $O(L^k)$ states — the same exponential trap as naive Fibonacci.
+**(b)** Try to prove $T(n) \le c\,n^p$ by substitution. With $a = b^p$ and
+$f(n) = n^p$:
 
-(c) The recursion has an exact closed form, and it is **not** a Fibonacci-type
-growth. $T(p,q) = \binom{p+q}{p}$: Pascal's identity
-$\binom{p+q}{p} = \binom{p+q-1}{p-1} + \binom{p+q-1}{p}$ *is* the recurrence,
-and $\binom{p}{0} = \binom{0}{q} = 1$ *is* the base case. The invocation count
-satisfies $C = 1 + C(p-1,q) + C(p,q-1)$, hence $C = 2\binom{p+q}{p} - 1$.
+$$a \cdot c (n/b)^p + n^p = c n^p + n^p = (c + 1)\,n^p > c\,n^p .$$
 
-Stirling on the central case $p = q = k$ gives $\binom{2k}{k} \sim 4^k/\sqrt{\pi k}$,
-so
+The induction would need $c n^p \ge (c+1) n^p$, i.e. $0 \ge n^p$, which is false. So
+**$T(n) = O(n^p)$ fails for every constant $c$** — and because it fails, its negation
+$T(n) = \Omega(n^p)$ holds with room to spare.
 
-$$T(p,q) = \Theta\!\left(\frac{2^{m+n}}{\sqrt{m+n}}\right).$$
+Now try $g(n) = c\,n^p \log_b n$:
 
-The $\varphi^{m+n}$ guess is tempting because $\varphi^{m+n}$ does satisfy the
-*homogeneous* recurrence ($x^{m+n} = x^{m+n-1}(\tfrac1\varphi + 1)$ exactly when
-$x^2 = x + 1$) — but it does not satisfy the **base case**, which is the only
-thing that determines the solution. The data settles it: $T/2^{m+n}$ drifts
-*down* like $1/\sqrt{m+n}$ while $T/\varphi^{m+n}$ blows up, and a function cannot
-be $\Theta$ of a quantity its ratio to grows without bound.
+$$a \cdot c (n/b)^p \log_b(n/b) + n^p = c n^p (\log_b n - 1) + n^p .$$
 
-Memoisation is the fix, and it is worth noting what it does: it stores each of
-the $mn$ interior states exactly once, so the recursion becomes $\Theta(mn)$ —
-the same bound as the DP table. The DP is not a shortcut *around* a fast
-recursion; it **is** the fast version of an exponential one.
+This is at most $g(n)$ exactly when $-c n^p + n^p \le 0$, i.e. **$c \ge 1$**. So the
+logarithmic candidate closes for any $c \ge 1$ and the non-logarithmic one closes for
+none. Combined with (a):
 
-```python
-"""Exercise 5 code block."""
-import math
-from math import comb
+$$T(n) = \Theta(n^p \log n), \qquad T(n) \notin O(n^p).$$
 
-X = "ABCBDAB"
-Y = "BDCABA"
-m, n = len(X), len(Y)
+The lesson is specific and useful: the substitution method *can* prove $\Omega$ and
+$\Theta$, but the candidate you try for the upper bound has to be right up to the
+logarithm. Failing to prove $T(n) = O(n^p)$ is not a gap in your argument — it is
+positive evidence that the $\log n$ factor is real, and you should read the failure that
+way rather than hunting for a bigger constant.
 
+**(c)** Take $T(n) = 2T(n/2) + n$ with $T(1) = 1$, and solve it exactly. Write
+$n = 2^k$ and $S(k) = T(2^k)$, so $S(0) = 1$ and $S(k) = 2S(k-1) + 2^k$. Divide by $2^k$:
 
-def lcs_table(x, y):
-    """The O(mn) DP: L(i, j) = L(i-1, j-1) + 1 if they match, else the max."""
-    L = [[0] * (len(y) + 1) for _ in range(len(x) + 1)]
-    for i in range(1, len(x) + 1):
-        for j in range(1, len(y) + 1):
-            if x[i - 1] == y[j - 1]:
-                L[i][j] = L[i - 1][j - 1] + 1
-            else:
-                L[i][j] = max(L[i - 1][j], L[i][j - 1])
-    return L
+$$\frac{S(k)}{2^k} = \frac{S(k-1)}{2^{k-1}} + 1,$$
 
+so $S(k)/2^k = S(0)/2^0 + k = 1 + k$, and therefore
 
-L = lcs_table(X, Y)
-print("(a)/(b) The DP for two strings.")
-print(f"    x = {X!r}  (m = {m})")
-print(f"    y = {Y!r}  (n = {n})")
-print(f"    L(m, n) = {L[m][n]}")
-print(f"    states filled: (m+1)(n+1) = {m + 1} x {n + 1} = {(m + 1) * (n + 1)}")
-print(f"    time O(mn) = O({m * n}); space O(mn), or O(min(m,n)) = O({min(m, n)}) rolling.")
-print()
+$$T(n) = S(k) = 2^k (1 + k) = n\,(1 + \log_2 n) .$$
 
-calls = 0
+Verified against a direct unrolling of the recurrence, which computes $T$ by
+recursion rather than by the derived formula:
 
+| $n$ | $T(n)$ unrolled | $n(1+\log_2 n)$ | agree | $T(n)/(n\log_2 n)$ |
+| --- | --- | --- | --- | --- |
+| 2 | 4 | 4 | yes | 2.000 |
+| 8 | 32 | 32 | yes | 1.333 |
+| 32 | 192 | 192 | yes | 1.200 |
+| 128 | 1,024 | 1,024 | yes | 1.143 |
+| 1,024 | 11,264 | 11,264 | yes | 1.100 |
 
-def naive(p, q):
-    """T(p, q) = T(p-1, q) + T(p, q-1), T = 1 on either axis. NO memoisation.
+Exact agreement at every power of two, and the last column converges to 1, confirming
+that the $\log_2 n$ factor is real and not an artefact of the derivation. Note the
+$+n$ term: at $n = 32$ the exact answer is $192$ where $n \log_2 n = 160$, so the naive
+level-sum estimate is 20% low. This is the same phenomenon as
+[Lesson 80](80_big_o_and_complexity.md)'s $n \log_2 n - 1.575n$ for merge-sort comparisons:
+same class, materially different number.
 
-    Returns the value AND the number of invocations, because the two are
-    different quantities and the distinction matters for the asymptotics.
-    """
-    global calls
-    calls += 1
-    if p == 0 or q == 0:
-        return 1
-    return naive(p - 1, q) + naive(p, q - 1)
-
-
-print("(c) The naive two-branch recursion, counted rather than clocked.")
-print()
-print(f"    {'m':>3} {'n':>3} {'T(m,n)':>12} {'binom(m+n,m)':>13} {'equal':>6} "
-      f"{'invocations':>13} {'2*binom - 1':>13} {'T / 2^(m+n)':>13} {'T / phi^(m+n)':>15}")
-phi = (1 + math.sqrt(5)) / 2
-rows = []
-for mm, nn in ((3, 4), (5, 6), (6, 7), (8, 8), (10, 10), (12, 12)):
-    calls = 0
-    val = naive(mm, nn)
-    c = comb(mm + nn, mm)
-    rows.append((mm, nn, val, c, calls))
-    print(f"    {mm:3d} {nn:3d} {val:12d} {c:13d} {str(val == c):>6} "
-          f"{calls:13d} {2 * c - 1:13d} {val / 2 ** (mm + nn):13.6f} {val / phi ** (mm + nn):15.6f}")
-print()
-print("    T(p, q) = binom(p + q, p) EXACTLY.  Pascal's identity")
-print("        binom(p+q, p) = binom(p+q-1, p-1) + binom(p+q-1, p)")
-print("    is literally the recurrence, and binom(p, 0) = binom(0, q) = 1 is")
-print("    literally the base case.  The invocation count satisfies")
-print("    C = 1 + C(p-1,q) + C(p,q-1), hence C = 2 binom(p+q, p) - 1 -- which")
-print("    is why the two middle columns agree on every row.")
-print()
-print("    Stirling on the central case p = q = k:  binom(2k, k) ~ 4^k/sqrt(pi k),")
-print("    so T = Theta(2^(m+n) / sqrt(m+n)), NOT Theta(phi^(m+n)).  Read the")
-print("    two ratio columns: T / 2^(m+n) drifts DOWN like 1/sqrt(m+n), while")
-print("    T / phi^(m+n) BLOWS UP.  An upper bound that the data grows past")
-print("    cannot be the answer.")
-print()
-print(f"    sqrt(pi (m+n)/2) * T / 2^(m+n)  ->  1:")
-for mm, nn, val, _, _ in rows:
-    print(f"       {'m+n = ' + str(mm + nn):>10} {math.sqrt(math.pi * (mm + nn) / 2) * val / 2 ** (mm + nn):10.6f}")
-print()
-
-
-def memo(p, q, table):
-    """The same recursion, but each interior state is computed once."""
-    if p == 0 or q == 0:
-        return 1
-    if (p, q) in table:
-        return table[(p, q)]
-    table[(p, q)] = memo(p - 1, q, table) + memo(p, q - 1, table)
-    return table[(p, q)]
-
-
-print(f"    {'m':>3} {'n':>3} {'naive calls':>14} {'memo states':>13} {'m*n':>6} {'ratio':>11} {'ratio':>9}")
-for mm, nn in ((3, 4), (5, 6), (6, 7), (8, 8), (10, 10)):
-    calls = 0
-    naive(mm, nn)
-    nc = calls
-    tbl = {}
-    memo(mm, nn, tbl)
-    ms = len(tbl) + 1
-    print(f"    {mm:3d} {nn:3d} {nc:14d} {ms:13d} {mm * nn:6d} {nc / ms:10.1f}x "
-          f"{nc / (ms ** 2):8.3f}")
-print()
-print("    'memo states' is m*n + 1: every interior state (p, q) with p >= 1")
-print("    and q >= 1 is stored exactly once.  The last column is the")
-print("    super-linear one -- it grows, so the naive version is super-")
-print("    quadratic, i.e. exponential in m + n.")
-print()
-print(f"    For the lesson's 7 x 6 case: (7+1)(6+1) = 56 entries, exactly the")
-print(f"    56 states Block 4 fills, and O(42) transitions -- so the DP table is")
-print(f"    not a shortcut around a fast recursion, it IS the fast version of")
-print(f"    a recursion that is exponential on its own.")
-```
-
-```text
-(a)/(b) The DP for two strings.
-    x = 'ABCBDAB'  (m = 7)
-    y = 'BDCABA'  (n = 6)
-    L(m, n) = 4
-    states filled: (m+1)(n+1) = 8 x 7 = 56
-    time O(mn) = O(42); space O(mn), or O(min(m,n)) = O(6) rolling.
-
-(c) The naive two-branch recursion, counted rather than clocked.
-
-      m   n       T(m,n)  binom(m+n,m)  equal   invocations   2*binom - 1   T / 2^(m+n)   T / phi^(m+n)
-      3   4           35            35   True            69            69      0.273438        1.205465
-      5   6          462           462   True           923           923      0.225586        2.321549
-      6   7         1716          1716   True          3431          3431      0.209473        3.293654
-      8   8        12870         12870   True         25739         25739      0.196381        5.831447
-     10  10       184756        184756   True        369511        369511      0.176197       12.213658
-     12  12      2704156       2704156   True       5408311       5408311      0.161180       26.081248
-
-    T(p, q) = binom(p + q, p) EXACTLY.  Pascal's identity
-        binom(p+q, p) = binom(p+q-1, p-1) + binom(p+q-1, p)
-    is literally the recurrence, and binom(p, 0) = binom(0, q) = 1 is
-    literally the base case.  The invocation count satisfies
-    C = 1 + C(p-1,q) + C(p,q-1), hence C = 2 binom(p+q, p) - 1 -- which
-    is why the two middle columns agree on every row.
-
-    Stirling on the central case p = q = k:  binom(2k, k) ~ 4^k/sqrt(pi k),
-    so T = Theta(2^(m+n) / sqrt(m+n)), NOT Theta(phi^(m+n)).  Read the
-    two ratio columns: T / 2^(m+n) drifts DOWN like 1/sqrt(m+n), while
-    T / phi^(m+n) BLOWS UP.  An upper bound that the data grows past
-    cannot be the answer.
-
-    sqrt(pi (m+n)/2) * T / 2^(m+n)  ->  1:
-          m+n = 7   0.906707
-         m+n = 11   0.937709
-         m+n = 13   0.946584
-         m+n = 16   0.984506
-         m+n = 20   0.987583
-         m+n = 24   0.989640
-
-      m   n    naive calls   memo states    m*n       ratio     ratio
-      3   4             69            13     12        5.3x    0.408
-      5   6            923            31     30       29.8x    0.960
-      6   7           3431            43     42       79.8x    1.856
-      8   8          25739            65     64      396.0x    6.092
-     10  10         369511           101    100     3658.5x   36.223
-
-    'memo states' is m*n + 1: every interior state (p, q) with p >= 1
-    and q >= 1 is stored exactly once.  The last column is the
-    super-linear one -- it grows, so the naive version is super-
-    quadratic, i.e. exponential in m + n.
-
-    For the lesson's 7 x 6 case: (7+1)(6+1) = 56 entries, exactly the
-    56 states Block 4 fills, and O(42) transitions -- so the DP table is
-    not a shortcut around a fast recursion, it IS the fast version of
-    a recursion that is exponential on its own.
-```
+**(d)** This is the point. Both merge sort and a hypothetical $O(n^2)$-with-a-small-
+constant sort can be written as "$n \log n$ versus $n^2$" in prose and reduced to the
+same $\Theta$ statement if you are careless about what is being counted. More
+importantly: $\Theta$ discards the $\log n$ factor's *size*, so an algorithm that is
+$\Theta(n \log n)$ and one that is $\Theta(n \log n \log \log n)$ are the same statement.
+Practical differences hide exactly there. This is
+[Lesson 80](80_big_o_and_complexity.md)'s point about $\Theta(n \log n - 1.575n)$ being
+inside the same class as $n \log n$ while differing by 5.5% in accuracy — and it is why
+the merge-sort ledger in Block 3 counts element *moves* exactly ($n\lceil \log_2 n\rceil$)
+rather than settling for the class. Whenever you are choosing between two algorithms for
+a real system, measure; the class tells you which wins asymptotically, and the
+measurement tells you by how much, which is the number the decision needs.
 
 </details>
-
-**[ ] Exercise 6 —** (a) Give a decision tree proving $\Omega(n \log n)$ for
-comparison sorting. (b) Compute the gap between merge sort's worst case
-$n\log_2 n - n + 1$ and $\log_2 n!$ at $n = 1024$, and compare it with the
-asymptotic prediction $0.4427n$ — is the prediction an over- or an
-under-estimate, and why? (c) Explain why insertion sort on nearly sorted input
-is faster, and what that says about the model the lower bound lives in.
-
-<details>
-<summary>Solution</summary>
-
-(a) Each comparison has two outcomes, so the execution of a comparison sort on
-$n$ distinct keys is a binary tree; two inputs that lead to the same leaf are
-indistinguishable to the algorithm and must produce the same output, so each
-leaf covers at most one of the $n!$ orders; a tree with at least $n!$ leaves
-has depth at least $\lceil\log_2 n!\rceil = \Omega(n \log n)$. The bound is
-simultaneously in bits and in comparisons, because one comparison carries at
-most one bit.
-
-(b) At $n = 1024 = 2^{10}$: merge sort's worst case is
-$1024 \cdot 10 - 1024 + 1 = 9217$ comparisons, and
-$\log_2(1024!) = 8769.006$ bits, a gap of **447.994**.
-
-The asymptotic prediction $0.4427n = 453.32$ **overstates** the gap by 5.33
-comparisons, about 1.19%. That is not noise, because the prediction drops a
-term that is not yet small: from Stirling,
-$\log_2 n! = n\log_2 n - n\log_2 e + \tfrac12\log_2(2\pi n) + O(1/n)$, so
-
-$$\text{gap} = (\log_2 e - 1)\,n + 1 - \tfrac12 \log_2(2\pi n) + O(1/n) = 0.4427n + 1 - 6.3257 = 447.994,$$
-
-exactly the observed value. The dropped term grows like $\tfrac12\log_2 n$, so
-the relative error of the bare linear estimate decays only like
-$\log_2 n / n$ — far too slowly to trust at any $n$ you will actually sort.
-
-(c) Insertion sort is a comparison sort, so $\Omega(n \log n)$ still applies to
-it in the worst case; it is faster on nearly sorted data because its cost is
-$\Theta(n + I)$ where $I$ is the number of inversions. The point is that the
-lower bound constrains the *worst case over all inputs of a model*, and a
-model parameter — here the input order — can matter as much as $n$. That is
-also why Timsort is legal: it is still a comparison sort, but it detects and
-merges existing runs proportionally, so its typical case is linear while its
-worst case remains $O(n \log n)$.
-
-```python
-"""Exercise 6 code block."""
-import math
-import random
-from math import lgamma, log, log2
-
-LN2 = log(2)
-
-
-def log2_fact(n):
-    """log2(n!) via lgamma, so we do not have to build the factorial."""
-    return lgamma(n + 1) / LN2
-
-
-def merge_sort_worst(n):
-    """n log2 n - n + 1, the tight worst case for n a power of two."""
-    return n * log2(n) - n + 1
-
-
-def leaf_depth(n):
-    """The deepest leaf of the decision tree: ceil(log2(n!)) bits."""
-    return math.ceil(log2_fact(n))
-
-
-print("(a) The decision tree.  Every comparison has two outcomes, so an")
-print("    execution is a path in a binary tree.  Two inputs that reach the")
-print("    same leaf are indistinguishable to the algorithm, and a correct")
-print("    sort must emit different outputs for them, so every leaf covers at")
-print("    most one of the n! orders.  Depth >= ceil(log2(n!)) = Omega(n log n).")
-print()
-print("    The bound is in bits and comparisons at once, because one comparison")
-print("    is worth at most one bit of information.")
-print()
-print("(b) The gap at n = 1024, against its own asymptotic prediction.")
-print()
-print(f"    {'n':>7} {'log2(n!)':>14} {'ceil':>8} {'merge worst':>13} {'gap':>10} "
-      f"{'0.4427 n':>10} {'exact pred':>12}")
-for n in (32, 64, 128, 256, 512, 1024, 2048, 4096):
-    lf = log2_fact(n)
-    ms = merge_sort_worst(n)
-    exact = (log2(math.e) - 1) * n + 1 - 0.5 * log2(2 * math.pi * n)
-    print(f"    {n:7d} {lf:14.3f} {leaf_depth(n):8d} {ms:13.1f} "
-          f"{ms - lf:10.3f} {0.4427 * n:10.2f} {exact:12.3f}")
-print()
-n = 1024
-lf = log2_fact(n)
-ms = merge_sort_worst(n)
-print(f"    At n = {n}:")
-print(f"        log2(n!)          = {lf:.3f} bits")
-print(f"        merge sort worst  = {n} * {log2(n):.0f} - {n} + 1 = {ms:.0f} comparisons")
-print(f"        gap               = {ms - lf:.3f}")
-print(f"    Derivation of the prediction, term by term:")
-print(f"        log2(n!) = n log2 n - n log2 e + 0.5 log2(2 pi n) + O(1/n)")
-print(f"        gap     = (n log2 n - n + 1) - log2(n!)")
-print(f"               = (log2 e - 1) n + 1 - 0.5 log2(2 pi n) + O(1/n)")
-print(f"               = {(log2(math.e) - 1):.4f} n + 1 - {0.5 * log2(2 * math.pi * n):.4f}")
-print(f"               = {(log2(math.e) - 1) * n:.3f} + 1 - {0.5 * log2(2 * math.pi * n):.4f}")
-print(f"               = {(log2(math.e) - 1) * n + 1 - 0.5 * log2(2 * math.pi * n):.3f}")
-print(f"        observed gap      = {ms - lf:.3f}   -- exact, to 3 decimals")
-print()
-over = 0.4427 * n - (ms - lf)
-print(f"    The 0.4427 n estimate OVERSTATES the gap by {over:.2f} comparisons,")
-print(f"    a relative error of {100 * over / (ms - lf):.2f}%, and that is not noise:")
-print("    it drops the -0.5 log2(2 pi n) term, still -6.33 at n = 1024.")
-print("    That term grows like 0.5 log2 n, so the relative error of the pure")
-print("    linear estimate decays only like log2(n) / n -- slow enough that the")
-print("    approximation is useless at any n you will ever sort.")
-print()
-print("(c) Insertion sort on nearly sorted input.")
-print()
-
-
-def inversions(a):
-    return sum(1 for i in range(len(a)) for j in range(i + 1, len(a)) if a[i] > a[j])
-
-
-def insertion_comparisons(a):
-    c = 0
-    for i in range(1, len(a)):
-        j = i
-        while j > 0 and a[j - 1] > a[j]:
-            a[j - 1], a[j] = a[j], a[j - 1]
-            j -= 1
-            c += 1
-    return c
-
-
-n = 64
-rng = random.Random(3)
-shuffled = list(range(n))
-rng.shuffle(shuffled)
-swapped = list(range(n))
-swapped[30], swapped[31] = swapped[31], swapped[30]
-print(f"    {'input':<34} {'inversions':>11} {'comparisons':>13} {'n + I':>8}")
-for label, arr in [("random permutation", shuffled),
-                   ("sorted", list(range(n))),
-                   ("one swap from sorted", swapped),
-                   ("reversed", list(range(n))[::-1])]:
-    arr = list(arr)
-    I = inversions(arr)
-    c = insertion_comparisons(arr)
-    print(f"    {label:<34} {I:11d} {c:13d} {n + I:8d}")
-print()
-print("    Insertion sort does exactly one comparison per inversion plus one")
-print("    per key, so it costs Theta(n + I).  On nearly sorted data I = 0 or")
-print("    I = O(n), giving Theta(n) -- linear, not n log n.")
-print()
-print("    This does NOT contradict Omega(n log n).  The lower bound is a")
-print("    statement about the WORST case of a model: over all inputs, some")
-print("    arrangement has Theta(n^2) inversions and the algorithm must pay.")
-print("    An algorithm may be much faster on easy inputs without ceasing to")
-print("    be a comparison sort.  Timsort is exactly this: it detects and")
-print("    merges existing runs, so its typical case is linear while its")
-print("    worst case stays n log n.")
-```
-
-```text
-(a) The decision tree.  Every comparison has two outcomes, so an
-    execution is a path in a binary tree.  Two inputs that reach the
-    same leaf are indistinguishable to the algorithm, and a correct
-    sort must emit different outputs for them, so every leaf covers at
-    most one of the n! orders.  Depth >= ceil(log2(n!)) = Omega(n log n).
-
-    The bound is in bits and comparisons at once, because one comparison
-    is worth at most one bit of information.
-
-(b) The gap at n = 1024, against its own asymptotic prediction.
-
-          n       log2(n!)     ceil   merge worst        gap   0.4427 n   exact pred
-         32        117.663      118         129.0     11.337      14.17       11.340
-         64        295.995      296         321.0     25.005      28.33       25.007
-        128        716.162      717         769.0     52.838      56.67       52.839
-        256       1683.996     1684        1793.0    109.004     113.33      109.004
-        512       3875.166     3876        4097.0    221.834     226.66      221.834
-       1024       8769.006     8770        9217.0    447.994     453.32      447.994
-       2048      19580.186    19581       20481.0    900.814     906.65      900.814
-       4096      43250.047    43251       45057.0   1806.953    1813.30     1806.953
-
-    At n = 1024:
-        log2(n!)          = 8769.006 bits
-        merge sort worst  = 1024 * 10 - 1024 + 1 = 9217 comparisons
-        gap               = 447.994
-    Derivation of the prediction, term by term:
-        log2(n!) = n log2 n - n log2 e + 0.5 log2(2 pi n) + O(1/n)
-        gap     = (n log2 n - n + 1) - log2(n!)
-               = (log2 e - 1) n + 1 - 0.5 log2(2 pi n) + O(1/n)
-               = 0.4427 n + 1 - 6.3257
-               = 453.320 + 1 - 6.3257
-               = 447.994
-        observed gap      = 447.994   -- exact, to 3 decimals
-
-    The 0.4427 n estimate OVERSTATES the gap by 5.33 comparisons,
-    a relative error of 1.19%, and that is not noise:
-    it drops the -0.5 log2(2 pi n) term, still -6.33 at n = 1024.
-    That term grows like 0.5 log2 n, so the relative error of the pure
-    linear estimate decays only like log2(n) / n -- slow enough that the
-    approximation is useless at any n you will ever sort.
-
-(c) Insertion sort on nearly sorted input.
-
-    input                               inversions   comparisons    n + I
-    random permutation                         847           847      911
-    sorted                                       0             0       64
-    one swap from sorted                         1             1       65
-    reversed                                  2016          2016     2080
-
-    Insertion sort does exactly one comparison per inversion plus one
-    per key, so it costs Theta(n + I).  On nearly sorted data I = 0 or
-    I = O(n), giving Theta(n) -- linear, not n log n.
-
-    This does NOT contradict Omega(n log n).  The lower bound is a
-    statement about the WORST case of a model: over all inputs, some
-    arrangement has Theta(n^2) inversions and the algorithm must pay.
-    An algorithm may be much faster on easy inputs without ceasing to
-    be a comparison sort.  Timsort is exactly this: it detects and
-    merges existing runs, so its typical case is linear while its
-    worst case stays n log n.
-```
-
-</details>
-
-**Challenge — Prove the whole chain.**
-
-**[ ]** (a) Show that $c = d$ is exactly the regime where the recursion-tree
-level costs are all equal. (b) Show that the pure-power substitution guess
-succeeds iff $c \ne d$, and give the slack term needed at $c = d$. (c) Using
-your answers, predict which of $T(n) = 8T(n/2) + \Theta(n)$ and
-$T(n) = 8T(n/2) + \Theta(n^2)$ is faster for large $n$, and explain why the
-intuition "more work per node should be slower" fails. (d) Extend: what does
-Akra–Bazzi say about $T(n) = 2T(n/2) + \Theta(n \log n)$, and how does the
-FFT recurrence $2T(n/2) + \Theta(n)$ differ — what would break if you used the
-FFT's answer for the other one?
-
-<details>
-<summary>Solution</summary>
-
-**(a)** Level $i$ of the tree has $a^i$ nodes of size $n/b^i$ each doing
-$(n/b^i)^c$ work, so it costs
-
-$$a^i \left(\frac{n}{b^i}\right)^c = n^c \left(\frac{a}{b^c}\right)^i .$$
-
-The ratio between consecutive levels is $a/b^c$, and that ratio equals $1$
-precisely when $c = \log_b a = d$. So $c = d$ is exactly the point where no
-level decays and none grows: every level costs the same $\Theta(n^d)$, and the
-$\log_b n$ levels can no longer be swallowed by a geometric sum. The answer is
-$\Theta(n^d \log n)$ rather than $\Theta(n^d)$.
-
-This is the real content of "Case 2". It is not that two things happen to tie;
-it is that the *ratio of successive terms* is $1$, which is the only value for
-which the geometric-series trick fails.
-
-**(b)** Guess $T(n) \le K n^d$. The step is
-$aK(n/b)^d + n^c \le K n^d$, i.e. $n^c \le K n^d\left(1 - a/b^d\right)$.
-
-- If $c > d$: $a/b^d < 1$, so the bracket is a positive constant and $n^c$ is
-  dominated — the guess succeeds with slack.
-- If $c < d$: $a/b^d > 1$ and the bracket is negative, so the guess fails but
-  a *smaller* power $K n^c$ works, which is Case 3.
-- If $c = d$: $a/b^d = 1$, the bracket is $0$, and the guess demands
-  $n^d \le 0$. It fails for every $K$. The slack must carry the extra log:
-  guess $T(n) \le K n^d \log_b n$, whose step is
-  $K n^d(\log_b n - 1) + n^d \le K n^d \log_b n \iff K \ge 1$; the base cases
-  ($T(2) = a + 2^d$ with $\log_b 2 = 1$) force $K \ge 2$. Take $K = 2$.
-
-So the pure-power guess succeeds iff $c \ne d$, and at $c = d$ the slack term is
-a multiplicative $\log_b n$ rather than an additive constant.
-
-**(c)** Neither is faster: both are $\Theta(n^3)$. The level ratio is $4$ and $2$
-respectively — both greater than $1$, so in both cases the leaves dominate and
-the level sum collapses onto them. Measured, the ratio between the two
-recurrences tends to $3/2$ (or $3$ if you exclude the shared leaf term), a
-**constant**, not a factor of $n$.
-
-The intuition fails because "more work per node" only bites once the per-node
-cost reaches the *leaf* cost $n^d$. Raising the local cost from $n$ to $n^2$
-while $d = 3$ is still far below $n^3$, so it is invisible in the total; push
-it to $n^4$ and you finally pay a factor of $n$. The boundary is $c = d$ — the
-same boundary as (a) and (b).
-
-**(d)** $T(n) = 2T(n/2) + \Theta(n \log n)$: the additive term is not
-$\Theta(n^c)$ for any $c$, so the Master Theorem does not apply. Akra–Bazzi
-gives $p$ from $2(1/2)^p = 1$, so $p = 1$, and
-
-$$\Theta\left(n^1\left(1 + \int_1^n \frac{u \log u}{u^{2}}\,du\right)\right) = \Theta\left(n\left(1 + \int_1^n \frac{\log u}{u}\,du\right)\right) = \Theta\!\left(n(\log n)^2\right).$$
-
-The FFT recurrence is $2T(n/2) + \Theta(n)$, which **does** fit the Master
-Theorem at $c = d = 1$ and gives $\Theta(n \log n)$.
-
-**What would break if you reused the FFT's answer?** Everything downstream,
-and silently. The two differ by a full factor of $\log n$, which grows without
-bound, so the error is not a constant you can absorb into a big-O: it changes
-the complexity class from $n\log n$ to $n\log^2 n$. A prediction built on the
-FFT answer would under-report the cost of a level of the transform by an
-unbounded factor, and — because the two recurrences look almost identical on
-the page — nothing in the code would complain. The single factor of $u$ in the
-integrand is what does it: $\int_1^n \log u\,du$ grows like $n\log n$, while
-$\int_1^n \frac{\log u}{u}\,du$ grows like $\tfrac12(\log n)^2$. Both
-measured below, converging to $1$ and $1/2$ respectively.
-
-```python
-"""Challenge code block."""
-import math
-from math import log
-
-
-def logb(x, b):
-    return log(x) / log(b)
-
-
-def classify(a, b, c):
-    d = logb(a, b)
-    if c < d - 1e-12:
-        return d, 1, f"Theta(n^{d:.4f})"
-    if abs(c - d) < 1e-12:
-        return d, 2, f"Theta(n^{d:.4f} log n)"
-    return d, 3, f"Theta(n^{c})"
-
-
-def tree_cost(a, b, c, k):
-    """T(2^k) for T(n) = a T(n/b) + n^c, by summing every LEVEL of the tree.
-
-    Level i holds a^i nodes of size 2^(k-i), each doing (2^(k-i))^c work.
-    The floor division is exact because n = 2^k.
-    """
-    total, nodes, m = 0, 1, 1 << k
-    while m > 1:
-        total += nodes * m ** c
-        nodes *= a
-        m //= b
-    total += nodes          # the leaves
-    return total
-
-
-print("(a) c = d is exactly the regime where the per-level work is CONSTANT.")
-print()
-print("    Level i of the tree costs  a^i (n/b^i)^c = n^c (a / b^c)^i, so the")
-print("    ratio between consecutive levels is a / b^c.  That ratio is 1")
-print("    precisely when c = d = log_b a -- no term decays, none grows, and")
-print("    the number of levels can no longer be absorbed into a geometric sum.")
-print()
-print(f"    {'recurrence':<20} {'c':>3} {'d':>8} {'a/b^c':>10} {'level ratio':>26} {'result':>22}")
-for label, a, b, c in [("2T(n/2) + n", 2, 2, 1),
-                       ("2T(n/2) + n^2", 2, 2, 2),
-                       ("8T(n/2) + n", 8, 2, 1),
-                       ("8T(n/2) + n^2", 8, 2, 2),
-                       ("8T(n/2) + n^3", 8, 2, 3),
-                       ("8T(n/2) + n^4", 8, 2, 4)]:
-    d, case, res = classify(a, b, c)
-    ratio = a / b ** c
-    verdict = "CONSTANT" if abs(ratio - 1) < 1e-12 else ("growing" if ratio > 1 else "decaying")
-    print(f"    {label:<20} {c:3d} {d:8.4f} {ratio:10.6f} {verdict:>26} {res:>22}")
-print()
-print("    Read the fifth row carefully: c = 3 and d = 3 are EQUAL, so the")
-print("    level ratio is 1 and the answer is Theta(n^3 log n), not Theta(n^3).")
-print("    Every other row has the ratio strictly off 1, so one term dominates")
-print("    and the geometric sum collapses onto it.")
-print()
-print("    Measured on 8T(n/2) + n^3, a genuine c = d case.  Each level costs")
-print("    exactly n^3, so with log2 n levels the total is n^3 log2 n + n^3:")
-print(f"       {'k':>3} {'n = 2^k':>10} {'T(n)':>18} {'n^3 log2 n':>18} {'ratio':>9} {'(k+1)/k':>9}")
-for k in range(3, 13):
-    n = 1 << k
-    t = tree_cost(8, 2, 3, k)
-    exact = n ** 3 * k
-    print(f"       {k:3d} {n:10d} {t:18d} {exact:18d} {t / exact:9.4f} {(k + 1) / k:9.4f}")
-print()
-print("    The ratio IS (k+1)/k and tends to 1 from above.  The excess is the")
-print("    leaf term n^3 -- one extra level's worth -- which is lower order and")
-print("    exactly what the substitution argument in (b) forces you to absorb.")
-print()
-print("(b) When does the pure-power guess work?  Guess T(n) <= K n^d.")
-print()
-print("    Step:  a K (n/b)^d + n^c <= K n^d")
-print("      <=> n^c <= K n^d (1 - a/b^d).")
-print("    At c = d we have a/b^d = 1, so the right side is 0 while the left")
-print("    side is n^d.  The guess FAILS for every K: there is no slack left.")
-print()
-print("    The slack has to carry the extra log factor.  Guess T(n) <= K n^d log_b n.")
-print("        a K (n/b)^d log_b(n/b) + n^d")
-print("          = a K n^d b^-d (log_b n - 1) + n^d")
-print("          = K n^d (log_b n - 1) + n^d            [since a / b^d = 1]")
-print("          = K n^d log_b n - (K - 1) n^d")
-print("        <= K n^d log_b n   iff   K >= 1.")
-print("    Base cases: T(1) = 1 and T(2) = a + 2^d = 16, and log_b 2 = 1, so")
-print("    16 <= K * 8 * 1 forces K >= 2.  Take K = 2; it satisfies both.")
-print()
-print("    Verified on 8T(n/2) + n^3 with the guess T(n) <= 2 n^3 log2 n:")
-print(f"       {'n':>8} {'T(n)':>18} {'2 n^3 log2 n':>18} {'holds':>7} {'K needed':>10}")
-for k in (3, 6, 9, 12, 15, 18):
-    n = 1 << k
-    t = tree_cost(8, 2, 3, k)
-    print(f"       {n:8d} {t:18d} {2 * n ** 3 * k:18d} "
-          f"{str(t <= 2 * n ** 3 * k):>7} {t / (n ** 3 * k):10.4f}")
-print()
-print("    So the pure-power guess succeeds iff c != d.  c < d is Case 1")
-print("    (leaves win) and c > d is Case 3 (the root wins); both sit far from")
-print("    the boundary, which is exactly why the three Master Theorem cases")
-print("    are so easy to remember and so easy to get wrong by intuition.")
-print()
-print("(c) 8T(n/2) + n versus 8T(n/2) + n^2.  Same order: both Theta(n^3).")
-print()
-print("    Closed forms for n = 2^k, by summing the levels exactly:")
-print("        level i costs 8^i (n/2^i)   = n 2^(2i)   -> internal sum (n^3 - n)/3")
-print("        level i costs 8^i (n/2^i)^2 = n^2 2^i   -> internal sum n^3 - n^2")
-print("        both then add the leaf term 8^k = n^3, so")
-print("            T(n) = n^3 + (n^3 - n)/3 = (4n^3 - n)/3")
-print("            T(n) = n^3 + (n^3 - n^2) = 2n^3 - n^2")
-print()
-print(f"       {'n':>8} {'8T(n/2)+n':>18} {'(4n^3-n)/3':>20} {'8T(n/2)+n^2':>18} {'2n^3-n^2':>20} {'ratio':>9}")
-for k in (6, 10, 14, 18, 22):
-    n = 1 << k
-    t1 = tree_cost(8, 2, 1, k)
-    t2 = tree_cost(8, 2, 2, k)
-    print(f"       {n:8d} {t1:18d} {(4 * n ** 3 - n) / 3:20.1f} {t2:18d} "
-          f"{2 * n ** 3 - n ** 2:20d} {t2 / t1:9.4f}")
-print()
-print("    The internal sums alone have ratio 3, but the leaves add the SAME")
-print("    n^3 to both, which drags the overall ratio down to 3/2.  Either way")
-print("    it is a CONSTANT, not a factor of n: both recurrences are Theta(n^3)")
-print("    = 8^(log2 n), and the extra per-node n^2 cost is invisible because")
-print("    the leaves already set the total.  The intuition that more work per")
-print("    node must be slower only becomes true once the per-node cost")
-print("    crosses the leaf cost, i.e. at c = 3:")
-print(f"       {'n':>8} {'8T(n/2)+n^2':>16} {'8T(n/2)+n^3':>16} {'8T(n/2)+n^4':>16}")
-for k in (10, 14, 18):
-    n = 1 << k
-    print(f"       {n:8d} {tree_cost(8, 2, 2, k):16d} {tree_cost(8, 2, 3, k):16d} "
-          f"{tree_cost(8, 2, 4, k):16d}")
-print()
-print("    The n^4 column finally costs a factor of n over the n^3 column --")
-print(f"    here 2n / log2 n, i.e. {2 * (1 << 18) / 18:.0f} at n = {1 << 18}.  That")
-print("    is the boundary from (a), and it is why 'more work per node' is")
-print("    wrong below the boundary and right above it.")
-print()
-print("(d) 2T(n/2) + Theta(n log n): the Master Theorem does not apply.")
-print("    Akra-Bazzi: solve a_1 b_1^p = 1  ->  2 (1/2)^p = 1  ->  p = 1.")
-print()
-print("        T(n) = Theta( n^1 (1 + INT_1^n u log u / u^2 du ) )")
-print("              = Theta( n (1 + INT_1^n log u / u du ) )")
-print("              = Theta( n (1 + 0.5 (ln n)^2) )")
-print("              = Theta(n (log n)^2)")
-print()
-print("    The FFT recurrence, by contrast, is 2T(n/2) + Theta(n), which DOES")
-print("    fit the Master Theorem at c = d = 1.  Both, measured:")
-print()
-print(f"       {'n':>10} {'FFT: 2T+n':>16} {'n log2 n':>14} {'ratio':>8} "
-      f"{'2T+n log n':>16} {'n log2^2 n':>16} {'ratio':>8}")
-for k in (10, 14, 18, 22, 26):
-    n = 1 << k
-    fft = tree_cost(2, 2, 1, k)
-    extra, nodes, m = 0, 1, n
-    while m > 1:
-        extra += nodes * m * math.log2(m)
-        nodes *= 2
-        m //= 2
-    extra += nodes
-    print(f"       {n:10d} {fft:16d} {n * k:14d} {fft / (n * k):8.4f} "
-          f"{extra:16.0f} {n * k * k:16.0f} {extra / (n * k * k):8.4f}")
-print()
-print("    The first ratio tends to 1, not 2: every level costs exactly n, and")
-print("    there are log2 n of them, so T = n log2 n + n.  The second tends to")
-print("    0.5: level i costs n log2(n/2^i) = n (k-i), and sum (k-i) = k(k+1)/2,")
-print("    so T = n k(k+1)/2 = (1/2) n (log2 n)^2 + lower order.")
-print()
-print("    One extra factor of log, and the difference is a single factor of u")
-print("    in the integrand: INT log u du grows like n log n, but INT log u/u du")
-print("    grows like (log n)^2.  Lesson 80 covers the first with the Master")
-print("    Theorem and the second only with Akra-Bazzi -- which is the reason")
-print("    the course teaches Akra-Bazzi at all.")
-```
-
-```text
-(a) c = d is exactly the regime where the per-level work is CONSTANT.
-
-    Level i of the tree costs  a^i (n/b^i)^c = n^c (a / b^c)^i, so the
-    ratio between consecutive levels is a / b^c.  That ratio is 1
-    precisely when c = d = log_b a -- no term decays, none grows, and
-    the number of levels can no longer be absorbed into a geometric sum.
-
-    recurrence             c        d      a/b^c                level ratio                 result
-    2T(n/2) + n            1   1.0000   1.000000                   CONSTANT  Theta(n^1.0000 log n)
-    2T(n/2) + n^2          2   1.0000   0.500000                   decaying             Theta(n^2)
-    8T(n/2) + n            1   3.0000   4.000000                    growing        Theta(n^3.0000)
-    8T(n/2) + n^2          2   3.0000   2.000000                    growing        Theta(n^3.0000)
-    8T(n/2) + n^3          3   3.0000   1.000000                   CONSTANT  Theta(n^3.0000 log n)
-    8T(n/2) + n^4          4   3.0000   0.500000                   decaying             Theta(n^4)
-
-    Read the fifth row carefully: c = 3 and d = 3 are EQUAL, so the
-    level ratio is 1 and the answer is Theta(n^3 log n), not Theta(n^3).
-    Every other row has the ratio strictly off 1, so one term dominates
-    and the geometric sum collapses onto it.
-
-    Measured on 8T(n/2) + n^3, a genuine c = d case.  Each level costs
-    exactly n^3, so with log2 n levels the total is n^3 log2 n + n^3:
-         k    n = 2^k               T(n)         n^3 log2 n     ratio   (k+1)/k
-         3          8               2048               1536    1.3333    1.3333
-         4         16              20480              16384    1.2500    1.2500
-         5         32             196608             163840    1.2000    1.2000
-         6         64            1835008            1572864    1.1667    1.1667
-         7        128           16777216           14680064    1.1429    1.1429
-         8        256          150994944          134217728    1.1250    1.1250
-         9        512         1342177280         1207959552    1.1111    1.1111
-        10       1024        11811160064        10737418240    1.1000    1.1000
-        11       2048       103079215104        94489280512    1.0909    1.0909
-        12       4096       893353197568       824633720832    1.0833    1.0833
-
-    The ratio IS (k+1)/k and tends to 1 from above.  The excess is the
-    leaf term n^3 -- one extra level's worth -- which is lower order and
-    exactly what the substitution argument in (b) forces you to absorb.
-
-(b) When does the pure-power guess work?  Guess T(n) <= K n^d.
-
-    Step:  a K (n/b)^d + n^c <= K n^d
-      <=> n^c <= K n^d (1 - a/b^d).
-    At c = d we have a/b^d = 1, so the right side is 0 while the left
-    side is n^d.  The guess FAILS for every K: there is no slack left.
-
-    The slack has to carry the extra log factor.  Guess T(n) <= K n^d log_b n.
-        a K (n/b)^d log_b(n/b) + n^d
-          = a K n^d b^-d (log_b n - 1) + n^d
-          = K n^d (log_b n - 1) + n^d            [since a / b^d = 1]
-          = K n^d log_b n - (K - 1) n^d
-        <= K n^d log_b n   iff   K >= 1.
-    Base cases: T(1) = 1 and T(2) = a + 2^d = 16, and log_b 2 = 1, so
-    16 <= K * 8 * 1 forces K >= 2.  Take K = 2; it satisfies both.
-
-    Verified on 8T(n/2) + n^3 with the guess T(n) <= 2 n^3 log2 n:
-              n               T(n)       2 n^3 log2 n   holds   K needed
-              8               2048               3072    True     1.3333
-             64            1835008            3145728    True     1.1667
-            512         1342177280         2415919104    True     1.1111
-           4096       893353197568      1649267441664    True     1.0833
-          32768    562949953421312   1055531162664960    True     1.0667
-         262144 342273571680157696 648518346341351424    True     1.0556
-
-    So the pure-power guess succeeds iff c != d.  c < d is Case 1
-    (leaves win) and c > d is Case 3 (the root wins); both sit far from
-    the boundary, which is exactly why the three Master Theorem cases
-    are so easy to remember and so easy to get wrong by intuition.
-
-(c) 8T(n/2) + n versus 8T(n/2) + n^2.  Same order: both Theta(n^3).
-
-    Closed forms for n = 2^k, by summing the levels exactly:
-        level i costs 8^i (n/2^i)   = n 2^(2i)   -> internal sum (n^3 - n)/3
-        level i costs 8^i (n/2^i)^2 = n^2 2^i   -> internal sum n^3 - n^2
-        both then add the leaf term 8^k = n^3, so
-            T(n) = n^3 + (n^3 - n)/3 = (4n^3 - n)/3
-            T(n) = n^3 + (n^3 - n^2) = 2n^3 - n^2
-
-              n          8T(n/2)+n           (4n^3-n)/3        8T(n/2)+n^2             2n^3-n^2     ratio
-             64             349504             349504.0             520192               520192    1.4884
-           1024         1431655424         1431655424.0         2146435072           2146435072    1.4993
-          16384      5864062009344      5864062009344.0      8795824586752        8795824586752    1.5000
-         262144  24019198012555264  24019198012555264.0  36028728299487232    36028728299487232    1.5000
-        4194304 98382635059782877184 98382635059782877184.0 147573934997490368512 147573934997490368512    1.5000
-
-    The internal sums alone have ratio 3, but the leaves add the SAME
-    n^3 to both, which drags the overall ratio down to 3/2.  Either way
-    it is a CONSTANT, not a factor of n: both recurrences are Theta(n^3)
-    = 8^(log2 n), and the extra per-node n^2 cost is invisible because
-    the leaves already set the total.  The intuition that more work per
-    node must be slower only becomes true once the per-node cost
-    crosses the leaf cost, i.e. at c = 3:
-              n      8T(n/2)+n^2      8T(n/2)+n^3      8T(n/2)+n^4
-           1024       2146435072      11811160064    2197949513728
-          16384    8795824586752   65970697666560 144110790029344768
-         262144 36028728299487232 342273571680157696 9444714951340780945408
-
-    The n^4 column finally costs a factor of n over the n^3 column --
-    here 2n / log2 n, i.e. 29127 at n = 262144.  That
-    is the boundary from (a), and it is why 'more work per node' is
-    wrong below the boundary and right above it.
-
-(d) 2T(n/2) + Theta(n log n): the Master Theorem does not apply.
-    Akra-Bazzi: solve a_1 b_1^p = 1  ->  2 (1/2)^p = 1  ->  p = 1.
-
-        T(n) = Theta( n^1 (1 + INT_1^n u log u / u^2 du ) )
-              = Theta( n (1 + INT_1^n log u / u du ) )
-              = Theta( n (1 + 0.5 (ln n)^2) )
-              = Theta(n (log n)^2)
-
-    The FFT recurrence, by contrast, is 2T(n/2) + Theta(n), which DOES
-    fit the Master Theorem at c = d = 1.  Both, measured:
-
-                n        FFT: 2T+n       n log2 n    ratio       2T+n log n       n log2^2 n    ratio
-             1024            11264          10240   1.1000            57344           102400   0.5600
-            16384           245760         229376   1.0714          1736704          3211264   0.5408
-           262144          4980736        4718592   1.0556         45088768         84934656   0.5309
-          4194304         96468992       92274688   1.0455       1065353216       2030043136   0.5248
-         67108864       1811939328     1744830464   1.0385      23622320128      45365592064   0.5207
-
-    The first ratio tends to 1, not 2: every level costs exactly n, and
-    there are log2 n of them, so T = n log2 n + n.  The second tends to
-    0.5: level i costs n log2(n/2^i) = n (k-i), and sum (k-i) = k(k+1)/2,
-    so T = n k(k+1)/2 = (1/2) n (log2 n)^2 + lower order.
-
-    One extra factor of log, and the difference is a single factor of u
-    in the integrand: INT log u du grows like n log n, but INT log u/u du
-    grows like (log n)^2.  Lesson 80 covers the first with the Master
-    Theorem and the second only with Akra-Bazzi -- which is the reason
-    the course teaches Akra-Bazzi at all.
-```
-
-</details>
-
----
-
 
 ---
 
 ## Summary
 
-- Every recursive algorithm gives a recurrence, and the three tools for solving it
-  — recursion tree (shape), substitution (constant), Master Theorem (class) —
-  always agree; the pure guess $c\,n^d$ fails whenever the recursion saturates
-  the budget, and the repair is a slack term $-\lambda n$.
-- $T(n) = a\,T(n/b) + \Theta(n^c)$ with $d = \log_b a$: leaves dominate when
-  $c < d$, every level ties when $c = d$, the top dominates when $c > d$.
-- A greedy algorithm is optimal only if you can write the exchange argument;
-  0/1 knapsack with capacity 50 returns `160` where the optimum is `220`, and
-  that failure is exactly the absence of the matroid exchange property.
-- Dynamic programming applies when a problem has optimal substructure *and*
-  overlapping subproblems; the state count is the budget — `56` cells for a
-  `7 × 6` LCS, `C(n,k)` for a subset state.
-- Memoisation converts an exponential recursion into a linear table; the naive
-  Fibonacci at `n = 28` makes `1028457` calls where the memoised version
-  evaluates `29` states.
-- Bellman-Ford needs `V-1` passes and one negative cycle is enough to break
-  Dijkstra: Block 5's graph has Dijkstra reporting `4` where the truth is
-  `-4`.
-- A loop invariant has three obligations — initialisation, maintenance,
-  conclusion — and termination is a separate proof via a decreasing variant.
-- Lower bounds are statements about a model: `log2(n!)` bits lower-bounds
-  comparison sorting, merge sort sits `0.4427n` above it, and counting sort
-  escapes only by asking a question comparisons cannot ask.
+- **A loop invariant has three obligations and a variant function has one more.** $I$
+  holds before the loop, $I \wedge G \Rightarrow B[I]$, and $I \wedge \neg G \Rightarrow P$;
+  the variant is a non-negative integer that strictly decreases. Correctness and
+  termination are independent arguments and need independent certificates.
+- **Invariants should be executable.** Block 1 checked binary search's invariant by
+  brute force at every loop head across 3,300 random cases, zero violations — and the
+  same checker makes the `hi = mid` bug a loud failure instead of 526 silent hangs.
+- **A greedy rule is correct only if you can write the exchange.** Coin change for
+  1, 3, 4 fails on `6, 10, 14, 18, 22`; the identical rule on US coins 1, 5, 10, 25 is
+  optimal. Rod cutting by best price-per-length is right on 393 of 400 instances and
+  still wrong — 98% is not a proof.
+- **Equal level costs *are* case 2.** $T(n) = 2T(n/2) + n$ has level costs
+  `32, 32, 32, 32, 32, 32` and total $192$; $T(n) = 2T(n/2) + n^2$ has level costs
+  `4096, 2048, 1024, ...` and the root alone costs more than everything below it. The
+  $\varepsilon$ is load-bearing: $T(n) = 4T(n/2) + n^2$ is case 2, $\Theta(n^2 \log n)$,
+  not case 3.
+- **The boundary is case 2.** $T(n) = 3T(n/3) + n$ has total work exactly $n(\log_3 n +
+  1)$, measured and closed form agreeing at every $n$, so the ratio to $n \ln n$ falls
+  `1.214 → 1.040` towards $1/\ln 3 = 0.910$. $\Theta(n \log n)$, not $\Theta(n^2)$.
+- **Count states, not calls.** Naive Fibonacci makes 29,860,703 calls at $n = 35$ and
+  multiplies by `11.1×` per step of 5 — $\varphi^5 = 11.09$ — while the table version
+  does 34 additions. "There are only $n$ states" is true and answers the wrong question.
+- **Counting and computing have different complexities.** Tiling a $2 \times n$ board
+  has $\varphi^n$ tilings and $\Theta(n)$ work to produce the count.
+- **The representation *is* the design.** Storing the list node inside the dict is what
+  makes an LRU cache $O(1)$, verified by 7,204 invariant evaluations and zero recency
+  mismatches against the naive version — and counting rather than timing makes the
+  argument exact: `4` pointer writes per operation at every capacity, against `123.2`
+  element shifts at capacity 100 and `4,338.9` at capacity 4000.
+- **The workflow is five questions, and the two people skip are the ones that matter.**
+  What is one unit of size? Write the brute force first — it is the oracle. Can you
+  write the exchange? Do the subproblems overlap? What is the dominant operation?
 
 ---
 
 ## Next
 
-[90 — Vectors in 3D and the Cross Product](../part07_geometry_graphics/90_vectors_3d_and_cross_product.md)
-moves from the algebra of algorithms to the geometry of the data those
-algorithms manipulate. The recurrence-solving and correctness-proof habits
-carry over unchanged; the subject matter becomes directions, planes, and the
-quantities that graphics and physics code compute every frame.
+That completes Part 6. [Part 07 — Geometry and Graphics](../part07_geometry_graphics/)
+takes the algorithms here and puts them on real numbers: vectors and the cross product,
+the affine transforms behind every 2D and 3D graphics pipeline, and the geometric
+algorithms — convex hulls, line intersection, spatial partitioning — that this lesson's
+divide-and-conquer and greedy techniques apply to directly. It assumes you can write
+and prove an algorithm and bound its cost, which is exactly what this part was for.
