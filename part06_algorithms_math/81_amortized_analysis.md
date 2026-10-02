@@ -3674,12 +3674,11 @@ itself, is an engineering decision that has to be measured.**
   $1, 2, 4, \dots$ and a total of `4,092` copies for $n = 4096$ (`0.9990` per
   append), while growing by a constant gives $1, 5, 9, \dots$ and `8,386,560`
   copies (`2047.5000` per append) from an identical interface.
-- The growth factor is the only free parameter, and it moves the *constant*:
-  the amortised cost is $\frac{1}{f-1}$ copies per append, measured at
-  `8.8263` for CPython's $f \approx 1.125$ and `0.9999` for $f = 2$, in exchange
-  for `9.3%` and `0%` wasted slots. $\frac{1}{f-1} + \frac{f-1}{2}$ is minimised
-  at $f = 2.414$, and no library uses it because a wasted byte and a wasted copy
-  are not priced alike.
+- The growth factor is the only free parameter, and it moves the *constant*, not
+  the class: $\frac{1}{f-1}$ copies per append, measured at `8.8263` for
+  CPython's $f \approx 1.125$ and `0.9999` for $f = 2$, for `9.3%` versus `0%`
+  wasted slots. $\frac{1}{f-1} + \frac{f-1}{2}$ is minimised at $f = 2.414$, and
+  no library uses it because a wasted byte and a wasted copy are not priced alike.
 - A potential is a bounded quantity that rises when an operation is expensive
   and falls by little when it is cheap. $\Phi = 2n - C$ gives a constant `3` for
   both kinds of array append — the code's set of distinct amortised costs over
@@ -3704,9 +3703,9 @@ itself, is an engineering decision that has to be measured.**
   trigger depends only on the sizes `17, 33, 65, 129, ...`, never on the keys.
 - The $\epsilon$-heavy theorem bounds a sequence whose expensive operations are
   merely *not too frequent*: $O(1/\epsilon)$, computable and degrading
-  gracefully. Exercise 6's queue compacts 8 times in 4000 operations, giving
-  $O(500)$ by the theorem against a measured `0.331` moves per operation — the
-  gap is the geometric series the theorem deliberately ignores.
+  gracefully, and looser than the geometric-series argument — Exercise 6's queue
+  compacts 8 times in 4000 operations, giving $O(500)$ by the theorem against a
+  measured `0.331` moves per operation.
 
 ## Next
 

@@ -2,140 +2,87 @@
 
 **Part**: part10_tensors_numerical · **Prerequisites**: 113 · **Time**: 30 min
 
-
 ---
 
 ## In Plain Words
 
-
-
 Everything so far in this repository was done with exact mathematics: integers
-
 never lose precision, and a conclusion that follows from the premises is
-
 unarguable. This lesson is about the day your answers stop being exact. A
-
 computer stores most real numbers as a long string of ones and zeros in a
-
 fixed number of bits, so most real numbers simply cannot be stored, and the
-
 ones that can be stored are the only ones available. Every calculation after
-
 that is a real calculation with a small amount of noise added, and the skill
-
 this lesson teaches is telling how much noise, and where it comes from.
 
-
-
 Three ideas carry the whole lesson. First, some questions are fragile in a way
-
 that no amount of care can fix, usually because the answer you want is a tiny
-
 difference between two huge numbers. Second, some questions are fragile because
-
 of how you wrote them down, and those you can rewrite until they are not.
 
 Third, even a perfect algorithm will not rescue you on a question that was
-
 fragile to begin with, and knowing which kind of fragility you are looking at
-
 is most of the diagnosis.
 
-
-
 ## Why Computer Science Cares
-
-
 
 - **`0.1 + 0.2 != 0.3` is in every language.** It is not a bug in Python, it is
 
   a fact about binary. Anyone who writes a test with `assert a + b == c` on
-
   floating-point values will eventually ship that failure. The correct response
-
   is a scaled comparison or an exact type, and the reasoning is in this lesson.
 
 - **Money.** Storing an amount as a float and adding it up accumulates error
 
   until a reconciliation fails and nobody can explain why. Integer cents, or
-
   `decimal.Decimal`, is the answer, and the reason why is the first section.
 
 - **`np.linalg.solve` versus `np.linalg.lstsq`.** The first is fast and breaks on
 
   near-singular matrices; the second is slower and returns a stable, biased
-
   answer. The condition number is what tells you which one you need, and
-
   Lesson 101's regularisation is what fixes the problem.
 
 - **Simulators, games and physics engines.** Fixed timestep integration with
 
   `dt = 0.001` is a claim that your error is small. Whether it is depends on
-
   how stiff your equations are, and the answer is a step size, not a wish.
 
 - **Convergence tests in optimisation.** A gradient descent that stops when the
 
   loss changes by less than `1e-9` can stop on a plateau or in a region where
-
   the loss has stopped responding to the parameters at all. The condition
-
   number of your problem is why, and it decides whether more iterations or more
-
   precision can possibly help.
 
 - **`scipy.optimize.brentq` versus a hand-rolled Newton loop.** Brent's method
 
   is a bisection skeleton with Newton accelerants, and that specific shape
-
   exists because Newton alone cycles. This lesson builds both and shows the
-
   cycle.
-
-
 
 ## The Formal Version
 
-
-
 Notation follows [SYMBOLS.md](../SYMBOLS.md). Used here: $\varepsilon$, $O()$,
-
 $h$, $n$, $\kappa$, $|x|$, $\delta$.
-
-
 
 **Definition.** A **float64** is a float64 is a 64-bit encoding of
 
-
-
 $$x = (-1)^s \cdot (1 + f) \cdot 2^{e - 1023}$$
 
-
-
 with a 1-bit sign $s$, an 11-bit exponent $e$, and a 52-bit fraction $f$ taken
-
 as an integer in $[0, 2^{52})$. Equivalently, every non-negative float64 is
-
 exactly $m \cdot 2^j$ for integers $m < 2^{53}$ and $j$.
-
-
 
 **Definition.** The **unit in the last place** (ulp) at $x > 0$ is
 
 $\operatorname{ulp}(x) = 2^{j-52}$ where $x = m 2^j$ with $m$ odd. It is the gap
-
 to the next float up.
-
-
 
 **Definition.** **Machine epsilon** for float64 is
 
 $\varepsilon = 2^{-52} \approx 2.22 \times 10^{-16}$, the ulp at $1.0$ and also
-
 the smallest $h$ for which $1 + h \neq 1$ up to the rounding tie.
-
-
 
 **Theorem (representable decimals).** A decimal $d = p/q$ in lowest terms is
 
@@ -143,57 +90,36 @@ exactly representable in binary floating point **iff** $q$ is a power of two.
 
 Hence $1/2, 1/4, 1/8$ are exact and $1/10, 1/5, 3/10$ are not.
 
-
-
 *Explanation.* A float64 is $m 2^j$, so its reduced denominator is a power of
 
 two. $1/10 = 1/(2 \cdot 5)$ has a factor of 5, which no power of two absorbs. ∎
-
-
 
 **Definition.** The **absolute error** of $\hat{x}$ for exact $x$ is
 
 $|\hat{x} - x|$. The **relative error** is $|\hat{x} - x| / |x|$.
 
-
-
 **Definition.** **Cancellation** occurs when a formula subtracts two quantities
 
 of similar magnitude to produce a much smaller result, so the absolute error of
-
 the operands becomes a large relative error of the output.
-
-
 
 **Definition.** The **condition number** of a function at $x$ is
 
 $\kappa(x) = |x f'(x)| / |f(x)|$. It is the factor by which a relative input
-
 error is amplified into a relative output error, to first order. For a linear
-
 system it is $\operatorname{cond}(A)$, the ratio of largest to smallest
-
 singular value.
-
-
 
 **Theorem (error amplification).** If the relative input error is $\le \delta$
 
 then the relative output error is $\approx \kappa \delta$, and this is
-
 asymptotically tight. $\kappa$ is a property of the problem and does not depend
-
 on the algorithm.
-
-
 
 **Theorem (error bound for bisection).** If $f$ is continuous, $f(a)f(b) < 0$,
 
 and the bracket $[a_n, b_n]$ has width $w$, then after $n$ halvings
-
 $w_n = w / 2^n$ and the returned midpoint is within $w / 2^{n+1}$ of the root.
-
-
 
 **Definition.** Newton's iteration is $x_{n+1} = x_n - f(x_n)/f'(x_n)$. It is
 
@@ -201,67 +127,38 @@ $w_n = w / 2^n$ and the returned midpoint is within $w / 2^{n+1}$ of the root.
 
 doubles per iteration. It is **linearly convergent** for bisection.
 
-
-
 **Definition.** A forward difference $D^+f(x) = (f(x+h) - f(x))/h$ has
 
 truncation error $O(h)$; a central difference
-
 $Df(x) = (f(x+h) - f(x-h))/(2h)$ has truncation error $O(h^2)$.
-
-
 
 **Theorem (the step-size optimum).** The total error of a finite difference is
 
 truncation plus rounding, roughly
 
-
-
 $$\text{forward: } C_1 h + \frac{2\varepsilon |f|}{h},
-
 \qquad \text{central: } C_2 h^2 + \frac{2\varepsilon |f|}{h}.$$
 
-
-
 The first term falls with $h$ and the second rises with $h$, so the optimum is
-
 where they balance:
 
-
-
 $$h^*_{\text{forward}} = \sqrt{\frac{2\varepsilon |f|}{|f''|}},
-
 \qquad h^*_{\text{central}} = \left(\frac{3\varepsilon |f|}{|f'''|}\right)^{{1/3}}.$$
 
-
-
 Choosing $h$ smaller than $h^*$ makes the answer strictly worse, because
-
 $f(x+h)$ rounds back to $f(x)$ and the numerator is zero.
-
-
 
 *Explanation.* The Taylor expansion gives the $C_1 h$ and $C_2 h^2$ terms; each
 
 of $f(x+h)$ and $f(x-h)$ carries a rounding error of order $\varepsilon |f|$,
-
 so their difference carries order $2 \varepsilon |f|$, and dividing by $h$
-
 turns that into $2\varepsilon|f|/h$. Setting the derivative of the sum to zero
-
 gives the two formulas. The central optimum is a cube root against a square
-
 root, so it is about 1000 times larger for the same function, and the best
-
 attainable relative accuracy is about $\varepsilon^{2/3} \approx 3.7 \times
-
 10^{-11}$ -- eleven digits, not sixteen. ∎
 
-
-
 ## Formula Sheet
-
-
 
 | Symbol | Formula | In plain words | When you use it |
 
@@ -319,79 +216,43 @@ attainable relative accuracy is about $\varepsilon^{2/3} \approx 3.7 \times
 
 | Richardson comparison | compare $n$ panels against $2n$ | trust agreement, not theory | picking $n$ honestly |
 
-
-
 Three restrictions to carry. The definitions of $\varepsilon$ and ulp are for
-
 float64 specifically; float32 has $\varepsilon = 2^{-23}$, which is why a GPU
-
 default is about a thousand times coarser. The condition number measures
-
 sensitivity to **input** error and says nothing about whether your algorithm is
-
 stable, which is a separate and often more important question. And every error
-
 formula here assumes the arithmetic was well conditioned; a single badly chosen
-
 subtraction destroys all of them at once.
-
-
 
 ## Worked Example
 
-
-
 The smallest interesting example in the repository: **why
-
 $0.1 + 0.2 \neq 0.3$**, done exactly.
-
-
 
 **Step 1. Establish what the machine stores.** Both $1/10$ and $1/5$ have a
 
 factor of 5 in their denominator, so by the theorem above neither is
-
 representable. Each is rounded to the nearest double when written. The stored
-
 values, computed with `fractions.Fraction`, are
 
-
-
 $$\mathrm{fl}(0.1) = \frac{3602879701896397}{36028797018963968},
-
 \qquad \mathrm{fl}(0.2) = \frac{3602879701896397}{18014398509481984}.$$
-
-
 
 **Step 2. Check the direction of the error.** Both fractions are *above* their
 
 true values: $\mathrm{fl}(0.1) > 1/10$ and $\mathrm{fl}(0.2) > 1/5$. This
-
 matters, because it means the sum will be too large.
-
-
 
 **Step 3. Add, exactly.** Using a common denominator $2^{55}$,
 
-
-
 $$\mathrm{fl}(0.1) + \mathrm{fl}(0.2)
-
   = \frac{10808639105689191}{36028797018963968}
-
   = \frac{3}{10} + 1.665 \times 10^{-17}.$$
 
-
-
 This addition is **exact**: the sum has a denominator of $2^{55}$, so it is a
-
 representable double. No error is introduced here. This is the step everyone
-
 gets wrong -- floating-point addition is correctly rounded, so $a + b$ is the
-
 correctly rounded value of the two stored numbers.
-
-
 
 **Step 4. Compare against the other route.** Writing the literal `0.3` rounds
 
@@ -399,57 +260,31 @@ $3/10$ once, to $\frac{5404319552844595}{18014398509481984}$, which is
 
 *below* $3/10$. The literal and the sum round in opposite directions.
 
-
-
 **Step 5. Conclude.** The two results are one ulp apart:
-
-
 
 $$\mathrm{fl}(0.1) + \mathrm{fl}(0.2) = 0.30000000000000004 \neq 0.3,$$
 
-
-
 and they differ by $5.55 \times 10^{-17}$. Three roundings happened along
-
 three different routes: two on the way in, one on the sum, and one on the
-
 literal. Rounding once, at the end, would have given a different and more
-
 accurate answer.
-
-
 
 **Step 6. Sanity check that settles it.** $0.1 + 0.5 = 0.6$ **exactly**, because
 
 $1/2$ is representable, so only one rounding is involved on its side and the
-
 two errors cancel. If the story were "floating point addition is broken", this
-
 case would also fail. It does not.
 
-
-
 The lesson generalises past this example. Any subtraction of two nearly equal
-
 quantities amplifies the operands' errors by the ratio of the operand size to
-
 the answer size. That single mechanism explains `exp(x) - 1` for small `x`, the
-
 quadratic formula's small root, and `sqrt(x*x + 1) - x` at large `x` -- and all
-
 three are repaired the same way, by rewriting the algebra so nothing is
-
 subtracted.
-
-
 
 ## Runnable Code
 
-
-
 ### 1. IEEE 754, machine epsilon, and the addition that does not add up
-
-
 
 ```python
 """IEEE 754 and why 0.1 + 0.2 != 0.3.
@@ -649,10 +484,7 @@ print("it has floating point -- and that is the subject of the rest of this")
 print("lesson.")
 ```
 
-
 ### 2. Absolute versus relative error, and catastrophic cancellation
-
-
 
 ```python
 """Absolute versus relative error, and catastrophic cancellation.
@@ -829,10 +661,7 @@ print("There is no problem with small numbers.  The problem is always")
 print("subtracting large ones.")
 ```
 
-
 ### 3. Conditioning: which problems are fragile, and which algorithms are
-
-
 
 ```python
 """Conditioning: how much a small input change can move the answer.
@@ -1095,10 +924,7 @@ print("Most people start at 3 and buy precision that step 1 or 2 would have")
 print("made unnecessary.")
 ```
 
-
 ### 4. Bisection and Newton, from scratch, with the error bounds
-
-
 
 ```python
 """Bisection and Newton-Raphson, from scratch, with their error guarantees.
@@ -1438,10 +1264,7 @@ print("error in x, or the step size -- never the raw residual against an")
 print("absolute constant.")
 ```
 
-
 ### 5. Finite differences, and why a tiny step is a terrible step
-
-
 
 ```python
 """Finite differences: measuring a derivative you cannot differentiate for.
@@ -1794,24 +1617,15 @@ print("quietly wrong in its twelfth digit will corrupt a Newton step or a")
 print("convergence test long before anyone notices the value itself.")
 ```
 
-
 ### With Libraries
 
-
-
 The same facts, checked against numpy and scipy, where the constants and the
-
 tools are the real library ones. numpy's `finfo.eps`, `spacing`,
 
 `expm1`, `log1p`, `cond`, and scipy's `brentq` and `approx_fprime` all appear
-
 in the lesson's arguments.
 
-
-
 not runnable
-
-
 
 ```python
 """The same facts, checked against numpy, mpmath and Python's own tools.
@@ -2032,14 +1846,9 @@ print(f"   float32 eps        = {np.finfo(np.float32).eps:.6e}")
 print(f"   2**53              = {2 ** 53}   (integers stop being exact here)")
 ```
 
-
 ## Common Mistakes
 
-
-
 **Wrong.** Testing floats with `==`, or with a fixed absolute epsilon.
-
-
 
 ```python
 
@@ -2087,27 +1896,17 @@ print("math.isclose(0.1 + 0.2, 0.3) =", math.isclose(a, c, rel_tol=1e-9))
 
 ```
 
-
-
 Why the wrong version is tempting: `==` is the reflexive test, and a fixed
 
 `abs(...) < eps` looks like it accounts for rounding. It does not account for
-
 it *correctly*: 1e-9 absolute is 1e-10 relative on a value of 10 and 1e-7
-
 relative on a value of 1e-2, so one threshold cannot be right for both. And
 
 `==` fails for ordinary arithmetic, not for exotic inputs.
 
-
-
 ---
 
-
-
 **Wrong.** Choosing a finite-difference step as small as possible.
-
-
 
 ```python
 
@@ -2165,27 +1964,15 @@ print("f(1.3 + 1e-16) is bit-for-bit f(1.3) and the numerator vanishes.")
 
 ```
 
-
-
 Why the wrong version is tempting: a smaller step looks like a more faithful
-
 approximation of the defining formula, and it is exactly what you would write
-
 if you were thinking of the derivative as a limit. But the finite-difference
-
 formula assumes the subtraction is exact, and below the spacing of $f$ it is
-
 not. The error curve has a finite minimum and you are past it.
-
-
 
 ---
 
-
-
 **Wrong.** Running plain Newton and hoping the starting point is good.
-
-
 
 ```python
 
@@ -2283,29 +2070,16 @@ print(f"the true root is near {plain_newton(-2.0, 40)[0]!r}")
 
 ```
 
-
-
 Why the wrong version is tempting: Newton is quadratically convergent, which
-
 makes it look like the obviously superior algorithm, and on a well-behaved
-
 function it is. But quadratic convergence is a *local* claim, and nothing in
-
 the plain loop checks that the iterate is still inside the region where it
-
 applies. Here the tangent at 0 crosses the axis at 1 and the tangent at 1
-
 crosses it back at 0, forever.
-
-
 
 ---
 
-
-
 **Wrong.** Treating a near-singular system as a precision problem.
-
-
 
 ```python
 
@@ -2395,20 +2169,12 @@ print("predictable 3.5e-5.  Bounded bias instead of unbounded noise.")
 
 ```
 
-
-
 Why the wrong version is tempting: the answer is wrong, and "wrong" usually
-
 sounds like "not enough precision". But the condition number says the problem
-
 multiplies whatever error you feed it by $2/\varepsilon$, and widening the type
-
 does not shrink that ratio -- it only moves the cliff. Regularisation changes
-
 the problem on purpose and accepts a known bias in exchange for stability,
-
 which is the trade that actually helps.
-
 
 ## Multiple Choice Questions
 
@@ -2425,7 +2191,6 @@ which is the trade that actually helps.
 **B) 0.1, 0.2 and 0.3 are not exactly representable in binary, and each was
 rounded on the way in, so the sum of the rounded values is a different double
 from the rounded value of 0.3.**
-
 $1/10$ has a factor of 5 in its denominator and no power of two can absorb it,
 so it cannot be stored; the same holds for $1/5$ and $3/10$. The lesson's block
 1 shows this with exact rationals: the stored 0.1 is
@@ -2502,7 +2267,6 @@ the condition number of the function $f(x) = \sqrt{x^2+1} - x$ at that point?
 
 **B) About 1, so the problem is perfectly conditioned and the fault is in the
 algorithm.**
-
 $\kappa(x) = |x f'(x)| / |f(x)|$, and this function has the closed form
 $\kappa(x) = x/\sqrt{x^2+1}$, which is 1 at every scale. Block 3 prints
 `1.000000000` at $x = 10^4$, $10^8$ and $10^{12}$. A relative perturbation of
@@ -2623,7 +2387,6 @@ digits. What does the condition number $\kappa = 100$ tell you?
 
 **B) The result will have about 2 correct digits, so 10 is not achievable in
 float64.**
-
 $\kappa = |x \cdot 100x^{99} / x^{100}| = 100$, and each factor of 10 in
 $\kappa$ costs about one decimal digit. Block 3 prints $\kappa(x^{100}) = 100.0$
 at both $x = 1.5$ and $x = 1.0000001$, and its digit table shows $\kappa = 100$
@@ -2836,11 +2599,9 @@ $0.3$?**
 
 Both results contain one rounding on the way in for $0.1$, and the answer
 depends on what happens to the other operand.
-
 $0.5 = 1/2$ is exactly representable, so nothing is lost there. The two errors
 that remain are of opposite size and cancel, and the result is the correctly
 rounded value of the true sum $3/5$, which is $0.6$.
-
 $0.2 = 1/5$ is *not* exactly representable, and it was rounded in the same
 direction as $0.1$ (both stored values sit slightly *above* their true values).
 The errors therefore add rather than cancel, and the final rounding lands one
@@ -2895,7 +2656,6 @@ happen?**
 
 The solver should report that it could not meet the tolerance, rather than
 returning a number as though it had.
-
 float64 carries about 16 significant digits, so no relative tolerance below
 roughly $2 \times 10^{-16}$ is reachable at unit scale. A tolerance of
 `1e-20` asks for digits the arithmetic cannot produce. The correct behaviour is
