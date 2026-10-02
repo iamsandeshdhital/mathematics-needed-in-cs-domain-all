@@ -71,6 +71,26 @@ service's tail latency is made of.
   this was a deliberate implementation decision (PEP 626 era) precisely because
   the analysis was done. In C++ it is $O(|s|^2)$ and the idiom is `std::string`
   or `+=` on a `std::string` with a reserve.
+- **Union-find, and the only named amortised cost in practice.** Disjoint-set
+  union with union by rank and full path compression is $O(\alpha(N))$ amortised
+  per operation, where $\alpha$ is the inverse Ackermann function — a function
+  bounded by 5 over the entire range of integers. Every one of these is a few
+  lines calling `find` and `union`: Kruskal's and Prim's minimum spanning trees,
+  connected-component labelling, image segmentation, Spark's and Hadoop's
+  connected-pair avoidance, and the "group these rows by adjacency" button in a
+  spreadsheet. The lesson measures `2.3613` parent hops per operation at
+  $N = 1{,}000$ and `2.3563` at $N = 300{,}000$: $N$ grew by 300 and the figure
+  did not move, which is the bound as an *observable* rather than a theorem.
+- **The sliding window, which is amortisation with no spike to amortise.** Almost
+  every "window of size $K$" algorithm — max or min window sum, longest
+  substring without repeats, minimum subarray meeting a threshold — is an
+  amortised argument with no rare expensive operation in it at all. Each element
+  enters the window once and leaves once, so the total is $K + 2(n - K) = 2n - K$
+  regardless of $K$: `199,500` element touches against `49,750,500` for
+  recomputing each window, a factor of `249.4`. When the statistic cannot be
+  un-added — a maximum — a monotonic deque carries the same argument, bounded
+  by $2n$ at any window size.
+
 
 ---
 
@@ -256,6 +276,71 @@ the depth of a stack, the number of set bits in a counter — all are potentials
 If you can find one, you have an amortised bound; if you cannot find one, the
 aggregate method may still work.
 
+**Definition (disjoint-set union).** A disjoint-set forest over $N$ labelled
+elements is an array `parent` plus a rank per node, supporting `MAKE-SET`,
+`FIND` (walk parent pointers to the root) and `UNION` (attach one root under the
+other). The cost of every operation is the number of pointers walked.
+
+**Theorem (union-find is $O(\alpha(N))$ amortised, and needs both heuristics).**
+With full path compression *and* union by rank, every sequence of $m$ operations
+on $N$ elements costs at most $O(m \cdot \alpha(N))$ traversals, where
+$A(0) = 1$, $A(k+1) = 2^{A(k)}$ and $\alpha(n) = \min\{k \ge 0 : A(k) \ge n\}$.
+Either heuristic alone gives only $O(\log N)$ amortised.
+
+*Explanation.* Union by rank bounds the *shape* — rank $r$ requires at least
+$2^r$ elements, so depth is at most $\lfloor \log_2 N \rfloor$ — while path
+compression bounds the *queries* by flattening the paths they walk. The two
+interact, and only the interaction is $\alpha$. Because $A$ is a tower of twos,
+$A(4) = 65{,}536$ and $A(5) = 2^{65536}$, so $\alpha(n) \le 4$ for
+$n \le 65{,}536$ and $\alpha(n) \le 5$ for every $n$ that exists. **Crucially,
+$\alpha$ bounds $\sum T_i$, not $\max_i T_i$ and not tree depth**: the code
+finds a deliberately balanced leaf in $2\log_2 N$ hops, and again in 2.
+
+**Definition (the sliding-window amortisation).** A window of width $K$ slides
+one position at a time over $n$ elements. Maintaining a window statistic by
+*updating* the previous value — subtracting the element that leaves, adding the
+one that arrives — costs $O(1)$ per shift, so the total over $n$ shifts is
+
+$$K + 2(n - K) \;=\; 2n - K \;<\; 2n \;=\; \Theta(n),$$
+
+independent of $K$: amortised $O(1)$ per element, unconditionally.
+
+*Explanation.* The charging rule is one sentence: every element is added once as
+it enters and removed once as it leaves, and no element leaves twice, so
+$\sum T_i \le 2n$. There is no expensive operation and no threshold — which is
+what distinguishes this from every other example in the lesson. When the
+statistic cannot be un-added, a monotonic deque supplies the same bound for the
+same reason: every index is pushed once and popped at most once.
+
+### Accounting and potential are the same argument
+
+**Theorem (the balance is the potential).** Fix a price $\hat T$, put
+$c_i = \hat T - T_i$ and $B_k = \sum_{i \le k} c_i$. Then for any $\Phi$
+satisfying $T_i + \Delta\Phi_i = \hat T$ for all $i$,
+
+$$B_k \;=\; \hat T\, k - \sum_{i \le k} T_i \;=\; \Phi_k - \Phi_0 .$$
+
+*Explanation.* Both equalities are the same rearrangement of the telescoping sum,
+so $B_k \ge 0$ and $\Phi_k \ge \Phi_0$ are literally the same inequality, and
+$\Phi_0$ is the account's initial deficit. The code verifies the identity rather
+than asserting it: over `4,096` appends of a doubling array there are `0` steps at
+which $B_k \ne \Phi_k - \Phi_0$, and both finish at `4,100`.
+
+The methods therefore differ not in what they prove but in **what you must check**.
+Accounting's obligation is a *prefix* condition — $B_k \ge 0$ at every $k$ — and
+potential's is a *per-operation* condition — $T + \Delta\Phi \le \hat c$ for every
+kind of operation. Two consequences follow. A prefix condition must be verified
+everywhere: charging 2 per append leaves the account at `1, 2, 3, 4, 1, 2, 3, 4`
+over the first eight appends and then at $-3$ on append 9, so eight appends of
+hand-checking pass a price that is simply wrong. And a per-operation condition is
+a reusable formula, which is why the potential method scales across a structure
+with a dozen operations while accounting does not — unless the operations
+genuinely deserve different prices, which is precisely when accounting wins.
+Finally, **accounting is how you find the potential**: guess a price, accumulate
+the balance, notice the balance is a potential, and raise the price until it never
+goes negative. The smallest such price is the bound, and for the doubling array it
+is 3.
+
 ---
 
 ## Formula Sheet
@@ -395,6 +480,31 @@ append and `499` resizes. The total is $\Theta(n^2)$: **quadratic work for $n$
 appends, from an interface that is character-for-character identical.** The
 amortised cost is $\Theta(n)$, not $\Theta(1)$.
 
+### Step 6 — the worst single append, and why it coexists
+
+Fill the array to capacity and then append once:
+
+| capacity before | copies in that one append |
+| --- | --- |
+| 64 | 64 |
+| 256 | 256 |
+| 1024 | 1024 |
+| 4096 | 4096 |
+| 16384 | 16384 |
+
+Each row moves the whole live array in one operation, and it grows with $n$. No
+rearrangement of the analysis changes this: the data has to exist somewhere, and
+relocating $n$ elements is $\Theta(n)$. Meanwhile the amortised column of the same
+run reads `0.9375, 0.9688, 0.9844, 0.9922, 0.9961` at $n = 64, 128, 256, 512,
+1024$ — flat, converging to 1.
+
+**Both are true, simultaneously, of the same array.** The amortised cost is a
+statement about the total; the worst case is a statement about the peak. The
+conflict people expect does not exist, because they are statements about
+different things — and the run-time consequence is that the peak is what a
+latency budget is made of.
+
+
 ### Step 7 — union-find, and what $\alpha(n)$ actually buys
 
 The worked example for union-find is the ledger of *parent-pointer hops*, which
@@ -462,14 +572,14 @@ statistic.
 is read, and the total is exactly
 
 $$\underbrace{(n - K + 1) \times K}_{\text{one read per element per window}}
-\;=\; 99{,}501 \times 500 \;=\; 49{,}750{,}500 	ext{ touches},$$
+\;=\; 99{,}501 \times 500 \;=\; 49{,}750{,}500 \text{ touches},$$
 
 which is `500.00` per window.
 
 **Rolling.** The first window costs $K$ reads. Each shift costs exactly 2 — one
 subtraction for the element leaving, one addition for the element entering — so
 
-$$K + 2\,(n - K) \;=\; 500 + 199{,}000 \;=\; 199{,}500 	ext{ touches},$$
+$$K + 2\,(n - K) \;=\; 500 + 199{,}000 \;=\; 199{,}500 \text{ touches},$$
 
 which is `2.0050` per window. The two methods agree on the first and last window
 sums (`2484655` and `2475090`), so the saving is not bought with wrong answers.
@@ -485,7 +595,6 @@ rare event is a deep tree and the bank is the path compression; in Step 8 there
 is no rare event at all and the bank is the element that has already been added
 and must be subtracted. **Amortisation is not a technique for tolerating spikes.
 It is a technique for noticing that the same work is being done twice.**
-
 
 ---
 
@@ -1779,7 +1888,11 @@ Note what is *not* required: $\Phi$ may dip below its starting value in between
 **They are the same quantity.** Summing the accounting definition gives
 $B_k = \hat T\, k - \sum_{i \le k} T_i$. In the potential version with
 $\hat T_i = \hat T$ we have
-$\Phi_k - \Phi_0 = \sum_{i \le k}(T_i + \Delta\Phi_i) - \sum_{i \le k} T_i = \hat T\, k - \sum_{i \le k} T_i$,
+$\hat T_i = \hat T$ we have
+
+$$\Phi_k - \Phi_0 \;=\; \sum_{i \le k}\bigl(T_i + \Delta\Phi_i\bigr)
+\;-\; \sum_{i \le k} T_i \;=\; \hat T\, k - \sum_{i \le k} T_i ,
+
 so rearranging:
 
 $$B_k \;=\; \hat T\, k - \sum_{i \le k} T_i \;=\; \Phi_k - \Phi_0 .$$
@@ -2473,6 +2586,315 @@ quantity is being claimed. The ratio column — $n/2$, unbounded — is the
 cleanest statement of the whole issue: the peak is not a constant multiple of
 the amortised cost, and no amount of asymptotic argument will relate them.
 
+**Mistake 6 — reading $\alpha(n)$ as a bound on a single call or on tree
+depth.**
+
+```python
+class DSU:
+    """Rank and full path compression -- the optimal implementation -- with the
+    hop counter exposed so the cost of ONE find can be measured."""
+
+    def __init__(self, n):
+        self.parent = list(range(n))
+        self.rank = [0] * n
+        self.hops = 0
+
+    def find(self, x):
+        parent = self.parent
+        hops = 1
+        r = x
+        while parent[r] != r:
+            r = parent[r]
+            hops += 1
+        while parent[x] != r:
+            nxt = parent[x]
+            parent[x] = r
+            x = nxt
+            hops += 1
+        self.hops += hops
+        return r
+
+    def union(self, a, b):
+        ra, rb = self.find(a), self.find(b)
+        if ra == rb:
+            return False
+        if self.rank[ra] < self.rank[rb]:
+            ra, rb = rb, ra
+        self.parent[rb] = ra
+        if self.rank[ra] == self.rank[rb]:
+            self.rank[ra] += 1
+        return True
+
+    def depth(self, x):
+        d = 0
+        while self.parent[x] != x:
+            x = self.parent[x]
+            d += 1
+        return d
+
+
+print("=== Mistake 6: reading alpha(n) as a bound on TREE DEPTH ===")
+print("  'alpha(n) is at most 4, so no find is more than 4 hops deep.'  That is")
+print("  the most common misreading of the result, and it is false.  alpha(n)")
+print("  bounds the AMORTISED cost of a sequence of operations.  It says nothing")
+print("  whatsoever about the depth of any individual element.")
+print()
+print("  Here is a rank-and-compression DSU whose trees are as deep as log2(n)")
+print("  allows, built by unioning perfect pairs bottom-up.  Every union used the")
+print("  rank rule correctly; every find below uses full path compression.")
+print()
+print("        n   log2 n   max depth   one find at that depth   find it again")
+for k in (4, 8, 12, 16):
+    n = 1 << k
+    d = DSU(n)
+    s = 1
+    while s < n:
+        for j in range(0, n, 2 * s):
+            d.union(j, j + s)
+        s *= 2
+    deepest = max(d.depth(i) for i in range(n))
+    before = d.hops
+    d.find(n - 1)
+    first = d.hops - before
+    before = d.hops
+    d.find(n - 1)
+    second = d.hops - before
+    print(f"  {n:>7,}   {k:>6}   {deepest:>9}   {first:>24}   {second:>14}")
+print()
+print("  At n = 65,536 the deepest leaf is 16 hops from its root and the first")
+print("  find of it costs 32 hops -- eight times the alpha bound of 4, and growing")
+print("  as log2(n) while alpha(n) does not move at all.  The SECOND find costs 2,")
+print("  because the first one rewrote the path.  That pair of numbers is the")
+print("  amortised statement made concrete: one expensive call, then cheap ones")
+print("  forever.")
+print()
+print("  So the correct version of the claim is:")
+print()
+print("    WRONG:  every find traverses at most 4 pointers")
+print("    WRONG:  a find is O(1) in the worst case")
+print("    RIGHT:  over any sequence of n operations the TOTAL number of parent")
+print("            traversals is at most O(n * alpha(n)); alpha(n) <= 4 for every")
+print("            n <= 65,536 and <= 5 for every n that exists, so the total is")
+print("            'about 4n' for any input that fits in memory")
+print()
+print("  The empirical version looks even better and is still not a guarantee: on")
+print("  the random workload measured earlier, at n = 300,000, 206,938 elements sat")
+print("  1 hop from a root, 43,118 sat 2 and 1,421 sat 3 -- nothing deeper,")
+print("  because compression keeps flattening the forest.  That flatness is an")
+print("  EMERGENT property of that workload.  The merge order in the table above")
+print("  produces a depth of 16 at a far SMALLER n.")
+print()
+print("=== The fix, in engineering terms ===")
+print("  1. If the depth matters, store the depth (or the set size) at each root")
+print("     -- one extra word per element -- and the worst case becomes O(1).")
+print("  2. If only the TOTAL matters, do nothing: that is the case alpha(n) was")
+print("     invented for, and it covers essentially every real use.")
+print("  3. If you need BOTH, do not use a tree at all -- use a disjoint set over a")
+print("     bitset or a hash set, where find really is O(1) and the total is O(n)")
+print("     with no amortisation anywhere.")
+print("  Choosing (3) over (2) is the peak-versus-amortised argument from Mistake")
+print("  5, applied to a data structure most people never think has a peak.")
+```
+
+The tempting version is that "$\alpha(N) \le 4$" is a statement about how far an
+element sits from its root, so a DSU can never be more than 4 hops deep and a
+`find` is $O(1)$ in the worst case. The code above is a correct, fully optimised
+disjoint-set forest — union by rank applied properly, full path compression on
+every call — and at $n = 65{,}536$ its deepest leaf is **16** hops from its
+root, with the first `find` of that leaf costing **32** hops: eight times the
+$\alpha$ bound, and growing as $\log_2 N$ while $\alpha$ does not move at all. The
+second `find` of the same element costs 2.
+
+The reason is that $\alpha$ bounds $\sum_i T_i$, not $\max_i T_i$ and not the
+depth. It is Mistake 5 wearing a data structure nobody suspects of having a peak.
+The interesting wrinkle is that on the *random* workload measured earlier the
+forest really is almost flat — at $n = 300{,}000$ nothing sits deeper than 3 —
+and that number is still not a guarantee, because it is a property of that merge
+order rather than of the algorithm. If you need a per-call bound, store the depth
+(or the set size) at each root, which costs one extra word per element and makes
+the worst case genuinely $O(1)$.
+
+**Mistake 7 — recomputing the window statistic on every step.**
+
+```python
+def lcg(seed):
+    x = seed
+    while True:
+        x = (1103515245 * x + 12345) % (1 << 31)
+        yield x >> 5
+
+
+print("=== Mistake 7: recomputing the window statistic on every step ===")
+print("  A sliding-window loop has two natural implementations and they are not")
+print("  remotely comparable:")
+print()
+print("    naive    for each window, sum its k elements from scratch")
+print("    rolling  subtract the element that left, add the element that arrived")
+print()
+print("  The naive method touches every element of every window, so its total is")
+print("  exactly (n - k + 1) * k.  The rolling method touches each element at")
+print("  most twice, so its total is at most 2n.  Both were run here, for real,")
+print("  and the answers agree.")
+print()
+
+n = 2_000
+g = lcg(31337)
+data = [next(g) % 10_000 for _ in range(n)]
+
+print("     n     k   windows   naive touches   rolling touches   ratio   agree")
+for k in (10, 100, 400, n // 2):
+    windows = n - k + 1
+
+    # the naive version, run window by window, counting every element touched
+    touches = 0
+    ends = []
+    for s in range(windows):
+        t = 0
+        for j in range(s, s + k):
+            t += data[j]
+            touches += 1
+        if s in (0, windows - 1):
+            ends.append(t)
+
+    # the rolling version, run window by window
+    rt = 0
+    for j in range(k):
+        rt += data[j]
+    r_ends = [rt]
+    for s in range(1, windows):
+        rt -= data[s - 1]
+        rt += data[s + k - 1]
+    r_ends.append(rt)
+
+    rolling = k + 2 * (windows - 1)
+    print(f"  {n:>5}   {k:>4}   {windows:>8}   {touches:>14,}   "
+          f"{rolling:>16,}   {touches / rolling:>5.0f}x   "
+          f"{ends == r_ends}")
+print()
+print("  Read the naive column: 19,910, then 190,100, then 640,400, then")
+print("  1,001,000 as k grows -- a factor of k.  And it is quadratic in n the")
+print("  moment k is a fixed fraction of n: at k = n/2 it is about n^2/4, which")
+print("  for n = 2,000 is the 1,001,000 above against the rolling version's 3,000.")
+print("  That is not a constant factor -- it is n/2, the same shape as the")
+print("  grow-by-a-constant array in Mistake 3.  'Subtract and add' is not an")
+print("  optimisation, it is a different complexity class.")
+print()
+
+print("=== The same mistake, made with a maximum instead of a sum ===")
+print("  A max cannot be un-added, so you cannot subtract the departing element.")
+print("  The naive fix -- rescan the window -- is Theta(k) per step and is the")
+print("  usual wrong answer.  The right structure is a MONOTONIC DEQUE, and the")
+print("  reason it works is an amortised argument: every index is pushed once and")
+print("  popped at most once, so the total work is at most 2n for ANY window size.")
+print()
+N, K = 100_000, 500
+g = lcg(31337)
+big = [next(g) % 10_000 for _ in range(N)]
+
+pushes = pops = 0
+stack = []
+wmax = []
+longest = 0
+for i, v in enumerate(big):
+    while stack and big[stack[-1]] <= v:
+        stack.pop()
+        pops += 1
+    stack.append(i)
+    pushes += 1
+    if stack[0] <= i - K:
+        stack.pop(0)
+        pops += 1
+    if len(stack) > longest:
+        longest = len(stack)
+    if i >= K - 1:
+        wmax.append(big[stack[0]])
+
+ok = all(wmax[i] == max(big[i:i + K]) for i in range(2000))
+print(f"  n = {N:,}, window = {K:,}")
+print(f"    pushes {pushes:,}, pops {pops:,}, total deque operations "
+      f"{pushes + pops:,}")
+print(f"    per element {(pushes + pops) / N:.4f}; longest deque {longest}")
+print(f"    checked against brute force on the first 2,000 windows: {ok}")
+print(f"    a brute-force rescan would touch {(N - K + 1) * K:,} elements, "
+      f"{(N - K + 1) * K / (pushes + pops):.0f}x more")
+print()
+print("  The longest deque is 19 in a window of 500, which is the other lesson:")
+print("  the structure does NOT hold the whole window, so its memory overhead is")
+print("  small and usually constant.  'Amortised O(1) per element' tells you the")
+print("  total; only measurement tells you the resident size.  Both are worth")
+print("  knowing and they are different questions.")
+```
+
+Output:
+
+```text
+=== Mistake 7: recomputing the window statistic on every step ===
+  A sliding-window loop has two natural implementations and they are not
+  remotely comparable:
+
+    naive    for each window, sum its k elements from scratch
+    rolling  subtract the element that left, add the element that arrived
+
+  The naive method touches every element of every window, so its total is
+  exactly (n - k + 1) * k.  The rolling method touches each element at
+  most twice, so its total is at most 2n.  Both were run here, for real,
+  and the answers agree.
+
+     n     k   windows   naive touches   rolling touches   ratio   agree
+   2000     10       1991           19,910              3,990       5x   True
+   2000    100       1901          190,100              3,900      49x   True
+   2000    400       1601          640,400              3,600     178x   True
+   2000   1000       1001        1,001,000              3,000     334x   True
+
+  Read the naive column: 19,910, then 190,100, then 640,400, then
+  1,001,000 as k grows -- a factor of k.  And it is quadratic in n the
+  moment k is a fixed fraction of n: at k = n/2 it is about n^2/4, which
+  for n = 2,000 is the 1,001,000 above against the rolling version's 3,000.
+  That is not a constant factor -- it is n/2, the same shape as the
+  grow-by-a-constant array in Mistake 3.  'Subtract and add' is not an
+  optimisation, it is a different complexity class.
+
+=== The same mistake, made with a maximum instead of a sum ===
+  A max cannot be un-added, so you cannot subtract the departing element.
+  The naive fix -- rescan the window -- is Theta(k) per step and is the
+  usual wrong answer.  The right structure is a MONOTONIC DEQUE, and the
+  reason it works is an amortised argument: every index is pushed once and
+  popped at most once, so the total work is at most 2n for ANY window size.
+
+  n = 100,000, window = 500
+    pushes 100,000, pops 99,997, total deque operations 199,997
+    per element 2.0000; longest deque 19
+    checked against brute force on the first 2,000 windows: True
+    a brute-force rescan would touch 49,750,500 elements, 249x more
+
+  The longest deque is 19 in a window of 500, which is the other lesson:
+  the structure does NOT hold the whole window, so its memory overhead is
+  small and usually constant.  'Amortised O(1) per element' tells you the
+  total; only measurement tells you the resident size.  Both are worth
+  knowing and they are different questions.
+```
+
+The tempting version is that a sliding-window loop has two implementations which
+differ by a constant factor, so pick whichever reads better. They do not. At
+$n = 2{,}000$ the naive total runs `19,910`, `190,100`, `640,400`, `1,001,000` as
+$k$ goes 10, 100, 400, 1000 — a factor of $k$ — and once $k$ is a fixed fraction
+of $n$ the naive version is $\Theta(n^2)$, the same shape as the grow-by-a-constant
+array in Mistake 3. The rolling version touches every element at most twice, so
+its total is $K + 2(n - K) = 2n - K$: `3,000` touches against `1,001,000` at
+$k = n/2$, a factor of 334, and **a different complexity class**, not a different
+constant.
+
+The second half is the more interesting failure. You cannot subtract a departing
+element from a *maximum*, so the natural fix — rescan the window — is
+$\Theta(k)$ per step, and sliding windows have a reputation for being the clever
+solution precisely because people reach for that rescan first. The right structure
+is a monotonic deque, and the reason it works is an amortised argument in exactly
+the lesson's sense: every index is pushed once and popped at most once, so the
+total is at most $2n$ *for any window size at all*. Measured: `199,997` deque
+operations for `n = 100,000`, or `2.0000` per element. Note also what the bound
+does not tell you — the longest deque is `19` inside a window of `500`, so the
+memory cost is small, and **only measurement tells you that**.
+
 ---
 
 ## Multiple Choice Questions
@@ -2810,15 +3232,13 @@ function of $n$.
 
 </details>
 
----
-
-
 
 **Q11.** A disjoint-set structure uses path compression but *not* union by
 rank. What is the best statement about its cost?
 
 - A) Still amortised `$O(\alpha(N))`, because path compression alone supplies the whole bound.
-- B) Amortised `$O(\log N)$`, which is the bound rank alone would give, so the two heuristics are interchangeable.
+- B) Amortised `$O(\log N)$`, which is also the bound union by rank alone gives, so neither
+  heuristic alone reaches the `$\alpha(N)$` bound.
 - C) Amortised `$O(1)$ but with `$O(N)$` worst case for a single `find`.
 - D) Amortised `$O(N)$`, because path compression can never improve a chain.
 
@@ -2845,25 +3265,36 @@ precisely what stops repeated queries from paying full depth.
 "constant time" rather than evaluated?
 
 - A) Because `α` is not a function, so it cannot be bounded.
-- B) Because `α` grows so slowly that `α(N) ≤ 4` for every `N` representable in 64 bits, so no practical input distinguishes it from a constant.
-- C) Because `α(N)` equals 1 whenever `N` is a power of two.
+- B) Because `α` grows so slowly that `α(N) ≤ 4` for every `N ≤ 65,536` and `α(N) ≤ 5`
+  for every `N` that exists, so no input that fits in memory distinguishes it from a
+  constant.
+- C) Because `α(N) = 1` whenever `N` is a power of two, so powers of two are
+  the easy case.
 - D) Because computing `α` requires running union-find, which is circular.
 
 <details>
 <summary>Answer and explanation</summary>
 
-**B) Because `α` grows so slowly that `α(N) ≤ 4` for every `N` representable in
-64 bits, so no practical input distinguishes it from a constant.**
+**B) Because `α` grows so slowly that `α(N) ≤ 4` for every `N ≤ 65,536` and
+`α(N) ≤ 5` for every `N` that exists, so no input that fits in memory
+distinguishes it from a constant.**
 
-`α` is defined as the least `k` such that a tower of `k` threes reaches `N`. It
-is genuinely a function, and it genuinely grows — just unimaginably slowly, and
-already saturated at 4 for any `N` you can store. Describing it as constant is a
-statement about the range of humanly reachable inputs, not a mathematical claim
-that it is constant.
+`α` is defined by `A(0) = 1`, `A(k+1) = 2^{A(k)}` and `α(n) = min{ k ≥ 0 : A(k) ≥ n }`
+— so it inverts a **tower of twos**, not a tower of threes. Hence `A(1) = 2`, `A(2) = 4`,
+`A(3) = 16`, `A(4) = 65,536`, and `A(5) = 2^{65536}`, already larger than the number of
+atoms in the observable universe. It is a real function and it really grows; it is
+merely bounded by 5 over the entire range of integers.
 
-A) and D) are wrong: `α` is a perfectly well-defined function. C) is wrong —
-`α(2^k)` is not 1; for small `N` the values run `0, 1, 2, 2, 3, 3, ...` and only
-reach 4 for astronomically large `N`.
+The precision matters, because the loose version is false as written. `α(n) ≤ 4`
+holds only up to `n = 65,536`, and `α(65,537) = 5`, so "`α(n) ≤ 4` for every `n`
+representable in 64 bits" overstates it: 64 bits reaches far past `65,536`. It is
+harmless in practice, which is exactly why it survives in textbooks.
+
+A) and D) are wrong: `α` is perfectly well defined and is not circular. C) is
+wrong — `α(2^k)` is not 1; the values for `n = 1, 2, 3, 4, 5, …` are `0, 1, 2, 2, 3,
+3, …`, `α` reaches 3 at `n = 5` and 4 already at `n = 17`. The function is at its
+ceiling almost immediately, which is the whole point: the first four doublings of `n` are
+the only ones that change `α` at all.
 
 </details>
 
@@ -2883,14 +3314,96 @@ window?
 **B) `$O(1)$` amortised per window — one addition and one subtraction per step
 after a `$k` once-off initialisation — against `$O(k)$` for brute force.**
 
-The lesson's code prints `best = 17` for `[3, 1, 4, 1, 5, 9, 2, 6]` with `k = 3`,
-agreeing with brute force, using `3` additions to start and then `5` add/subtract
-pairs. The saving comes from *amortising away the recomputation you would
-otherwise repeat*, not from any individual step becoming cheaper to express.
+At `n = 100,000` with `K = 500` the lesson's code counts `199,500` element
+touches for the rolling version against `49,750,500` for recomputing every
+window — `2.0050` per window against `500.00`, with the two agreeing on the
+first and last window sums. The total is exactly `K + 2(n - K) = 2n - K`, so
+it is `Theta(n)` for **any** `K`. The saving comes from *amortising away the
+recomputation you would otherwise repeat*, not from any individual step becoming
+cheaper to express — and it changes the class rather than the constant, since at
+`K = n/2` the naive version is `n^2/4`.
 
 A) counts elements present in the window rather than work performed, which is
 exactly the mistake the technique removes. C) invents a binary search. D) is
 below the cost of reading a single element, so it cannot describe real work.
+
+</details>
+
+**Q14.** Union-find with union by rank and full path compression is said to cost
+`$O(\alpha(N))$` amortised. The code measures a maximum depth of `3` at
+`$N = 300{,}000$, but also a first `find` costing `32` hops at `$N = 65{,}536$`
+with a depth of `16`. How do these fit together?
+
+- A) They contradict each other, so one of the two measurements must be wrong.
+- B) Both are true, because `$\alpha(N)$` bounds the **total** over a sequence and neither any single `find` nor any single tree depth. A cold path can still cost `$\Theta(\log N)$` once, and compression flattens it for good.
+- C) The depth of `3` *is* the amortised cost, and the `32` hops came from timing noise.
+- D) `$\alpha(N) \le 4$` forces every element to be within 4 hops of a root, so a depth of `16` is impossible.
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) Both are true, because `$\alpha(N)$` bounds the **total** over a sequence and
+neither any single `find` nor any single tree depth. A cold path can still cost
+`$\Theta(\log N)$` once, and compression flattens it for good.**
+
+This is the most common misreading of the result and it is Mistake 5 in a new
+costume. `$\alpha$` bounds `$\sum_i T_i$`, so the figure you may quote is "about
+4 hops per operation on average". It places **no** bound on `$\max_i T_i$` and
+none on depth. The code's peak table builds a perfectly balanced forest and finds
+its deepest leaf: `8`, `16`, `24`, `32` hops at `n = 16, 256, 4096, 65536` —
+exactly `$2\log_2 n` — and the *second* `find` of the same element costs `2`. That
+pair of numbers is the amortised claim made concrete: one expensive call, then
+cheap ones for good.
+
+Option A treats an amortised bound as a per-call promise. Option C confuses a
+structural property (depth) with a cost, and mislabels a counted measurement as a
+timing; the lesson counts parent-pointer hops precisely so that no stopwatch is
+involved. Option D is a reinterpretation the bound does not support: `$\alpha(n) \le 4$`
+for `n \le 65,536` constrains the *amortised average*, which is perfectly
+compatible with one call costing `32` hops and the next costing `2`. The honest
+answer to "how deep is the tree" is a measurement — `3`, at `$N = 300{,}000$`,
+on the lesson's workload — and never `$\alpha(N)$`.
+
+</details>
+
+**Q15.** The accounting method requires the balance to be non-negative at **every**
+prefix; the potential method requires `$T + \Delta\Phi \le \hat c$` for **every
+kind of operation**. Both return `3` for the doubling array, and the code confirms
+`$B_k = \Phi_k - \Phi_0$` at all `4,096` steps. If they are the same argument, why
+keep both?
+
+- A) There is no reason; one of the two is redundant and should be dropped.
+- B) Because the *shape* of the obligation differs. Accounting is a **prefix** condition and the natural tool when different operations deserve different prices; the potential method is a **per-operation** formula, and it is what you use to find one constant and reuse it across many operation types.
+- C) Because the potential method is exact where the accounting method is only an approximation.
+- D) Because the potential method applies only to arrays, while accounting applies to any structure.
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) Because the *shape* of the obligation differs. Accounting is a **prefix**
+condition and the natural tool when different operations deserve different
+prices; the potential method is a **per-operation** formula, and it is what you
+use to find one constant and reuse it across many operation types.**
+
+They are the same *proof* — `$B_k = \Phi_k - \Phi_0$`, checked at all `4,096`
+steps with `0` mismatches, both finishing at `4,100` — and they are not the same
+*procedure*. Two practical differences carry the weight.
+
+First, accounting is the **search procedure** for the potential. `$\Phi = 2n - C$`
+does not arrive; you guess a price, accumulate the balance, notice that the
+balance *is* a potential, and raise the price until it never goes negative. The
+code's sweep gets `-4092`, `-2043`, `2`, `3`, `4`, `5` for prices 1 to 6, so `3`
+is the smallest sound price. Second, a prefix condition must hold at every $k$,
+and price 2 is the demonstration: the balances over the first eight appends are
+`1, 2, 3, 4, 1, 2, 3, 4` — never negative — and then append 9, which costs 9,
+takes it to `-3`. Hand-checking eight appends would have passed it.
+
+Option A is the naive reading of "equivalent": equivalent statements can still be
+the better tool for different jobs. Option C is false in both directions — both
+are bounds, and the doubling-array constant is 3 under either and tight in both.
+Option D is invented; the potential method is a statement about a state function
+with no restriction on the structure, and union-find's path compression is the
+standard example.
 
 </details>
 
@@ -4563,6 +5076,28 @@ itself, is an engineering decision that has to be measured.**
   compacts 8 times in 4000 operations, giving $O(500)$ by the theorem against a
   measured `0.331` moves per operation.
 
+- **Union-find is the one data structure whose amortised cost is a named
+  function.** With union by rank *and* full path compression the total is
+  `$O(N\alpha(N))$`, where `$\alpha$` inverts a tower of twos:
+  `$A(0)=1`, `$A(k+1)=2^{A(k)}$`. It is `$\le 4$` for `$n \le 65{,}536$` and `$\le 5$`
+  for every `n` that exists. The honest measurement is a *flat column*, not a
+  value: `2.3613` hops per operation at `$n=1{,}000$` and `2.3563` at
+  `$n=300{,}000$`, with the forest never deeper than `3`. It is emphatically **not**
+  a per-call bound — a first `find` on a cold leaf costs `32` hops at
+  `$n = 65{,}536`.
+- **The sliding window is an amortised argument with no expensive event at all.**
+  Subtract the element leaving, add the element entering, and the total is
+  `$K + 2(n-K) = 2n - K$`: `199,500` touches against `49,750,500` for rescanning,
+  a factor of `249.4`. When the statistic cannot be un-added — a maximum — a
+  monotonic deque carries the same argument, because every index is pushed once
+  and popped at most once, bounding the total by `$2n$` at any window size.
+- **Accounting and potential are the same object.** The balance and the potential
+  satisfy `$B_k = \Phi_k - \Phi_0$`, verified at all `4,096` steps of a doubling
+  array with `0` mismatches and both finishing at `4,100`. They differ in what you
+  must check: a **prefix** condition versus a **per-operation** condition. And
+  accounting is how you *find* the potential — charge 1, 2, 3 … and take the
+  smallest price whose balance never goes negative (`3` here, with price 2
+  passing eight appends and then failing at append 9).
 ## Next
 
 [82 — Tools for Algorithm Design](82_tools_for_algorithm_design.md) turns to
