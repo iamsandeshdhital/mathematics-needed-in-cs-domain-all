@@ -1674,12 +1674,15 @@ print("    supplies only the likelihood-side information.")
 </details>
 
 **[ ] Exercise 5 — the p-value is a property of the null, demonstrated by
-simulation.** (a) Simulate 20,000 experiments in which the null **is true**
-($p_A = p_B = 0.06$) and record the fraction with p < 0.05. (b) Repeat with a
-real effect of +1 percentage point and record both the rejection rate (power) and
-the Type I error rate. (c) With a prior that the effect is real 50% of the time,
-compute $P(\text{real} \mid p < 0.05)$ from the simulated rates. (d) Explain why
-the answer differs so much from 95%, and state the two levers that move it.
+simulation.** Set up: baseline conversion 6%, $n = 4{,}000$ per arm, two-sided
+$\alpha = 0.05$. (a) Simulate 20,000 experiments in which the null **is true**
+($p_A = p_B = 0.06$) and record the fraction with p < 0.05. (b) Repeat with a real
+effect of +2 percentage points, and record both the rejection rate in the effect
+worlds (power) and the Type I rate in the null worlds. (c) With a prior that the
+effect is real 50% of the time, compute $P(\text{real} \mid p < 0.05)$ from the
+simulated rates, and repeat with priors 0.1 and 0.01. (d) Explain why the answer
+differs so much from 95%, and compare the two levers that move it — raising power
+versus lowering α.
 
 <details>
 <summary>Solution</summary>
@@ -1689,33 +1692,38 @@ should be 0.05 — up to Monte Carlo error of about $\sqrt{0.05 \times 0.95/2000
 = 0.0015$. This is the check that validates the whole apparatus: if the false alarm
 rate were 14% when α = 0.05, nothing else could be trusted either.
 
-(b) With a real +1-point effect at n = 4,000 per arm, $\delta/\mathrm{SE} \approx
-2.96$, giving power about 0.90, while the Type I rate in the no-effect worlds stays
-at 0.05. The two are independent: the false alarm rate is a property of the
-threshold, the power is a property of the effect size and $n$.
+(b) With a real +2-point effect,
+$\delta/\mathrm{SE} = 0.02/\sqrt{2 \times 0.07 \times 0.93/4000} =
+0.02/0.005705 = 3.505$, giving power $\Phi(3.505 - 1.96) = \Phi(1.545) =
+0.9389$ — the simulation should land near that. Crucially the Type I rate in the
+null worlds stays at 0.05: the two are independent, because the false alarm rate
+is a property of the threshold while power is a property of the effect size and
+$n$.
 
-(c) With simulated power $\approx 0.90$, $\alpha = 0.05$, and prior 0.5:
-$$P(\text{real} \mid p<0.05) = \frac{0.90 \times 0.5}{0.90\times 0.5 + 0.05 \times 0.5} = \frac{0.45}{0.50} = 0.90.$$
+(c) With simulated power $\approx 0.94$, $\alpha = 0.05$, and prior 0.5:
+$$P(\text{real} \mid p<0.05) = \frac{0.94 \times 0.5}{0.94\times 0.5 + 0.05 \times 0.5} = \frac{0.470}{0.495} = 0.949.$$
 
 With a 50/50 prior you get back roughly the power, which is the sanity check that
-the arithmetic is right. Push the prior down to 0.01 and the same
-$\alpha = 0.05$ gives $0.009/(0.009+0.0495) = 0.154$ — a 15% posterior from a
-p-value below 0.05, because the null pool is 99× larger.
+the arithmetic is right. Push the prior to 0.1 and it falls to
+$0.094/(0.094+0.045) = 0.677$; to 0.01 and it collapses to
+$0.0094/(0.0094+0.0495) = 0.160$ — a **16% posterior** from a p-value below
+0.05, because the null pool is 99× larger.
 
 (d) The answer differs from 95% because a p-value conditions on the null and
 discards the prior. The "null pool" is $(1-\pi)$ times as large as the real pool,
 and the false positives from it scale with $\alpha$ while the true positives
 scale with power × $\pi$. Whenever $\alpha(1-\pi) \gg \text{power}\cdot\pi$, the
 posterior collapses — and that condition is just a restatement of the base-rate
-problem from [Lesson 62](../part05_probability_statistics/62_conditional_probability_and_bayes.md).
+problem from [Lesson 62](62_conditional_probability_and_bayes.md).
 
-Two levers, with very different reach. **Raise power**: at 0.99 instead of 0.90
-the posterior goes from 0.90 to 0.95 with prior 0.5, but with prior 0.01 only
-from 0.154 to 0.167 — power helps proportionally to how balanced the pools are.
-**Lower α**: at $\alpha = 0.01$ the posterior with prior 0.01 rises to
-$0.009/(0.009+0.0099) = 0.476$, which is a far larger move, at the cost of needing
-much more evidence to declare a win. The prior is the third input and the strongest
-of the three — which is why it has to be stated rather than assumed.
+Two levers, with very different reach. **Raise power**: at 0.99 instead of 0.94
+the posterior with prior 0.01 goes only from 0.160 to 0.167, because power
+multiplies a pool that is already negligible. **Lower α**: at $\alpha = 0.01$ the
+posterior with prior 0.01 rises to $0.0094/(0.0094+0.0099) = 0.487$, which is a
+far larger move — because the false-positive pool was the thing that was too
+big. Lowering α costs you power and requires much more evidence to declare a win;
+raising power costs you time and traffic. The prior is the third input and the
+strongest of the three — which is why it has to be stated rather than assumed.
 
 ```python
 import random
@@ -1725,6 +1733,7 @@ random.seed(2024)
 TRIALS = 20_000
 N_ARM = 4_000
 P_BASE = 0.06
+EFFECT = 0.02
 ALPHA = 0.05
 
 

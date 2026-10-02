@@ -1,13 +1,13 @@
-# 30 — Vectors and Vector Spaces
+# 30 â€” Vectors and Vector Spaces
 
-**Part**: part03_linear_algebra · **Prerequisites**: 24 · **Time**: 40 min
+**Part**: part03_linear_algebra Â· **Prerequisites**: 24 Â· **Time**: 40 min
 
 ---
 
 ## In Plain Words
 
 A vector is just a list of numbers. Three measurements about a person, the
-pixels of an image, the coefficients of a polynomial — each one is a list of
+pixels of an image, the coefficients of a polynomial â€” each one is a list of
 numbers, and once you see that a lot of code stops looking arbitrary. What
 makes lists of numbers special is that you can add them together and you can
 multiply them by a plain number, and both operations keep you inside the world
@@ -37,7 +37,7 @@ data, and error-correcting codes.
   a missing rating is fitting a linear combination of a few known vectors, which
   is a linear system, and the "dimension" of the span of your vectors is the
   number of independent factors in your data.
-- **Computer graphics.** A 3-D point, a colour, a surface normal, and a 4×4
+- **Computer graphics.** A 3-D point, a colour, a surface normal, and a 4Ã—4
   transform are all vectors. Every vertex shader in [lesson 91](../part07_geometry_graphics/91_transformations_graphics.md)
   is arithmetic of this kind.
 - **Error-correcting codes and hashes.** Treat a bit string as a vector over the
@@ -53,84 +53,84 @@ data, and error-correcting codes.
 
 Symbols follow [SYMBOLS.md](../SYMBOLS.md).
 
-**Definition.** Let `F` be a *field* of scalars — a set of numbers where
+**Definition.** Let `F` be a *field* of scalars â€” a set of numbers where
 addition, subtraction, multiplication, and division by nonzero elements all
-behave as you expect. `ℝ`, `ℂ` and GF(2) (arithmetic mod 2) are the three you
+behave as you expect. `â„`, `â„‚` and GF(2) (arithmetic mod 2) are the three you
 will meet here.
 
 **Definition.** A **vector space** over `F` is a set `V` of objects together
 with two operations, vector addition and scalar multiplication, such that:
 
 1. `u + v` is in `V` whenever `u, v` are in `V` (closure under addition).
-2. `c·u` is in `V` whenever `c ∈ F` and `u` is in `V` (closure under scaling).
+2. `cÂ·u` is in `V` whenever `c âˆˆ F` and `u` is in `V` (closure under scaling).
 3. `u + (v + w) = (u + v) + w` (associativity).
 4. `u + 0 = u`, and for every `u` there is `-u` with `u + (-u) = 0` (additive
    identity and inverses).
-5. `c·(d·u) = (c·d)·u` and `c·(u+v) = c·u + c·v` (compatibility).
-6. `1·u = u` (scalar identity).
+5. `cÂ·(dÂ·u) = (cÂ·d)Â·u` and `cÂ·(u+v) = cÂ·u + cÂ·v` (compatibility).
+6. `1Â·u = u` (scalar identity).
 
 **Explanation.** Rule 1 and rule 2 are the whole content of "closed under".
 Rules 3 to 6 are bookkeeping that says the arithmetic behaves the way ordinary
-arithmetic does. The standard example is `ℝⁿ`: all lists of `n` real numbers.
+arithmetic does. The standard example is `â„â¿`: all lists of `n` real numbers.
 
-**Definition.** A **linear combination** of vectors `v₁, …, v_k` is
-`c₁v₁ + c₂v₂ + … + c_kv_k` for scalars `c₁, …, c_k`.
+**Definition.** A **linear combination** of vectors `vâ‚, â€¦, v_k` is
+`câ‚vâ‚ + câ‚‚vâ‚‚ + â€¦ + c_kv_k` for scalars `câ‚, â€¦, c_k`.
 
 **Definition.** The **span** of a set `S` is the set of all linear combinations of
 its elements:
 
-    span(S) = { c₁v₁ + … + c_kv_k : v_i ∈ S, c_i ∈ F }
+    span(S) = { câ‚vâ‚ + â€¦ + c_kv_k : v_i âˆˆ S, c_i âˆˆ F }
 
 **Explanation.** The span is the set of points reachable from the origin by
 adding scaled copies of the generators. Adding a redundant generator never
 changes the span, which is why span is the right notion of "what this data can
 represent" and not the number of columns you happen to have.
 
-**Definition.** A set `S = {v₁, …, v_k}` is **linearly independent** (or *linearly
+**Definition.** A set `S = {vâ‚, â€¦, v_k}` is **linearly independent** (or *linearly
 free*) if the only choice of scalars making
 
-    c₁v₁ + … + c_kv_k = 0
+    câ‚vâ‚ + â€¦ + c_kv_k = 0
 
-is `c₁ = … = c_k = 0`. If some other choice exists, `S` is **linearly dependent**.
+is `câ‚ = â€¦ = c_k = 0`. If some other choice exists, `S` is **linearly dependent**.
 
-**Explanation.** A dependence relation `c₁v₁ + … + c_kv_k = 0` with at least one
+**Explanation.** A dependence relation `câ‚vâ‚ + â€¦ + c_kv_k = 0` with at least one
 nonzero `c_j` says "these vectors cancel each other out". Divide by `c_j` and you
 have expressed `v_j` in terms of the others. So independence is exactly the
 statement that no generator is redundant.
 
-**Theorem.** If `S` has `m` vectors in `ℝⁿ` and `m > n`, then `S` is linearly
+**Theorem.** If `S` has `m` vectors in `â„â¿` and `m > n`, then `S` is linearly
 dependent.
 
 **Explanation.** Consider the system `Ac = 0` where `A` has the vectors of `S` as
 its columns. `A` has `n` rows and `m > n` columns, so it has more unknowns than
 equations, and any homogeneous system with more unknowns than equations has a
 nontrivial solution. The full algorithm is in
-[lesson 34](../part03_linear_algebra/34_basis_dimension_rank.md).
+[lesson 34](34_basis_dimension_rank.md).
 
-**Definition.** A **subspace** `W ⊆ V` is a subset that is itself a vector space
+**Definition.** A **subspace** `W âŠ† V` is a subset that is itself a vector space
 under the same operations.
 
-**Theorem (Subspace test).** A nonempty subset `W ⊆ V` is a subspace if and only
+**Theorem (Subspace test).** A nonempty subset `W âŠ† V` is a subspace if and only
 if:
 
-1. `0 ∈ W`;
-2. `c·u ∈ W` for every `c ∈ F` and `u ∈ W`;
-3. `u + v ∈ W` for all `u, v ∈ W`.
+1. `0 âˆˆ W`;
+2. `cÂ·u âˆˆ W` for every `c âˆˆ F` and `u âˆˆ W`;
+3. `u + v âˆˆ W` for all `u, v âˆˆ W`.
 
 **Explanation.** Condition 1 gives the additive identity, condition 2 with `c = 0`
-gives `0·u = 0 ∈ W`, condition 2 with `c = -1` gives additive inverses, and the
+gives `0Â·u = 0 âˆˆ W`, condition 2 with `c = -1` gives additive inverses, and the
 rest of the axioms follow from the ambient ones. Nothing else needs checking.
 This is the single most-used test in applied linear algebra.
 
 **Definition.** `dim(V)`, the **dimension** of a vector space, is the number of
-vectors in any basis of `V`. For `ℝⁿ` it is `n`.
+vectors in any basis of `V`. For `â„â¿` it is `n`.
 
-**Theorem.** A set of `k` vectors in `ℝⁿ` is independent if and only if its span
+**Theorem.** A set of `k` vectors in `â„â¿` is independent if and only if its span
 has dimension `k`.
 
 **Explanation.** This is why "independent" and "a basis of its span" mean the
 same thing from two directions. See
-[lesson 34](../part03_linear_algebra/34_basis_dimension_rank.md).
+[lesson 34](34_basis_dimension_rank.md).
 
 ## Worked Example
 
@@ -148,51 +148,51 @@ Note the third: it is the first two added together, component by component.
 
 Yes, with `a = 1`, `b = 1`:
 
-    1·(80, 3, 10) + 1·(120, 4, 25)
+    1Â·(80, 3, 10) + 1Â·(120, 4, 25)
       = (80 + 120, 3 + 4, 10 + 25)
       = (200, 7, 35)
-      = H3  ✓
+      = H3  âœ“
 
 So `{H1, H2, H3}` is linearly dependent. Here is the relation:
 
-    -1·H1 + -1·H2 + 1·H3 = 0
+    -1Â·H1 + -1Â·H2 + 1Â·H3 = 0
 
 Verify by hand, component by component:
-- area: `-80 - 120 + 200 = 0` ✓
-- rooms: `-3 - 4 + 7 = 0` ✓
-- age: `-10 - 25 + 35 = 0` ✓
+- area: `-80 - 120 + 200 = 0` âœ“
+- rooms: `-3 - 4 + 7 = 0` âœ“
+- age: `-10 - 25 + 35 = 0` âœ“
 
 **Question 2: what is `span(H1, H2)`?**
 
-Every point of the form `a·H1 + b·H2`. Since `H3` is already in there, this is
-also `span(H1, H2, H3)` — the third vector bought nothing. There are two free
+Every point of the form `aÂ·H1 + bÂ·H2`. Since `H3` is already in there, this is
+also `span(H1, H2, H3)` â€” the third vector bought nothing. There are two free
 numbers, `a` and `b`, and only two independent directions.
 
 To describe the set without naming `H1` and `H2`, find a nonzero vector `p`
 perpendicular to both. Solve
 
-    80p₁ +  3p₂ + 10p₃ = 0     (p·H1 = 0)
-    120p₁ + 4p₂ + 25p₃ = 0     (p·H2 = 0)
+    80pâ‚ +  3pâ‚‚ + 10pâ‚ƒ = 0     (pÂ·H1 = 0)
+    120pâ‚ + 4pâ‚‚ + 25pâ‚ƒ = 0     (pÂ·H2 = 0)
 
 Multiply the first equation by 4 and the second by 3, then subtract:
 
-    320p₁ + 12p₂ + 40p₃ = 0
-    360p₁ + 12p₂ + 75p₃ = 0
+    320pâ‚ + 12pâ‚‚ + 40pâ‚ƒ = 0
+    360pâ‚ + 12pâ‚‚ + 75pâ‚ƒ = 0
     --------------------
-    -40p₁      - 35p₃ = 0      →  40p₁ = -35p₃  →  p₁ = -7p₃/8
+    -40pâ‚      - 35pâ‚ƒ = 0      â†’  40pâ‚ = -35pâ‚ƒ  â†’  pâ‚ = -7pâ‚ƒ/8
 
-Set `p₃ = 8`, so `p₁ = -7`. Then `80(-7) + 3p₂ + 10(8) = 0` gives
-`-560 + 3p₂ + 80 = 0`, so `3p₂ = 480`, so `p₂ = 160`.
+Set `pâ‚ƒ = 8`, so `pâ‚ = -7`. Then `80(-7) + 3pâ‚‚ + 10(8) = 0` gives
+`-560 + 3pâ‚‚ + 80 = 0`, so `3pâ‚‚ = 480`, so `pâ‚‚ = 160`.
 
 Therefore `p = (-7, 160, 8)`.
 
 Check it against all three houses:
-- `p·H1 = -7(80) + 160(3) + 8(10) = -560 + 480 + 80 = 0` ✓
-- `p·H2 = -7(120) + 160(4) + 8(25) = -840 + 640 + 200 = 0` ✓
-- `p·H3 = -7(200) + 160(7) + 8(35) = -1400 + 1120 + 280 = 0` ✓
+- `pÂ·H1 = -7(80) + 160(3) + 8(10) = -560 + 480 + 80 = 0` âœ“
+- `pÂ·H2 = -7(120) + 160(4) + 8(25) = -840 + 640 + 200 = 0` âœ“
+- `pÂ·H3 = -7(200) + 160(7) + 8(35) = -1400 + 1120 + 280 = 0` âœ“
 
 Every linear combination of the houses is perpendicular to `p`, because
-`p·(a·H1 + b·H2) = a(p·H1) + b(p·H2) = 0`. So the span is contained in the
+`pÂ·(aÂ·H1 + bÂ·H2) = a(pÂ·H1) + b(pÂ·H2) = 0`. So the span is contained in the
 flat set
 
     -7x + 160y + 8z = 0
@@ -204,25 +204,25 @@ the equation, because `c(-7x + 160y + 8z) = 0` whenever the bracket is `0`.
 
 **Question 3: which points are reachable, and which are not?**
 
-Reachable: `H1 + 2·H2 = (80 + 240, 3 + 8, 10 + 50) = (320, 11, 60)`.
-Check the plane equation: `-7(320) + 160(11) + 8(60) = -2240 + 1760 + 480 = 0` ✓
+Reachable: `H1 + 2Â·H2 = (80 + 240, 3 + 8, 10 + 50) = (320, 11, 60)`.
+Check the plane equation: `-7(320) + 160(11) + 8(60) = -2240 + 1760 + 480 = 0` âœ“
 
 Not reachable: `(0, 0, 1)`. Check the plane equation:
-`-7(0) + 160(0) + 8(1) = 8 ≠ 0`. No coefficients `a`, `b` give it, and the
+`-7(0) + 160(0) + 8(1) = 8 â‰  0`. No coefficients `a`, `b` give it, and the
 reason is not a computational failure but a structural fact: the data does not
 contain that direction.
 
 **Question 4: how many houses would you need for an independent set?**
 
-Two. `H1` and `H2` are independent because neither is a multiple of the other —
+Two. `H1` and `H2` are independent because neither is a multiple of the other â€”
 the ratio of areas is `80/120 = 2/3`, and the ratio of rooms is `3/4`, and those
 differ, so no single scalar turns `H1` into `H2`. Add a third house that is not a
 combination and you would have three independent vectors in three dimensions,
-spanning all of `ℝ³`.
+spanning all of `â„Â³`.
 
 This is the whole practical content of the lesson: three feature columns of a
 dataset may carry two independent factors, not three, and knowing which and why
-is what [lesson 34](../part03_linear_algebra/34_basis_dimension_rank.md) is for.
+is what [lesson 34](34_basis_dimension_rank.md) is for.
 
 ## Runnable Code
 
@@ -313,7 +313,7 @@ print(f"dot([1,0], [0,5]) = {dot(right_a, right_b)}  (perpendicular)")
 
 The span is the set of everything reachable by scaling and adding generators.
 To ask whether a target is reachable, we form a linear system and solve it. The
-solver here is a preview; [lesson 32](../part03_linear_algebra/32_linear_systems_gaussian_elimination.md)
+solver here is a preview; [lesson 32](32_linear_systems_gaussian_elimination.md)
 builds the real one and explains why partial pivoting matters.
 
 ```python
@@ -473,7 +473,7 @@ print(f"equals the original point: {recovered == any_point}")
 
 ### Testing linear independence
 
-Independence is the question "is `Ac = 0` solvable with `c ≠ 0`?", which is the
+Independence is the question "is `Ac = 0` solvable with `c â‰  0`?", which is the
 same row reduction we will build properly in lesson 32.
 
 ```python
@@ -858,17 +858,17 @@ right version: `bob - sue` is a *direction*, the displacement from sue to bob,
 and it is a legitimate vector independent of where either one lives. Gradient
 descent moves along `bob - sue`, not toward either point.
 
-**Mistake 2: assuming `m` vectors in `ℝⁿ` are independent when `m ≤ n`.**
+**Mistake 2: assuming `m` vectors in `â„â¿` are independent when `m â‰¤ n`.**
 The wrong version: "three vectors in three dimensions, so they must be a basis."
 The right version: counting only rules out dependence when `m > n`. Three vectors
-in `ℝ³` can be dependent — the worked example above has exactly that, with a
+in `â„Â³` can be dependent â€” the worked example above has exactly that, with a
 cancelling combination. You must actually row reduce.
 
 **Mistake 3: calling the circle or a line not through the origin a subspace.**
 The wrong version: "a subspace is any set defined by an equation." The right
-version: a subspace must contain the zero vector and must be flat. `x² + y² = 1`
+version: a subspace must contain the zero vector and must be flat. `xÂ² + yÂ² = 1`
 and `x + y = 1` both fail the zero-vector check. Any subspace passes through the
-origin — if your set does not, it is an *affine* subspace, useful in regression
+origin â€” if your set does not, it is an *affine* subspace, useful in regression
 but not a vector space.
 
 **Mistake 4: putting generators in rows when you meant columns.**
@@ -889,28 +889,28 @@ only the direction. This is why every retrieval system normalises first.
 ## Formula Sheet
 
 Every symbol and formula this lesson introduces, in one place. `F` is the field of
-scalars (here `ℝ`, `ℂ`, or `GF(2)`); `u, v, w ∈ Fⁿ` are `n`-component vectors;
+scalars (here `â„`, `â„‚`, or `GF(2)`); `u, v, w âˆˆ Fâ¿` are `n`-component vectors;
 `a_{ij}` is the entry in row `i`, column `j` of a matrix whose **columns** are the
-listed vectors, so `A` is `n × k`.
+listed vectors, so `A` is `n Ã— k`.
 
 | Symbol | Formula | In plain words | When you use it |
 | --- | --- | --- | --- |
 | `u + v` | `$(u+v)_i = u_i + v_i$` | Add matching components. Requires `u, v` to have the same length. | Combining two measurements, or the add step of one optimiser step |
-| `c \cdot u` | `$(cu)_i = c\,u_i$` | Multiply every component by the one number `c ∈ F`. | Rescaling; `c = -1` reverses a direction |
+| `c \cdot u` | `$(cu)_i = c\,u_i$` | Multiply every component by the one number `c âˆˆ F`. | Rescaling; `c = -1` reverses a direction |
 | `-u` | `$-u = (-1) \cdot u$` | Point the opposite way, same length. | Turning two data points into a displacement |
 | `0` | `$\mathbf{0} = (0, \dots, 0)$ | The zero vector: the additive identity, at the origin. | Any subspace must contain it; any dependence relation sums to it |
 | `u \cdot v` | `u \cdot v = \sum_{i=1}^{n} u_i v_i$` | Multiply matching components and add. Zero means the two point at right angles. | Perpendicularity test, projection, ranking documents |
-| `\|u\|` | `$\|u\| = \sqrt{u \cdot u}$` | The Euclidean length of `u`. Always `≥ 0`, and `= 0` only for `u = 0`. | Distances, normalising a vector to unit length |
+| `\|u\|` | `$\|u\| = \sqrt{u \cdot u}$` | The Euclidean length of `u`. Always `â‰¥ 0`, and `= 0` only for `u = 0`. | Distances, normalising a vector to unit length |
 | `$\cos\theta$` | `$\cos\theta = \dfrac{u \cdot v}{\|u\|\,v\|} \in [-1, 1]}$` | How closely two vectors point the same way, ignoring length. | Cosine similarity; comparing text of different lengths |
-| Linear combination | `$\sum_{i=1}^{k} c_i v_i$`, `c_i ∈ F` | A weighted sum: scale each vector, then add. | The only way this lesson builds new vectors |
+| Linear combination | `$\sum_{i=1}^{k} c_i v_i$`, `c_i âˆˆ F` | A weighted sum: scale each vector, then add. | The only way this lesson builds new vectors |
 | `$\operatorname{span}(S)$` | `$\operatorname{span}(S) = \left\{ \sum_{i=1}^{k} c_i v_i : v_i \in S,\ c_i \in F \right\}$` | Everything reachable from the origin by scaling and adding members of `S`. Always contains `0` and is always a subspace. | "What can this data represent?" |
-| `$\operatorname{span}(\emptyset)$` | `$\{\mathbf{0}\}$` | The empty set spans only the origin — the one zero-dimensional space. | Edge case in "drop all dependent vectors" |
+| `$\operatorname{span}(\emptyset)$` | `$\{\mathbf{0}\}$` | The empty set spans only the origin â€” the one zero-dimensional space. | Edge case in "drop all dependent vectors" |
 | Independence test | `$\sum_{i=1}^{k} c_i v_i = \mathbf{0} \ \Rightarrow\ c_1 = \dots = c_k = 0$` | No nonzero choice of weights cancels to zero. Equivalently: no vector is a combination of the others. | Deciding what to keep and what to delete |
 | Dependence | `$\exists\ (c_1,\dots,c_k) \ne 0$ with `$\sum_i c_i v_i = \mathbf{0}$` | The vectors cancel each other out; at least one is redundant. | Reported by `dependent_relation` as a witness |
 | Dimension counting | `k > n \Rightarrow \{v_1,\dots,v_k\} \subseteq F^n$ is dependent` | More vectors than dimensions *always* means redundancy. Valid for `k > n` only. | A free argument that never needs a computation |
 | `$\dim(V)$` | `$\dim(\mathbb{R}^n) = n$; generally `$\dim(V) = $` size of any basis of `V` | How many independent directions the space has. Basis-independent, so any two bases agree. | "How many real factors are in this data?" |
-| Independent ⇔ spanning dimension | `$\{v_1,\dots,v_k\}$ independent $\iff \dim(\operatorname{span}\{v_1,\dots,v_k\}) = k$` | A set is independent exactly when it is already a basis of its own span. | Deciding whether a basis needs extending |
-| Subspace test | `W` nonempty, and `$\mathbf{0} \in W$`, `c \in F, u \in W \Rightarrow cu \in W$`, `u, v \in W \Rightarrow u+v \in W$` | Three checks, nothing else. `W ⊆ V` is a subspace iff all three hold. | The most-used test in applied linear algebra |
+| Independent â‡” spanning dimension | `$\{v_1,\dots,v_k\}$ independent $\iff \dim(\operatorname{span}\{v_1,\dots,v_k\}) = k$` | A set is independent exactly when it is already a basis of its own span. | Deciding whether a basis needs extending |
+| Subspace test | `W` nonempty, and `$\mathbf{0} \in W$`, `c \in F, u \in W \Rightarrow cu \in W$`, `u, v \in W \Rightarrow u+v \in W$` | Three checks, nothing else. `W âŠ† V` is a subspace iff all three hold. | The most-used test in applied linear algebra |
 | Homogeneous description | `$W = \{x \in \mathbb{R}^n : p_1 x_1 + \dots + p_n x_n = 0\}` | Any set cut out by *homogeneous* linear equations (no constant term). | The quickest way to recognise a subspace |
 | Affine set | `$\{x \in \mathbb{R}^n : p_1x_1 + \dots + p_nx_n = b\},\ b \ne 0$` | Parallel to a subspace but shifted off the origin; **not** a subspace. | Regression without an intercept |
 | `A c = 0` (null space test) | `$A \in \mathbb{R}^{n \times k}$, `$\sum_{i=1}^{n} c_i v_i = 0 \iff A c = \mathbf{0}$` | Put the vectors in the **columns** of `A`; a nonzero null vector *is* the cancelling relation. | The mechanical independence test |
@@ -918,32 +918,32 @@ listed vectors, so `A` is `n × k`.
 | Least squares | `$\hat c = \arg\min_c \|A c - t\|^2$`, `$\hat y = A\hat c$` | The reachable point closest to the target. Not unique when `A` has dependent columns. | Fitting a model whose columns are collinear |
 | Orthogonality of the residual | `$(t - A\hat c) \cdot v_i = 0$ for every `i` | The leftover error points in a direction no generator reaches. | Why least squares works; why the residual is diagnostic |
 | GF(2) addition | `$u \oplus v$`, componentwise, `a + b \bmod 2` | XOR. There is no subtraction, and `-1 = 1`. | Parity bits, checksums, error-correcting codes |
-| `$\|W\|$` for a GF(2) subspace | `$\|W\| = 2^{\dim W}$` | A `k`-dimensional space over two scalars has `2^k` points — one per free bit. | Sizing a linear code without enumerating it |
+| `$\|W\|$` for a GF(2) subspace | `$\|W\| = 2^{\dim W}$` | A `k`-dimensional space over two scalars has `2^k` points â€” one per free bit. | Sizing a linear code without enumerating it |
 | Centred data | `$x - \mu$`, `$\mu$` the column mean | Subtract the mean vector from every row: scaling by `-1` then adding. | PCA, correlation, before any rank analysis |
 | Standardised data | `$(x - \mu)/\sigma$`, `$\sigma$` the column std. dev. | Centre, then rescale each column to unit spread. | Comparing features with different units |
 
 ## Multiple Choice Questions
 
-**Q1.** Which of these subsets of `ℝ³` is a subspace?
+**Q1.** Which of these subsets of `â„Â³` is a subspace?
 
 - A) `{(x, y, z) : x + y + z = 1}`
-- B) `{(x, y, z) : x·y·z = 0}`
+- B) `{(x, y, z) : xÂ·yÂ·z = 0}`
 - C) `{(x, y, z) : x = y}`
-- D) `{(x, y, z) : x² + y² + z² = 1}`
+- D) `{(x, y, z) : xÂ² + yÂ² + zÂ² = 1}`
 
 <details>
 <summary>Answer and explanation</summary>
 
 **C) `{(x, y, z) : x = y}`.**
 
-This is a *homogeneous* linear equation — no constant term — so scaling preserves
+This is a *homogeneous* linear equation â€” no constant term â€” so scaling preserves
 it and adding two such triples gives another such triple; `(0,0,0)` satisfies it.
 
-- A) fails the zero-vector check immediately: `0 + 0 + 0 = 0 ≠ 1`. A set with no
+- A) fails the zero-vector check immediately: `0 + 0 + 0 = 0 â‰  1`. A set with no
   zero vector can never be a subspace, however well it behaves under addition.
 - B) *does* contain `(0,0,0)` and *is* closed under scaling, which is why it looks
   right. It fails addition: `(1,2,0)` and `(0,0,7)` are both in it, but their sum
-  is `(1,2,7)`, and `1·2·7 = 14 ≠ 0`. It is the union of three coordinate planes,
+  is `(1,2,7)`, and `1Â·2Â·7 = 14 â‰  0`. It is the union of three coordinate planes,
   and a union of flats is not a flat.
 - D) fails twice over: `(0,0,0)` is not on the unit sphere, and `(1,0,0)` plus
   `(0,1,0)` gives `(1,1,0)`, which is also not on it.
@@ -953,7 +953,7 @@ it and adding two such triples gives another such triple; `(0,0,0)` satisfies it
 **Q2.** In the worked example, `H3 = H1 + H2`. Which statement about
 `{H1, H2, H3}` is guaranteed?
 
-- A) It is a basis of `ℝ³`, because it has exactly three vectors
+- A) It is a basis of `â„Â³`, because it has exactly three vectors
 - B) It is linearly dependent, and its span has dimension 2
 - C) It is linearly independent, because `H3` is a combination of the other two
 - D) Its span is the line through `H1` and `H2`
@@ -963,13 +963,13 @@ it and adding two such triples gives another such triple; `(0,0,0)` satisfies it
 
 **B) It is linearly dependent, and its span has dimension 2.**
 
-The relation `-1·H1 - 1·H2 + 1·H3 = 0` has a nonzero coefficient, so the set is
-dependent — the worked example checks it component by component
+The relation `-1Â·H1 - 1Â·H2 + 1Â·H3 = 0` has a nonzero coefficient, so the set is
+dependent â€” the worked example checks it component by component
 (`-80 - 120 + 200 = 0`, `-3 - 4 + 7 = 0`, `-10 - 25 + 35 = 0`).
 
 The span is `span(H1, H2)`, which is `span(H1, H2, H3)` since `H3` adds nothing.
-`H1` and `H2` are independent — the ratio of areas is `80/120 = 2/3` but the
-ratio of rooms is `3/4`, so no single scalar turns one into the other — hence the
+`H1` and `H2` are independent â€” the ratio of areas is `80/120 = 2/3` but the
+ratio of rooms is `3/4`, so no single scalar turns one into the other â€” hence the
 span has dimension 2, the plane `-7x + 160y + 8z = 0`.
 
 - A) and C) are the two halves of the classic mistake in Mistake 2. Having `n`
@@ -982,26 +982,26 @@ span has dimension 2, the plane `-7x + 160y + 8z = 0`.
 
 </details>
 
-**Q3.** `is_independent` is run on 500 random sets of four vectors in `ℝ³`, and
+**Q3.** `is_independent` is run on 500 random sets of four vectors in `â„Â³`, and
 reports dependent 500 times. Is the routine broken?
 
-- A) Yes — four vectors in three dimensions should be independent at least some of
+- A) Yes â€” four vectors in three dimensions should be independent at least some of
   the time, so a 100% failure rate is suspicious
-- B) Yes — the routine should have reported exactly 250 dependent and 250
+- B) Yes â€” the routine should have reported exactly 250 dependent and 250
   independent, since independence and dependence are equally likely
-- C) No — four vectors in `ℝ³` can never be independent, so 500 out of 500 is the
+- C) No â€” four vectors in `â„Â³` can never be independent, so 500 out of 500 is the
   only outcome a correct routine can produce
-- D) No — but only because 500 is a round number and the seed is fixed, so the
+- D) No â€” but only because 500 is a round number and the seed is fixed, so the
   agreement proves nothing
 
 <details>
 <summary>Answer and explanation</summary>
 
-**C) No — four vectors in `ℝ³` can never be independent, so 500 out of 500 is the
+**C) No â€” four vectors in `â„Â³` can never be independent, so 500 out of 500 is the
 only outcome a correct routine can produce.**
 
 This is the `k > n` theorem from the Formal Version, applied to the code: the
-lesson states it as a *specification* — "Four vectors cannot be independent in
+lesson states it as a *specification* â€” "Four vectors cannot be independent in
 three dimensions, so this must be 500. If it is not, the routine is wrong." A
 routine that ever reported `True` here would be the thing under suspicion.
 
@@ -1020,9 +1020,9 @@ routine that ever reported `True` here would be the thing under suspicion.
 
 - A) Its coordinates are not integers, so no integer combination of `H1` and `H2`
   can produce it
-- B) It fails the plane equation — it evaluates to `8 ≠ 0` — and every linear
+- B) It fails the plane equation â€” it evaluates to `8 â‰  0` â€” and every linear
   combination of `H1` and `H2` satisfies that equation exactly
-- C) Two generators in `ℝ³` can only reach two points, and `(0,0,1)` is not one of
+- C) Two generators in `â„Â³` can only reach two points, and `(0,0,1)` is not one of
   the generators
 - D) It is not a scalar multiple of the normal vector `(-7, 160, 8)`, and nothing
   in the span needs to be
@@ -1030,16 +1030,16 @@ routine that ever reported `True` here would be the thing under suspicion.
 <details>
 <summary>Answer and explanation</summary>
 
-**B) It fails the plane equation — it evaluates to `8 ≠ 0` — and every linear
+**B) It fails the plane equation â€” it evaluates to `8 â‰  0` â€” and every linear
 combination of `H1` and `H2` satisfies that equation exactly.**
 
-The normal `p = (-7, 160, 8)` was constructed with `p·H1 = p·H2 = 0`, and the dot
-product is bilinear, so `p·(a·H1 + b·H2) = a(p·H1) + b(p·H2) = 0` for all `a, b`.
-For `t = (0,0,1)`, `p·t = -7(0) + 160(0) + 8(1) = 8`. Contradiction, so no `a, b`
+The normal `p = (-7, 160, 8)` was constructed with `pÂ·H1 = pÂ·H2 = 0`, and the dot
+product is bilinear, so `pÂ·(aÂ·H1 + bÂ·H2) = a(pÂ·H1) + b(pÂ·H2) = 0` for all `a, b`.
+For `t = (0,0,1)`, `pÂ·t = -7(0) + 160(0) + 8(1) = 8`. Contradiction, so no `a, b`
 exist. The lesson is explicit that this is "a structural fact, not a
 computational failure".
 
-- A) is wrong because the coefficients are in `F = ℝ`, not `ℤ`. `H1` and `H2` are
+- A) is wrong because the coefficients are in `F = â„`, not `â„¤`. `H1` and `H2` are
   already integer vectors, and the question is whether some *real* pair works.
   This is exactly the "why a field, not the integers" issue.
 - C) is nonsense numerically: a single generator reaches an infinite line, so two
@@ -1051,7 +1051,7 @@ computational failure".
 
 </details>
 
-**Q5.** The subspace test is stated for a **nonempty** `W ⊆ V`. Why must
+**Q5.** The subspace test is stated for a **nonempty** `W âŠ† V`. Why must
 nonemptiness be part of the statement rather than a side remark?
 
 - A) Because the empty set is not closed under scaling, since there is nothing to
@@ -1069,20 +1069,20 @@ nonemptiness be part of the statement rather than a side remark?
 with an undefined case can be neither proved nor used.**
 
 The statement is a biconditional: "`W` is a subspace **if and only if** these
-three conditions hold." The reverse direction is the delicate one — it must show
+three conditions hold." The reverse direction is the delicate one â€” it must show
 that the three conditions *imply* the eight vector-space axioms. That proof picks
-`u, v ∈ W` and reasons about `u + v`, which is only meaningful if such `u, v`
-exist. Without the nonemptiness hypothesis, `∅` vacuously satisfies the closure
+`u, v âˆˆ W` and reasons about `u + v`, which is only meaningful if such `u, v`
+exist. Without the nonemptiness hypothesis, `âˆ…` vacuously satisfies the closure
 sentences and would have to be declared a subspace.
 
-- A) is not a real objection. "Closed under addition" means *if* `u, v ∈ W` *then*
-  `u + v ∈ W`; over an empty `W` that sentence is vacuously true, which is
+- A) is not a real objection. "Closed under addition" means *if* `u, v âˆˆ W` *then*
+  `u + v âˆˆ W`; over an empty `W` that sentence is vacuously true, which is
   precisely the problem.
 - B) would be right if the theorem did not also need `u, v` for the addition
   closure, but condition 1 guarantees nonemptiness *for the reader's benefit*,
-  not for the statement's — the statement has to be well formed before any
+  not for the statement's â€” the statement has to be well formed before any
   condition is used.
-- D) is false as mathematics: `ℝⁿ` and any GF(2) space of any size are all
+- D) is false as mathematics: `â„â¿` and any GF(2) space of any size are all
   vector spaces, finite and infinite.
 
 </details>
@@ -1093,14 +1093,14 @@ should you hand to the solver?
 - A) The matrix whose **rows** are `g1, g2, g3`
 - B) The matrix whose **columns** are `g1, g2, g3`
 - C) Either one, because the set of reachable points is the same either way
-- D) The `3 × 3` identity, since the coefficients are all that is being solved for
+- D) The `3 Ã— 3` identity, since the coefficients are all that is being solved for
 
 <details>
 <summary>Answer and explanation</summary>
 
 **B) The matrix whose **columns** are `g1, g2, g3`.**
 
-`A c` *is* the sum of scaled columns: `A c = c1·g1 + c2·g2 + c3·g3`. So the
+`A c` *is* the sum of scaled columns: `A c = c1Â·g1 + c2Â·g2 + c3Â·g3`. So the
 coefficients multiply the columns, and the generators must be the columns. The
 lesson's `as_columns` helper does precisely this transpose-by-hand.
 
@@ -1109,7 +1109,7 @@ lesson's `as_columns` helper does precisely this transpose-by-hand.
 - C) is the trap that makes the bug survive testing: for a **square** matrix the
   row space and column space happen to be the same set, so the bug is invisible
   on small square examples and appears the moment the generators are not
-  `n × n` or not the same length.
+  `n Ã— n` or not the same length.
 - D) solves `c = 0` (well, `c =` the target read as a vector) and has nothing to
   do with `g1, g2, g3`. If you find yourself building an identity you have lost
   the generators.
@@ -1117,7 +1117,7 @@ lesson's `as_columns` helper does precisely this transpose-by-hand.
 </details>
 
 **Q7.** The vectors `bob = (170, 70, 30)` and `sue = (160, 55, 28)` give
-`bob · sue = 31890` and `cos(bob, sue) = 0.9983`. A third vector `long_doc` has
+`bob Â· sue = 31890` and `cos(bob, sue) = 0.9983`. A third vector `long_doc` has
 exactly the same direction as `bob` but is scaled by 10. Which quantity changes?
 
 - A) The cosine similarity, because the longer vector has more components to
@@ -1146,12 +1146,12 @@ the cosine stays `0.9983` and the dot product becomes `318900`.
   change, not a *direction* change, and an angle is purely a direction quantity.
   This is why the whole retrieval pipeline normalises documents before ranking.
 - C) is wrong about the dot product, which is bilinear and therefore does scale:
-  `31890 → 318900`. Only the cosine is scale-invariant.
+  `31890 â†’ 318900`. Only the cosine is scale-invariant.
 
 </details>
 
 **Q8.** The set of 4-bit strings with an even number of 1s is a subspace of
-`GF(2)⁴` with 3 degrees of freedom. How many elements does it contain?
+`GF(2)â´` with 3 degrees of freedom. How many elements does it contain?
 
 - A) 2, because a subspace must contain the zero vector and at least one other
   point
@@ -1166,18 +1166,18 @@ the cosine stays `0.9983` and the dot product becomes `318900`.
 **C) 8, because each of the 3 free bits can independently be 0 or 1.**
 
 The rule "the weight is even" fixes the **parity bit** from the other three, so
-three bits are free and one is determined: `2³ = 8`. The code prints exactly the
+three bits are free and one is determined: `2Â³ = 8`. The code prints exactly the
 eight words `0000, 0011, 0101, 0110, 1001, 1010, 1100, 1111`, and the general
 rule is `|W| = 2^dim(W)` for any subspace of a space over two scalars.
 
 - A) and B) undercount. `2` is the count for a 1-dimensional subspace and `4` for
   a 2-dimensional one; the dimension here is 3, and the lesson's own brute-force
-  loop `for c0 in (0,1): for c1 in (0,1): for c2 in (0,1)` makes the `2³` structure
+  loop `for c0 in (0,1): for c1 in (0,1): for c2 in (0,1)` makes the `2Â³` structure
   explicit.
 - B) is a subtle and instructive error: the parity rule pins the *fourth* bit from
   the first three, not the last from the first. Fixing one bit from three others
   always leaves three free.
-- D) is simply false — `0001` has weight 1, and the loop's own printed output
+- D) is simply false â€” `0001` has weight 1, and the loop's own printed output
   never lists it.
 
 </details>
@@ -1205,7 +1205,7 @@ with pivots.**
 
 Row operations are invertible, so if `A c = 0` has a nonzero solution then
 `rref(A) c = 0` has one too, and a free variable in `rref(A)` reads the relation
-straight off the reduced rows — that is exactly what `dependent_relation` does
+straight off the reduced rows â€” that is exactly what `dependent_relation` does
 when it sets `c_vec[free] = 1` and copies `-M[row_index][free]` into the pivot
 entries. If all `k` columns get pivots, there is no free variable, so `c = 0` is
 the only solution.
@@ -1254,13 +1254,13 @@ better fit exists.
   reachable* point, and a nonzero residual is the honest report that the target
   has a component the model cannot express.
 - D) is the deepest confusion: "least-squares solution" refers to minimising
-  `‖A c − t‖²`, not to being an exact solution of `A c = t`. `lstsq` does use
+  `â€–A c âˆ’ tâ€–Â²`, not to being an exact solution of `A c = t`. `lstsq` does use
   a least-squares/pseudoinverse route internally, but it returns a `fit` and a
   `residual` precisely so you can see how far off it is.
 
 </details>
 
-**Q11.** Two different sets both span the same subspace `W` of `ℝ⁴`: one has two
+**Q11.** Two different sets both span the same subspace `W` of `â„â´`: one has two
 vectors, the other has three. What must be true?
 
 - A) The three-vector set must contain a vector outside `W`, since it is larger
@@ -1277,7 +1277,7 @@ vectors, the other has three. What must be true?
 both spans have dimension 2.**
 
 If the two-vector set were dependent, its span would be one-dimensional, and a
-one-dimensional space cannot be spanned by three independent vectors — so it must
+one-dimensional space cannot be spanned by three independent vectors â€” so it must
 be independent and `dim(W) = 2`. A third spanning vector is then redundant by
 definition, and `|W| = 2` is basis-independent: `dim` is one of the few
 quantities that genuinely does not depend on which spanning set you picked.
@@ -1285,9 +1285,9 @@ quantities that genuinely does not depend on which spanning set you picked.
 - A) is impossible: `span` is closed under taking linear combinations, so any
   combination of vectors in `W` is in `W`. Adding a generator can never escape
   the set, which is why it can never extend the span either.
-- C) applies the `k > n` theorem with the numbers the wrong way round. `3 ≤ 4`
-  means counting is *silent* — the theorem only fires when `k > n`. Whether three
-  vectors in `ℝ⁴` are dependent is decided by the actual numbers, not the
+- C) applies the `k > n` theorem with the numbers the wrong way round. `3 â‰¤ 4`
+  means counting is *silent* â€” the theorem only fires when `k > n`. Whether three
+  vectors in `â„â´` are dependent is decided by the actual numbers, not the
   count.
 - D) is the misconception the whole part exists to kill. Dimension is a property
   of the *set*, not of the description. `span(H1, H2) = span(H1, H2, H3)` in the
@@ -1295,42 +1295,42 @@ quantities that genuinely does not depend on which spanning set you picked.
 
 </details>
 
-**Q12.** Why must the scalars come from a *field* such as `ℝ`, `ℂ`, or `GF(2)`,
-rather than from the integers `ℤ`?
+**Q12.** Why must the scalars come from a *field* such as `â„`, `â„‚`, or `GF(2)`,
+rather than from the integers `â„¤`?
 
-- A) Because `ℤ` is infinite, and vector spaces are required to be finite
-- B) Because `ℤ` has no multiplicative identity, and a space needs an element `1`
-  acting as `1·u = u`
-- C) Because over `ℤ` you cannot always divide by a nonzero integer, so
-  normalising coefficients is impossible — `ℤ²` has no basis containing
+- A) Because `â„¤` is infinite, and vector spaces are required to be finite
+- B) Because `â„¤` has no multiplicative identity, and a space needs an element `1`
+  acting as `1Â·u = u`
+- C) Because over `â„¤` you cannot always divide by a nonzero integer, so
+  normalising coefficients is impossible â€” `â„¤Â²` has no basis containing
   `(1,0)` and `(0,1/2)`
-- D) Because `ℤ` is not closed under addition, so vectors in `ℤⁿ` could sum to
-  something outside `ℤⁿ`
+- D) Because `â„¤` is not closed under addition, so vectors in `â„¤â¿` could sum to
+  something outside `â„¤â¿`
 
 <details>
 <summary>Answer and explanation</summary>
 
-**C) Because over `ℤ` you cannot always divide by a nonzero integer, so
-normalising coefficients is impossible — `ℤ²` has no basis containing
+**C) Because over `â„¤` you cannot always divide by a nonzero integer, so
+normalising coefficients is impossible â€” `â„¤Â²` has no basis containing
 `(1,0)` and `(0,1/2)`.**
 
 The lesson defines `F` as "a set of numbers where addition, subtraction,
 multiplication, **and division by nonzero elements** all behave as you expect."
-The division clause is the one that rules out `ℤ`. Over `ℤ` the lattice
-`ℤ·(1,0) + ℤ·(0,2)` is a proper sublattice of `ℤ²` that cannot be repaired by
+The division clause is the one that rules out `â„¤`. Over `â„¤` the lattice
+`â„¤Â·(1,0) + â„¤Â·(0,2)` is a proper sublattice of `â„¤Â²` that cannot be repaired by
 any integer rescaling, so rank and independence stop agreeing with the linear
 algebra developed in this part. The lesson's worked example leans on exactly
 this: `H1`, `H2`, `H3` and the coefficients `-1, -1, 1` are all integers, but the
 *plane* they span is a real object, and the point `(0,0,1)` is excluded by real
 arithmetic, not integer arithmetic.
 
-- A) is false: `ℝⁿ` is an infinite vector space over an infinite field, and
+- A) is false: `â„â¿` is an infinite vector space over an infinite field, and
   nothing in the axioms limits either.
-- B) is false: `1 ∈ ℤ` and `1·u = u` holds perfectly well. Identity elements are
+- B) is false: `1 âˆˆ â„¤` and `1Â·u = u` holds perfectly well. Identity elements are
   not the problem.
-- D) is false: `ℤ` is closed under addition and subtraction, so `ℤⁿ` *is* closed
+- D) is false: `â„¤` is closed under addition and subtraction, so `â„¤â¿` *is* closed
   under the two operations. The gap is division, and that gap is subtle enough
-  to be the real reason `ℤ` is not a field.
+  to be the real reason `â„¤` is not a field.
 
 </details>
 
@@ -1344,13 +1344,13 @@ there.**
 <details>
 <summary>Model answer</summary>
 
-A nonempty subset `W ⊆ V` is a subspace if and only if all three hold: (1) the zero
-vector is in `W`; (2) for every scalar `c ∈ F` and every `u ∈ W`, the vector
-`cu` is in `W`; (3) for every `u, v ∈ W`, the vector `u + v` is in `W`.
+A nonempty subset `W âŠ† V` is a subspace if and only if all three hold: (1) the zero
+vector is in `W`; (2) for every scalar `c âˆˆ F` and every `u âˆˆ W`, the vector
+`cu` is in `W`; (3) for every `u, v âˆˆ W`, the vector `u + v` is in `W`.
 
 The nonemptiness hypothesis is needed so that condition 3 is a statement about an
-actual pair of vectors. Without it, `∅` satisfies conditions 2 and 3
-*vacuously* — there are no `u, v` to check — and the biconditional would force
+actual pair of vectors. Without it, `âˆ…` satisfies conditions 2 and 3
+*vacuously* â€” there are no `u, v` to check â€” and the biconditional would force
 the empty set to be declared a subspace, which it is not. Equivalently: the
 reverse direction of the theorem has to derive the eight vector-space axioms,
 and it cannot do that if there is no `u` to derive them from.
@@ -1363,35 +1363,35 @@ operational test for it.**
 <details>
 <summary>Model answer</summary>
 
-A set `S = {v₁, …, v_k}` is **linearly independent** over `F` if the only choice
-of scalars making `c₁v₁ + … + c_kv_k = 0` is `c₁ = … = c_k = 0`. If some other
+A set `S = {vâ‚, â€¦, v_k}` is **linearly independent** over `F` if the only choice
+of scalars making `câ‚vâ‚ + â€¦ + c_kv_k = 0` is `câ‚ = â€¦ = c_k = 0`. If some other
 choice exists, `S` is **linearly dependent**.
 
 The operational test: build the matrix `A` whose columns are the `v_i` and row
 reduce it. `S` is independent exactly when `rref(A)` has a pivot in every one of
-its `k` columns — equivalently when the homogeneous system `A c = 0` has only
+its `k` columns â€” equivalently when the homogeneous system `A c = 0` has only
 the zero solution. A nonzero solution *is* a cancelling relation, so the solver
 can hand it to you as a certificate of which vectors are redundant.
 
 </details>
 
-**Q3. State the `k > n` counting result, and give an example of `k ≤ n` that is
+**Q3. State the `k > n` counting result, and give an example of `k â‰¤ n` that is
 still dependent.**
 
 <details>
 <summary>Model answer</summary>
 
-If `S` has `k` vectors in `ℝⁿ` and `k > n`, then `S` is linearly dependent.
-Put the vectors in the columns of an `n × k` matrix `A`; the homogeneous system
+If `S` has `k` vectors in `â„â¿` and `k > n`, then `S` is linearly dependent.
+Put the vectors in the columns of an `n Ã— k` matrix `A`; the homogeneous system
 `A c = 0` then has `k` unknowns and `n` equations with `k > n`, and any
 homogeneous system with more unknowns than equations has a nontrivial solution,
 which is a dependence relation.
 
 The converse is false, and the lesson's own worked example is the counterexample:
-`H1 = (80,3,10)`, `H2 = (120,4,25)`, `H3 = (200,7,35)` are three vectors in `ℝ³`,
-so `k = n = 3` and counting says nothing — yet `-H1 - H2 + H3 = 0`, so they are
-dependent. A smaller case is `{[1,2], [2,4]}` in `ℝ²`, where the relation
-`-2·[1,2] + 1·[2,4] = 0` is detected in Exercise 5.
+`H1 = (80,3,10)`, `H2 = (120,4,25)`, `H3 = (200,7,35)` are three vectors in `â„Â³`,
+so `k = n = 3` and counting says nothing â€” yet `-H1 - H2 + H3 = 0`, so they are
+dependent. A smaller case is `{[1,2], [2,4]}` in `â„Â²`, where the relation
+`-2Â·[1,2] + 1Â·[2,4] = 0` is detected in Exercise 5.
 
 </details>
 
@@ -1403,14 +1403,14 @@ does the distinction matter when you fit a model?**
 
 A **subspace** is a subset that is closed under addition and scalar multiplication
 and therefore contains the zero vector: it always passes through the origin. An
-**affine subspace** is a translate of one — a set cut out by non-homogeneous
-linear equations, `p·x = b` with `b ≠ 0` — which is a flat sitting off the
+**affine subspace** is a translate of one â€” a set cut out by non-homogeneous
+linear equations, `pÂ·x = b` with `b â‰  0` â€” which is a flat sitting off the
 origin. It is closed under *differences* of its members but not under addition of
 them, and it is not a vector space: `(0,0,0)` is not in it.
 
 It matters because a subspace-flavoured constraint always permits the trivial
 solution `c = 0` and a prediction of zero. In regression, forcing the fit through
-the origin — a subspace constraint — is a real modelling decision: it says
+the origin â€” a subspace constraint â€” is a real modelling decision: it says
 "no offset", it removes one degree of freedom, and it can be badly wrong when
 there is a genuine baseline. The lesson's `S2 = {x + y + z = 1}` versus
 `S1 = {x + y + z = 0}` is the minimal illustration: identical equations, and
@@ -1428,37 +1428,37 @@ Because setting it to `0` recovers the trivial solution. The procedure is: if
 there are fewer pivots than columns then at least one column is a non-pivot, and
 its coefficient is a free variable of `A c = 0`. Setting the free coefficient to
 `0` forces every pivot coefficient to `0` as well, because the reduced rows read
-`c_pivot = -M[row][free] · c_free`. That gives `c = 0`, which every homogeneous
+`c_pivot = -M[row][free] Â· c_free`. That gives `c = 0`, which every homogeneous
 system has, and it certifies nothing.
 
-Setting the free coefficient to `1` — any nonzero value would do — forces a
+Setting the free coefficient to `1` â€” any nonzero value would do â€” forces a
 genuinely nonzero vector, and the pivot entries then become the actual
 coefficients of the cancelling relation. For `{[1,0], [0,1], [1,1]}` this yields
-`c = [-1, -1, 1]`, which the lesson verifies by hand as `-1·[1,0] - 1·[0,1] +
-1·[1,1] = [0,0]`. Any nonzero scalar multiple of this vector is an equally valid
+`c = [-1, -1, 1]`, which the lesson verifies by hand as `-1Â·[1,0] - 1Â·[0,1] +
+1Â·[1,1] = [0,0]`. Any nonzero scalar multiple of this vector is an equally valid
 relation; the `1` is a choice that makes the output readable, not a fact.
 
 </details>
 
-**Q6. Why does a `k`-dimensional subspace of `GF(2)ⁿ` contain exactly `2^k`
+**Q6. Why does a `k`-dimensional subspace of `GF(2)â¿` contain exactly `2^k`
 elements, and how is that different from the real case?**
 
 <details>
 <summary>Model answer</summary>
 
 Pick a basis of `k` vectors. Every element of the subspace is a *unique* linear
-combination of them — unique because the basis is independent. Over `GF(2)` there
+combination of them â€” unique because the basis is independent. Over `GF(2)` there
 are exactly two scalars, `0` and `1`, so each basis vector is either in or out,
-giving `2 · 2 · … · 2 = 2^k` combinations, hence `2^k` elements.
+giving `2 Â· 2 Â· â€¦ Â· 2 = 2^k` combinations, hence `2^k` elements.
 
-Over `ℝ` the same argument gives an *infinite* set, because each coefficient can
+Over `â„` the same argument gives an *infinite* set, because each coefficient can
 be any real number: the count `2^k` is replaced by "continuum", and the
 `k`-bit-style information content is lost. This is the reason GF(2) is the
-right setting for error-correcting codes — a `k`-dimensional code over two
+right setting for error-correcting codes â€” a `k`-dimensional code over two
 symbols stores exactly `k` bits of information in an `n`-bit word, and the
 lesson's even-weight subspace has `dim = 3`, hence 8 codewords out of 16 possible
 4-bit words. The same count appears in Exercise 5's challenge, where two
-independent conditions on 4 bits leave 2 free bits and `2² = 4` codewords.
+independent conditions on 4 bits leave 2 free bits and `2Â² = 4` codewords.
 
 </details>
 
@@ -1471,29 +1471,29 @@ fitted model if you forced the fit through the origin?**
 <summary>Model answer</summary>
 
 The origin is forced by the axioms, not chosen. Condition 1 of the subspace test
-requires `0 ∈ W` outright. Even without that condition, closure under scaling
-alone forces it: pick any `u ∈ W`, and take `c = 0`. Then `0·u = 0 ∈ W`. So
+requires `0 âˆˆ W` outright. Even without that condition, closure under scaling
+alone forces it: pick any `u âˆˆ W`, and take `c = 0`. Then `0Â·u = 0 âˆˆ W`. So
 "nonempty and closed under scaling" is already enough to place the origin inside
 the set. You can see the same thing in the plane description from the worked
 example: `span(H1, H2) = { -7x + 160y + 8z = 0 }` is homogeneous, and the
-homogeneous part is not decoration — it *is* the origin constraint. A non-zero
+homogeneous part is not decoration â€” it *is* the origin constraint. A non-zero
 right-hand side `b` moves the whole flat off the origin, and the resulting affine
 set is no longer closed under addition: two points on the line `x + y = 1` sum to
 something with `x + y = 2`.
 
-What breaks in a fitted model is concrete. If you constrain `y = c₁x₁ + c₂x₂`
+What breaks in a fitted model is concrete. If you constrain `y = câ‚xâ‚ + câ‚‚xâ‚‚`
 (a subspace constraint, since the coefficient vector must lie in a subspace of
-`ℝ²`) you have removed the intercept, and you have asserted that zero features
-predicts zero output. Exercise 4 shows the cost: fitting `price = 3000·area +
+`â„Â²`) you have removed the intercept, and you have asserted that zero features
+predicts zero output. Exercise 4 shows the cost: fitting `price = 3000Â·area +
 50000` from the first two houses gives `slope = 3000.0, intercept = 50000.0`,
-which reproduces the 200 m² house as `650000` against an actual `690000` — a
+which reproduces the 200 mÂ² house as `650000` against an actual `690000` â€” a
 `40000` residual. If instead the true relationship had a genuine baseline (a
 house is worth something even with zero floor area, or a sensor reads a nonzero
 value at zero input), the origin-constrained fit is not merely less accurate, it
 is biased, and no amount of data fixes it. The practical rule: the subspace
 constraint is correct exactly when the physics says the zero response is zero,
 and that is an assumption to state, not one to inherit by accident. Machine
-learning practice encodes it as a choice — scikit-learn's `LinearRegression`
+learning practice encodes it as a choice â€” scikit-learn's `LinearRegression`
 includes an intercept by default and `fit_intercept=False` removes it.
 
 </details>
@@ -1505,14 +1505,14 @@ must you *not* conclude?**
 <details>
 <summary>Model answer</summary>
 
-Rank 2 means the 5000 rows, viewed as vectors in `ℝ³` after centring, occupy a
+Rank 2 means the 5000 rows, viewed as vectors in `â„Â³` after centring, occupy a
 2-dimensional subspace. Equivalently, the three feature columns satisfy one
 non-trivial linear relation, so one of them is a combination of the other two.
 This is a statement about the *columns* surviving row reduction, and the row
-count is irrelevant to it — a rank of 2 is the same whether there are 5 rows or
+count is irrelevant to it â€” a rank of 2 is the same whether there are 5 rows or
 5 million. It also means the data has exactly 2 independent factors, not 3.
 
-What you can safely delete: one of the three columns — after solving `A c = 0` to
+What you can safely delete: one of the three columns â€” after solving `A c = 0` to
 find *which* relation, so you delete a member of the dependent set rather than
 guessing. You keep the other two, and every row of the dataset is still
 represented exactly: `span` is unchanged, which the lesson demonstrates in
@@ -1533,7 +1533,7 @@ What you must **not** conclude:
    dependency can disappear the moment new data arrives.
 3. Not that rank 2 is "nearly rank 3 and therefore fine". Exact rank 2 is exact:
    there is a whole plane of targets the model provably cannot hit. Any target
-   with a component normal to the span gets a residual — Exercise 6 measures one
+   with a component normal to the span gets a residual â€” Exercise 6 measures one
    of squared length 25.
 4. Not that you have lost information by deleting. You have not, for anything
    inside the span; what you lost is the *description* of a redundancy, which is
@@ -1550,13 +1550,13 @@ does that tell you about how you should test a real dataset?**
 Because the counting argument is one-directional. The proof goes: build `A` with
 the `k` vectors as columns, write the independence question as `A c = 0`, and
 observe that the system has `k` unknowns and `n` equations. If `k > n` then the
-system is under-determined, a free variable exists, and `c ≠ 0` is guaranteed.
+system is under-determined, a free variable exists, and `c â‰  0` is guaranteed.
 Every step of that argument is an implication *from* the inequality to dependence.
-There is no step that runs backwards: `k ≤ n` leaves you with a square-ish,
+There is no step that runs backwards: `k â‰¤ n` leaves you with a square-ish,
 possibly full-rank system, and the inequality simply carries no information. That
-is why `{[1,0], [0,1], [1,1]}` and `{[1,0], [0,1], [1,2]}` — both three vectors in
-`ℝ²` — behave differently while every count agrees, and why the worked example
-can have three vectors in `ℝ³` that cancel.
+is why `{[1,0], [0,1], [1,1]}` and `{[1,0], [0,1], [1,2]}` â€” both three vectors in
+`â„Â²` â€” behave differently while every count agrees, and why the worked example
+can have three vectors in `â„Â³` that cancel.
 
 The asymmetry is structural, not a gap waiting to be filled. A counting
 argument can only ever produce a *certificate of redundancy*; independence is the
@@ -1568,14 +1568,14 @@ version is "counting only rules out dependence when `m > n`; you must actually
 row reduce."
 
 The practical consequence is a two-stage policy. Use counting as a free
-screen — it is O(1) and it catches the most common and most embarrassing case,
+screen â€” it is O(1) and it catches the most common and most embarrassing case,
 a feature matrix with more columns than rows-plus-one, which is the standard
 symptom of an over-parameterised model. Then, for everything the screen does not
 decide, run the actual algorithm: `np.linalg.matrix_rank` in numpy, `is_independent`
 in the lesson, or the RREF pivot count. And when you want more than a yes/no,
 ask for the *witness*, not the verdict. `dependent_relation` does this: it
-returns the coefficients `c` with `A c = 0`, so the report is "-1·H1 - 1·H2 +
-1·H3 = 0" rather than "dependent". A boolean cannot be acted on; a relation tells
+returns the coefficients `c` with `A c = 0`, so the report is "-1Â·H1 - 1Â·H2 +
+1Â·H3 = 0" rather than "dependent". A boolean cannot be acted on; a relation tells
 you exactly which column to drop, or which pair to re-collect.
 
 </details>
@@ -1588,54 +1588,54 @@ distance?**
 <summary>Model answer</summary>
 
 Because the perpendicularity *is* the optimality condition, and it falls out of
-one line of algebra. We want to minimise `f(c) = ‖A c − t‖²` over `c`. For
-convenience write `c* = c − h` for an arbitrary displacement `h`. Then
+one line of algebra. We want to minimise `f(c) = â€–A c âˆ’ tâ€–Â²` over `c`. For
+convenience write `c* = c âˆ’ h` for an arbitrary displacement `h`. Then
 
-`f(c* − h) − f(c*) = ‖A c* − t − A h‖² − ‖A c* − t‖² = −2(A c* − t)·(A h)`
+`f(c* âˆ’ h) âˆ’ f(c*) = â€–A c* âˆ’ t âˆ’ A hâ€–Â² âˆ’ â€–A c* âˆ’ tâ€–Â² = âˆ’2(A c* âˆ’ t)Â·(A h)`
 
-because `‖A h‖²` appears on both sides and cancels. If `r = A c* − t` is the
-residual and `r·A h = 0` for all `h`, then `f` is unchanged along every direction
-in the space of `c` — which is exactly "at a minimum". Taking `h = e_i` (the
-`i`-th standard basis vector of `F^k`) gives `r·a_i = 0`, i.e. the residual is
+because `â€–A hâ€–Â²` appears on both sides and cancels. If `r = A c* âˆ’ t` is the
+residual and `rÂ·A h = 0` for all `h`, then `f` is unchanged along every direction
+in the space of `c` â€” which is exactly "at a minimum". Taking `h = e_i` (the
+`i`-th standard basis vector of `F^k`) gives `rÂ·a_i = 0`, i.e. the residual is
 perpendicular to the `i`-th **column** of `A`, which is the `i`-th generator.
 The lesson's Exercise 6 checks this numerically: with generators `e1, e2, e1+e2`
 and target `(4, -1, 5)`, the fit is `(4, -1, 0)`, the residual is `(0, 0, 5)`, and
 the dot product with all three generators is `0.0000`.
 
 Two things break if you optimise something else. First, if you minimise the
-*squared* residual componentwise with a weight that is not constant — a weighted
-or regularised objective — the residual is no longer perpendicular to the
+*squared* residual componentwise with a weight that is not constant â€” a weighted
+or regularised objective â€” the residual is no longer perpendicular to the
 generators; it is perpendicular to the *weighted* generators, and the plain
 orthogonality check fails even though the solve is correct. This is why the
 leverage and residual plots in `statsmodels` OLS are the standard diagnostics
 rather than raw residuals. Second, and more seriously, if you minimise the
-absolute error `‖A c − t‖` instead of its square, the normal equations do not
+absolute error `â€–A c âˆ’ tâ€–` instead of its square, the normal equations do not
 hold and there is no `A`-based closed form: you must fall back on an iterative
 method (linear programming, or iteratively reweighted least squares). The square
 is not an arbitrary convenience; it is the choice that makes the problem smooth
 and solvable by row reduction, and it is what `np.linalg.lstsq` and every
-`XᵀX` normal-equation solver actually compute.
+`Xáµ€X` normal-equation solver actually compute.
 
 A final wrinkle worth knowing: the residual is unique, but the *coefficients* are
 not, when the generators are dependent. In Exercise 6, `c = (4, -1, 0)` and
 `c = (3, -2, 1)` and `c = (6.5, 1.5, -2.5)` all give the identical fit and the
 identical residual of squared length 25, because the third generator is a
 combination of the first two. So "the least-squares solution" is ambiguous
-exactly when the model is redundant — which is a reason to find a basis first
+exactly when the model is redundant â€” which is a reason to find a basis first
 and only then fit.
 
 </details>
 
 ## Exercises and Solutions
 
-**[ ] Exercise 1 — express a vector as a combination.** Let `u = [1, 2, 3]`,
+**[ ] Exercise 1 â€” express a vector as a combination.** Let `u = [1, 2, 3]`,
 `v = [2, -1, 0]` and `w = [5, 0, 3]`. Find scalars `a` and `b` with
-`a·u + b·v = w`, verify the answer by hand, and confirm with code.
+`aÂ·u + bÂ·v = w`, verify the answer by hand, and confirm with code.
 
 <details>
 <summary>Solution</summary>
 
-By hand, try small integer weights. `1·u + 2·v = [1 + 4, 2 - 2, 3 + 0] = [5, 0, 3]`,
+By hand, try small integer weights. `1Â·u + 2Â·v = [1 + 4, 2 - 2, 3 + 0] = [5, 0, 3]`,
 which is `w`. So `a = 1`, `b = 2`.
 
 The code confirms it, using a general solver rather than a guess.
@@ -1710,11 +1710,11 @@ equal to w: True
 
 </details>
 
-**[ ] Exercise 2 — span membership.** Write an `in_span(target, generators)`
+**[ ] Exercise 2 â€” span membership.** Write an `in_span(target, generators)`
 function returning `True` or `False`. Test it on: (a) the single generator
-`[1, 1]` in `ℝ²` with targets `[5, 5]`, `[30, 3]`, `[-2, -2]`; (b) the
+`[1, 1]` in `â„Â²` with targets `[5, 5]`, `[30, 3]`, `[-2, -2]`; (b) the
 generators `[1, 0]` and `[0, 1]`; (c) the generators `[1, 0, 0]` and
-`[0, 1, 0]` in `ℝ³` with the extra target `[4, -1, 2]`. For each case, say in one
+`[0, 1, 0]` in `â„Â³` with the extra target `[4, -1, 2]`. For each case, say in one
 sentence why the answer is what it is.
 
 <details>
@@ -1840,12 +1840,12 @@ whose third component is zero can never produce a nonzero third component.
 
 </details>
 
-**[ ] Exercise 3 — subspace or not?** Decide whether each of these subsets of
-`ℝ³` is a subspace, and give a one-line reason for each.
+**[ ] Exercise 3 â€” subspace or not?** Decide whether each of these subsets of
+`â„Â³` is a subspace, and give a one-line reason for each.
 
 1. `{(x, y, z) : x + y + z = 0}`
 2. `{(x, y, z) : x + y + z = 1}`
-3. `{(x, y, z) : x·y·z = 0}`
+3. `{(x, y, z) : xÂ·yÂ·z = 0}`
 4. `{(x, y, z) : x = y}`
 
 <details>
@@ -1855,7 +1855,7 @@ whose third component is zero can never produce a nonzero third component.
    whose sums are zero gives a triple whose sum is zero.
 2. Not a subspace. It does not contain the zero vector.
 3. Not a subspace. `[1, 2, 0]` and `[0, 0, 7]` are both in it, but their sum
-   `[1, 2, 7]` is not, since `1·2·7 = 14 ≠ 0`.
+   `[1, 2, 7]` is not, since `1Â·2Â·7 = 14 â‰  0`.
 4. Subspace. `0 = 0`; scaling preserves the equality; adding two points with
    equal first and second components gives another such point.
 
@@ -1950,13 +1950,13 @@ is a check, not a proof.
 
 </details>
 
-**[ ] Exercise 4 — a linear model of house prices.** Four houses have floor
+**[ ] Exercise 4 â€” a linear model of house prices.** Four houses have floor
 areas `80, 120, 150, 200` square metres and asking prices
 `290000, 410000, 500000, 690000` dollars.
 
-1. Fit the single rule `price = 3000·area + 50000` and report the residual for
+1. Fit the single rule `price = 3000Â·area + 50000` and report the residual for
    each house.
-2. Now fit `price_i = c_i · area_i` with one coefficient per house. Report the
+2. Now fit `price_i = c_i Â· area_i` with one coefficient per house. Report the
    coefficients and say why this model, despite fitting perfectly, is useless.
 3. Fit a slope and intercept from the first two houses only, then check it
    against all four.
@@ -2038,11 +2038,11 @@ idea behind regularisation in [lesson 100](../part08_optimization/100_convexity.
 
 </details>
 
-**[ ] Exercise 5 — independence, and a code count.** Write `is_independent` and
+**[ ] Exercise 5 â€” independence, and a code count.** Write `is_independent` and
 `dependent_relation` for a list of vectors, then decide independence for:
 `{[1,0], [0,1], [1,1]}`, `{[1,0], [0,1], [1,2]}`, `{[1,2], [2,4]}`, and
 `{[1,2], [2,3]}`. Verify one relation by hand. Then explain why the four vectors
-`e1, e2, e3, [1,1,1]` in `ℝ³` are dependent.
+`e1, e2, e3, [1,1,1]` in `â„Â³` are dependent.
 
 **Challenge.** The bit strings of length 4 satisfying "the number of 1 bits is
 even" and "bit 0 equals bit 3" form a subspace over GF(2). Enumerate its
@@ -2210,28 +2210,28 @@ Verify closure with the same three subspace conditions, using XOR as add.
   all three hold, so it really is a subspace, and a code by definition.
 ```
 
-The hand check: `-1·[1,0,0] + -1·[0,1,0] + 1·[1,1,0] = [-1,0,0] + [0,-1,0] + [1,1,0] = [0,0,0]`,
+The hand check: `-1Â·[1,0,0] + -1Â·[0,1,0] + 1Â·[1,1,0] = [-1,0,0] + [0,-1,0] + [1,1,0] = [0,0,0]`,
 which is the zero vector, so the set is dependent.
 
 </details>
 
-**[ ] Exercise 6 — the least-squares residual is perpendicular to the span.**
-Take the three generators `g₀ = [1,0,0]`, `g₁ = [0,1,0]`, `g₂ = [1,1,0]` in `ℝ³`
+**[ ] Exercise 6 â€” the least-squares residual is perpendicular to the span.**
+Take the three generators `gâ‚€ = [1,0,0]`, `gâ‚ = [0,1,0]`, `gâ‚‚ = [1,1,0]` in `â„Â³`
 and the target `t = [4, -1, 5]`.
 
 1. Show that `A c = t` has no solution, and say in one sentence why.
 2. Find the coefficients of the best fit and the residual. Report the squared
    length of the residual.
 3. Show that the residual is perpendicular to all three generators, including
-   the dependent one `g₂`.
+   the dependent one `gâ‚‚`.
 4. Find a second, different set of coefficients giving exactly the same fit.
    Explain what that tells you about the word "the" in "the least-squares
    solution".
 
-**Challenge.** Prove in general that when `c` minimises `‖A c − t‖²` over `c`,
-the residual `t − A c` is perpendicular to every column of `A`. Then use the
+**Challenge.** Prove in general that when `c` minimises `â€–A c âˆ’ tâ€–Â²` over `c`,
+the residual `t âˆ’ A c` is perpendicular to every column of `A`. Then use the
 result to explain why the minimum is unique in the *fitted point* but never
-unique in the *coefficients* when the columns of `A` are linearly dependent —
+unique in the *coefficients* when the columns of `A` are linearly dependent â€”
 and say what one should do about that in a real model.
 
 <details>
@@ -2239,7 +2239,7 @@ and say what one should do about that in a real model.
 
 Parts 1 to 4 by hand first. Write the product out with the generators as columns:
 
-    A c = c₀·[1,0,0] + c₁·[0,1,0] + c₂·[1,1,0] = (c₀ + c₂,  c₁ + c₂,  0)
+    A c = câ‚€Â·[1,0,0] + câ‚Â·[0,1,0] + câ‚‚Â·[1,1,0] = (câ‚€ + câ‚‚,  câ‚ + câ‚‚,  0)
 
 **Part 1.** The third component of `A c` is `0` for every choice of coefficients,
 but the third component of `t = (4, -1, 5)` is `5`. No `A c` can equal `t`, so
@@ -2247,33 +2247,33 @@ but the third component of `t = (4, -1, 5)` is `5`. No `A c` can equal `t`, so
 direction.
 
 **Part 2.** Drop the unreachable part of the target, so we ask for
-`A c = (4, -1, 0)`. Taking `c₂ = 0` gives `c₀ = 4`, `c₁ = -1`, hence
+`A c = (4, -1, 0)`. Taking `câ‚‚ = 0` gives `câ‚€ = 4`, `câ‚ = -1`, hence
 
     c = (4, -1, 0),   fit = A c = (4, -1, 0),   residual = t - fit = (0, 0, 5)
 
-Squared length of the residual: `0² + 0² + 5² = 25`. Length `5`.
+Squared length of the residual: `0Â² + 0Â² + 5Â² = 25`. Length `5`.
 
 **Part 3.** Perpendicularity, by hand:
 
-    (0,0,5) · (1,0,0) = 0
-    (0,0,5) · (0,1,0) = 0
-    (0,0,5) · (1,1,0) = 0 + 0 + 0 = 0
+    (0,0,5) Â· (1,0,0) = 0
+    (0,0,5) Â· (0,1,0) = 0
+    (0,0,5) Â· (1,1,0) = 0 + 0 + 0 = 0
 
 All three are zero, so the residual is perpendicular to all three generators. It
 points along the third axis, which is exactly the direction the generators
 cannot reach.
 
-**Part 4.** Take `c₂ = 1`. Then `c₀ + 1 = 4` and `c₁ + 1 = -1`, so
+**Part 4.** Take `câ‚‚ = 1`. Then `câ‚€ + 1 = 4` and `câ‚ + 1 = -1`, so
 `c = (3, -2, 1)`, and
 
-    3·[1,0,0] + (-2)·[0,1,0] + 1·[1,1,0] = (3,0,0) + (0,-2,0) + (1,1,0) = (4,-1,0)
+    3Â·[1,0,0] + (-2)Â·[0,1,0] + 1Â·[1,1,0] = (3,0,0) + (0,-2,0) + (1,1,0) = (4,-1,0)
 
 The same fit, the same residual, the same squared distance `25`. Generally
 `c = (4 - t, -1 - t, t)` for any `t`, because the first two components are
-`c₀ + c₂` and `c₁ + c₂` and only those sums are pinned down. So the fitted point
+`câ‚€ + câ‚‚` and `câ‚ + câ‚‚` and only those sums are pinned down. So the fitted point
 is unique and the coefficients are not: "the least-squares solution" should be
-"a least-squares solution". Any statement of the form "the coefficient on `g₂`
-is 0" is meaningless — it is arbitrary, and a different pivot choice returns a
+"a least-squares solution". Any statement of the form "the coefficient on `gâ‚‚`
+is 0" is meaningless â€” it is arbitrary, and a different pivot choice returns a
 different number.
 
 ```python
@@ -2423,48 +2423,48 @@ smallest squared distance on a 13^3 grid = 25.0000
 our residual gives 25.0000. Nothing beats it.
 ```
 
-**Challenge, by hand.** Let `c*` be any minimiser of `f(c) = ‖A c − t‖²` and let
-`h` be an arbitrary displacement. With `r = A c* − t`:
+**Challenge, by hand.** Let `c*` be any minimiser of `f(c) = â€–A c âˆ’ tâ€–Â²` and let
+`h` be an arbitrary displacement. With `r = A c* âˆ’ t`:
 
-    f(c* + h) − f(c*)
-      = ‖r + A h‖² − ‖r‖²
-      = (‖r‖² + 2 r·(A h) + ‖A h‖²) − ‖r‖²
-      = 2 r·(A h) + ‖A h‖²
+    f(c* + h) âˆ’ f(c*)
+      = â€–r + A hâ€–Â² âˆ’ â€–râ€–Â²
+      = (â€–râ€–Â² + 2 rÂ·(A h) + â€–A hâ€–Â²) âˆ’ â€–râ€–Â²
+      = 2 rÂ·(A h) + â€–A hâ€–Â²
 
-If `r` is perpendicular to every column of `A`, then `r·(A h) = 0` for every `h`,
-and `f(c* + h) − f(c*) = ‖A h‖² ≥ 0`, so `c*` is a global minimum. Conversely, if
-`r·(A h) ≠ 0` for some `h` then for `h` and `−h` the two differences are
-`2 r·(A h) + ‖A h‖²` and `−2 r·(A h) + ‖A h‖²`, whose minimum is
-`‖A h‖² − 2|r·(A h)|`; if `r·(A h)` is nonzero enough to outweigh `‖A h‖²/2` that
+If `r` is perpendicular to every column of `A`, then `rÂ·(A h) = 0` for every `h`,
+and `f(c* + h) âˆ’ f(c*) = â€–A hâ€–Â² â‰¥ 0`, so `c*` is a global minimum. Conversely, if
+`rÂ·(A h) â‰  0` for some `h` then for `h` and `âˆ’h` the two differences are
+`2 rÂ·(A h) + â€–A hâ€–Â²` and `âˆ’2 rÂ·(A h) + â€–A hâ€–Â²`, whose minimum is
+`â€–A hâ€–Â² âˆ’ 2|rÂ·(A h)|`; if `rÂ·(A h)` is nonzero enough to outweigh `â€–A hâ€–Â²/2` that
 is negative and `c*` was not a minimum. Smallest positive values of `h` give
 exactly the normal equations, so the two conditions are equivalent. Hence
 
-    `r = A c* − t` ⟂ every column of `A`, i.e. `Aᵀ(A c* − t) = 0`, i.e.
-    `(Aᵀ A) c* = Aᵀ t` — the normal equations.
+    `r = A c* âˆ’ t` âŸ‚ every column of `A`, i.e. `Aáµ€(A c* âˆ’ t) = 0`, i.e.
+    `(Aáµ€ A) c* = Aáµ€ t` â€” the normal equations.
 
-That is why every least-squares routine in existence multiplies by `Aᵀ` first.
+That is why every least-squares routine in existence multiplies by `Aáµ€` first.
 
 Now the uniqueness question. The fitted point is unique because the fitted point
 *is* the closest point of the span, and a subspace is closed: if `p` and `q` are
-both closest to `t` then every point `s p + (1−s) q` of the segment joining them
+both closest to `t` then every point `s p + (1âˆ’s) q` of the segment joining them
 lies in the span and is at least as close, and the distance is a strictly convex
 function along that segment unless `p = q`. The coefficients are different: if the
 columns of `A` are dependent there is a nonzero `d` with `A d = 0`, so
-`A(c* + d) = A c*` for every `c*` already found. An entire line `c* + ℝ d` of
+`A(c* + d) = A c*` for every `c*` already found. An entire line `c* + â„ d` of
 coefficient vectors produces the identical fit, which is precisely what parts 3
 and 4 exhibit: `d = (-1, -1, 1)` is the relation among the three generators, and
-`c = (4, -1, 0) + t·(-1, -1, 1)` runs along it.
+`c = (4, -1, 0) + tÂ·(-1, -1, 1)` runs along it.
 
 What to do about it: a non-unique coefficient is not a numerical curiosity, it is
 a report that your model is over-parameterised. Two coefficients that are
-mathematically interchangeable can behave very differently in practice — with any
+mathematically interchangeable can behave very differently in practice â€” with any
 regularisation term, or any finite precision, the solver will pick one of them
 essentially arbitrarily, and the one it picks can change when you reorder your
 columns, change the data order, or upgrade numpy. The fix is to make the model
-minimal before fitting: drop the dependent column and keep `g₀, g₁`, at which
+minimal before fitting: drop the dependent column and keep `gâ‚€, gâ‚`, at which
 point the coefficients become unique and equal to `(4, -1)`. This is the same
 redundancy argument as Exercise 2's fourth part and the same reason
-`np.linalg.lstsq` reports a `rank` field alongside the coefficients — it is
+`np.linalg.lstsq` reports a `rank` field alongside the coefficients â€” it is
 telling you which of those two situations you are in.
 
 </details>
@@ -2482,8 +2482,8 @@ telling you which of those two situations you are in.
   the others.
 - More vectors than the dimension guarantees dependence, but the converse is
   false: you must row reduce to know.
-- The subspace test is three checks — contains zero, closed under scaling,
-  closed under addition — and no others.
+- The subspace test is three checks â€” contains zero, closed under scaling,
+  closed under addition â€” and no others.
 - Any subspace passes through the origin. A set that does not (a circle, a line
   offset from the origin) is an affine subspace, not a vector space.
 - Span and independence are about redundancy: drop every dependent vector and
@@ -2493,7 +2493,7 @@ telling you which of those two situations you are in.
 
 ## Next
 
-[31 — Matrices and Matrix Algebra](../part03_linear_algebra/31_matrices_and_matrix_algebra.md) takes the
+[31 â€” Matrices and Matrix Algebra](31_matrices_and_matrix_algebra.md) takes the
 list of vectors from this lesson and puts them in a grid, then makes the grid do
 arithmetic: multiplication, transpose, powers, and the special shapes that
 structured problems rely on.

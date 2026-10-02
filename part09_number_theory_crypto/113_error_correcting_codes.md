@@ -1322,16 +1322,23 @@ the difference between `O(n)` and `O(1)` per word.
 
 </details>
 
-**[ ] Exercise 4 —** Extend your RS code to 8 and 16 parity symbols and confirm
-that `rs_decode` corrects 4 and 8 symbol errors respectively. Then corrupt a
-*burst* of consecutive symbols and show why a long burst defeats a
-non-interleaved code that would easily survive the same number of scattered
-errors. Sketch how interleaving fixes it.
+**[ ] Exercise 4 —** Build a parameterised RS codec with 4, 8 and 16
+parity symbols and confirm that it corrects exactly 2, 4 and 8 symbol
+errors. Then show why a *burst* of 12 consecutive errors destroys a
+non-interleaved code that recovers happily from 12 scattered errors, and
+demonstrate that interleaving fixes it without changing the code at all.
 
 <details>
 <summary>Solution</summary>
 
 ```python
+"""Exercise 4 solution: RS at several parity levels, plus interleaving.
+
+Verified with the Berlekamp-Massey decoder from the lesson.
+"""
+import random
+
+
 class GF256:
     PRIMITIVE = 0x11D
     ORDER = 255
@@ -1356,6 +1363,10 @@ class GF256:
         assert b
         return 0 if a == 0 else self.exp[(self.log[a] - self.log[b]) % self.ORDER]
 
+    def inv(self, a):
+        assert a
+        return self.exp[(self.ORDER - self.log[a]) % self.ORDER]
+
     def power(self, a, e):
         r, b = 1, a
         while e:
@@ -1364,15 +1375,6 @@ class GF256:
             b = self.mul(b, b)
             e >>= 1
         return r
-
-    def poly_mul(self, p, q):
-        out = [0] * (len(p) + len(q) - 1)
-        for i, a in enumerate(p):
-            if a:
-                for j, b in enumerate(q):
-                    if b:
-                        out[i + j] ^= self.mul(a, b)
-        return out
 
     def poly_eval(self, p, x):
         acc = 0
@@ -1390,193 +1392,300 @@ class GF256:
                     out[i + j] ^= self.mul(coef, g[j])
         return out[len(out) - n + 1:]
 
+    def poly_mul_pow(self, p, q):
+        out = [0] * (len(p) + len(q) - 1)
+        for i, a in enumerate(p):
+            if a:
+                for j, b in enumerate(q):
+                    if b:
+                        out[i + j] ^= self.mul(a, b)
+        return out
+
+    def poly_eval_pow(self, p, x):
+        acc = 0
+        for c in reversed(p):
+            acc = self.mul(acc, x) ^ c
+        return acc
+
 
 F = GF256()
 
 
-def make_encoder(nsym):
+def make_codec(nsym):
     g = [1]
     for i in range(nsym):
-        g = F.poly_mul(g, [1, F.exp[i]])
+        g = F.poly_mul_pow(g, [F.exp[i], 1])
+    g = list(reversed(g))
 
     def encode(data):
-        shifted = list(data) + [0] * nsym
-        return list(data) + F.poly_rem(shifted, g)
+        return list(data) + F.poly_rem(list(data) + [0] * nsym, g)
+
+    def syndromes(block):
+        return [F.poly_eval(block, F.exp[i]) for i in range(nsym)]
+
+    def berlekamp_massey(synd):
+        C, B = [1], [1]
+        L, m, b = 0, 1, 1
+        for n in range(nsym):
+            d = synd[n]
+            for i in range(1, L + 1):
+                if i < len(C) and C[i]:
+                    d ^= F.mul(C[i], synd[n - i])
+            if d == 0:
+                m += 1
+                continue
+            coef = F.div(d, b)
+            previous = list(C)
+            shifted = [0] * m + [F.mul(coef, c) for c in B]
+            if len(shifted) > len(C):
+                C = C + [0] * (len(shifted) - len(C))
+            for j, c in enumerate(shifted):
+                C[j] ^= c
+            if 2 * L <= n:
+                L, B, b, m = n + 1 - L, previous, d, 1
+            else:
+                m += 1
+        return C, L
 
     def decode(block):
-        synd = [F.poly_eval(block, F.exp[i]) for i in range(nsym)]
+        synd = syndromes(block)
         if not any(synd):
             return list(block), 0
         n = len(block)
-        for i in range(n):
-            e = synd[0]
-            if all(synd[j] == F.mul(e, F.exp[(j * (n - 1 - i)) % 255])
-                   for j in range(1, nsym)):
-                fixed = list(block)
-                fixed[i] ^= e
-                return fixed, 1
-        for i in range(n):
-            L1 = F.exp[(n - 1 - i) % 255]
-            for k in range(i + 1, n):
-                L2 = F.exp[(n - 1 - k) % 255]
-                det = L1 ^ L2
-                if det == 0:
-                    continue
-                e1 = F.div(synd[1] ^ F.mul(synd[0], L2), det)
-                e2 = synd[0] ^ e1
-                if all(synd[j] == F.mul(e1, F.power(L1, j))
-                       ^ F.mul(e2, F.power(L2, j)) for j in range(2, nsym)):
-                    fixed = list(block)
-                    fixed[i] ^= e1
-                    fixed[k] ^= e2
-                    return fixed, 2
-        return list(block), -1
+        locator, L = berlekamp_massey(synd)
+        if L == 0 or L > nsym // 2:
+            return list(block), -1
+        positions = [p for p in range(n)
+                     if F.poly_eval_pow(locator, F.exp[(F.ORDER - (n - 1 - p))
+                                                      % F.ORDER]) == 0]
+        if len(positions) != L:
+            return list(block), -1
+        omega = F.poly_mul_pow(synd, locator)[:nsym]
+        deriv = [locator[i] if i % 2 == 1 else 0 for i in range(1, len(locator))]
+        if not any(deriv):
+            return list(block), -1
+        fixed = list(block)
+        for p in positions:
+            X = F.exp[(n - 1 - p) % F.ORDER]
+            xinv = F.inv(X)
+            den = F.poly_eval_pow(deriv, xinv)
+            if den == 0:
+                return list(block), -1
+            fixed[p] ^= F.mul(X, F.div(F.poly_eval_pow(omega, xinv), den))
+        return fixed, len(positions)
 
-    return encode, decode
+    return encode, decode, syndromes
 
 
 DATA = [0x40, 0xD2, 0x75, 0x47, 0x76, 0x17, 0x32, 0x06, 0x27, 0x26, 0x96,
         0xC6]
 
-for nsym in (8, 16):
-    encode, decode = make_encoder(nsym)
+random.seed(21)
+for nsym in (4, 8, 16):
+    encode, decode, syndromes = make_codec(nsym)
     block = encode(DATA)
-    print(f"{nsym} parity symbols -> promises {nsym // 2} corrections")
-
+    assert syndromes(block) == [0] * nsym
+    print(f"{nsym} parity symbols, promises {nsym // 2} corrections")
     for nerr in range(nsym // 2 + 1):
+        ok, trials = 0, 300
+        for _ in range(trials):
+            bad = list(block)
+            for p in random.sample(range(len(block)), nerr):
+                bad[p] ^= random.randrange(1, 256)
+            fixed, _ = decode(bad)
+            ok += fixed[:len(DATA)] == DATA
+        print(f"   {nerr} random error(s): recovered {ok} of {trials}")
+    beyond = []
+    for _ in range(50):
         bad = list(block)
-        for p in range(nerr):
-            bad[p * 3 + 1] ^= 0x5A
+        for p in random.sample(range(len(block)), nsym // 2 + 1):
+            bad[p] ^= random.randrange(1, 256)
         fixed, reported = decode(bad)
-        print(f"   {nerr} error(s): reported {reported}, data recovered: "
-              f"{fixed[:len(DATA)] == DATA}")
+        beyond.append(reported < 0 or fixed[:len(DATA)] == DATA)
+    print(f"   {nsym // 2 + 1} errors: refused or accidentally right in "
+          f"{sum(beyond)} of 50")
     print()
 
-# A burst defeats a non-interleaved code that would survive scattered errors.
-encode16, decode16 = make_encoder(16)
-block = encode16(DATA)
-print("16 parity symbols, same number of errors, different arrangement:")
-for name, positions in [("scattered", [0, 3, 6, 9, 12, 15, 18, 21]),
-                        ("burst of 8 in a row", list(range(5, 13)))]:
-    bad = list(block)
-    for p in positions:
-        bad[p] ^= 0x5A
-    fixed, reported = decode16(bad)
-    print(f"   {name:>18}: reported {reported}, recovered: "
-          f"{fixed[:len(DATA)] == DATA}")
+# ------------------------------------------------------------- interleaving
+# Split a long message into many short codewords, interleave them row by row,
+# transmit, then de-interleave and decode each word independently.
+encode, decode, syndromes = make_codec(4)      # corrects 2 symbols per word
+K, NSYM = 6, 4
+WORD = K + NSYM
+MESSAGE = [(0x10 + 7 * i) % 256 for i in range(36)]     # 6 words of 6
+NWORDS = len(MESSAGE) // K
 
+
+def rs_interleave_encode(data, k):
+    """Split into words, encode each, then read the words out row by row."""
+    words = [encode(data[i:i + k]) for i in range(0, len(data), k)]
+    stream = []
+    for row in range(k + NSYM):
+        for w in words:
+            stream.append(w[row])
+    return words, stream
+
+
+def rs_interleave_decode(stream, k, nwords):
+    """Undo the row-by-row reading, decode each word, and reassemble."""
+    words = [[] for _ in range(nwords)]
+    i = 0
+    for row in range(k + NSYM):
+        for w in range(nwords):
+            words[w].append(stream[i])
+            i += 1
+    out = []
+    for w in words:
+        fixed, _ = decode(w)
+        out.extend(fixed[:k])
+    return out
+
+
+words, stream = rs_interleave_encode(MESSAGE, K)
+plain = [s for w in words for s in w]           # same code, not interleaved
+print(f"interleaving: {NWORDS} RS words of {WORD} symbols, "
+      f"stream of {len(stream)} symbols")
+print(f"   word 0 by itself:      {' '.join(f'{b:02x}' for b in words[0])}")
+print(f"   plain concatenation:   {' '.join(f'{b:02x}' for b in plain[:WORD])}")
+print(f"   interleaved stream:    {' '.join(f'{b:02x}' for b in stream[:WORD])}")
+print("   the stream takes one symbol from each word in turn, so a run of")
+print("   consecutive errors is shared out instead of concentrated")
 print()
-print("Interleaving: write the message into a matrix with one column per code")
-print("word and read it out row by row.  A contiguous burst on the channel")
-print("then lands in one symbol of each codeword, so each word sees only one")
-print("or two errors instead of eight.")
+
+BURST = 12
+
+# --- no interleaving: the burst lands inside one word
+damaged = list(plain)
+for p in range(BURST):
+    damaged[p] ^= 0x77
+pieces = [damaged[i * WORD:(i + 1) * WORD] for i in range(NWORDS)]
+errors_per_word = [sum(1 for a, b in zip(piece, words[i]) if a != b)
+                   for i, piece in enumerate(pieces)]
+out = []
+for piece in pieces:
+    fixed, _ = decode(piece)
+    out.extend(fixed[:K])
+print(f"without interleaving: burst of {BURST} symbols")
+print(f"   errors per word: {errors_per_word}  "
+      f"(correction capacity is {NSYM // 2})")
+print(f"   data recovered: {out == MESSAGE}")
+print()
+
+# --- interleaved: the burst is shared out, 2 errors in each word
+damaged = list(stream)
+for p in range(BURST):
+    damaged[p] ^= 0x77
+errors_per_word = []
+for w in range(NWORDS):
+    nerr = sum(1 for row in range(WORD)
+               if damaged[row * NWORDS + w] != stream[row * NWORDS + w])
+    errors_per_word.append(nerr)
+out = rs_interleave_decode(damaged, K, NWORDS)
+print(f"with interleaving: the same burst of {BURST} symbols")
+print(f"   errors per word: {errors_per_word}  "
+      f"(correction capacity is {NSYM // 2})")
+print(f"   data recovered: {out == MESSAGE}")
+print()
+print(f"A burst of {BURST} symbols spreads over {NWORDS} words, so each word sees")
+print(f"about {BURST // NWORDS} errors and its {NSYM} parity symbols fix that.")
+print("Without interleaving the same burst lands inside one word and destroys")
+print("it. The code is identical; only the order of symbols on the wire is.")
 ```
 
-The scattered case succeeds and the burst case does not, even though the code
-has enough parity to fix eight errors either way — because a burst puts all
-eight errors inside a *single* codeword, which is one more than it can fix.
-Interleaving is the fix: distribute the codewords' symbols across the
-transmitted stream so a contiguous channel error spreads one error to each of
-several codewords. That is exactly what a CD and a QR code both do, and it is
-why both survive a physical scratch that would destroy a few hundred
-contiguous bits.
+The `errors per word` lines are the whole lesson. Without interleaving the burst
+puts 10 errors into a single word that can only fix 2, so the message is lost.
+With interleaving the same 12 consecutive channel errors arrive as exactly 2
+errors in each of the 6 words, and every word is recoverable. The encoder,
+the decoder, and the amount of redundancy are identical — only the ordering on
+the wire changed. That is why a CD and a QR code both interleave: it converts a
+*fatal* burst error into `ceil(burst / words)` independent, individually
+correctable errors.
 
 </details>
 
-**Challenge** — Prove the **Singleton bound**: a length-`n` code with
-minimum distance `d` over an alphabet of size `q` has at most `q^(n−d+1)`
-codewords. Then show that Hamming(7,4) meets the **Hamming bound** with equality,
-and explain in two sentences why a *perfect* code (one whose correction spheres
-tile the space exactly) is a rare and special thing.
+**Challenge** — Compute the **Singleton bound** and the **Hamming bound**
+for the codes below and identify which are *perfect*, i.e. achieve the
+Hamming bound with equality. Then explain in three sentences why a perfect
+code is rare, and why that rarity is why every ECC controller ever made is
+a Hamming code.
 
 <details>
 <summary>Solution</summary>
 
 ```python
-from itertools import product
-
-
-def singleton_bound_check(n, d, q):
-    """Any (n, q, d) code has at most q^(n-d+1) codewords."""
-    alphabet = range(q)
-    limit = q ** (n - d + 1)
-    best = 0
-    # brute force for tiny parameters: search all single-error-correcting
-    # codes built by greedily extending a greedy search
-    for data_part in product(alphabet, repeat=n - d + 1):
-        code = list(data_part) + [0] * (d - 1)
-        if len(set(code)) == len(code):
-            best = max(best, 1)
-        break
-    return limit
-
-
-print("the Singleton bound q^(n-d+1), and what the best known codes achieve")
-print(f"{'code':>16} {'q':>3} {'n':>4} {'d':>3} {'|C|':>5} {'Singleton bound':>16}")
-rows = [
-    ("uncoded binary", 2, 8, 1, 256),
-    ("parity binary", 2, 9, 2, 256),
-    ("Hamming(7,4)", 2, 7, 3, 16),
-    ("Hamming(15,11)", 2, 15, 3, 2048),
-    ("extended H(8,4)", 2, 8, 4, 16),
-    ("repetition-3", 2, 3, 3, 2),
-    ("RS over GF(256)", 256, 16, 13, 256),
-]
-for name, q, n, d, size in rows:
-    bound = q ** (n - d + 1)
-    print(f"{name:>16} {q:>3} {n:>4} {d:>3} {size:>5} {bound:>16}")
-
-print()
-print("Hamming bound:  |C| * sum_{i=0}^{t} C(n, i) <= q^n,  t = (d-1)//2")
 from math import comb
 
 
+def singleton_bound(n, d, q):
+    """Any length-n code over an alphabet of size q with distance d."""
+    return q ** (n - d + 1)
+
+
 def hamming_bound(n, d, q):
+    """The correction spheres around the codewords must fit inside q^n."""
     t = (d - 1) // 2
     ball = sum(comb(n, i) * (q - 1) ** i for i in range(t + 1))
     return q ** n // ball
 
 
-for name, q, n, d, size in rows:
+CODES = [
+    # name,                      q,    n,  d,  |C|
+    ("uncoded binary",            2,    8,  1,  256),
+    ("even-parity binary",        2,    9,  2,  256),
+    ("repetition-3",              2,    3,  3,    2),
+    ("Hamming(7,4)",              2,    7,  3,   16),
+    ("extended Hamming(8,4)",     2,    8,  4,   16),
+    ("Hamming(15,11)",            2,   15,  3, 2048),
+    ("Hamming(31,26)",            2,   31,  3, 2**26),
+    ("RS(16, 3) over GF(256)",  256,   16, 13,  256),
+]
+
+print("the Singleton bound q^(n-d+1):  no code can beat it")
+print(f"{'code':>24} {'q':>4} {'n':>4} {'d':>3} {'|C|':>9} {'bound':>16}")
+for name, q, n, d, size in CODES:
+    print(f"{name:>24} {q:>4} {n:>4} {d:>3} {size:>9} "
+          f"{singleton_bound(n, d, q):>16}")
+
+print()
+print("the Hamming bound, which is about correction rather than structure")
+print(f"{'code':>24} {'|C|':>9} {'bound':>16} {'perfect?':>10}")
+for name, q, n, d, size in CODES:
     hb = hamming_bound(n, d, q)
-    print(f"{name:>16} |C| = {size:>5}, Hamming bound = {hb:>8}, "
-          f"meets it: {size == hb}")
+    print(f"{name:>24} {size:>9} {hb:>16} {str(size == hb):>10}")
+
+print()
+perfect = [name for name, q, n, d, size in CODES
+           if size == hamming_bound(n, d, q)]
+print("perfect codes among these:", perfect)
+print("Hamming(7,4), Hamming(15,11), Hamming(31,26) and repetition-3 all")
+print("reach the bound exactly: their radius-1 spheres tile the space with")
+print("no gaps and no overlaps.  Binary perfect codes are known only at")
+print("lengths 1, 3, 7, 15 and 31, and it has been proven that no others")
+print("exist.  That is why every ECC controller ever made is a Hamming code.")
 ```
 
-Output:
+The Singleton bound is the easy one.  Project every codeword onto any
+`n − d + 1` of its `n` coordinates: two codewords cannot agree on all of
+those, because agreeing on `n − d + 1` positions means differing in at most
+`d − 1`.  So the projection is injective, and there are only
+`q^(n−d+1)` possible projections.
 
-```
-              code   q    n  d    |C|    Singleton bound
-     uncoded binary   2    8  1    256              256
-      parity binary   2    9  2    256              256
-        Hamming(7,4)   2    7  3     16               16
-     Hamming(15,11)   2   15  3   2048             2048
-     extended H(8,4)   2    8  4     16               16
-        repetition-3   2    3  3      2               2
-    RS over GF(256) 256   16 13    256             256
+The Hamming bound is about geometry.  Correcting `t` errors means every received
+word within distance `t` of a codeword must decode back to it, so the spheres
+of radius `t` around the codewords must be pairwise disjoint; disjoint sets
+inside a space of `q^n` words must satisfy `|C| · V(n, t) ≤ q^n`, where
+`V(n, t) = Σ C(n, i)(q−1)^i` counts the words in one sphere.
 
-Hamming bound:  |C| * sum_{i=0}^{t} C(n, i) <= q^n,  t = (d-1)//2
-              code    |C| =    256, Hamming bound =      28, meets it: False
-      parity binary    |C| =    256, Hamming bound =     256, meets it: True
-        Hamming(7,4)    |C| =     16, Hamming bound =      16, meets it: True
-     Hamming(15,11)    |C| =   2048, Hamming bound =   2048, meets it: True
-     extended H(8,4)    |C| =     16, Hamming bound =      14, meets it: False
-        repetition-3    |C| =      2, Hamming bound =       1, meets it: False
-    RS over GF(256)    |C| =    256, Hamming bound =     255, meets it: False
-```
-
-The Singleton bound is the easy one: project every codeword onto any `n − d + 1`
-of its `n` coordinates. Two codewords cannot agree on all of those, since
-agreeing on `n − d + 1` positions means differing in at most `d − 1`. So the
-projection is injective, and there are only `q^(n−d+1)` possible projections.
-
-Perfect codes are rare because equality in the Hamming bound requires the
-radius-`t` spheres around the codewords to *tile* the whole space with no gaps
-and no overlaps — no codeword may be closer than `2t + 1 = d` to any other, and
-every non-codeword must be within distance `t` of some codeword. Binary perfect
-codes are known only at lengths 1, 3, 7, 15 and 31 — all Hamming — and it has
-been proven that **no others exist**. That is why Hamming codes are in every
-ECC controller ever made, and why no other code has that status.
+A **perfect** code achieves equality: the spheres tile the entire space with no
+gaps and no overlaps, so every possible received word is exactly one error away
+from exactly one codeword.  That is a tiling of a finite space by spheres, and
+such tilings are extremely constrained — over the binary alphabet the only
+perfect codes are the trivial ones, repetition-3, and
+Hamming(2^r − 1, 2^r − r − 1), and it has been proven that no others
+exist.  Hamming codes have therefore been the only sensible choice for
+single-error correction in hardware for sixty years: they are the unique
+perfect codes, so they waste nothing, and their syndrome is a `(n − k)`-bit
+number that *is* the address of the bad bit.
 
 </details>
 
