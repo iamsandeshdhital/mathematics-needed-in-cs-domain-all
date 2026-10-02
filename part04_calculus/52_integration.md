@@ -2130,8 +2130,10 @@ print()
 print("(b) column j=1 against Simpson's rule:")
 for k in range(1, 7):
     n = 2 ** k
-    print(f"   n={n:>3}  R[k][1] = {R[k][1]:.12f}   Simpson = {simpson(math.sin, a, b, n):.12f}"
-          f"   identical = {R[k][1] == simpson(math.sin, a, b, n)}")
+    rk1 = R[k][1]
+    sim = simpson(math.sin, a, b, n)
+    print(f"   n={n:>3}  R[k][1] = {rk1:>18.15f}   Simpson = {sim:>18.15f}"
+          f"   bitwise equal = {rk1 == sim}   |diff| = {abs(rk1 - sim):.3e}")
 print()
 print("(c) one more column, j=3 (order 8):")
 for k in (3, 4):
@@ -2179,16 +2181,38 @@ errors:
 absolute error than $T_2 = 1.570796326795$: extrapolating from a single coarse level is not
 yet an improvement, and you need at least two levels before Richardson pays.
 
-(b) The equality holds bit for bit at every $n$, not merely approximately. The reason is
-algebra, not numerology. Write the trapezoid rule with its error expansion
-$T_n = I + \frac{c_2}{n^2} + \frac{c_4}{n^4} + O(n^{-6})$, where $I$ is the true integral
-and $c_2, c_4$ depend only on $f$. Since $T_{2n} = I + \frac{c_2}{4n^2} +
-\frac{c_4}{16n^4} + O(n^{-6})$, the combination $\frac{4T_n - T_{2n}}{3}$ cancels the
-$c_2/n^2$ term exactly and leaves $I + \frac{c_4}{4n^4} + \dots$. With $h = (b-a)/n$ the
-$n^4$ is an $h^4$, so the rule is fourth order. A three-node rule that integrates
-constants, linears and quadratics exactly is uniquely determined by those three conditions,
-so the fourth-order rule must be Simpson's. The 1-4-1 weights and the "error
-$\propto f^{(4)}$" property are two faces of one fact.
+(b) **The equality is a theorem in exact arithmetic and it is *not* bit-for-bit in
+floating point — the code proves it, and the failure is the interesting part.** The
+printed `bitwise equal` column reads `False` at every $n$, even though the two numbers
+agree to all 15 displayed digits. The reason is that they are computed by
+*different arithmetic sequences*: $R_{k,1}$ reaches its value by differencing two
+trapezoid estimates and dividing by $3$, whereas `simpson` accumulates $1,4,2,4,\dots$
+weights directly. Rounding happens at every step of both, and the roundings do not
+cancel. So $|R_{k,1} - S_n|$ is a few units in the last place — visible in the
+`|diff|` column and invisible at 15 digits.
+
+The identity itself is algebra, not numerology, and it does hold exactly over the
+reals. Write the trapezoid rule with its error expansion
+
+$$T_n = I + \frac{c_2}{n^2} + \frac{c_4}{n^4} + O(n^{-6}),$$
+
+where $I$ is the true integral and $c_2, c_4$ depend only on $f$. Since
+$T_{2n} = I + \frac{c_2}{4n^2} + \frac{c_4}{16n^4} + O(n^{-6})$, the combination
+$\frac{4T_n - T_{2n}}{3}$ cancels the $c_2/n^2$ term **exactly** and leaves
+$I + \frac{c_4}{4n^4} + \dots$. With $h = (b-a)/n$ the $n^4$ is an $h^4$, so the rule
+is fourth order. A three-node rule that integrates constants, linears and quadratics
+exactly is uniquely determined by those three conditions, so the fourth-order rule
+*must* be Simpson's. The $1,4,1$ weights and the "error $\propto f^{(4)}$" property
+are two faces of one fact.
+
+**What would break if you tested with `==`.** A "bit-for-bit" test is the one check
+that cannot distinguish a correct implementation from a lucky one here, because it
+fails for the *right* reason and would also fail for a subtly wrong one. Compare
+magnitudes instead: `|diff|` is the number to watch, and it should sit at the rounding
+level — a handful of ulp — rather than at the integration error level, which is many
+orders of magnitude larger. If you ever see a program that claims two mathematically
+equal quantities are `==` identical in floating point, the thing to check first is
+whether the two sides were computed by the same sequence of operations.
 
 (c) Column 3 reaches order 8: `5.550e-06` at $k=3` and `1.629e-08` at $k=4` — a factor of
 about 340 for one doubling, consistent with $2^8 = 256$ plus a changing constant. Compare
