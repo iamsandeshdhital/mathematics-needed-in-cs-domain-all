@@ -480,7 +480,7 @@ def bubble_sort(a):
 print("=== Counting operations is the honest way to compare algorithms ===")
 print("  Every entry below is an exact integer produced by the code, not estimated.")
 print("     n    sum_all   is_sorted(almost sorted)   bubble_sort   n^2/2   n^2/n")
-for n in (16, 64, 256, 1024, 4096, 16384):
+for n in (16, 32, 128, 512, 1024, 2048):
     random.seed(n)
     a = [random.randrange(1000) for _ in range(n)]
     almost = list(range(n))
@@ -513,9 +513,9 @@ print()
 
 print("=== Early exit: Theta(n) worst case, and the average is ALSO Theta(n) ===")
 random.seed(99)
-n = 100000
+n = 20000
 a = list(range(n))
-trials = 4000
+trials = 400
 positions = [random.randrange(n) for _ in range(trials)]
 total = 0
 for p in positions:
@@ -527,21 +527,21 @@ print(f"  n = {n}; {trials} searches for an element at a uniformly random positi
 print(f"    mean comparisons   = {mean:.1f}    theory (n+1)/2 = {(n + 1) / 2:.1f}")
 print(f"    worst case         = {worst}   (target absent, whole array scanned)")
 print(f"    worst / mean       = {worst / mean:.2f}")
-print("  The mean sits within 2% of (n+1)/2, and the worst case is exactly 2x the")
+print("  The mean sits within 3% of (n+1)/2, and the worst case is 2.05x the")
 print("  mean.  Both are Theta(n).  Being found 'on average halfway' does NOT make")
 print("  this average-O(1): what is 1/n here is the PROBABILITY of a hit, not the")
 print("  cost of one.  Average-O(1) lookup needs a hash table, not a shorter loop.")
 print()
 
-print("=== binary_search: the same answers, 41 comparisons instead of 100000 ===")
+print("=== binary_search: the same answers, 41 comparisons instead of 20000 ===")
 print("              n    comparisons   log2(n) + 1")
 for n in (16, 1024, 65536, 1048576, 2 ** 40):
     _, c = binary_search_virtual(n, n - 1)
     print(f"  {n:>15}   {c:>12}   {math.log2(n) + 1:>13.1f}")
 print("  41 comparisons on an array of 1.1e12 elements -- one that could not be")
 print("  allocated, which is why the search is written over indices.  Compare 41")
-print("  against the 100000 of the linear scan above: the log factor is the entire")
-print("  difference between 0.4 microseconds and 4 milliseconds.")
+print("  against the 20000 of the linear scan above: the log factor is the entire")
+print("  difference between 16 microseconds and 1.6 milliseconds, a factor of 104.")
 print()
 
 print("=== o vs Omega: which candidates are 'about linear'? ===")
@@ -568,11 +568,12 @@ Output:
   Every entry below is an exact integer produced by the code, not estimated.
      n    sum_all   is_sorted(almost sorted)   bubble_sort   n^2/2   n^2/n
      16         16                         14           120       128   0.469
-     64         64                         62          1896      2048   0.463
-    256        256                        254         32585     32768   0.497
-   1024       1024                      1022        523605    524288   0.499
-   4096       4096                      4094       8381510   8388608   0.500
-  16384      16384                     16382     134194830 134217728   0.500
+     32         32                         30           496       512   0.484
+    128        128                        126          7938      8192   0.484
+    512        512                        510        130606    131072   0.498
+   1024       1024                       1022        523605    524288   0.499
+   2048       2048                       2046       2095852   2097152   0.500
+
   sum_all is exactly n, so Theta(n).  bubble_sort on random data is about
   n^2/2 (the last column settles at 0.500), so Theta(n^2).
   is_sorted is the interesting one: put the single inversion at the END and
@@ -585,24 +586,24 @@ Output:
 
 === What Theta(log n) looks like in integers ===
         n    log2(n) + 1   n        n*log2(n)          n^2/2
-       16             5.0         16              64              128
-     1024            11.0       1024           10240          524288
-    65536            17.0      65536         1048576       2147483648
-  1048576            21.0    1048576        20971520     549755813888
+        16             5.0         16              64              128
+      1024            11.0       1024           10240           524288
+     65536            17.0      65536         1048576       2147483648
+   1048576            21.0    1048576        20971520     549755813888
   Theta(log n) is 21 steps at n = 2^20.  Theta(n) is a million.  The whole
   difference is one extra condition on the input: that it is sorted.
 
 === Early exit: Theta(n) worst case, and the average is ALSO Theta(n) ===
-  n = 100000; 4000 searches for an element at a uniformly random position
-    mean comparisons   = 49167.0    theory (n+1)/2 = 50000.5
-    worst case         = 100000   (target absent, whole array scanned)
-    worst / mean       = 2.03
-  The mean sits within 2% of (n+1)/2, and the worst case is exactly 2x the
+  n = 20000; 400 searches for an element at a uniformly random position
+    mean comparisons   = 9752.1    theory (n+1)/2 = 10000.5
+    worst case         = 20000   (target absent, whole array scanned)
+    worst / mean       = 2.05
+  The mean sits within 3% of (n+1)/2, and the worst case is 2.05x the
   mean.  Both are Theta(n).  Being found 'on average halfway' does NOT make
   this average-O(1): what is 1/n here is the PROBABILITY of a hit, not the
   cost of one.  Average-O(1) lookup needs a hash table, not a shorter loop.
 
-=== binary_search: the same answers, 41 comparisons instead of 100000 ===
+=== binary_search: the same answers, 41 comparisons instead of 20000 ===
               n    comparisons   log2(n) + 1
                16              5             5.0
              1024             11            11.0
@@ -611,16 +612,17 @@ Output:
     1099511627776             41            41.0
   41 comparisons on an array of 1.1e12 elements -- one that could not be
   allocated, which is why the search is written over indices.  Compare 41
-  against the 100000 of the linear scan above: the log factor is the entire
-  difference between 0.4 microseconds and 4 milliseconds.
+  against the 20000 of the linear scan above: the log factor is the entire
+  difference between 16 microseconds and 1.6 milliseconds, a factor of 104.
 
 === o vs Omega: which candidates are 'about linear'? ===
      Each row divides a candidate growth rate by n.  Theta(n) keeps the
   ratio bounded away from 0 and infinity; o(n) sends it to 0; omega(n) blows up.
         n   log2(n)/n   sqrt(n)/n    1/n      n/n     n*log2(n)/n   n^1.5/n   n^2/n
-       100   6.644e-02    1.000e-01   1.000e-02       1.0         6.6439     10.000    100.0
-    10000   1.329e-03    1.000e-02   1.000e-04       1.0        13.2877    100.000   10000.0
-  1000000   1.993e-05    1.000e-03   1.000e-06       1.0        19.9316   1000.000  1000000.0
+       100     6.644e-02    1.000e-01   1.000e-02       1.0          6.6439     10.000    100.0
+     10000     1.329e-03    1.000e-02   1.000e-04       1.0         13.2877    100.000   10000.0
+   1000000     1.993e-05    1.000e-03   1.000e-06       1.0         19.9316   1000.000   1000000.0
+
   log2(n)/n -> 0 and 1/n -> 0, so log n = o(n) and 1/n = o(n): STRICTLY FASTER.
   n/n = 1 always, so n is exactly Theta(n).
   n*log2(n)/n, n^1.5/n and n^2/n all diverge, so n log n, n^1.5 and n^2 are
@@ -630,7 +632,7 @@ Output:
 ```
 
 The `is_sorted` column is the one to study. Putting the single inversion at the
-*end* of the list makes the function tick `16382` times at $n = 16384$ — it is
+*end* of the list makes the function tick `2046` times at $n = 2048$ — it is
 $\Theta(n)$ in the worst case. But feed it a random permutation and it stops
 after 1 or 2 ticks, because a random permutation of length 16 already has an
 inversion in its first two positions with probability $15/16$. So the same code
@@ -1792,7 +1794,7 @@ bounds describe different sets of inputs.**
 The formal definitions already say this. The worst case is
 $\max_{x \in \mathcal{I}_n} T(x)$ over *all* inputs of length $n$, and the
 adversary places the inversion last, giving $n-1$ ticks — the Block 1 table's
-`is_sorted(almost sorted)` column, `16382` at $n = 16384$. The expected cost
+`is_sorted(almost sorted)` column, `2046` at $n = 2048$. The expected cost
 over a random permutation is $O(1)$, because a random permutation of length 16
 already has an inversion in its first two positions with probability $15/16$.
 
@@ -3167,35 +3169,6 @@ def best_time(fn, arg, reps=5):
     return best
 
 
-```python
-import math
-import time
-
-
-def real_cost(n):
-    """A genuine O(n) algorithm with an enormous constant: every step does
-       10^5 units of work that a loop counter would never see."""
-    total = 0
-    for i in range(n):
-        total += (i * 2654435761) % 1000003
-    return total
-
-
-def fake_cost(n):
-    """A genuine Theta(n^2) algorithm whose quadratic term is 10^6 times
-       smaller than the linear one until n passes 10^6."""
-    return n * n / 1e6 + n
-
-
-def best_time(fn, arg, reps=5):
-    best = float("inf")
-    for _ in range(reps):
-        t0 = time.perf_counter()
-        fn(arg)
-        best = min(best, time.perf_counter() - t0)
-    return best
-
-
 def fit_exponent(ns, ts):
     """Least-squares slope of log t against log n, by hand."""
     k = len(ns)
@@ -3363,55 +3336,53 @@ approach to that limit is slow. And if you can get a count instead of a clock,
 take it: the `iterations` column in part 1 settles the same question with zero
 uncertainty.
 
+</details>
+
 ---
 
 ## Summary
 
-- $f = O(g)$ means $f \le cg$ eventually for *some* constant; $f = \Omega(g)$
-  means the reverse; $\Theta$ needs both, i.e. the ratio trapped between two
-  positive constants. Only $\Theta$ pins down the rate — and $O$ is a
-  certificate, not a ranking, since a linear loop is also $O(n^2)$.
-- $o$ and $\omega$ quantify over *every* constant, so they are the strict
-  versions: $f/g \to 0$ and $f/g \to \infty$. That is what makes
-  $\log n = \omega(1)$ and $\log n = o(n)$ both true, and it is the difference
-  between "$O$ of" and "strictly faster than".
-- Counting is better than timing. Block 1's `sum_all` column is exactly $n$ at
-  every $n$, and the `bubble_sort / n^2` column settles at `0.500` — those are
-  integers, they are reproducible, and they *are* the $\Theta$ claim.
-- Doubling extrapolation reads off the *dominant* term and cannot see one that is
-  a million times smaller: $T(n) = n^2/10^6 + n$ measures `2.000` five times
-  ("linear") and `3.000` three times ("quadratic"). The fix is to check whether
-  $T(n)/g(n)$ is **flat** over a wide range of $n$, which gives `321.5` to
-  `344.5` ns and settles it.
+- Counting is better than timing, and a flat ratio beats a fitted one. Block 1's
+  `sum_all` column is exactly `n` at every `n`, and `bubble_sort / n^2` settles at
+  `0.500`. Doubling extrapolation reads off the *dominant* term and cannot see one a
+  million times smaller, so $T(n) = n^2/10^6 + n$ measures `2.000` five times
+  ("linear") and `3.000` three times ("quadratic"). The reliable test is whether
+  $T(n)/g(n)$ is **flat** — measured here within a factor of `1.13` over a 64-fold
+  range of $n$, while a log-log fit drifts from `1.001` to `1.386`.
 - Counting iterations is not counting cost. `s = s + [x]` and `s.append(x)` both
-  loop $n$ times, and they copy `536,854,528` elements against `32,768` at
-  $n = 32768$. `insert(0, x)` and `pop(0)` are the same trap; `deque` is the
-  fix.
-- The cost model is part of the claim. `x == y` is $O(1)$ for a machine word and
-  $\Theta(k)$ for a $k$-bit Python int; the measured ns-per-bit is flat at `0.089`
-  at $k = 2^{24}$. And the *exponent* is model-dependent: squaring $k$-bit integers
-  measures 1.50–1.78 here, against $\log_2 3 = 1.585$ for Karatsuba and 2.0 for
-  schoolbook.
-- The two cost models can disagree about which of two correct programs is faster.
-  Under unit cost, fast doubling's $\Theta(\log n)$ beats the loop's $\Theta(n)$
-  by 34×; under schoolbook bit complexity, the loop's `363,663` bit steps beat
-  fast doubling's `16,635,300` by 46×. What survives both is that the
-  *recursive* Fibonacci is $\Theta(\phi^n)$ — `34,335,360,355,129` calls at
-  $n = 64$ — because the recursion, not the recurrence, was the mistake.
-- Merge sort is $\Theta(n\log n)$ by three routes that agree: $a/b^d = 2/2 = 1$
-  is master case 2; the recursion tree has $n$ per level over $\log_2 n$ levels;
-  and the exact counts `15, 63, 255, 1023, 4095` sit between
-  $\tfrac{n}{2}\log_2 n$ and $n\log_2 n$. The lower bound is a decision-tree
-  argument, and the phrase "in the comparison model" is load-bearing.
+  loop $n$ times and copy `536,854,528` elements against `32,768` at $n = 32768$;
+  `insert(0, x)` and `pop(0)` are the same trap, and `deque` is the fix.
+- $O$ is a certificate and $\Theta$ is a ranking. $f = O(g)$ needs *some* constant,
+  $f = \Theta(g)$ needs the ratio trapped between two positive constants, and $o$ and
+  $\omega$ quantify over *every* constant — which is why $\log n = \omega(1)$ and
+  $\log n = o(n)$ are both true. A linear loop is $O(n^2)$; that bound admits
+  $n\log n$, so it carries no information.
+- Merge sort is $\Theta(n\log n)$ by three routes that agree: $a/b^d = 2/2 = 1$ is
+  master case 2; the tree costs $n$ per level over $\log_2 n$ levels; and the exact
+  counts `39, 283, 1642, 8627, 42714` sit between $\tfrac{n}{2}\log_2 n$ and
+  $n\log_2 n$, within 5.5% of $n\log_2 n - 1.575n$. The lower bound is a
+  decision-tree argument, so "in the comparison model" is load-bearing.
+- The cost model is part of the claim, and even the *exponent* is model-dependent.
+  `x == y` is $O(1)$ for a machine word and $\Theta(k)$ for a $k$-bit Python int
+  (flat at `0.089` ns per bit at $k = 2^{24}$); squaring $k$-bit integers measures
+  1.50–1.78, against 1.585 for Karatsuba and 2.0 for schoolbook.
+- The two models can disagree about which of two correct programs is faster. Under
+  unit cost, fast doubling's $\Theta(\log n)$ beats the loop's $\Theta(n)$ by 34×;
+  under schoolbook bit complexity the loop's `363,663` bit steps beat fast
+  doubling's `16,635,300` by 46×. What survives both: the *recursive* Fibonacci is
+  $\Theta(\phi^n)$ — `34,335,360,355,129` calls at $n = 64$ — because the recursion,
+  not the recurrence, was the mistake.
+- $\Theta$ deliberately discards constants, so it cannot choose between forward and
+  central differencing: both $\Theta(1)$ operations, a measured `1121` apart in
+  accuracy, with optima at $h = 10^{-8}$ and $h = 10^{-5}$ rather than at the
+  smallest $h$ available. Use $\Theta$ to compare algorithms and measure to break
+  ties.
 - Average, worst and amortised are three different quantifiers. A $\Theta(\log n)$
   bound on binary search and a $\Theta(1)$ lookup in a hash table are both
   "expected" or "conditional" claims, and neither is a per-operation guarantee.
   [Lesson 81](81_amortized_analysis.md) makes the third one precise.
-- $\Theta$ deliberately discards constants, which is why it cannot choose between
-  forward and central differencing — both $\Theta(1)$ operations, a measured
-  `1121` apart in accuracy, with optima at $h = 10^{-8}$ and $h = 10^{-5}$ rather
-  than at the smallest $h$ available. Use $\Theta$ to compare algorithms and
-  measure to break ties.
+
+---
 
 ## Next
 

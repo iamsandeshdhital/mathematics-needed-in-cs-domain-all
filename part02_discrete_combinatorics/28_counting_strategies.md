@@ -648,6 +648,745 @@ print(f"and the number of subsets of a 64-element set is {2**64:,}.")
 > Why the wrong one is tempting: the answer looks finished, and restating the
 > specification feels redundant once you have computed it.
 
+---
+
+## Formula Sheet
+
+Every symbol and formula this lesson introduces. `n` is the size parameter, `m` the
+alphabet size, `k` a chosen cardinality, `p` a target sum, `t` a target value, and
+`L` the local-constraint length. Every technique below is a function of `n`.
+
+| Symbol | Formula | In plain words | When you use it |
+| --- | --- | --- | --- |
+| S0 — finite? | `$\lvert\text{objects}\rvert < \infty` with a bounded parameter | an infinite count is not a counting problem yet | always first; find and bound `n` |
+| S1 — size parameter | `$\text{answer} = F(n)$` for a named `n` | you cannot count without a size | **required** — if you cannot name `n`, stop |
+| S2 — constraints | "at least/at most `k`" ⟹ complement + binomial sum, or inclusion–exclusion | constraints break the easy cases | "exactly `k` of a kind" ⟹ `C(n,k)` positions |
+| S3 — independence | `$n_1\cdot n_2\cdots n_k$` | the choices decompose | ordered vs unordered decided by "does swapping change the object?" |
+| S4 — disjointness | `$\sum_i \lvert A_i\rvert$` if provably disjoint, else inclusion–exclusion | add only when you can prove the branches never coincide | **if you cannot prove disjointness, they overlap** |
+| S5 — bijection | `$\lvert A\rvert = \lvert B\rvert` | count something you already know | subsets ↔ bit strings ↔ functions; multisets ↔ multiset permutations |
+| S6 — internal structure | `a_n = c_1a_{n-1} + \cdots + f(n)` | the object repeats structure internally | expand, use characteristic roots, or the master theorem |
+| S7 — too big? | state count vs enumeration count | stop doing mathematics | DP with memoisation, bitmask DP, coefficient extraction, or sampling |
+| Tractable / intractable | exact count computable in time polynomial in the input size | feasible / not | `#P` is the class whose *yes* instances are verifiable in polynomial time |
+| Closed form | an expression in `n` with a fixed number of operations, no loop over `n` | a formula, not a program | exists for `C(n,k)`, `2^{n}`, `n!`, `n^{n−2}`; none known for Hamiltonian paths |
+| Closed form: no repeats | `$P(n,r) = n!/(n-r)!$` | falling factorial | ordered, no repeats; `P(10,8) = 1,814,400` |
+| Closed form: unordered repeats | `$C(n+r-1, r)$` | stars and bars | 3 from 4 types: `C(6,3) = 20` |
+| Multiset permutation | `$n!/(k_1!\cdots k_m!)$` | divide once per distinct item | BANANA: `6!/(3!·2!) = 60` |
+| Cayley | `$n^{\,n-2}$` | labelled trees on `n` vertices | valid for `n ≥ 2`; closed forms appear in surprising places |
+| Feasibility by count | `$C(70,4) = 916{,}895 \approx 9.2\times 10^{5}$` vs `$2^{70} = 1.18\times 10^{21}$` | one is a cache, one is a catastrophe | decide search vs sample vs approximate *before* coding |
+| Local constraint ⟹ recurrence | `f_1(c) = 1`, `$f_L(c) = \mathrm{total}_{L-1} - f_{L-1}(c)$ | track the previous character | **state must be the previous character itself**, `m` states |
+| Closed form for that recurrence | `$\mathrm{total}_L = m\,(m-1)^{L-1}$` | each step has `m−1` continuations | `L = 6`, `m = 94` gives 653,947,067,142; `m = 84` gives 330,879,414,012 |
+| Global "at least one" | `$\mathrm{total}_6(94) - \mathrm{total}_6(84) = 323{,}067{,}653{,}130$` | subtract the complement, computed the same way | one extra run of the same recurrence; **no** inclusion–exclusion |
+| Wrong state (2 states) | track only whether the previous character was a digit | answers a stricter, different question | returns 1,059,064,000 — a plausible positive integer that is wrong |
+| Fibonacci avoidance count | `$q_L = q_{L-1} + q_{L-2}`, `$q_0 = 1`, `$q_1 = 2$`, so `$q_L = F(L+2)$` | split on the last bit | `q₁₂ = 377` of 4096 twelve-bit strings |
+| State-count arithmetic | subset-sum DP: `(n+1)·(target+1) = 101 × 101` states vs `2¹⁰⁰` subsets | the DP is the answer's size | **write this down before choosing an algorithm** |
+| Bitmask DP | `$2^{n}\cdot n$` states vs `$n!$` for enumeration | Hamiltonian paths from a fixed start | `n = 7`: 896 states against 5,040; the gap widens from there |
+| Sampling instead | `$\widehat{p} = \frac{\text{trials with a collision}}{\text{trials}}$` | estimate when the exact sum is hopeless | exact IE over `C(n,2)` collision events has `2^{C(n,2)}` terms |
+| Surjection count | `$\sum_{j=0}^{k}(-1)^{j}C(k,j)(k-j)^{n}$` | global "every target hit", few events | `5 → 3` gives `243 − 96 + 3 = 150`; 30 targets would give 2³⁰ terms |
+| Divisibility count | `$\sum_{k\ge1}(-1)^{k+1}\sum_{\lvert S\rvert=k}\left\lfloor LIM/\mathrm{lcm}(S)\right\rfloor$` | global "divisible by one of these", few divisors | `LIM = 10^{18}`, divisors `{2,3,5,7}`: 15 terms, 771,428,571,428,571,429 |
+| Graph count by IE (careful) | `$2^{C(n,2)}$` graphs; connected ones need more than "no isolated vertex" | constraint can fail for several reasons | `n = 4`: 64 total, 38 connected, naive IE over isolated vertices gives **41** |
+| Layered path count | `$\prod_{\text{layers}} (\text{branching}) = 5^{10}$` | the count is a product | exact and cheap if you notice the structure; 9,765,625 paths |
+
+---
+
+## Multiple Choice Questions
+
+**Q1.** You must count strings of length `n` over `{0, 1}` with no two consecutive
+`1`s. Which routing does the decision procedure give, and why?
+
+- A) Inclusion–exclusion over the `n − 1` bad-pair events
+- B) A recurrence, because the constraint is *local*: adjacent positions depend on
+  each other, and the `n − 1` bad events overlap each other
+- C) The product rule, since each position is an independent choice
+- D) The complement, since "no consecutive 1s" is the complement of something
+  simpler
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) A recurrence, because the constraint is *local*: adjacent positions depend on
+each other, and the `n − 1` bad events overlap each other.**
+
+Step S6 of the decision procedure: does the object have internal structure that
+repeats? Adjacent positions interact, so the state must remember the previous
+bit. The lesson does exactly this with a two-state DP — `new_end0 = end0 + end1`,
+`new_end1 = end0` — giving `q_n = q_{n−1} + q_{n−2}`, hence `q_n = F(n+2)` and
+`q₁₂ = 377`.
+
+- A) is Mistake 1 of this lesson. There are `n − 1` bad events and their scopes
+  overlap, so inclusion–exclusion would need `2^(n−1)` terms — 4096 at `n = 13`.
+  IE handles *global* constraints; recurrences handle *local* ones.
+- C) is wrong precisely because the choices are **not** independent. That is what
+  the constraint says.
+- D) is a real technique here, but not the *only* thing: the complement is used for
+  a second, global constraint layered on top ("and at least one `1`"), computed by
+  running the same recurrence over a smaller alphabet. It is not the answer to the
+  local constraint by itself.
+
+</details>
+
+**Q2.** For "6-character strings over 94 characters with no two adjacent positions
+equal", what is the correct DP state?
+
+- A) Whether the previous character was a digit — 2 states, cheapest and correct
+- B) The exact previous character — 94 states, which is what the constraint
+  depends on
+- C) The length so far, which is all a recurrence needs
+- D) The count of characters used, 0 through 6
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) The exact previous character — 94 states, which is what the constraint
+depends on.**
+
+The constraint "the next character differs from the one before" depends on the
+*identity* of the previous character, not on its kind. So `f_1(c) = 1` for every
+`c`, `f_i(c) = total_{i−1} − f_{i−1}(c)`, and `total_i = Σ_c f_i(c)` — 94 states
+and six steps, about 600 operations. The lesson's `count_no_adjacent_repeats`
+implements it and is checked against brute force for every `(m, n)` pair printed.
+
+- A) is Mistake 2 of this lesson. The two-state version answers a *different and
+  stricter* question — no two adjacent positions of the same **kind** — which also
+  forbids `'bc'` for two distinct non-digits. It returns 1,059,064,000 against
+  the correct 653,947,067,142, and it "fails silently: the number it returns is a
+  plausible positive integer".
+- C) and D) are the two things a DP always needs *plus* the constraint, never
+  instead of it. Forgetting what the constraint depends on is the error;
+  forgetting to advance the length is not a plausible mistake.
+
+</details>
+
+**Q3.** The worked example needs 6-character passwords with **at least one digit**
+**and** no two adjacent positions equal. What is the lesson's recommended route?
+
+- A) Inclusion–exclusion over 2 + 10 events — 2¹² = 4,096 terms
+- B) A recurrence with 94 states for the local constraint, then subtract the
+  complement computed by the same recurrence over the 84 non-digits
+- C) The product rule with 6 independent choices
+- D) Count all 94⁶ strings and divide by 2 for the symmetry
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) A recurrence with 94 states for the local constraint, then subtract the
+complement computed by the same recurrence over the 84 non-digits.**
+
+`total₆(94) = 653,947,067,142` and `total₆(84) = 330,879,414,012`, so the answer
+is 323,067,653,130. The lesson's Step S7 states the framing: "the complement step,
+and it is far cheaper than the 4096-term inclusion–exclusion". Step S8 then verifies
+the same recurrence against all 94³ = 830,584 three-character strings, which *can*
+be enumerated.
+
+- A) is what Step S3/S4 calls "technically possible, practically absurd". It is
+  *correct*, which is the danger: IE is right for any number of sets, so there is
+  no moment at which it is obviously wrong, only when it becomes too slow.
+- C) ignores the local constraint entirely. 94⁶ ≈ 6.9 × 10¹¹ is the size of the
+  unconstrained space, and Step S8's classification says "Neither inclusion–exclusion
+  nor nCr appears, and both were reasonable first guesses that lose badly".
+- D) is meaningless: there is no factor-of-2 symmetry here, and `94⁶` is not even
+  computable in the state you would need it in.
+
+</details>
+
+**Q4.** Which pairing of constraint shape to technique does the lesson insist on?
+
+- A) Local constraints ⟹ inclusion–exclusion; global "at least one of a kind"
+  ⟹ product rule
+- B) Local constraints ⟹ recurrence with a state large enough to capture them;
+  global "at least one of a kind" ⟹ subtract a complement computed the same way
+- C) Both ⟹ inclusion–exclusion, since both are "not" conditions
+- D) Local ⟹ brute force; global ⟹ a closed form
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) Local constraints ⟹ recurrence with a state large enough to capture them;
+global "at least one of a kind" ⟹ subtract a complement computed the same way.**
+
+The lesson's closing classification puts it in one line: "Local constraint →
+recurrence with a state large enough to capture it; global 'at least one of a kind'
+constraint → subtract the complement computed the same way." Recognising which kind
+you have is most of the skill.
+
+- A) swaps the two, and it is the classic misroute. Local constraints have
+  *overlapping scopes*, which is exactly the structure a DP handles and exactly
+  the structure inclusion–exclusion handles worst.
+- C) is the trap the word "not" sets. "No adjacent repeats" is a "not" condition,
+  so inclusion–exclusion feels like the tool; the trap is not noticing that the
+  `n − 1` bad events overlap each other *and* the global constraints.
+- D) confuses the referee with the method. Brute force is how you *check* the
+  answer; it is not the answer when `94⁶` cannot be enumerated.
+
+</details>
+
+**Q5.** How many connected graphs are there on 4 labelled vertices? A tempting
+inclusion–exclusion over the four events "vertex `v` is isolated" gives a
+different number. Why?
+
+- A) 38 connected; the naive inclusion–exclusion gives 41 because a graph can be
+  disconnected with **no** isolated vertex — the two disjoint edges
+- B) 64 connected; the naive count is 38 and is right for a different reason
+- C) 38 connected; the naive inclusion–exclusion is wrong because
+  `2^{C(4,2)}` is not the right total
+- D) 41 connected; the naive inclusion–exclusion is simply correct
+
+<details>
+<summary>Answer and explanation</summary>
+
+**A) 38 connected; the naive inclusion–exclusion gives 41 because a graph can be
+disconnected with **no** isolated vertex — the two disjoint edges.**
+
+There are `2^6 = 64` graphs on 4 labelled vertices and 38 of them are connected.
+The three that the IE misses are the graphs consisting of two disjoint edges: every
+vertex has degree 1, so none is isolated, yet the graph is disconnected. That is
+Mistake-exercise-level overcounting: **a constraint can fail for more than one
+reason, and inclusion–exclusion only corrects for the reasons you actually
+enumerated.** Fixing it needs inclusion–exclusion over every *partition* of the
+vertex set, not just the singletons.
+
+- B) confuses the total number of graphs with the connected ones. `64 = 2^6` is
+  every graph, connected or not.
+- C) identifies the wrong culprit. `2^{C(4,2)} = 64` is exactly the right total;
+  the error is in the *event list*, not the sample space.
+- D) reverses cause and effect. 41 is the naive IE's output, not the true count,
+  and the lesson's comment prints it with a literal `<-- WRONG by 3`.
+
+</details>
+
+**Q6.** You want to enumerate every 4-element subset of a 70-element set. About how
+many is that, and what does it tell you?
+
+- A) `C(70,4) = 916,895`, which is enumerable — cache it, do not sample
+- B) `2⁷⁰ ≈ 1.18 × 10²¹`, which is a catastrophe
+- C) `70⁴ = 24,010,000`, since four slots pick independently
+- D) `70! / 4!`, which is the count of ordered 4-tuples
+
+<details>
+<summary>Answer and explanation</summary>
+
+**A) `C(70,4) = 916,895`, which is enumerable — cache it, do not sample.**
+
+The lesson's feasibility rule is "before you write an exhaustive search, count the
+states", and it names this case directly: "`C(70,4) ≈ 916,000` subsets of size 4
+out of 70 is fine; `2⁷⁰` subsets is not". Roughly a million is a cache; roughly
+10²¹ is a different problem.
+
+- B) is the count of *all* subsets, not of the size-4 ones. It is the wrong
+  quantity by a factor of about 10¹⁵, and it is the answer to "how many
+  configurations are there", not "how many configurations satisfy a size
+  constraint".
+- C) counts ordered 4-tuples with repeats allowed. The relation
+  `P(70,4) = C(70,4)·4!` says the overcount is exactly a factor of 24.
+- D) is `70!/4!`, which is not an integer count of anything meaningful here; the
+  correct ordered count is `70·69·68·67 = 22,651,320`, and the unordered count is
+  that divided by 24.
+
+</details>
+
+**Q7.** Counting subsets of `{1, …, 100}` that sum to a target `t` has no known
+closed form. Why not just enumerate? What does the state count tell you?
+
+- A) Enumeration is `2¹⁰⁰`, while the DP has `(n+1)·(t+1) = 101 × 101 = 10,201`
+  states — five orders of magnitude apart
+- B) Enumeration is `100!`, while the DP has `101` states
+- C) Enumeration is fine at `n = 100`, since only 512 subsets matter
+- D) The DP needs `(t + 1)²` states, so it is worse than enumeration for small `t`
+
+<details>
+<summary>Answer and explanation</summary>
+
+**A) Enumeration is `2¹⁰⁰`, while the DP has `(n+1)·(t+1) = 101 × 101 = 10,201`
+states — five orders of magnitude apart.**
+
+The lesson's `count_subsets_with_sum` memoises on `(i, remaining)`, so the number
+of states is the number of distinct `(i, r)` pairs, not the number of subsets. The
+lesson prints the ratio explicitly, and the point it makes is general: "the count
+was never the hard part; the representation was."
+
+- B) uses `100!`, which is the size of the *permutation* space, not the subset
+  space. Subset enumeration is `2^n`; `n!` belongs to the Hamiltonian-path
+  comparison further down this lesson, where the DP uses `2ⁿ · n` states.
+- C) is the lesson's own observation about when brute force *is* the method:
+  for `{1, …, 9}` there are 2⁹ = 512 subsets, so enumeration is the answer. At
+  `n = 100` it is not, and the crossover is what the state count measures.
+- D) inverts the comparison. The DP's state count is linear in both `n` and `t`,
+  so it is *never* worse than enumeration, and for large `n` it is better by
+  exponentially many.
+
+</details>
+
+**Q8.** A counting problem has a fast exact algorithm. What does that tell you
+about `#P` and about closed forms?
+
+- A) Nothing; `#P` concerns verification, not computation, and a fast exact
+  algorithm need not have a closed form
+- B) The problem is in `P`, so it cannot be in `#P`
+- C) The problem has a closed form, since a fast algorithm is a formula
+- D) The problem is trivial, since `P ⊆ #P`
+
+<details>
+<summary>Answer and explanation</summary>
+
+**A) Nothing; `#P` concerns verification, not computation, and a fast exact
+algorithm need not have a closed form.**
+
+The lesson is careful about this: "`#P` is the class of problems whose *yes*
+instances are verifiable in polynomial time". Verification is different from
+computation, and the separation between the two is open. A fast algorithm also need
+not be a closed form — `math.comb` is a fast algorithm and not an expression you
+write down, and the DP state count `101 × 101` is a computation rather than a
+formula.
+
+- B) gets the direction of the relationship backwards. `#P` is the class of
+  *counting* problems associated with polynomial verification; being efficiently
+  computable certainly does not exclude you from it. The famous open question is
+  whether `#P ⊆ FP`, and the assumption that it is not is what makes counting hard.
+- C) confuses a program with an expression. A closed form is "an expression in `n`
+  and a fixed number of arithmetic operations, with no loop over `n`" — that is a
+  much narrower object, and the lesson notes that for Hamiltonian paths "there is
+  none known, and finding one would be a major result".
+- D) reverses the containment intuition. `#P`-complete problems are believed to be
+  hard precisely *because* polynomial verification is easy; ease of verification is
+  not evidence of ease of counting.
+
+</details>
+
+**Q9.** `solve_puzzle` explores states and prunes when it revisits one. Why must
+the visited set be a set of canonical states rather than of the moves taken?
+
+- A) Because moves are ordered and a set cannot hold order
+- B) Because the state is what determines the future; two different move sequences
+  reaching the same state have exactly the same continuations, so deduplicating by
+  move sequence does not deduplicate work
+- C) Because sets deduplicate automatically and you need to keep duplicates
+- D) Because move sequences are unordered pairs
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) Because the state is what determines the future; two different move sequences
+reaching the same state have exactly the same continuations, so deduplicating by
+move sequence does not deduplicate work.**
+
+This is the state-vs-history distinction the whole lesson is about, in its purest
+form. The recurrence `f(i, remaining) = f(i+1, remaining) + f(i+1, remaining − i)`
+is a function of *state*, and its memo table is indexed by state. Pruning on move
+sequence instead would be a different recurrence — one whose key does not determine
+the continuation — and the work would not collapse.
+
+- A) is a non-issue: order is not what the set is for, and Python sets preserve no
+  order deliberately.
+- C) is the reverse of the purpose. Deduplication is the whole point; keeping
+  duplicates is what makes the search exponential.
+- D) is incoherent: a move sequence is an ordered list, not an unordered pair.
+
+</details>
+
+**Q10.** Counting distinct bit patterns among `2⁴⁰` random 40-bit integers is
+"exact and easy", per the worked answers. What is the count and why is it easy?
+
+- A) `2⁴⁰ ≈ 1.1 × 10¹²`, because every 40-bit pattern is reachable — a product rule
+  with no constraints
+- B) `2⁴⁰ − 1`, because the all-zero pattern is excluded
+- C) `40!`, because each bit position is a separate choice
+- D) `C(2⁴⁰, 2⁴⁰)`, which is one pattern
+
+<details>
+<summary>Answer and explanation</summary>
+
+**A) `2⁴⁰ ≈ 1.1 × 10¹²`, because every 40-bit pattern is reachable — a product rule
+with no constraints.**
+
+40 independent binary choices, so the product rule: `2⁴⁰ = 1,099,511,627,776`.
+The lesson's classification note reads "**Exact and easy.** Every 40-bit pattern is
+reachable, so `2⁴⁰ ≈ 1.1 × 10¹²`. Product rule." Step S3 fires and nothing else
+does: no constraint is present, so there is nothing to subtract and nothing to
+recurrify.
+
+- B) subtracts a pattern that is perfectly reachable. There is no exclusion here.
+- C) confuses bit positions with bits; `40!` is the number of orderings of 40
+  labelled positions.
+- D) `C(m, m) = 1`, and the count of distinct patterns is emphatically not 1.
+  This is the shape of the mistake where an object with a size constraint gets a
+  `C(·,·)` formula with the wrong second argument.
+
+</details>
+
+**Q11.** To count the collision probability for `n` items hashed into a table of
+size `m`, exact inclusion–exclusion over the `C(n,2)` pairwise collision events has
+how many terms, and what do you do instead?
+
+- A) `n` terms, so inclusion–exclusion is fine up to `n = 10⁶`
+- B) `2^{C(n,2)}` terms, hopeless from about `n = 6` upwards — so sample
+- C) `C(n, 2)` terms, which is manageable
+- D) `2ⁿ` terms, which is the same as the number of subsets
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) `2^{C(n,2)}` terms, hopeless from about `n = 6` upwards — so sample.**
+
+There are `C(n,2)` pairwise collision events and inclusion–exclusion sums over all
+non-empty subsets of them, so `2^{C(n,2)}`. For `n = 16` that is `2¹²⁰`, already
+far beyond any budget; for `n = 6` it is `2¹⁵ = 32,768`, which is fine. The
+lesson's `sample_collision` estimates the probability in a fixed budget of trials
+instead, and the closing line is the right one: "That is the moment to stop
+counting and start sampling."
+
+- A) counts the events, not the terms. `n` terms would be the case with one event,
+  or `n − 1` for a chain.
+- C) counts the events again. Inclusion–exclusion never needs one term per event;
+  it needs one term per *subset* of events, which is the exponential blow-up.
+- D) is the count of subsets of `n` things, not of `C(n,2)` things. The lesson
+  makes the same point about scale elsewhere: `C(64,32)` is already
+  1,832,624,140,942,590,534 terms.
+
+</details>
+
+---
+
+## Subjective Questions
+
+### Short Answer
+
+**Q1. List the decision procedure's steps `S0` through `S7`, in order, with one
+line each.**
+
+<details>
+<summary>Answer</summary>
+
+- **S0 — Is the answer finite?** If not, find the unbounded parameter and bound
+  it first.
+- **S1 — Is there a size parameter `n`?** If you cannot name `n`, you cannot count.
+- **S2 — Are there constraints?** "at most/at least `k`" ⟹ complement plus
+  binomial sums or inclusion–exclusion; "exactly `k` of a kind" ⟹ `C(n,k)`
+  positions; "no repeats" ⟹ `P(n,r)`; "pairs forbidden together" ⟹ inclusion–
+  exclusion.
+- **S3 — Do the choices decompose?** Then multiply; decide ordered vs unordered by
+  asking whether swapping two chosen items changes the object.
+- **S4 — Are the cases disjoint?** If you can prove it, add; if you cannot prove
+  it, they overlap and you need inclusion–exclusion.
+- **S5 — Is there a bijection available?** Subsets ↔ bit strings ↔ functions;
+  multisets ↔ multiset permutations; paths ↔ sequences.
+- **S6 — Does the object have internal structure that repeats?** Then find a
+  recurrence and solve it by expansion, characteristic roots, or the master
+  theorem.
+- **S7 — Is the count exponential and too large to enumerate?** Stop doing
+  mathematics: DP with memoisation, bitmask DP, coefficient extraction, or
+  sampling.
+
+</details>
+
+**Q2. Define *tractable*, the class `#P`, and *closed form*.**
+
+<details>
+<summary>Answer</summary>
+
+A counting problem is **tractable** if an exact count is computable in time
+polynomial in the input size; otherwise it is **intractable**. `#P` is the class of
+problems whose *yes* instances are verifiable in polynomial time — verification, not
+computation, and whether the two coincide is open.
+
+A **closed form** is an expression in `n` and a fixed number of arithmetic
+operations, with no loop over `n`. One exists for `C(n,k)`, `2ⁿ` and `n!`; none
+is known for the number of Hamiltonian paths in a graph, and finding one would be a
+major result.
+
+</details>
+
+**Q3. Why is a local constraint a signal to use a recurrence rather than
+inclusion–exclusion? Give the term count for both.**
+
+<details>
+<summary>Answer</summary>
+
+Local constraints have **overlapping scopes**: "no two adjacent positions equal"
+imposes `n − 1` bad-pair events, and each event constrains a pair of neighbours, so
+the events share positions with each other. Inclusion–exclusion over `n − 1` events
+needs `2^(n−1)` terms — 4096 at `n = 13`, and hopeless in any real range.
+
+A recurrence handles overlapping scopes natively because the state captures exactly
+what the constraint depends on: the previous character. Two states for binary
+strings, `m` states in general, `n` steps. That is `O(nm)` work against
+`2^(n−1)` terms.
+
+So: global constraints ("at least one of each kind") go to inclusion–exclusion;
+local ones (adjacent, sequential) go to a recurrence.
+
+</details>
+
+**Q4. Why must the DP state capture exactly what the constraint depends on? Use
+the 94-state versus 2-state example.**
+
+<details>
+<summary>Answer</summary>
+
+Because the state is the *sufficient statistic* for the future: two partial
+solutions with the same state must have exactly the same continuations, and
+different states may have different continuations. If the state loses information
+the constraint needs, continuations that should be distinguished get merged, and
+the answer is wrong.
+
+For "no two adjacent positions equal" over 94 characters, the constraint depends on
+the *identity* of the previous character: after `b` there are 93 options, and the
+set of options is different from the set after `a`. So the state must be the
+previous character — 94 states, with `f_1(c) = 1`, `f_i(c) = total_{i−1} −
+f_{i−1}(c)`, giving `653,947,067,142` at `i = 6`.
+
+Tracking only whether the previous character was a digit — 2 states — loses the
+identity and therefore over-forbids: it also forbids `'bc'` for two distinct
+non-digits. It returns `1,059,064,000`.
+
+</details>
+
+**Q5. What are the two distinct jobs a brute-force count does in this lesson?**
+
+<details>
+<summary>Answer</summary>
+
+**As the method.** For small instances, enumeration *is* the answer. With 6
+elements there are 64 subsets, so enumeration is not a referee but the technique.
+The rule of thumb is "enumerate while the count fits in memory, then switch to the
+formula". The worked example leans on this: `94⁶` cannot be enumerated, but the
+same recurrence at `n = 3` can be checked against all `94³ = 830,584`
+three-character strings.
+
+**As the referee.** For large instances, enumeration checks the formula on a case
+small enough to compute, and gives *evidence* rather than *confidence*. The lesson's
+closing instruction: "write the brute-force count for the smallest instance and
+compare. A formula that has never been checked against enumeration is a guess with
+good handwriting."
+
+</details>
+
+**Q6. Why count the states before writing an exhaustive search? Give two
+comparisons that show why.**
+
+<details>
+<summary>Answer</summary>
+
+Because the size of the answer determines whether you search, sample, or
+approximate — and that decision costs one subtraction to make and days to make
+late.
+
+**Subsets vs size-4 subsets.** `C(70,4) = 916,895` is enumerable — cache it. All
+`2⁷⁰ ≈ 1.18 × 10²¹` subsets are not. Same set, wildly different feasibility, and
+the size constraint is the only difference.
+
+**Bitmask DP vs enumeration.** Counting Hamiltonian paths from a fixed start needs
+`2ⁿ · n` DP states against `(n−1)!` enumerated paths. At `n = 7` that is 896 states
+against 5,040, and the gap widens from there. Subset-sum over `{1, …, 100}` is the
+same story: `101 × 101 = 10,201` states against `2¹⁰⁰` subsets.
+
+</details>
+
+### Long Answer
+
+**Q1. Why does the wrong DP state fail silently, and what would you actually have
+to check to catch it?**
+
+<details>
+<summary>Model answer</summary>
+
+Because a DP that merges states it should not distinguish returns a *number*, not
+an error. Python has no type that says "this integer is not the answer"; it has an
+integer. The two-state version of the no-adjacent-repeat count returns
+1,059,064,000 against the correct 653,947,067,142 — positive, plausible in
+magnitude, three orders of magnitude off in the wrong direction, and completely
+silent. The lesson is blunt about it: "it fails silently: the number it returns is a
+plausible positive integer with no error message." Compare this with the factorial
+formula at `n = 1000`, which is also silent but slow enough that you notice.
+
+The reason the error is silent is structural. The DP's own correctness conditions
+are *satisfied* as far as the program can tell: the recurrence is evaluated in the
+right order, the memo table is complete, and the base case is right. What is wrong
+is the model — the state does not contain enough information. Program verification
+cannot detect that, because the property being violated is not a property of the
+program.
+
+So catching it requires a check the program does not perform. Four work.
+
+**Compare against a brute-force count on a tiny instance.** The lesson's loop does
+this for every `(m, n)` printed: `m=2,3,5` against `n=1,2,3,4`. At `m = 3, n = 3`
+the correct answer is 12 and the two-state answer is different, so the error is
+caught in microseconds rather than in production. This is the highest-return habit
+in the subject and the lesson's own instruction.
+
+**Ask what the constraint depends on, and check the state contains exactly that.**
+For "no two adjacent positions equal", the constraint asks "is the next character
+different from the previous one?" — an identity question. A state of "digit or
+non-digit" cannot answer it, and the wrong answer over-forbids `'bc'`. Reading the
+constraint as a question in words and matching it against the state is the check
+that would have caught this before any code ran.
+
+**Check the answer against a trivial case where the answer is obvious.** At `m = 2`
+the number of valid strings is 2 for every `n ≥ 1` (you must alternate). Any DP
+that disagrees at `m = 2` is wrong immediately. Small cases with answers you can
+count on your fingers are the cheapest test available.
+
+**Check the growth rate.** The correct count is `m(m−1)^{L−1}`, so it grows by a
+factor of `m − 1` per step. The two-state version grows by a different factor. A
+closed form for the small cases exposes the difference.
+
+What would *not* catch it: unit tests on the recurrence's own consistency (the
+recurrence is consistent — it is answering a different question), type checks,
+property-based tests that only assert monotonicity in `L` (both versions are
+monotone), or reading the code. The lesson's summary is the right summary of all
+four: "a formula that has never been checked against enumeration is a guess with
+good handwriting."
+
+</details>
+
+**Q2. Why is inclusion–exclusion the wrong tool for a local constraint, and what
+actually breaks if you use it anyway?**
+
+<details>
+<summary>Model answer</summary>
+
+The reason is that a local constraint produces *overlapping* events. "No two
+adjacent positions equal" is the conjunction of `n − 1` bad-pair events, one per
+adjacent position pair. Neighbouring events share a position — the event at `(i, i+1)`
+and the event at `(i+1, i+2)` both constrain position `i+1` — so the events are not
+independent and their scopes interleave. Inclusion–exclusion is defined for
+*arbitrary* families of events, and it is correct for any `n`; it is simply that its
+cost is `2^{|events|}`, and here `|events| = n − 1`, so the term count is `2^(n−1)`.
+For `n = 13` that is 4,096; for `n = 40` it is 5.5 × 10¹¹. The formula does not
+become wrong — it becomes unavailable, which is the most dangerous kind of failure
+because there is no point at which the algebra tells you so. This is Mistake 3 of
+this lesson: "IE is *correct* for any `n`, so there is never a moment where it is
+obviously wrong — only when it becomes too slow to run."
+
+A recurrence is the right tool because a DP handles overlapping scopes by design.
+Overlapping subproblems are not a nuisance for dynamic programming; they are the
+reason it exists. The state carries the residue of the past that the constraint
+depends on — the previous character — so two prefixes with the same state have the
+same number of continuations, and the memo table collapses `2^(n−1)` histories into
+`n·m` entries. `O(nm)` work, 600 operations in the lesson's 94-state example.
+
+What actually breaks if you use inclusion–exclusion anyway, concretely:
+
+- **The worked example's password count.** Two global constraints ("at least one
+  digit", "at least one lowercase") plus 5 adjacent-repeat conditions is 7 events
+  and `2⁷ = 128` terms — feasible. Step S3/S4's actual complaint is that naively
+  separating the two global constraints and the local constraint gives `2 + 10`
+  events and 2¹² = 4,096 terms, "technically possible, practically absurd".
+- **Termination.** For any length where the local constraint generates more than
+  about 30 events, the enumeration does not return. You do not get a wrong answer;
+  you get no answer, which is arguably worse because there is nothing to inspect.
+- **Composability.** The recurrence composes: the lesson subtracts a complement by
+  *re-running the same recurrence* over a smaller alphabet, giving 323,067,653,130
+  in one extra line. An inclusion–exclusion expansion has to be re-derived for
+  every new alphabet size and every new constraint.
+
+The general lesson, and the reason the decision procedure exists, is to match the
+tool to the *shape* of the constraint: global "at least one of a kind" conditions
+overlap in a way inclusion–exclusion handles (they are events on disjoint position
+sets, few in number), while local conditions generate `Θ(n)` overlapping events and
+must be handled by a recurrence. Reach for the wrong one and the mathematics does
+not complain; it simply stops being reachable.
+
+</details>
+
+**Q3. Why does inclusion–exclusion over "vertex `v` is isolated" give 41 instead
+of 38 for connected graphs on 4 vertices? What is the general lesson?**
+
+<details>
+<summary>Model answer</summary>
+
+Because the event list does not match the failure condition. The constraint is
+"connected", and the bad events chosen were "`v` is isolated" for each of the four
+vertices. That list captures graphs with a component of size 1 and *misses* graphs
+whose failure has a different shape. The three it misses are the graphs consisting
+of two disjoint edges: `12|34`, `13|24`, `14|23`. Every vertex has degree 1, so no
+vertex is isolated — and the graph is disconnected. Hence 38 + 3 = 41, exactly the
+error the lesson's code prints with a literal `<-- WRONG by 3`.
+
+This is not an arithmetic slip. Inclusion–exclusion is being applied exactly as
+stated; the mistake is in *stating* the events. And the mistake is the natural one,
+because "some vertex is isolated" is the first thing that comes to mind when you
+think of a disconnected graph. It is also a genuinely common modelling error outside
+this exercise: a network-design rule phrased as "no host is a single point of
+failure" does not by itself forbid two hosts that depend on each other and on nobody
+else.
+
+The general lesson has two halves.
+
+First, **inclusion–exclusion only corrects for the reasons you enumerated.** The
+alternating sum's correctness argument — an element in exactly `r` of the bad sets
+nets `Σ_{j=1..r} (−1)^{j+1} C(r,j) = 1` — guarantees each *enumerated* event's
+contribution is corrected exactly. It says nothing about events you never wrote down.
+A constraint that can fail in several ways needs an event for each way, or a
+restatement that has only one way.
+
+Second, **the right move is often to choose a constraint with fewer failure modes.**
+Fixing this properly means inclusion–exclusion over every *partition* of the vertex
+set — `v` alone, `{u,v}` as a component, and so on — which is a much larger
+expansion. That cost is a hint, not a failure: when the correct event list is
+enormous, the event list is the wrong model. For connected graphs on `n` labelled
+vertices the standard answer is a labelled-tree count times a component structure,
+or the complementary formula using Stirling numbers of the second kind; neither is
+"subtract the isolated vertices".
+
+The transferable habit for a published textbook's worth of constraints: before
+applying inclusion–exclusion, write down *how a bad object can arise*, and check
+that your event list has one event per way. Then verify on a small instance, because
+`n = 4` with a 3-way error is a three-line check and the kind of mistake that
+survives into a 4,096-term expansion is precisely the kind nobody re-derives.
+
+</details>
+
+**Q4. When is a closed form unavailable, and what should you do instead? Why is
+"write the brute-force count first" the highest-return habit in the subject?**
+
+<details>
+<summary>Model answer</summary>
+
+A closed form is unavailable when the object's structure does not decompose in a way
+any known technique exploits. The lesson is careful that this is a statement about
+current knowledge, not about impossibility: for the number of Hamiltonian paths in
+a graph "there is none known, and finding one would be a major result". The lesson's
+examples are instructive — subsets of `{1, …, n}` summing to a fixed target has no
+closed form, yet `{1, …, 9}` has only 512 subsets, so brute force is a complete
+answer at that size. The obstruction is not the mathematics; it is that the
+structure does not factor.
+
+So there are three honest moves, in increasing order of desperation.
+
+**Switch representation, keep exactness.** Subset-sum over `{1, …, 100}` becomes
+`101 × 101 = 10,201` states under `(i, remaining)` rather than `2¹⁰⁰` subsets.
+Hamiltonian paths become `2ⁿ · n` states rather than `n!`. The count was never the
+hard part; the representation was. This is Step S7's "stop doing mathematics, write
+a program" — and "stop doing mathematics" means stop seeking a *formula*, not stop
+computing.
+
+**Narrow the question.** If you need a bound rather than a count, ask for one: the
+pigeonhole guarantee `⌈n/k⌉` answers "how crowded does it get" exactly, with no
+formula for the distribution. If you need a probability rather than a count, state
+it as a probability and use the sampling route below. Scoping the request correctly
+converts many intractable *questions* into tractable ones.
+
+**Sample.** Exact inclusion–exclusion over the `C(n,2)` pairwise collision events
+has `2^{C(n,2)}` terms, hopeless from about `n = 6` upwards; twenty thousand trials
+give a usable number in a fixed budget. And then — the lesson's fifth common
+mistake — *state the answer's scope*: "the number of 6-character strings over 94
+printable ASCII characters with no two adjacent positions equal is X; the count of
+those containing at least one digit is Y". Counts are always relative to a precise
+size specification, and an unqualified number cannot be checked by anyone.
+
+Why is brute force first the highest-return habit? Because it is the only check
+that tests the *model* rather than the arithmetic. Every other check — Pascal's
+recursion agreeing with the factorial formula, `math.comb` agreeing with a hand
+loop, DP agreeing with a second DP — tests internal consistency, and internal
+consistency is exactly what a mis-modelled problem has in abundance. The lesson's
+worked example makes the case concretely: the 2-state version of the password count
+is internally consistent, well-typed, monotone in `n`, and wrong by a factor of
+1.6. Enumeration catches it in the time it takes to run `m = 3, n = 3`. And the
+habit costs one line, on the smallest instance you can compute, before any formula
+is trusted — which is why it beats every other debugging technique available in this
+subject.
+
+</details>
+
 ## Exercises and Solutions
 
 **[ ] Exercise 1 — Classify ten problems.** For each, name the size parameter and

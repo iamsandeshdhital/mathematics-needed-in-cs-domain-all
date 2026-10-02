@@ -1007,6 +1007,705 @@ print("  first and refuses to reopen it. That is the non-negativity requirement.
 
 ---
 
+## Formula Sheet
+
+Every symbol and formula this lesson introduces. `n` is the number of vertices,
+`|E|` the number of edges, `w(e)` an edge weight, `h` a height, `m` a fan-out and
+`t` a minimum degree. Valid domains are stated in the last column.
+
+| Symbol | Formula | In plain words | When you use it |
+| --- | --- | --- | --- |
+| Tree | connected and acyclic graph | exactly one path between every pair | the definition everything else is derived from |
+| Forest | acyclic, possibly disconnected | trees not joined up | valid for any `n`; `c` components is fine |
+| Rooted tree | a tree plus a designated root | pick a starting vertex for depth | valid for `n ≥ 1` |
+| Depth / height | `depth(v)` = distance from the root; `height = max_v depth(v)` | how deep a vertex sits | the complexity bound; `n.bit_length() − 1` for a complete tree |
+| Leaf / internal | leaf has degree 1 (degree 0 at the root of a single-vertex tree); others internal | no children / has children | the single-vertex tree is the edge case in every leaf count |
+| Six equivalent characterisations | (1) tree ⟺ (2) connected ∧ acyclic ⟺ (3) connected ∧ `\|E\| = n−1` ⟺ (4) acyclic ∧ `\|E\| = n−1` ⟺ (5) connected ∧ every edge a bridge ⟺ (6) unique path between every pair | six ways to say the same thing | use whichever is cheapest to verify; all require `n ≥ 1` |
+| Forest edge count | `\|E\| = n - c` where `c` is the number of components | `c` independent trees | a forest with `n−1` edges must have `c = 1`, hence be a tree |
+| Cut property | if `e` is a minimum-weight edge crossing some cut, then `e` belongs to **some** MST | the cheapest edge out of a region is always safe | valid when weights are arbitrary real numbers; ties are fine |
+| Proof of the cut property | swap `e` for the crossing edge `f` on the tree path | replacing `f` with `e` gives an MST of the same weight | one exchange, and it is the whole correctness argument |
+| Kruskal | sort by weight; add `e` only if its endpoints are in different components; stop at `n − 1` edges | cheapest first, never a cycle | union–find answers "same component?" in `O(α(n))` |
+| Prim | start anywhere; repeatedly add the cheapest edge with exactly one endpoint inside | grow one connected piece | the growing tree defines the cut that invokes the cut property |
+| MST total cost | `$\min_{T} \sum_{e\in T} w(e)$` over spanning trees | connect everything as cheaply as possible | **different objective** from a shortest path |
+| Shortest-path distance | `$\min_{P} \sum_{e\in P} w(e)$` over paths `A ⇝ v` | get from `A` to `v` as cheaply as possible | Dijkstra: `A = 0, C = 1, B = 3, E = 4, D = 6, F = 7` |
+| Dijkstra | settle the unsettled vertex with the smallest tentative distance; relax its edges | never reopen a settled vertex | valid **only when every `w(e) ≥ 0`**; `O((V+E) log V)` |
+| Negative edge | Dijkstra's conclusion can fail | a later negative edge can shorten a settled path and is ignored | use Bellman–Ford, `O(V·E)`, which also detects negative cycles |
+| Negative cycle | shortest distances are unbounded below | go round it as often as you like | **no** algorithm can return such a distance |
+| Undirected negative edge | it *is* a negative cycle of weight `2w` | traversable both ways | "Dijkstra hung" has this cause; it is a structure bug, not a code bug |
+| Binary tree vertex bound | at most `2^{h+1} - 1` vertices at height `h` | each level doubles: `1 + 2 + ⋯ + 2^h` | `h = 3` gives 15, so 6 ≤ 15 ✓ |
+| Leaves vs internal | if every internal vertex has exactly two children, leaves = internal + 1 | `2n` child slots, `n − 1` filled by internal vertices | **requires the two-children assumption** and `n_internal ≥ 1`; also fails for the single-vertex tree |
+| Sum of child counts | `$\sum_v \#children(v) = n - 1$` | every non-root vertex is exactly one child | true for **every** rooted tree; `5 = 6 − 1` in the worked example |
+| Complete binary tree height | `$h = \lfloor \log_2 n \rfloor$` | no gaps in the array layout | the worked tree has height 3, not `⌊log₂ 6⌋ = 2`, so it is not complete |
+| Balanced-tree search bound | `$\lceil \log_2 n \rceil + 1$` comparisons | depth of a balanced tree over `n` keys | 9 keys ⟹ 5; a degenerate BST over 7 ascending keys needs 7 |
+| B-tree node bound | a node is full at `2t − 1` keys; a non-root node holds ≥ `t − 1` | the root may hold as few as 1 | the rule `report` checks |
+| B-tree height | `$h = \lceil \log_m n \rceil$` or `$\lceil \log_m n \rceil + 1$` | each level multiplies the key count by at most `m` | `O(log_m n)` node reads; valid when all leaves are at one level |
+| Page-sized B-tree | 499 keys per 4 KB node, `499^{3} = 124{,}251{,}499` | three levels for 10⁶ keys | the single most consequential place a tree invariant shows up in production |
+| Trie node bound | nodes ≤ `1 + Σ(word lengths)` | each insert creates at most `len(word)` new nodes | 6 words, 18 characters, 10 nodes; two 501-character strings sharing a 500-character prefix need 503 nodes |
+| Cayley's formula | `$\#\{\text{labelled trees on } n \} = n^{\,n-2}$` | via Prüfer sequences of length `n − 2` | valid for `n ≥ 2`; `K₄` has `4² = 16` trees, `n = 10` gives 10⁸ |
+| Worked MST | `1 + 2 + 2 + 3 + 3 = 11` | Kruskal and Prim agree, brute force confirms | vs shortest path `A ⇝ F` of 7: a local and a global optimum |
+
+---
+
+## Multiple Choice Questions
+
+**Q1.** The lesson lists six equivalent characterisations of a tree. Which of
+these is **not** one of them?
+
+- A) `G` is connected and acyclic
+- B) `G` is connected and has exactly `n − 1` edges
+- C) `G` is acyclic and has exactly `n − 1` edges
+- D) `G` is connected and has exactly `n − 2` edges
+
+<details>
+<summary>Answer and explanation</summary>
+
+**D) `G` is connected and has exactly `n − 2` edges.**
+
+`n − 2` edges on `n` vertices cannot be connected: a connected graph needs at
+least `n − 1` edges, since every step from one vertex to a new one uses at least
+one edge. So a connected graph with `n − 2` edges does not exist at all.
+
+- A) is item (2) of the list, and the definition itself.
+- B) is item (3): connected with `n − 1` edges forces acyclicity, because in a
+  connected graph every edge lies on a cycle or is a bridge, and connectivity
+  plus only `n − 1` edges leaves no room for a cycle.
+- C) is item (4), and the converse of B: acyclic with `n − 1` edges forces
+  connectivity, since a forest on `n` vertices with `c` components has exactly
+  `n − c` edges, and `n − 1` forces `c = 1`.
+
+</details>
+
+**Q2.** A graph has 6 vertices and 5 edges. What must you check before calling it
+a tree?
+
+- A) Nothing — `|V| − 1 = 5`, so it is a tree
+- B) Only that it is acyclic; connectivity follows from the edge count
+- C) Whether it is connected, or equivalently acyclic — though for 6 vertices and
+  5 edges the forest formula `|E| = n − c` forces `c = 1` and settles it
+- D) Whether it is planar
+
+<details>
+<summary>Answer and explanation</summary>
+
+**C) Whether it is connected, or equivalently acyclic — though for 6 vertices and
+5 edges the forest formula `|E| = n − c` forces `c = 1` and settles it.**
+
+`|E| − 1 = 5` is *consistent* with a tree, and the exercise works through why
+that nearly decides it: a forest on `n` vertices with `c` components has exactly
+`n − c` edges, so `5 = 6 − c` gives `c = 1`, which forces connectivity. The
+5-cycle-plus-isolated-vertex counterexample people reach for does not have 6
+vertices and 5 edges as one graph does — as a single graph on 6 vertices and 5
+edges the count does decide it.
+
+- A) states the right conclusion with the reasoning in the wrong place. `|V| − 1`
+  edges alone is not a theorem about trees in general; it is a theorem about
+  forests, and applying it as "the edge count matches, so it's a tree" is the
+  habit the exercise warns about.
+- B) is the same claim stated more confidently. Acyclicity and connectivity are
+  interchangeable *given* the edge count, but one of them still has to be
+  established; it does not follow for free.
+- D) is irrelevant to being a tree. Every tree is planar, so planarity is a
+  consequence and can never be the missing check.
+
+</details>
+
+**Q3.** What exactly does the cut property assert, and why is it the whole
+correctness argument for both Kruskal and Prim?
+
+- A) Every minimum-weight edge belongs to **every** MST
+- B) A minimum-weight edge crossing some cut belongs to **some** MST, and the
+  proof is a single edge exchange
+- C) An MST is obtained by taking the `n − 1` globally cheapest edges
+- D) If two MSTs exist they must have the same total weight
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) A minimum-weight edge crossing some cut belongs to **some** MST, and the
+proof is a single edge exchange.**
+
+Take an MST `T`. If `e` is already in `T`, done. Otherwise `T` has a unique path
+between `e`'s endpoints, and that path crosses the cut at some edge `f`. Replacing
+`f` with `e` gives a spanning tree no heavier than `T` — and since `T` is minimal,
+exactly as heavy. So a new MST containing `e` exists.
+
+- A) is the over-strong version, and it is false: option D of the worked example's
+  Exercise 2 finds a *different* MST with the *same* weight, so some cheap edges
+  are in one MST and not the other. "Some", not "every", is what is provable.
+- C) is the greedy-by-globally-cheapest strategy, and it fails for a specific
+  reason: the `n − 1` globally cheapest edges may contain a cycle, and then fewer
+  than `n − 1` edges remain to connect everything. Kruskal is the *repaired*
+  version — it takes the cheapest edges but skips any that closes a cycle, and it
+  is the cut property, not the global ranking, that certifies optimality.
+- D) is true and much weaker. It follows from optimality by definition, but it
+  says nothing about which edges to pick and so cannot justify an algorithm.
+
+</details>
+
+**Q4.** Why does Kruskal need union–find rather than a depth-first search to test
+whether an edge closes a cycle?
+
+- A) BFS cannot detect cycles at all
+- B) Union–find answers "are these two endpoints in the same component?" in
+  `O(α(n))` amortised time, and maintaining the components incrementally is exactly
+  the equivalence-class operation of [Lesson 25](../part02_discrete_combinatorics/25_relations_and_equivalence_classes.md)
+- C) DFS is `O(n²)` and Kruskal processes `m` edges, so the total would be `O(n²m)`
+- D) Union–find finds the *cheapest* crossing edge, so DFS is redundant
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) Union–find answers "are these two endpoints in the same component?" in
+`O(α(n))` amortised time, and maintaining the components incrementally is exactly
+the equivalence-class operation of [Lesson 25](../part02_discrete_combinatorics/25_relations_and_equivalence_classes.md).**
+
+Kruskal only ever *adds* edges, so the answer only ever moves from "different
+components" to "same component" and never back. That is precisely the operation
+union–find supports at near-constant cost, and precisely the one it cannot undo —
+which is why it is the right tool here and why it would be the wrong tool for a
+problem that *removes* edges.
+
+- A) is false and is the Lesson-26 point BFS exists to make. Cycle detection needs
+  DFS three-colour marking; that is a different question from a connectivity query.
+- C) is a true complexity fact with an irrelevant conclusion. A DFS per edge would
+  indeed be costly, but so would `O(nm)` repeated BFS, and both are avoidable by
+  noticing that the answer is *incremental*.
+- D) misdescribes union–find. It answers connectivity and merges classes; it has
+  no notion of weight at all. The cheapest crossing edge comes from Kruskal's sort
+  order, not from the data structure.
+
+</details>
+
+**Q5.** In the worked network, what is the total cost of the minimum spanning
+tree, and what is the cost of the shortest path from A to F?
+
+- A) Both are 11
+- B) Both are 7
+- C) The MST costs 11; the shortest path `A ⇝ F` costs 7
+- D) The MST costs 7; the shortest path costs 11
+
+<details>
+<summary>Answer and explanation</summary>
+
+**C) The MST costs 11; the shortest path `A ⇝ F` costs 7.**
+
+Kruskal picks `A–C(1), B–C(2), D–E(2), C–E(3), E–F(3)` for a total of 11, and
+Prim growing `A → C → B → E → D → F` gives the same 11 — with brute force over
+all `C(9,5) = 126` five-edge subsets confirming 11 is optimal. Dijkstra from A
+gives `A = 0, C = 1, B = 3, E = 4, D = 6, F = 7`, so the cheapest route to F is 7.
+
+- A) and B) are the two halves of Mistake 3. The two numbers are genuinely
+  different objectives: the MST minimises the *total* over all chosen links, a
+  shortest path minimises one route's weight.
+- D) has them the wrong way round, and it cannot happen: a single path's weight is
+  at most the total weight of a tree containing it, so 7 ≤ 11 always. A number
+  ordering that violates this is a sign you have mislabelled the quantities.
+
+</details>
+
+**Q6.** The worked example notes that the MST and the shortest-path tree happen to
+contain the *same* five edges, and calls that "the easy case and the reason people
+conflate the two". Why is the agreement dangerous?
+
+- A) It is not dangerous, since they always agree on graphs like this
+- B) Because the agreement is an accident of the weights: add a cheap `A–D` link
+  and the shortest path from A to F becomes 2 while the MST stays at 11, because
+  the MST minimises the total and would rather connect D through E at cost 2
+- C) Because the two algorithms then produce different *numbers of edges*
+- D) Because Dijkstra can only be applied when the graph is a tree
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) Because the agreement is an accident of the weights: add a cheap `A–D` link
+and the shortest path from A to F becomes 2 while the MST stays at 11, because the
+MST minimises the total and would rather connect D through E at cost 2.**
+
+The lesson's Step 7 constructs the counterexample precisely so you can watch the
+divergence happen. Textbook examples are usually chosen to be small and tidy, and
+tidiness is exactly what produces this coincidence — so a program tested on such
+an example passes, and the bug survives into production.
+
+- A) is the belief the lesson is trying to break. The two coincide only when the
+  graph has a shape that makes every short path also globally cheap, and that
+  shape is not typical.
+- C) is impossible in principle: both produce trees on the same vertex set, so
+  both have exactly `n − 1` edges. The difference is *which* edges, never how
+  many.
+- D) is false — Dijkstra in the lesson runs on the full nine-edge network, not on
+  a tree. The networks and trees it produces are separate objects.
+
+</details>
+
+**Q7.** Why does Dijkstra require non-negative edge weights, and what happens with
+a *negative cycle*?
+
+- A) Non-negative weights are needed only for the priority queue to be efficient
+- B) Non-negativity is used at exactly one point in the proof — a prefix of a
+  shorter path is no longer than the whole path — and without it a negative cycle
+  makes shortest distances unbounded below, so no algorithm can return them
+- C) Non-negativity is needed so that all weights are integers
+- D) A negative cycle can be removed by simply ignoring it
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) Non-negativity is used at exactly one point in the proof — a prefix of a
+shorter path is no longer than the whole path — and without it a negative cycle
+makes shortest distances unbounded below, so no algorithm can return them.**
+
+In the settling argument, suppose the next vertex to settle, `u`, had a shorter
+path `P` than its tentative distance. Let `w` be the first unsettled vertex on `P`;
+its predecessor `v` *is* settled, so relaxing `v`'s edges set
+`dist[w] ≤ length of the prefix of P to w`. That prefix is no longer than the
+total length of `P` *because all weights are non-negative*. So `dist[w] ≤
+length(P) < tentative dist of u`, contradicting `u` being the minimum unsettled.
+Every step of that argument uses non-negativity; that is the entire hypothesis.
+
+- A) is a performance claim masquerading as a correctness one. With a negative
+  edge, Dijkstra does not merely run slowly — it settles a vertex permanently at a
+  value that a later negative edge then improves, and then refuses to reopen it.
+  The failure is silent.
+- C) is invented. Nothing about the proof requires integrality.
+- D) is false by definition: "negative cycle" means a cycle whose weights sum
+  below zero, so you can go round it arbitrarily many times and drive the cost to
+  `−∞`. The lesson's directed demo shows the related failure: the true path
+  `A → C → B` costs `2 + (−5) = −3`, but Dijkstra settled `B` at 1 first.
+
+</details>
+
+**Q8.** A binary tree of height `h` has at most how many vertices? And how many
+vertices can a tree of height `h = 3` have?
+
+- A) `2^{h+1} − 1`, so 15
+- B) `2^{h} − 1`, so 7
+- C) `2^{h+1}`, so 16
+- D) `h²`, so 9
+
+<details>
+<summary>Answer and explanation</summary>
+
+**A) `2^{h+1} − 1`, so 15.**
+
+Each level can hold twice as many vertices as the one above, giving the geometric
+sum `1 + 2 + ⋯ + 2^h = 2^{h+1} − 1`. With `h = 3` that is 15, and the lesson's
+worked tree check reads `max nodes for height 3 is 2^(h+1)-1 = 15; 6 <= that: True`.
+
+- B) has the wrong exponent offset. `2^h − 1 = 7` is the number of nodes in a
+  binary tree of height `h` counting only *levels 0 through h − 1*, i.e. a
+  different convention for height. The lesson counts the root as depth 0, so the
+  root-only tree has height 0 and 1 vertex, and `h = 3` reaches depth 3.
+- C) is the count of a perfect binary tree with one extra empty slot per leaf. The
+  off-by-one is easy to make and shows up as `16 ≤ 16` — an answer that looks
+  right and is wrong.
+- D) has no combinatorial content. A complete binary tree of 9 vertices has
+  height `⌊log₂ 9⌋ = 3`, and 9 is nothing like `h²`.
+
+</details>
+
+**Q9.** Why are B-trees, not binary search trees, the structure behind database
+indexes?
+
+- A) Because a B-tree gives `Θ(log n)` while a BST gives `O(n)`, and the B-tree's
+  fan-out means that height comes from fan-out: 499 keys per 4 KB page gives 3
+  levels for 10⁶ keys
+- B) Because a B-tree stores data in the internal nodes and a BST does not
+- C) Because a BST cannot be searched without comparisons
+- D) Because a B-tree is always binary, so it needs no comparisons either
+
+<details>
+<summary>Answer and explanation</summary>
+
+**A) Because a B-tree gives `Θ(log n)` while a BST gives `O(n)`, and the B-tree's
+fan-out means that height comes from fan-out: 499 keys per 4 KB page gives 3
+levels for 10⁶ keys.**
+
+With `m` keys per node the height is `⌈log_m n⌉` or `⌈log_m n⌉ + 1`, so
+`O(log_m n)` node reads. The lesson computes it: with 499 keys per node,
+`499³ = 124,251,499`, so three level reads cover 10⁶ keys. A balanced BST would
+need about `10⁶`'s `bit_length()` — roughly 20 — levels, and 20 random disk reads
+per lookup instead of 3.
+
+- B) is false. A B-tree stores keys in every node, including internal ones; that
+  is what raises the fan-out and lowers the height.
+- C) has it backwards. A B-tree *reduces* the number of comparisons, which is
+  secondary to reducing the number of *I/O operations*. The lesson says a shipped
+  `dict` "is a hash table with a compact open-addressed layout, precisely because
+  BST pointer-chasing costs cache misses" — the same argument at a different scale.
+- D) contradicts itself. A B-tree of minimum degree `t` is not binary unless
+  `t = 2`, in which case it is a 2-3-4 tree — and the whole advantage comes from
+  `t` being large.
+
+</details>
+
+**Q10.** Cayley's formula counts labelled trees on `n` labelled vertices. How many
+trees are there on 4 vertices?
+
+- A) `4² = 16`
+- B) `4³ = 64`
+- C) `4! = 24`
+- D) `C(4,2) = 6`
+
+<details>
+<summary>Answer and explanation</summary>
+
+**A) `4² = 16`.**
+
+Cayley's formula is `n^{n−2}` for `n ≥ 2`, proved by a bijection between labelled
+trees and Prüfer sequences of length `n − 2` over the same labels. For `n = 4`
+that is `4² = 16`, and brute-force enumeration confirms it: each of the 6 possible
+edges is present or absent, so there are `2⁶ = 64` graphs, of which 16 are
+connected and acyclic.
+
+- B) is `n^{n−1}`, off by one in the exponent — the Prüfer sequence has length
+  `n − 2`, not `n − 1`, which is exactly where the `−2` in the formula comes from.
+- C) is `4!`, the number of orderings of 4 vertices. A tree is an edge set, not an
+  ordering; `4! = 24` counts traversals.
+- D) is the number of *edges* in a spanning tree on 4 vertices, `n − 1 = 3`, not
+  the number of trees.
+
+</details>
+
+**Q11.** You insert the keys 1, 2, 3, 4, 5, 6, 7 into a plain binary search tree
+in that order. How deep does a search for key 7 go, and why does the lesson care?
+
+- A) 3 comparisons, because a BST is always `Θ(log n)`
+- B) 7 comparisons — the tree degenerates into a linked list, which is why
+  self-balancing trees (AVL, red-black) exist
+- C) 1 comparison, because 7 is the largest key and lives at the root
+- D) It depends on the implementation, so no bound can be stated
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) 7 comparisons — the tree degenerates into a linked list, which is why
+self-balancing trees (AVL, red-black) exist.**
+
+Every insert is larger than everything already in the tree, so it goes right every
+time and the tree becomes a chain: 1 at the root, 2 one level down, …, 7 at depth 7.
+The lesson's code prints exactly this: `ascending insert into a BST -> depth of key
+7 is 7 (linear, not log) -- this is why trees self-balance`. Balanced insertion
+would give `⌈log₂ 7⌉ + 1 = 4` comparisons.
+
+- A) is the guarantee self-balancing trees buy, and it fails the moment balancing
+  is removed. The lesson's comparison is the point: a balanced tree of 9 keys has
+  a bound of `⌈log₂ 9⌉ + 1 = 5` comparisons, while the degenerate one needs 7 for
+  only 7 keys.
+- C) is a confusion about where maxima live. In a *balanced* tree the largest key
+  is near a leaf, not the root; the root of this BST is 1.
+- D) is wrong because the bound is a property of the *shape*, and ascending input
+  determines the shape: right spine of length `n`. Sorted input is the standard
+  adversarial case.
+
+</details>
+
+---
+
+## Subjective Questions
+
+### Short Answer
+
+**Q1. Define *tree*, *forest*, *rooted tree*, *depth*, *height*, *leaf* and
+*internal vertex*. Note the single-vertex edge case.**
+
+<details>
+<summary>Answer</summary>
+
+A **tree** is a connected acyclic graph. A **forest** is an acyclic graph,
+possibly disconnected. A **rooted tree** is a tree with a designated root. The
+**depth** of `v` is its distance from the root; the **height** is the maximum
+depth. A **leaf** is a vertex of degree 1 — degree 0 at the root of a
+single-vertex tree; other vertices are **internal**.
+
+The single-vertex tree is the edge case in every counting identity: its only
+vertex is both the root and, by convention, a leaf, so "leaves = internal + 1"
+reads `1 = 0 + 1` and holds only by that convention.
+
+</details>
+
+**Q2. State two of the six equivalent characterisations of a tree, and sketch why
+`(2) → (3)` works.**
+
+<details>
+<summary>Answer</summary>
+
+For a graph `G` with `n ≥ 1` vertices, these are equivalent:
+
+1. `G` is a tree.
+2. `G` is connected and acyclic.
+3. `G` is connected and has exactly `n − 1` edges.
+4. `G` is acyclic and has exactly `n − 1` edges.
+5. `G` is connected and every edge is a **bridge** (removing it disconnects `G`).
+6. There is a unique path between every pair of vertices.
+
+For `(2) → (3)`: a spanning tree of a connected graph has `n − 1` edges, and
+removing any non-tree edge leaves the graph connected — so more than `n − 1` edges
+forces a cycle.
+
+</details>
+
+**Q3. State the cut property, and give the one-sentence exchange proof.**
+
+<details>
+<summary>Answer</summary>
+
+**Cut property.** Let `e` be a minimum-weight edge crossing some cut — a partition
+of `V` into two non-empty parts. Then `e` belongs to *some* minimum spanning tree.
+
+*Proof.* Take an MST `T`. If `e ∈ T`, done. Otherwise `T` has a unique path from
+one endpoint of `e` to the other, and that path crosses the cut at some edge `f`.
+Replacing `f` with `e` gives a spanning tree no heavier than `T` — and since `T`
+is minimal, exactly as heavy. So a new MST containing `e` exists.
+
+This one lemma is the entire correctness argument for both Kruskal and Prim.
+
+</details>
+
+**Q4. State Kruskal's algorithm and Prim's algorithm. How is the cut property
+invoked in each?**
+
+<details>
+<summary>Answer</summary>
+
+**Kruskal.** Sort the edges by weight; add each edge whose endpoints are currently
+in different connected components; stop when `n − 1` edges are added.
+
+*Cut property use.* When Kruskal adds an edge, it is the cheapest edge crossing the
+cut between its own component and everything else. Union–find answers "are these
+in the same component?" in `O(α(n))`.
+
+**Prim.** Start from any vertex; repeatedly add the cheapest edge with exactly one
+endpoint in the growing tree.
+
+*Cut property use.* At each step the growing tree defines a cut (tree versus
+everything else), and the chosen edge is the cheapest crossing edge.
+
+</details>
+
+**Q5. State the binary-tree bounds, and say which assumption each one needs.**
+
+<details>
+<summary>Answer</summary>
+
+A binary tree of height `h` has at most `2^{h+1} − 1` vertices (geometric sum
+`1 + 2 + ⋯ + 2^h`), so `h = 3` allows 15. A *complete* binary tree with `n`
+vertices has height exactly `⌊log₂ n⌋`.
+
+The leaves/internal identity — a binary tree with `n` internal vertices has exactly
+`n + 1` leaves — requires that **every internal vertex have exactly two children**:
+count edges two ways, `2n` child slots, `n − 1` of them filled by other internal
+vertices, leaving `n + 1` filled by leaves. Drop that assumption and the identity
+fails, since `∑_v children(v) = n − 1` holds for *every* rooted tree but does not
+imply `leaves = internal + 1`.
+
+</details>
+
+**Q6. State Cayley's formula and explain the bijection that proves it. What does
+it tell you about "generate a random tree"?**
+
+<details>
+<summary>Answer</summary>
+
+**Cayley's formula.** The number of distinct labelled trees on `n` vertices is
+`n^{n−2}`, valid for `n ≥ 2`.
+
+*Proof.* By Prüfer sequences: there is a bijection between labelled trees on
+`{n, 1, …, n}` and sequences of length `n − 2` over the same labels, so there are
+`n^{n−2}` of them. The map is explicit — repeatedly delete the smallest-labelled
+leaf and record its neighbour — which is why it is a bijection and not just a
+count.
+
+It tells you that for `n = 10` there are 10⁸ = 100,000,000 trees, so *generate a
+random tree* (sample uniformly from that space) and *generate **the** random tree*
+(the Cayley/random-labelled-tree distribution) are different problems.
+
+</details>
+
+### Long Answer
+
+**Q1. Why do shortest paths and minimum spanning trees give different answers, and
+why is the worked example's agreement the most dangerous kind of example?**
+
+<details>
+<summary>Model answer</summary>
+
+They optimise different functions. A shortest-path tree minimises, for each vertex
+`v`, the weight of the *one route* from the source to `v`. A minimum spanning tree
+minimises the *sum over all chosen edges*. Nothing forces those two minima to
+coincide, and the worked example's construction is explicit about the failure
+mode: connect `A` to `F` for 2 via a cheap link `A–D`, while the MST would rather
+connect `D` through `E` at cost 2 and pay for `A`'s own connection separately.
+One route can be cheap while the *sum* is dominated by other branches.
+
+The danger is that textbook graphs are chosen to be tidy, and tidiness is exactly
+what produces agreement. The lesson's six-site network was designed to be
+hand-checkable in nine edges — and the price is that Dijkstra's tree and Kruskal's
+tree come out with the same five edges, so a program tested against the worked
+example passes. This is Mistake 3's mechanism in one sentence: "they coincide only
+by accident — in the worked example they happen to, and that is exactly the
+coincidence that causes the bug to survive testing."
+
+The confusion survives because the two objects *look* the same. Both are trees on
+the same graph; both are built greedily, edge by edge; both are usually reported as
+a cost and an edge list; and in the small case the answers match. Every surface
+signal says "same kind of thing" and none of them says "different objective". So
+the error is not a typo — it is a misreading of what was being minimised, which is
+invisible until a real network has a cheap local shortcut and an expensive global
+structure.
+
+The disciplined habit follows from the objectives. Before running anything, write
+down which quantity is being minimised: *total weight over all links needed for
+connectivity* (MST), or *weight of the best route from one source to one target*
+(shortest path), or *weight of the best route between every pair* (all-pairs, which
+needs neither of these). Then check the answer against that sentence. A single
+question — "does this answer include every link or only one route?" — separates the
+three, and it is the same question you would ask about a routing decision in
+production.
+
+</details>
+
+**Q2. Why is non-negativity exactly the hypothesis Dijkstra needs? Point to the
+step in the proof that uses it, and say what fails when it does not hold.**
+
+<details>
+<summary>Model answer</summary>
+
+Dijkstra's correctness rests on a *settling* argument, and the hypothesis appears
+in exactly one place in it. Maintain a set of settled vertices whose distances are
+claimed final. Suppose the next vertex to settle, `u`, has a genuinely shorter
+path `P` than its tentative distance. Let `w` be the first vertex on `P` that is
+not yet settled; its predecessor `v` on `P` *is* settled, so when `v` was settled,
+relaxation gave `dist[w] ≤` the true distance from the source to `w`, which is at
+most the length of the prefix of `P` up to `w`. Now the non-negativity step:
+
+> That prefix is no longer than the total length of `P`, **because all weights are
+> non-negative.**
+
+So `dist[w] ≤ length(P) < tentative dist of u`, contradicting that `u` was the
+minimum unsettled vertex. Every other step is order and bookkeeping. Non-negativity
+is the whole hypothesis, and the lesson says so.
+
+Without it the argument breaks exactly at that inequality. A prefix can be *longer*
+than the whole path when a later edge is negative, so the contradiction does not
+follow and the "final" claim is false. Concretely, the lesson's directed demo has
+arcs `A→B (1)`, `A→C (2)`, `C→B (−5)`. Dijkstra settles `B` at 1 early, marks it
+done, and never reopens it — but the true path `A → C → B` costs `2 + (−5) = −3`.
+Dijkstra returns 1 and reports no error. That is why Mistake 1 calls the failure
+silent rather than loud: you get a plausible number.
+
+Two further consequences worth knowing. First, a negative edge in an **undirected**
+graph is worse than a bad answer: it *is* a negative cycle of weight `2w`, since you
+can traverse it back and forth, so the "distance" is unbounded below and no
+algorithm can return it. "Dijkstra hung" in that situation is the theorem
+announcing itself. Second, if there is a negative **cycle**, shortest distances do
+not exist at all, and Bellman–Ford's job is to detect that as well as to compute the
+distances in `O(V·E)` instead of `O((V+E) log V)`.
+
+So the practical rule is a check, not a hope: if any weight can be negative,
+Bellman–Ford. The cost difference is one logarithmic factor, and it is the
+difference between right and silently wrong.
+
+</details>
+
+**Q3. Why is the tree height bound the thing that actually pays for the complexity
+of a data structure, and what breaks in production when a "tree" is not
+balanced?**
+
+<details>
+<summary>Model answer</summary>
+
+The height bound *is* the complexity. In a tree, the cost of reaching a node is the
+number of edges on the path to it, which is the depth, which is bounded by the
+height. So a bound on the height is a bound on every operation: search, insert,
+delete. `Θ(log n)` search is not a property of "searching" — it is a consequence of
+the height being `Θ(log n)`, and the only reason it *is* `Θ(log n)` is that a
+binary tree halves its remaining candidate set at each level. Remove the balance and
+the height becomes `Θ(n)`, and so does every operation. The lesson's degenerate BST
+is the demonstration: seven ascending inserts produce a right spine, key 7 needs
+**7** comparisons, and the balanced bound for those keys would have been
+`⌈log₂ 7⌉ + 1 = 4`. Nothing about the algorithm changed; only the shape did.
+
+That is why the fan-out matters so much for B-trees. The height is `⌈log_m n⌉`, so
+raising `m` lowers the height for the same `n`. A binary tree needs about 20 levels
+for 10⁶ keys; a B-tree with 499 keys per 4 KB node needs 3, because
+`499³ = 124,251,499`. Each level is one disk read, so this is the difference
+between three reads and twenty, and it is why every index in MySQL, PostgreSQL and
+SQLite is a B-tree. The lesson calls this "the single most consequential place where
+a tree invariant shows up in production", and the reason is not abstract: a B-tree
+is a binary search tree whose comparisons have been made 500 at a time.
+
+What breaks when a "tree" is not balanced is not always a performance number.
+Three concrete failures are in the lesson:
+
+- **Recursion.** Traversals written recursively hit CPython's default recursion
+  limit of about 1000, so a 50,000-node list-shaped tree raises `RecursionError`.
+  The lesson's Mistake 4 calls `list(map(eval, input().split()))` on a
+  50,000-element list "a well-known interview trap". The fix is an explicit stack,
+  and the diagnosis is that a depth failure is a shape failure.
+- **Stack overflow in parsers.** JSON, XML and most interchange formats are trees,
+  and a recursive-descent parser is literally DFS over one. Many parser
+  vulnerabilities are missing depth limits — "a stack overflow is a cycle in what
+  you believed was a tree", the lesson says. Here the failure is not slow but
+  fatal, and it is reachable from untrusted input.
+- **Silent blow-up.** An unbalanced BST on sorted input is `O(n)` per lookup, which
+  does not crash; it just takes a thousand times longer than expected, which is
+  worse in a service because it consumes the thread.
+
+The general lesson is that a tree's invariants are *coupled*: acyclicity gives
+unique paths, uniqueness gives `n − 1` edges, and the shape determines the height.
+The moment you build something that is a tree in name but not in structure — the
+right edges, the wrong shape — every complexity claim you make about it is void.
+Verify `|E| = n − 1` and the height, not just that it "looks like a tree".
+
+</details>
+
+**Q4. Why is the cut property enough to prove that both Kruskal and Prim return a
+*minimum* spanning tree rather than merely a cheap one? What would go wrong
+without it?**
+
+<details>
+<summary>Model answer</summary>
+
+Because the cut property turns every *local* choice into part of a *global*
+optimum, and the exchange argument makes that rigorous. Take any MST `T` and any
+edge `e` that is a minimum-weight edge crossing some cut. If `e ∈ T`, done.
+Otherwise `T` has a unique path between `e`'s endpoints — uniqueness follows from
+acyclicity — and that path must cross the cut at some edge `f ≠ e`. Since `e` is
+the cheapest crossing edge, `w(e) ≤ w(f)`. Swap: `T − f + e` is still a spanning
+tree (connectivity is restored along `e`, and no cycle is created because the only
+cycle in `T + e` is the one through `f`), and its weight is `w(T) − w(f) + w(e) ≤
+w(T)`. Since `T` is minimal, the new tree is also minimal. Hence an MST containing
+`e` exists, for *any* such `e`.
+
+Now the two algorithms become two applications of that lemma. **Kruskal**: when it
+accepts an edge, that edge is the cheapest remaining edge crossing the cut between
+its own component and the rest of the graph, so the cut property applies and some
+MST contains it. Invariant: the accepted edges are contained in *some* MST. **Prim**:
+the growing tree defines a cut (inside versus outside) and the chosen edge is the
+cheapest crossing edge, so again the cut property applies. Same invariant, different
+search strategy — one scans cheapest-first globally, the other scans
+cheapest-first locally.
+
+Note what the lemma says: `e` belongs to **some** MST, not **every** one. That is
+the right strength, and the worked example's Exercise 2 shows why it cannot be
+strengthened: adding a cheap `A–D` link of cost 1 produces a *different* MST with
+the *same* weight, replacing `A–C` with `A–D`. Equal-weight MSTs are common, which
+is exactly what you would expect from a theorem about minimums.
+
+What goes wrong without it is worth seeing, because the naive strategies it rules
+out look reasonable. "Take the `n − 1` globally cheapest edges" fails when they
+contain a cycle — then they leave the graph disconnected, and the cheapest
+*spanning* tree needs a dearer edge than the ones you skipped. "Take the cheapest
+edge incident to the newest vertex" is Prim without the cut, and it can strand an
+expensive connection elsewhere. Every greedy rule needs a *proof* that its local
+choice is globally safe, and the cut property is that proof for spanning trees.
+The boundary is worth naming explicitly: the *same* exchange argument does **not**
+justify a shortest-path algorithm, because a shortest path is not a spanning tree
+and the cut is the wrong shape. Two greedy algorithms, one lemma, and a boundary
+you have to know where it is.
+
+</details>
+
 ## Exercises and Solutions
 
 **[ ] Exercise 1 — Is it a tree?** A graph has 6 vertices and 5 edges. What can

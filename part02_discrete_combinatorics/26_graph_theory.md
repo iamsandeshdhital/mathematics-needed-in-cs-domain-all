@@ -682,6 +682,700 @@ print("  A^2 diagonal:", [A2[i][i] for i in path_nodes],
 
 ---
 
+## Formula Sheet
+
+Every symbol and formula this lesson introduces. `G = (V, E)` with `V` vertices and
+`E` edges, `|V|` the **order** and `|E|` the **size**, `n = |V|`, `m = |E|`.
+Subscripts on `A` index vertices; `Aᵏ` is the `k`-th matrix power.
+
+| Symbol | Formula | In plain words | When you use it |
+| --- | --- | --- | --- |
+| Graph | `$G = (V, E)$` with `E ⊆ {{u,v} : u,v ∈ V}` | a set of things and a set of which pairs are joined | road networks, social graphs, build graphs, control flow |
+| Order and size | `$\lvert V\rvert = n$`, `$\lvert E\rvert = m$` | how many vertices, how many edges | almost every bound in the lesson is a statement about `n` and `m` |
+| Simple graph | no loops, no multiple edges | a plain undirected graph | required for the bounds `m ≤ 3n − 6`, `deg ≤ n − 1`, `m ≤ C(n,2)` |
+| Degree | `$\deg(v) = \lvert\{u : \{u,v\} \in E\}\rvert$` | how many edges touch `v` | the input to the handshake lemma and to Euler's theorem |
+| Degree sequence | the multiset of all degrees | the degrees, order irrelevant | checking a proposed graph is graphical |
+| Average degree | `$\bar d = 2\lvert E\rvert/\lvert V\rvert$` | total degree divided by number of vertices | sparse vs dense; `16/6 ≈ 2.67` for the worked graph |
+| Handshake lemma | `$\sum_{v\in V}\deg(v) = 2\lvert E\rvert$` | every edge has two ends, so endpoints are counted twice | the cheapest possible check on an edge list |
+| Parity corollary | a simple graph cannot have all `n` vertices of odd degree when `n` is odd | the degree sum `2m` is even | rejects whole degree sequences in one step |
+| Degree ceiling | `$\deg(v) \le n - 1$`, hence `$\bar d \le n-1$` | a vertex cannot be joined to itself | saturates only for the complete graph `K_n` |
+| Walk | `$v_0, v_1, \dots, v_k$` with `$v_{i-1}v_i \in E$` | a trip that may revisit vertices | what the adjacency matrix counts |
+| Path | a walk with all vertices distinct | no repeats | the shortest-path object; requires a traversal, not a matrix power |
+| Circuit | a walk returning to its start | closed, repeats allowed | a route you can trace in one stroke |
+| Cycle | a circuit with all interior vertices distinct | a minimal closed loop | the object the bipartiteness criterion forbids when odd |
+| Connected / components | every pair joined by a path; the maximal such subgraphs | one piece, or several | components are the equivalence classes of [Lesson 25](../part02_discrete_combinatorics/25_relations_and_equivalence_classes.md) |
+| Spanning tree | a connected acyclic subgraph with all `n` vertices | the skeleton | has **exactly `n − 1`** edges, always |
+| Bipartite | `$V = X \cup Y$, `$X \cap Y = \emptyset$`, every edge one endpoint in each | 2-colourable | the structure under matching, flow, and scheduling |
+| Bipartite criterion | `$G$ bipartite $\iff$ `$G$ has no odd-length cycle$` | two-colourable exactly when no odd cycle | the single test worth memorising |
+| Euler circuit | a closed trail using every edge exactly once | one-stroke drawing | exists **iff every vertex has even degree** (connected) |
+| Euler trail | uses every edge once, not closed | one-stroke open drawing | exists **iff exactly two** vertices have odd degree |
+| Neither | four or more odd-degree vertices | cannot be drawn in one stroke | the build graph has four: 1, 3, 4, 5 |
+| Hierholzer's algorithm | walk until stuck, then splice closed walks from vertices on the circuit | constructive Euler trail | the lesson's `hierholzer` |
+| Euler's formula | `$V - E + F = 2$` | vertices minus edges plus faces | for a **connected plane** graph, `F` counting the outer face; cube: `8 − 12 + 6 = 2` |
+| Face-degree incidence | `$3F \le 2E$` | each face has ≥ 3 sides, each edge borders exactly 2 faces | combine with Euler to get the planar bound |
+| Planar edge bound | `$E \le 3V - 6$` | simple planar, **`V ≥ 3`** | **necessary only** — passing proves nothing |
+| Bipartite planar bound | `$E \le 2V - 4$` | simple planar **and** bipartite, **`V ≥ 3`** | uses `4F ≤ 2E`; valid *only* for bipartite graphs |
+| Non-planarity by counting | `$K_5`: `10 > 9 = 3·5−6`; `$K_{3,3}$`: `9 > 8 = 2·6−4` | the bound rejects these outright | the two canonical non-planar graphs |
+| Four colour theorem | every planar graph is 4-colourable | stated as fact, not proved | the algorithmic shadow is `Δ + 1` colours greedily |
+| Adjacency matrix | `$A_{ij} = 1$ if `$i,j\in E$`, else 0 | `n × n` 0/1 matrix | `O(V²)` memory, `O(1)` edge test |
+| Matrix-power theorem | `$(A^{k})_{ij}$` = number of **walks** of length `k` from `i` to `j` | multiply: sum over the intermediate vertex | drives PageRank, centrality, and interleaving counts |
+| Diagonal consequence | `$(A^{2})_{ii} = \deg(i)$` | a 2-walk from `v` back to `v` is neighbour-and-back | the tell that you are counting walks, not paths |
+| Row sums of `Aᵏ` | total `k`-step walks anywhere in `G` | 16 for `k = 1`, 48 for `k = 2`, 142 for `k = 3` | `k = 1` recovers `2m` — the handshake lemma again |
+| BFS | enqueue each vertex once; distances are shortest hop counts | `O(V + E)` | unweighted shortest paths, components, reachability |
+| DFS three-colour | white / grey / black marking | cycle detection, topological sort, SCCs, bridges | `O(V + E)`; needed for weighted paths only via other tools |
+| Complete graph | `$K_n$` has `$C(n,2)$` edges and degree `n−1` everywhere | everything joined to everything | `K_5` = 10 edges, `K_4` = 6 edges (bound tight) |
+
+---
+
+## Multiple Choice Questions
+
+**Q1.** The build graph in the worked example has `E = {0–1, 0–2, 1–2, 1–3, 2–3,
+2–4, 3–4, 4–5}`, so `|V| = 6` and `|E| = 8`. What does the handshake lemma
+give you?
+
+- A) The degrees are 2, 3, 4, 3, 3, 1, and their sum 16 must equal `2 × 8`
+- B) The degrees sum to 8, because each edge contributes one degree
+- C) Vertex 2 has degree 4, so `|E| = 4`
+- D) The average degree is `8/6`, so the graph is sparse enough to be planar
+
+<details>
+<summary>Answer and explanation</summary>
+
+**A) The degrees are 2, 3, 4, 3, 3, 1, and their sum 16 must equal `2 × 8`.**
+
+`2 + 3 + 4 + 3 + 3 + 1 = 16` and `2|E| = 16`, so the check passes. The average
+degree is `16/6 ≈ 2.67`, which Step 2 notes is about a third as connected as
+`K₆`, where every degree would be 5.
+
+- B) is the off-by-one that Mistake 1 of this lesson warns about: it forgets
+  that each edge has *two* endpoints. The lemma is "degrees sum to twice the
+  number of edges", and dropping the 2 is the standard error.
+- C) is Mistake 1 in its purest form — the lemma constrains the *total* over all
+  vertices, not any individual degree. `deg(2) = 4` happens to be true here
+  because 2 is adjacent to 0, 1, 3 and 4, but it is not something the lemma
+  tells you.
+- D) is a non-sequitur. `8/6` is not the average degree — the average degree uses
+  the degree *sum*, so it is `16/6`. And planarity is not settled by a density
+  figure in either direction; see Q5.
+
+</details>
+
+**Q2.** Why is the build graph not bipartite?
+
+- A) Because it has 8 edges and 6 vertices, so it is too dense to 2-colour
+- B) Because vertices 0, 1 and 2 form a 3-cycle, and bipartite ⟺ no odd cycle
+- C) Because vertex 2 has degree 4, which is even and so incompatible with two
+  colours
+- D) Because it contains a cycle at all, and bipartite graphs have no cycles
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) Because vertices 0, 1 and 2 form a 3-cycle, and bipartite ⟺ no odd cycle.**
+
+`0–1`, `1–2` and `0–2` are all edges, so those three vertices form a triangle, and
+a triangle is a cycle of length 3 — odd. The lesson's step-by-step version is the
+same argument in colouring form: put 0 in `X`; then 1 and 2 must both be in `Y`;
+but 1 and 2 are adjacent, contradiction.
+
+- A) is meaningless as stated. Density has nothing to do with 2-colourability: a
+  star `K_{1,5}` has 5 edges on 6 vertices and is bipartite, and `K_{3,3}` has 9
+  edges on 6 vertices and is also bipartite.
+- C) gets the parity backwards, and parity of degree is an Euler-theorem
+  condition, not a bipartiteness condition. `C₄` is bipartite with every degree
+  equal to 2.
+- D) is Mistake 4 of this lesson. "No odd cycles" is the criterion; "no cycles"
+  is far stronger and excludes `C₄`, `C₆`, and every grid, all of which are
+  bipartite.
+
+</details>
+
+**Q3.** Does the build graph have an Euler trail — a route using every edge
+exactly once?
+
+- A) Yes, because it has eight edges and six vertices
+- B) No, because it has **four** odd-degree vertices (1, 3, 4, 5), and Euler's
+  theorem allows only zero or two
+- C) Yes, because it is connected
+- D) No, because it contains a cycle
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) No, because it has **four** odd-degree vertices (1, 3, 4, 5), and Euler's
+theorem allows only zero or two.**
+
+Degrees are 2, 3, 4, 3, 3, 1, so vertices 1, 3, 4 and 5 have odd degree — four
+of them. A connected graph has an Euler circuit when every degree is even and an
+Euler trail when exactly two are odd; four means neither, so you cannot draw the
+dependency graph without lifting your pen.
+
+- A) confuses "uses every edge" with "is possible". The edge count is
+  irrelevant; the degree parities decide it.
+- C) is a necessary condition, not a sufficient one. The square `0–1–2–3–0` is
+  connected and has an Euler circuit because all its degrees are 2; connectivity
+  alone says nothing about parity.
+- D) is irrelevant to Euler trails. In fact, having a cycle is what makes Euler
+  circuits *possible* in the first place — each visit to a vertex consumes edges
+  in pairs, one in and one out, which is exactly why even degrees are required.
+
+</details>
+
+**Q4.** The build graph passes the test `E ≤ 3V − 6` since `8 ≤ 12`. What has been
+established?
+
+- A) The graph is planar
+- B) The graph is not planar
+- C) Nothing about planarity: the bound is necessary, not sufficient
+- D) The graph is bipartite
+
+<details>
+<summary>Answer and explanation</summary>
+
+**C) Nothing about planarity: the bound is necessary, not sufficient.**
+
+`E ≤ 3V − 6` must hold for every simple planar graph with `V ≥ 3`, so a violation
+proves non-planarity. Satisfying it proves nothing. The lesson is careful: "The
+necessary condition is `E ≤ 3V − 6`: here `8 ≤ 12`, so the bound does not reject
+G. It does *not* prove G is planar." To prove planarity you need a drawing; to
+disprove it you need either the bound failing or a non-planarity result such as
+containing `K₅` or `K₃,₃` as a minor. This is Mistake 3 of the lesson.
+
+- A) is the over-strong reading, and Mistake 3 names it exactly: "a passing test
+  feels like a green light, and the bound is famous enough to feel authoritative."
+- B) is backwards — failing the bound would prove non-planarity, and this graph
+  passes it. (The graph happens to *be* planar, being a triangle with two pendant
+  chains, but you need a drawing to know that.)
+- D) is Step 4's separate question. The triangle 0–1–2 already settles it: not
+  bipartite.
+
+</details>
+
+**Q5.** Why is `K₅` not planar?
+
+- A) It has 5 vertices and 10 edges, and `10 > 9 = 3V − 6`, violating the planar
+  bound
+- B) It has an odd cycle, so it is not bipartite, and bipartite graphs cannot be
+  planar
+- C) It has 4 vertices of odd degree, so it has no Euler circuit
+- D) It is not connected
+
+<details>
+<summary>Answer and explanation</summary>
+
+**A) It has 5 vertices and 10 edges, and `10 > 9 = 3V − 6`, violating the planar
+bound.**
+
+Every simple planar graph with `V ≥ 3` satisfies `E ≤ 3V − 6`, so `K₅` with
+10 edges against a limit of 9 is rejected outright, with no drawing required. The
+lesson's candidate table prints `E<=3V-6: FAIL` and the verdict
+`NOT planar (3V-6 fails)`.
+
+- B) is a non-sequitur wrapped in a true statement. `K₅` is indeed not bipartite,
+  but many bipartite graphs are planar — `K_{3,3}` is bipartite and non-planar,
+  the grid is bipartite and planar, and `K_{2,3}` is bipartite and planar.
+  Non-planarity has nothing to do with bipartiteness.
+- C) is a true statement about `K₅` — all four degrees are 3 — with an irrelevant
+  conclusion. Euler's theorem concerns drawing the graph in one stroke, not
+  drawing it without crossings.
+- D) is false: `K₅` is complete and therefore connected.
+
+</details>
+
+**Q6.** Why is `K₃,₃` not planar, and which bound does the counting use?
+
+- A) It has 6 vertices and 9 edges, and `9 > 9 = 3V − 6`, so the general bound
+  rejects it
+- B) It has 6 vertices and 9 edges, and `9 > 8 = 2V − 4`, so the **bipartite**
+  bound rejects it
+- C) It has odd degree vertices, so it cannot be 2-coloured
+- D) It has `C(6,2) = 15` edges
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) It has 6 vertices and 9 edges, and `9 > 8 = 2V − 4`, so the **bipartite**
+bound rejects it.**
+
+`K_{3,3}` is the complete bipartite graph with parts of size 3 and 3, so
+`V = 6` and `E = 9`. Because it is bipartite — every edge runs from one part to
+the other — the tighter bound `E ≤ 2V − 4` applies, and `9 > 8`. The lesson's code
+notes explicitly that the bipartite bound "is only consulted for graphs that are
+bipartite".
+
+- A) applies the general bound and gets lucky in its arithmetic: `3V − 6 = 12`,
+  not 9. So `9 ≤ 12` and the general bound *passes*. The stronger bipartite
+  bound is the only one of the two that rejects.
+- C) inverts the definition. Being bipartite means a 2-colouring **exists**;
+  `K_{3,3}` has the perfectly good colouring "left part one colour, right part the
+  other".
+- D) counts all pairs of 6 vertices. `K_{3,3}` has only the 9 cross-part pairs as
+  edges.
+
+</details>
+
+**Q7.** What does `(A³)ᵢⱼ` count for the adjacency matrix of a simple graph?
+
+- A) The number of **paths** of length 3 from `i` to `j`
+- B) The number of **walks** of length 3 from `i` to `j`, where vertices may be
+  revisited
+- C) The number of distinct vertices reachable from `i` in 3 steps
+- D) The number of 3-cycles containing `i` and `j`
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) The number of **walks** of length 3 from `i` to `j`, where vertices may be
+revisited.**
+
+Matrix multiplication sums over the intermediate vertex — `(A²)ᵢⱼ =
+Σ_m A_im A_mj` counts `i → m → j` — and the same expansion compounds by induction.
+The tell is the diagonal: `(A²)ᵢᵢ = deg(i)`, which is 0 for a tree but 2, 3, 4,
+3, 3, 1 on the build graph's diagonal. A count of *paths* would have a zero
+diagonal wherever there are no cycles.
+
+- A) is Mistake 2 of this lesson. It is the error that hides perfectly well on
+  trees, where walks and paths coincide, and surfaces the first time you meet a
+  cycle — which is why the diagonal is the diagnostic to check.
+- C) mixes up "count of sequences" with "size of a set". Walks are distinct
+  objects; reachable *vertices* are deduplicated, and `(A³)ᵢⱼ` does no
+  deduplication. Row sums of `A³` give 142 walks for the build graph, far more
+  than the 6 reachable vertices.
+- D) would require a cycle, and `(A^k)_{ij}` never checks that the start and end
+  coincide or that the walk is simple. It counts every sequence of edges.
+
+</details>
+
+**Q8.** In the worked example, `(A²)₀₀ = 2`. Why?
+
+- A) There are two shortest paths of length 2 from 0 back to 0
+- B) A 2-walk from `v` to itself is exactly "step to a neighbour and back", so
+  `(A²)ᵢᵢ = deg(i)`, and `deg(0) = 2`
+- C) The matrix is symmetric, so the diagonal must be 2
+- D) Vertex 0 appears in exactly two shortest paths to vertex 3
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) A 2-walk from `v` to itself is exactly "step to a neighbour and back", so
+`(A²)ᵢᵢ = deg(i)`, and `deg(0) = 2`.**
+
+The two walks are `0 → 1 → 0` and `0 → 2 → 0` — 0's two neighbours. The lesson
+states the general fact: "`(A²)₀₀ = 2` is the number of 2-walks from 0 back to 0:
+`0 → 1 → 0` and `0 → 2 → 0`. That number is `deg(0) = 2`, exactly as the theorem
+predicts, because a 2-walk from `v` to `v` is exactly a neighbour-and-back."
+
+- A) is the same count described in the vocabulary of *paths*, and the two
+  descriptions coincide here only because the walks in question do repeat
+  vertices. That coincidence is precisely what makes the walk/path confusion
+  survive small examples.
+- C) misreads what symmetry gives. Symmetry of `A` gives `Aᵢⱼ = Aⱼᵢ`; it says
+  nothing about the diagonal, whose values are the degrees. For the build graph
+  the diagonal of `A²` is `[2, 3, 4, 3, 3, 1]`, not all 2s.
+- D) is a different entry. The number of 2-walks from 0 to 3 is 2 — via 1 and via
+  2 — which is `(A²)₀₃`, not the diagonal.
+
+</details>
+
+**Q9.** The row sums of `A¹` for the build graph total 16. Why does that number
+look familiar?
+
+- A) It is `|V|`, the number of vertices
+- B) It is `2|E| = 16`, because each edge contributes two entries to the adjacency
+  matrix — the handshake lemma, seen a second way
+- C) It is the number of walks of length 1 that return to their start
+- D) It is `n(n − 1)`, the maximum possible degree sum
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) It is `2|E| = 16`, because each edge contributes two entries to the adjacency
+matrix — the handshake lemma, seen a second way.**
+
+Each undirected edge `{u, v}` puts a 1 at `(u, v)` and a 1 at `(v, u)`, so
+`Σᵢⱼ Aᵢⱼ = 2|E| = 16`. The lesson notes this explicitly: "16 for `k = 1` (which
+must equal `2|E| = 16` by the handshake lemma — the same fact again), 48 for
+`k = 2`, and 142 for `k = 3`."
+
+- A) is `|V| = 6`, off by nearly a factor of three. It is a natural slip because
+  the matrix is indexed by vertices, but its *sum* is over entries, not vertices.
+- C) describes the diagonal, whose values are the degrees and whose total is
+  `2|E|` as well — but by a different count. The diagonal of `A¹` is `[0,0,0,0,0,0]`
+  for a loop-free graph, so there are no such walks at all.
+- D) is `6 × 5 = 30`, the degree sum of `K₆`. The build graph is far sparser than
+  complete, so 16 is right and 30 is the ceiling, not the value.
+
+</details>
+
+**Q10.** You want to detect a cycle in a graph whose edges carry weights. Which
+tool is wrong, and why?
+
+- A) BFS, because BFS revisits vertices constantly and that is how it avoids
+  re-exploring
+- B) DFS with three-colour marking, because DFS is too slow on weighted graphs
+- C) BFS, because it returns hop counts rather than distances, silently
+- D) BFS, because weighted graphs are never connected
+
+<details>
+<summary>Answer and explanation</summary>
+
+**C) BFS, because it returns hop counts rather than distances, silently.**
+
+This is Mistake 5 of this lesson, and its worst feature is that BFS does not
+fail — it returns a confident, wrong-shaped answer. BFS assigns `dist[v] =
+dist[u] + 1`, one per hop, so on a weighted graph it reports the number of edges
+on the cheapest *hop* route while any caller believes it is reporting cost. Cycle
+detection itself needs the DFS three-colour marking, and weighted shortest paths
+need Dijkstra, not BFS.
+
+- A) is true but does not answer the question, and it understates the problem:
+  revisiting vertices is not why BFS is *wrong* here, it is why BFS is silent.
+- B) is false. DFS is `O(V + E)` on any graph, weighted or not; and it is the
+  *correct* tool for cycle detection, which BFS is not.
+- D) is false — weights have no bearing on connectivity. The lesson's graph
+  `H` is disconnected for structural reasons, and the same `H` with weighted
+  edges would be no more or less connected.
+
+</details>
+
+**Q11.** How many edges does any spanning tree of a connected graph on `n`
+vertices have?
+
+- A) `n`
+- B) `n − 1`
+- C) `C(n, 2)`
+- D) `2n − 2`
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) `n − 1`.**
+
+A spanning tree is a connected acyclic subgraph containing every vertex. The
+existence theorem says every connected graph on `n` vertices has one, and every
+spanning tree has exactly `n − 1` edges. The lesson's Step 8 uses this on the
+six-vertex build graph: "Any spanning tree of G has exactly `6 − 1 = 5` edges",
+which is why
+[Lesson 27](../part02_discrete_combinatorics/27_trees_and_spanning_trees.md) chooses
+exactly 5 of the 9 candidate links.
+
+- A) is one too many, and that is not a rounding detail: `n` edges in a connected
+  graph forces at least one cycle, since the smallest cycle in a simple graph is
+  a triangle formed by an edge plus an existing path.
+- C) is the size of the *complete* graph on `n` vertices. It is the maximum
+  possible, not what a spanning subgraph contains.
+- D) is `2n − 2`, which happens to equal the number of directed arcs needed for a
+  tree on `n` vertices — `n − 1` edges, each used in both directions. For an
+  undirected edge list that would double-count every edge.
+
+</details>
+
+---
+
+## Subjective Questions
+
+### Short Answer
+
+**Q1. Define *walk*, *path*, *circuit* and *cycle*. What does a path of length `k`
+have?**
+
+<details>
+<summary>Answer</summary>
+
+A **walk** is a sequence `v₀, v₁, …, v_k` with `{v_{i−1}, v_i} ∈ E` for every `i`.
+A **path** is a walk in which all vertices are distinct. A **circuit** is a walk
+that ends where it started. A **cycle** is a circuit whose interior vertices are
+all distinct.
+
+A path of length `k` has `k` **edges** — length counts edges, not vertices, so
+`v₀ … v_k` spans `k + 1` vertices.
+
+The distinction between walk and path is the one that matters computationally: the
+adjacency matrix theorem counts walks, and the difference is invisible on trees.
+
+</details>
+
+**Q2. State the handshake lemma, and prove it in one sentence.**
+
+<details>
+<summary>Answer</summary>
+
+$$\sum_{v\in V}\deg(v) = 2\lvert E\rvert$$
+
+Count the endpoints of edges. Each edge `{u, v}` contributes one endpoint at `u`
+and one at `v`, so counting endpoint-by-endpoint gives `2|E|`; counting
+vertex-by-vertex gives the sum of degrees. Both count the same set of endpoints.
+
+</details>
+
+**Q3. State the bipartite criterion and prove it in both directions.**
+
+<details>
+<summary>Answer</summary>
+
+**Theorem.** A graph is bipartite if and only if it contains no cycle of odd
+length.
+
+*If bipartite:* every edge flips colour, so returning to the start of a cycle of
+length `k` takes `k` flips, and that is possible only for even `k`.
+
+*Conversely:* in each connected component pick a root and colour each vertex by the
+parity of the length of its path from the root. If an edge ever joined two
+vertices of the same colour, the two root-paths plus that edge would close an odd
+cycle. So no edge does, and the colouring works.
+
+</details>
+
+**Q4. State Euler's theorem on trails. What is the correct construction, and why do
+the parities decide it?**
+
+<details>
+<summary>Answer</summary>
+
+A connected graph has an **Euler circuit** — a closed trail using every edge once
+— if and only if every vertex has even degree. It has an **Euler trail** (open)
+if and only if exactly two vertices have odd degree. Otherwise it has neither.
+
+Each visit to a vertex consumes edges in pairs, one arriving and one leaving, so
+degrees must be even — except possibly at the two endpoints of an open trail. The
+construction is **Hierholzer's algorithm**: keep walking unused edges; when stuck,
+pop the vertex onto the circuit; then reverse.
+
+</details>
+
+**Q5. State Euler's formula and the two planar edge bounds, including every
+hypothesis.**
+
+<details>
+<summary>Answer</summary>
+
+**Euler's formula.** For a connected **plane** graph with `V` vertices, `E` edges
+and `F` faces including the outer one:
+
+$$V - E + F = 2$$
+
+**Planar edge bound.** A simple planar graph with `V ≥ 3` has `E ≤ 3V − 6`.
+Derived from Euler plus `3F ≤ 2E`.
+
+**Bipartite planar bound.** A simple planar **and bipartite** graph with `V ≥ 3`
+has `E ≤ 2V − 4`, from `4F ≤ 2E` (no triangles, so every face has length ≥ 4).
+
+Both bounds are **necessary only**. Passing one proves nothing about planarity;
+failing one proves non-planarity.
+
+</details>
+
+**Q6. State the adjacency-matrix theorem, and what the diagonal tells you.**
+
+<details>
+<summary>Answer</summary>
+
+For a simple graph with adjacency matrix `A` (`Aᵢⱼ = 1` if `{i,j} ∈ E`), the
+entry `(Aᵏ)ᵢⱼ` is the number of **walks** of length `k` from `i` to `j`.
+
+Matrix multiplication sums over the intermediate vertex:
+`(A²)ᵢⱼ = Σ_m A_im A_mj` counts `i → m → j`, and the same expansion compounds by
+induction.
+
+The diagnostic is the diagonal: `(A²)ᵢᵢ = deg(i)`, because a 2-walk from `v` back
+to `v` is exactly a step to a neighbour and back. That is zero for a tree and
+nonzero in general — the tell that you are counting walks, not paths.
+
+</details>
+
+### Long Answer
+
+**Q1. Why is `E ≤ 3V − 6` necessary but not sufficient? What would you actually
+need to prove planarity, and what would you need to disprove it?**
+
+<details>
+<summary>Model answer</summary>
+
+Necessary-not-sufficient is the standard shape of a bound derived by counting, and
+the derivation shows exactly why. Euler's formula gives `V − E + F = 2`, and
+`3F ≤ 2E` because every face is bounded by at least 3 edges and every edge borders
+exactly 2 faces. Eliminating `F` gives `E ≤ 3V − 6`. Every step in that chain is a
+one-sided inequality, so the conclusion is a one-sided constraint: violating it is
+a certificate of non-planarity, and satisfying it leaves you with nothing.
+
+There is also a counting reason, and it is the more interesting one. The bound
+counts *edge slots available for faces* per face, and it is tight only when every
+face is a triangle. `K₄` hits `3V − 6 = 6` exactly, and so does every maximal
+planar graph. But a graph can be very sparse and still non-planar: `K₃,₃` has 9
+edges and 6 vertices, so `9 ≤ 12` and the general bound passes comfortably — it
+takes the *bipartite* bound `E ≤ 2V − 4 = 8` to reject it. A graph can be sparse
+and non-planar because non-planarity is about *how* edges are arranged, not how
+many there are. Counting cannot see arrangement.
+
+So what does it take to settle planarity?
+
+To prove planarity you need an **embedding**: an actual drawing with no crossings,
+or an algorithmically verified rotation system. That is why every planarity tool
+in practice is constructive — Kuratowski-style subgraph detection, Boyer–Myrvold,
+planar graph drawing libraries. The bound can never help here, because "no
+crossing-free drawing exists" and "the edge count is under the limit" are simply
+different statements.
+
+To disprove planarity you have three routes, in increasing strength. The counting
+bounds first: `10 > 9` rejects `K₅`, `9 > 8` rejects `K₃,₃`. Then a **Kuratowski
+subgraph**: a subdivision of `K₅` or `K₃,₃` anywhere inside `G` is a certificate
+of non-planarity, since subdivisions of non-planar graphs are non-planar. And
+most powerfully, the **Wagner theorem** via minors: `G` is planar iff it has no
+minor isomorphic to `K₅` or `K₃,₃`, and minors are what contraction-based
+algorithms produce.
+
+The practical discipline this implies: run the counting test as a cheap screen
+because it costs one subtraction and catches `K₅` and `K₃,₃` outright. Never
+report planarity on the strength of a passing test. And when you need the answer,
+reach for the constructive route — which is exactly the situation the lesson
+describes for Google Mapbox and OpenStreetMap, which "render graphs with
+crossing-minimising heuristics precisely because you cannot always avoid them".
+
+</details>
+
+**Q2. Why does the adjacency matrix count walks rather than paths, and why is the
+diagonal the fastest way to notice?**
+
+<details>
+<summary>Model answer</summary>
+
+Because the matrix power sums over *sequences of edges*, and nothing in the
+algebra enforces distinctness of vertices. The expansion is
+`(Aᵏ)ᵢⱼ = Σ_{v₁, …, v_{k−1}} A_{i v₁} A_{v₁ v₂} ⋯ A_{v_{k−1} j}`, and each
+product is 1 exactly when every consecutive pair is an edge. So each surviving
+summand *is* a sequence `i → v₁ → ⋯ → v_{k−1} → j` of length `k` with every step
+legal — and nothing in the sum forbids `v₁ = v₃`, or `v₁ = i`, or any other
+repetition. Summation counts sequences; deduplication is a different operation
+entirely, and there is no way to express it as a fixed matrix power. (There are
+better objects for path counting — the characteristic polynomial of `A`, whose
+`k`-th coefficient is the number of closed walks of length `k` — but that is a
+different formula, not this one.)
+
+The diagonal is the fastest detector because it is *always* wrong for paths and
+*always* right for walks, in a way you can read off one line. `(A²)ᵢᵢ = Σ_m A_{im}
+A_{mi} = Σ_m A_{im}² = deg(i)`, since a simple graph has `A_{im} ∈ {0,1}`. So the
+diagonal of `A²` is the degree sequence: `[2, 3, 4, 3, 3, 1]` for the build
+graph, and `[0, 0, 0, 0]` for any tree. A count of paths would have a zero
+diagonal everywhere, because a path cannot revisit its start.
+
+This matters practically because of exactly where the two coincide. On a tree,
+every walk is a path, so `(Aᵏ)ᵢⱼ` computes genuine path counts and the error is
+invisible. That is Mistake 2's mechanism: "`path` is the friendlier word, and for a
+tree the two coincide, so the error hides until you meet a cycle." The lesson's
+build graph contains the triangle 0–1–2 precisely so that the diagonal is nonzero
+and the lesson's own numbers demonstrate the point.
+
+The same walk/path gap is why `(Aᵏ)ᵢⱼ` is the right tool for some questions and the
+wrong one for others. "How many execution interleavings of depth `k` are
+possible?" wants walks — the lesson reports 16, 48 and 142 total walks for
+`k = 1, 2, 3`, and interleavings genuinely repeat vertices. "How many distinct
+routes" wants paths. Choosing wrongly does not produce an error; it produces a
+plausible integer that is too large, and the only reliable test is the one the
+lesson suggests: compare against a traversal that actually enforces the
+constraint, such as BFS with a visited set.
+
+</details>
+
+**Q3. Why is BFS the right tool for reachability and unweighted shortest paths,
+and the wrong tool for cycles and weighted paths? What breaks in each case?**
+
+<details>
+<summary>Model answer</summary>
+
+The reason is structural, and it comes down to what BFS maintains: a *level*
+structure. Each vertex is enqueued exactly once and stamped with
+`dist[v] = dist[u] + 1`, so levels are non-decreasing in enqueue order. Two
+properties fall straight out of that, and everything BFS is good at is a
+consequence of them.
+
+**Reachability and hop distance.** Because each vertex is stamped once at the
+earliest level it can be reached, `dist[v]` is minimal by construction — a vertex
+enqueued later from a neighbour at a smaller distance cannot happen, since that
+neighbour would have been processed first. So BFS gives shortest hop count
+correctly in `O(V + E)`, with each vertex visited exactly once. On the worked
+graph it gives `dist = {0: 0, 1: 1, 2: 1, 3: 2, 4: 2, 5: 3}` and the path
+`0 → 2 → 4 → 5` to vertex 5, three hops. Components fall out for free by running
+it from each unvisited vertex, which is exactly the `components` function.
+
+**What breaks, and why.** Three separate failures, and none of them raises an
+error.
+
+*Cycles.* BFS revisits vertices constantly — that is how it avoids re-exploring
+— so "BFS complained about a revisit" is a complaint about BFS, not about the
+graph. Cycle detection needs the DFS three-colour marking: white (unvisited),
+grey (on the current recursion stack), black (finished). An edge to a grey vertex
+is a back edge and closes a cycle. The lesson is explicit that this is the tool for
+"find cycles, topological sort, strongly connected components, bridge-finding".
+
+*Weighted paths.* `dist[v] = dist[u] + 1` counts **hops**, so on a weighted graph
+BFS silently reports the cheapest hop route while any caller believes it is
+reporting cost. This is Mistake 5, and its danger is the silence: you get a
+number, the number is plausible, and the answer is wrong. Dijkstra's fix is a
+priority queue plus relaxation (`dist[v] ← min(dist[v], dist[u] + w)`), which needs
+non-negative weights for the same reason BFS needs its level structure; negative
+weights need Bellman–Ford, and
+[Lesson 27](../part02_discrete_combinatorics/27_trees_and_spanning_trees.md)
+shows exactly how Dijkstra fails when they appear.
+
+*Topological order.* BFS cannot produce one in general because it does not carry
+the recursion-stack information that makes a back edge visible. DFS can, and a
+cycle in the result is a real error — the lesson notes that `make`, `ninja`,
+Maven, npm and Cargo all model builds as DAGs and topologically sort them, where
+a cycle is a genuine bug rather than an inconvenience.
+
+So the rule is short: BFS for "how far, in hops" and "what is reachable"; DFS for
+"is there a cycle", "what is the order", and "what are the strongly connected
+pieces". Pick by the question, not by habit, because the two algorithms fail
+silently and in opposite directions.
+
+</details>
+
+**Q4. Why is the handshake lemma so useful, and what specifically does it *not*
+tell you?**
+
+<details>
+<summary>Model answer</summary>
+
+Useful because it is the cheapest possible consistency check and it rejects
+entire families of graphs at once. On the worked graph it takes one subtraction:
+`2 + 3 + 4 + 3 + 3 + 1 = 16 = 2 × 8`, and any miscounted edge list fails it
+immediately. The lesson leans on it as a referee on the *implementation*, not
+just the mathematics — if your `degrees()` and your `edge_list` disagree, one of
+them is wrong, and that is a bug you can find in a line of code.
+
+Its real power is the parity corollary, which rejects *degree sequences* rather
+than graphs. Since the sum is `2|E|`, it is always even, so an odd number of odd
+degrees is impossible: a simple graph with 7 vertices cannot have all 7 vertices
+of odd degree. This rejects a proposed degree sequence without constructing
+anything. The degree ceiling `deg(v) ≤ n − 1`, giving `d̄ ≤ n − 1`, does the same
+job from the other end — the `6` in the worked example's Exercise 1 is allowed
+precisely because `n − 1 = 6`.
+
+What it does **not** tell you, and this is where the lesson's Mistake 1 bites, is
+anything about *individual* degrees. The lemma constrains the total
+`Σ_v deg(v)`, not any single term. Reading a 4 out of the degree *sequence* and
+concluding `deg(2) = 4` is Mistake 1 exactly: the `deg(2) = 4` happens to be
+true on the build graph because 2 is adjacent to 0, 1, 3 and 4 — but it is not
+something the lemma provides. Degrees can be permuted freely among vertices
+without disturbing the lemma, and many sequences are graphical and many are not
+while all passing the parity test.
+
+Two more limitations worth stating plainly. First, a satisfying degree sequence
+is not sufficient: the sum being even does not make the sequence realisable, and
+the characterisation that does — the Erdős–Gallai inequalities — is a genuinely
+harder result. Second, the lemma says nothing about *structure*: two graphs with
+the same degree sequence can have completely different connectivity, cycle
+structure and planarity, and the lemma cannot distinguish them. Degree sequences
+are a necessary condition for being simple and connected, and a rather weak one.
+
+The practical discipline: use the lemma as a fast assertion on every graph you
+build or read, treat it as an early filter, and never let it substitute for
+actually checking the property you care about — connectivity, acyclicity,
+planarity, bipartiteness. Those need their own theorems, which is why the rest of
+the lesson is about graphs.
+
+</details>
+
 ## Exercises and Solutions
 
 **[ ] Exercise 1 — Handshake lemma.** A simple graph has 7 vertices, three of

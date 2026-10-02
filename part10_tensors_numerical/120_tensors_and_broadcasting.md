@@ -118,7 +118,7 @@ Notation follows [SYMBOLS.md](../SYMBOLS.md). `T` is an n-dimensional array,
 | size (numel) | `$\lvert T\rvert = \prod_{k=0}^{n-1} d_k$` | how many entries there are in total | `numel`; `2 × 3 × 4` is 24, not 9 |
 | rank | `$n$`, the number of axes | how many dimensions, *not* how many entries | `ndim`; a `100 × 100` matrix has rank 2 |
 | slice | `$T[i_0, \ldots, i_{n-1}]$` | the entry at that index | the only way values are read |
-| axis 0 | the outermost axis | the slowest-varying index | it is *not* the axis a 1D array broadcasts over |
+| axis $k$ | `$k \in \{0, \ldots, n-1\}$`; axis 0 is the outermost | the slowest-varying index of the shape | axis 0 is *not* the axis a 1D array broadcasts over -- that is axis $-1$ |
 | broadcast-compatible | after right-alignment every pair satisfies `$a_k = c_k$` or `$a_k = 1$` or `$c_k = 1$` | axes either match or one of them can stretch | the precondition for any elementwise op |
 | broadcast shape | `$b_k = \max(a_k, c_k)$` with 1 treated as "stretch me" | the output shape | `(3,) + (3,1) → (3,3)`; `(2,2) + (3,3)` raises |
 | stretch map | `$B(x)_i = x$` for every output index `i` | the length-1 axis replicates its single value | why `B` is order-independent and associative |
@@ -126,13 +126,13 @@ Notation follows [SYMBOLS.md](../SYMBOLS.md). `T` is an n-dimensional array,
 | F-contiguous stride | `$s_k = \prod_{j<k} d_j$` | every dimension to the left of axis `k` | `(2,3,4)` has strides `(1,2,6)`; column-major |
 | flat offset | `$\operatorname{off}(i) = \sum_k i_k s_k$` | where an entry physically sits in the buffer | why `A[1][0] = 3` on a `(2,3)` buffer holding `1 2 3 4 5 6` |
 | last stride is 1 | `$s_{n-1} = 1$` | moving along the last axis moves one element | C-contiguity is exactly this, for all axes |
-| transpose | shape `← (d₀, …, d_{n−1})`, strides `← (s_{n−1}, …, s₀)` | flip axes and reverse the stride tuple | always a **view**, never a copy |
-| reshape is free iff | the new axes come from splitting or merging **consecutive** old axes | no element has to move, so only metadata changes | `(2,3) → (6,)` and `(2,3) → (3,2)` are free; `(2,3,4) → (4,6)` copies |
+| transpose | `$\text{shape} \leftarrow (d_{n-1}, \ldots, d_0)$`, `$\text{strides} \leftarrow (s_{n-1}, \ldots, s_0)$` | flip the axes and reverse the stride tuple | always a **view**, never a copy |
+| reshape is free iff | `$\operatorname{off}(k) = b + k\,\Delta$` for every flat position $k$ | read in the new order, the addresses must be evenly spaced | `(2,3)` to `(6,)` is free with $\Delta = 1$; `(2,3)` to `(3,2)` is free but is *not* the transpose; a strided slice with gaps is not |
 | einsum contraction | `$C[i,\ldots] = \sum\sum\cdots \prod_a A_a[\text{indices}]$` | multiply the operands entrywise and add over the contracted axes | the general form of every matmul-shaped op |
 | matrix product | `$[AB]_{ik} = \sum_j A_{ij}B_{jk}$` | contract the shared middle axis | `A @ B`, and `'ij,jk->ik'` |
-| summed letter | appears in **more than one operand** and is **absent from the output** | shared indices get added over | `'ij,jk->ik'` sums `j`; `'bij,bjk->bik'` sums only `j` |
-| free letter | appears exactly once, or appears in the output | a surviving axis of the result | `b` in `'bij,bjk->bik'` is kept, not summed |
-| implicit output | free letters sorted alphabetically | `'ij,jk'` means `'ij,jk->ik'` | same result as the explicit form |
+| summed letter $L$ | `$\lvert\{a : L \in t_a\}\rvert \ge 2 \ \wedge\ L \notin \text{output} \Rightarrow \textstyle\sum$` | a shared index that is not asked for gets added over | `'ij,jk->ik'` sums `j`; `'bij,bjk->bik'` sums `j` but keeps `b` |
+| free letter $L$ | `$\lvert\{a : L \in t_a\}\rvert = 1 \ \vee\ L \in \text{output} \Rightarrow \text{keep}$` | a surviving axis of the result | `b` in `'bij,bjk->bik'` is kept, not summed, purely because it is named after the arrow |
+| implicit output | `$\text{output} = \{L : \lvert\{a : L \in t_a\}\rvert = 1\}$`, in order of first appearance | with no `->`, every letter used exactly once survives | `'ij,jk'` means `'ij,jk->ik'`, same result as the explicit form |
 | Frobenius inner product | `$\sum_{i,j} A_{ij}B_{ij}$` | multiply entrywise and add everything up | `'ij,ij->'`; for `[[1,2],[3,4]]` that is `30.0` |
 | trace | `$\sum_i A_{ii}$` | add the diagonal | `'ii->'`; for `[[1,2],[3,4]]` that is `5.0` |
 | diagonal | `$(A_{11}, A_{22}, \ldots)$` | read the diagonal out | `'ii->i'`; for `[[1,2],[3,4]]` that is `[1.0, 4.0]` |
@@ -1427,7 +1427,7 @@ absent from the output; if you cannot, the equation is not understood yet.
 
 ## Exercises and Solutions
 
-**[ ] Exercise 1 — ** Implement the broadcasting rules for two operands, then use
+**[ ] Exercise 1 —** Implement the broadcasting rules for two operands, then use
 them to (a) add a `(3,)` vector to a `(2,3)` matrix and confirm the result
 matches column-wise addition by hand; (b) add a `(3,1)` column to a `(1,3)` row
 to build a `(3,3)` array; (c) show that multiplying a `(2,3)` matrix by a `(3,)`
@@ -1641,7 +1641,7 @@ axis of the first shape.
 
 </details>
 
-**[ ] Exercise 2 — ** Implement `einsum` from scratch and use it to verify five
+**[ ] Exercise 2 —** Implement `einsum` from scratch and use it to verify five
 operations against hand computations: matrix multiply `'ij,jk->ik'`, row sums
 `'ij->i'`, the total sum `'ij->'`, the Frobenius inner product `'ij,ij->'`, and
 the diagonal `'ii->i'`. Then use `'bij,bjk->bik'` on a stack of two matrices and
@@ -1837,7 +1837,609 @@ the same notation expresses operations that `@` cannot distinguish, because
 
 </details>
 
-**Challenge — ** Build a strided array view class like the one in the lesson,
+
+**[ ] Exercise 3 —** Write a function `pairwise(left, right)` that returns
+every product of one element of `left` with one element of `right`. Call it on a
+3-element list and a 5-element list, then call it again with the arguments
+swapped. Show that the two results contain the same numbers, that one is the
+transpose of the other, and that their shapes differ. Finally, repeat the test
+with two equal-length lists and show that the shapes now look identical, so a
+test written that way cannot detect the swap.
+
+<details>
+<summary>Solution</summary>
+
+```python
+"""Exercise 3 solution: the non-square pairwise product.
+
+`pairwise` returns the same 15 numbers no matter which order the arguments
+arrive in, but the shape it hands back depends entirely on that order.  The
+whole point is that nothing raises: you have to notice.
+"""
+
+
+def pairwise(left, right):
+    """Every product of one element of `left` with one of `right`.
+
+    Returned as nested lists, so len(left) rows of len(right) columns.
+    """
+    return [[l * r for r in right] for l in left]
+
+
+def pairwise_by_broadcast(left, right):
+    """The same thing, spelled as a broadcast of a column against a row."""
+    return pairwise_by_broadcast_helper(left, right)
+
+
+def pairwise_by_broadcast_helper(left, right):
+    # As (n, 1) and (1, m): one column of `left`, one row of `right`.  Under
+    # broadcasting the two size-1 axes stretch and the product is (n, m).
+    column = [[l] for l in left]
+    row = [list(right)]
+    n, m = len(left), len(right)
+    out = [[0.0] * m for _ in range(n)]
+    for i in range(n):
+        for j in range(m):
+            out[i][j] = column[i][0] * row[0][j]
+    return out
+
+
+A = [1.0, 2.0, 3.0]                    # 3 items
+B = [10.0, 20.0, 30.0, 40.0, 50.0]     # 5 items
+
+as_rows = pairwise(A, B)
+as_cols = pairwise(B, A)
+
+print(f"pairwise(A, B): {len(as_rows)} rows of {len(as_rows[0])}")
+for row in as_rows:
+    print("   ", row)
+print(f"pairwise(B, A): {len(as_cols)} rows of {len(as_cols[0])}")
+for row in as_cols:
+    print("   ", row)
+
+transposed = [list(column) for column in zip(*as_cols)]
+print(f"as_rows is the transpose of as_cols: {as_rows == transposed}")
+print(f"the shapes agree: {len(as_rows) == len(as_cols)} "
+      f"({len(as_rows)} vs {len(as_cols)} rows)")
+print()
+
+# The same computation through broadcasting gives the same answer.
+print("through broadcasting, as (3, 1) times (1, 5):")
+for row in pairwise_by_broadcast(A, B):
+    print("   ", row)
+print("   and as (5, 1) times (1, 3):")
+for row in pairwise_by_broadcast(B, A):
+    print("   ", row)
+print("   identical to the list version:",
+      pairwise_by_broadcast(A, B) == as_rows)
+print()
+
+# Why a square test cannot catch this.
+S = [1.0, 2.0, 3.0]
+sq_rows = pairwise(S, S)
+sq_cols = pairwise(S, S)[::-1]
+print("now with a SQUARE input, S = [1.0, 2.0, 3.0]:")
+print(f"   pairwise(S, S) is {len(sq_rows)} x {len(sq_rows[0])}, "
+      f"and swapping the arguments gives {len(sq_cols)} x {len(sq_cols[0])}")
+print(f"   the shapes are indistinguishable: "
+      f"{len(sq_rows) == len(sq_cols)}")
+print(f"   but the numbers differ: {sq_rows == sq_cols}")
+print("   pairwise(S, S)     ", sq_rows)
+print("   pairwise(S, S)[::-1]", sq_cols)
+print()
+print("So a test written with equal-length inputs passes, whatever the code")
+print("does.  The bug only appears the day the two lengths differ, and then it")
+print("appears as a matrix with the wrong shape rather than an exception.")
+print()
+print("The defence is not 'be careful'.  It is to state the orientation in the")
+print("name and the type: name the function for the order it produces --")
+print("pairwise_rows_of(left, right) -- and check `.shape` at the boundary")
+print("where the two lengths come from different places.")
+```
+
+**The numbers never disagreed, only the shape.** Both results hold the same 15
+products; `as_rows == transpose(as_cols)` is `True`. What differs is whether
+you get 3 rows of 5 or 5 rows of 3, and the rule that decides it is simply
+which argument came first.
+
+**The square case is why the bug survives.** With `S = [1.0, 2.0, 3.0]` both
+calls return a 3x3 array, so `len(...)` checks pass and a shape assertion
+written as `(3, 3)` passes. Yet the arrays are different: one is
+`[[1, 2, 3], [2, 4, 6], [3, 6, 9]]` and the other is
+`[[3, 6, 9], [2, 4, 6], [1, 2, 3]]`. The orientation bug is present in both,
+invisible in both, and only becomes a shape error when the two inputs happen to
+have different lengths.
+
+**What actually fixes it** is not vigilance. It is making the orientation part
+of the interface: name the function for the order it returns, and assert the
+shape where the two lengths come from different sources -- at a function
+boundary, not in the middle of an algorithm where the lengths are already
+assumed.
+
+</details>
+
+**[ ] Exercise 4 —** Compute a batched matrix product twice: once by
+broadcasting the operands up to rank 4 and summing along the contracted axis,
+and once by contracting directly in the innermost loop. Use a batch of 2
+matrices of size 3x4 against a batch of 2 matrices of size 4x5. Count how many
+numbers each version writes, confirm both give the same 2x3x5 result, and state
+the rule that decides when broadcasting a product is acceptable.
+
+<details>
+<summary>Solution</summary>
+
+```python
+"""Exercise 4 solution: what broadcasting a product actually costs.
+
+A broadcast that REPEATS an axis (a bias add) writes only the output.  A
+broadcast that builds an OUTER PRODUCT writes the product of every pair before
+any of it is summed away.  This counts the difference exactly, with real
+arithmetic, rather than asserting it.
+"""
+
+from itertools import product
+
+
+def shape_of(x):
+    if not isinstance(x, list):
+        return ()
+    if len(x) == 0:
+        return (0,)
+    return (len(x),) + shape_of(x[0])
+
+
+def zeros(shape):
+    if not shape:
+        return 0
+    return [zeros(shape[1:]) for _ in range(shape[0])]
+
+
+def put(arr, idx, value):
+    node = arr
+    for i in idx[:-1]:
+        node = node[i]
+    node[idx[-1]] = value
+
+
+# A batch of 2 matrices 3x4, and a batch of 2 matrices 4x5.  Result: 2 of 3x5.
+Bt, N, M, K = 2, 3, 4, 5
+A = [[[10 * b + 10 * i + j for j in range(M)] for i in range(N)]
+     for b in range(Bt)]
+Bm = [[[100 * b + 10 * j + k for k in range(K)] for j in range(M)]
+      for b in range(Bt)]
+
+print(f"A shape {shape_of(A)}, B shape {shape_of(Bm)}, "
+      f"expected result {(Bt, N, K)}")
+
+# --- the broadcast route ------------------------------------------------------
+
+intermediate = zeros((Bt, N, M, K))
+for b, i, j, k in product(range(Bt), range(N), range(M), range(K)):
+    put(intermediate, (b, i, j, k), A[b][i][j] * Bm[b][j][k])
+print(f"route 1 builds an intermediate of shape {shape_of(intermediate)}: "
+      f"{Bt * N * M * K} numbers")
+out1 = zeros((Bt, N, K))
+for b, i, k in product(range(Bt), range(N), range(K)):
+    out1[b][i][k] = sum(intermediate[b][i][j][k] for j in range(M))
+print(f"        then reduces to {shape_of(out1)}: {Bt * N * K} numbers")
+
+# --- the contracting route ---------------------------------------------------
+
+out2 = zeros((Bt, N, K))
+for b, i, k in product(range(Bt), range(N), range(K)):
+    total = 0
+    for j in range(M):
+        total += A[b][i][j] * Bm[b][j][k]
+    out2[b][i][k] = total
+print(f"route 2 writes only {shape_of(out2)}: {Bt * N * K} numbers")
+print(f"the two agree: {out1 == out2}")
+print(f"batch 0 of route 1: {out1[0]}")
+print(f"batch 0 of route 2: {out2[0]}")
+print()
+
+writes1 = Bt * N * M * K + Bt * N * K
+writes2 = Bt * N * K
+print(f"numbers written: route 1 = {writes1}, route 2 = {writes2}, "
+      f"ratio {writes1 / writes2:.0f}x")
+print(f"the intermediate alone is M = {M} times the output, so the ratio is "
+      f"M + 1 = {M + 1}")
+print()
+
+# The rule, as a function of the summed-over dimension.
+print("so broadcast the product only when the summed dimension is tiny:")
+for m in (1, 2, 4, 16, 64):
+    out_size = Bt * N * K
+    print(f"   M = {m:>3}: intermediate {out_size * m:>6} numbers, "
+          f"total writes {out_size * (m + 1):>6}")
+print("   M = 1 is just a scaling, and M = 2 doubles it.  Everything past")
+print("   that is a different asymptotic cost, not a constant factor.")
+print()
+
+# A bias add, for contrast: repeating an axis costs the output and nothing more.
+BIAS = [[[100 + 10 * i + k for k in range(K)] for i in range(N)]]   # (1, N, K)
+added = [[[x + BIAS[0][i][k] for k, x in enumerate(row)]
+          for i, row in enumerate(item)] for item in out2]
+print(f"a bias add with bias shape {shape_of(BIAS)} writes {Bt * N * K} "
+      f"numbers, exactly the output")
+print(f"batch 0 with bias: {added[0]}")
+print()
+print("The distinction is whether the stretched axis has to be SUMMED.")
+print("Repeating it: cost is the output.  Summing over it: broadcasting has to")
+print("build the full outer product first, and the cost is the output TIMES")
+print("that axis.  Matrix products and attention sum.  Biases, normalisation")
+print("and residual connections repeat.  That one sentence decides 90% of the")
+print("shape work in a deep-learning layer.")
+```
+
+**The rule is about whether the stretched axis is summed.** A bias add
+*repeats* its axis, so it writes exactly the output and costs nothing extra --
+30 numbers here for a 30-number answer. A matrix product must *sum* over the
+shared axis, and broadcasting can only do that by first building every pairwise
+product. That intermediate is `M` times the output: 120 numbers for a 30-number
+result, so 150 written against 30, a factor of `M + 1 = 5`.
+
+**Why the factor is `M + 1` and not `M`.** The intermediate is `M` times the
+output, and the reduction pass then writes the output again. One pass to build,
+one to reduce. This is why the ratio grows without bound as `M` grows, and why
+"it is only a factor of 5" stops being a defence at `M = 512`: at
+`(32, 512, 512)` against itself the intermediate is 32768 MiB against an input
+of 64 MiB, and numpy refuses to allocate it.
+
+**The practical form of the rule.** Broadcasting a product is fine when the
+summed dimension is tiny and constant -- an outer product of two short vectors
+is exactly what you wanted. It is wrong the moment the summed dimension is
+another layer's width, because then you have chosen a different asymptotic cost
+without being told. Writing it as `'bij,bjk->bik'` states the contraction in
+the notation, so the cost is visible in the source instead of discovered in a
+profile.
+
+</details>
+
+**[ ] Exercise 5 —** Show that floating-point addition is not associative in
+a way that changes the answer. Write a left-to-right `fold` and a `pairwise`
+sum (split in half, recurse, add the halves), and an exact comparison using
+`math.fsum`. Try them on `[1e16, 1.0, -1e16, 1.0]`, on `[big] + [1.0]*4` for
+`big` in `1e8, 1e12, 1e16, 1e20`, and on 1000 copies of `0.1`. Then take the
+2x3 array `[[1e16, 1.0, -1e16], [1.0, 1.0, 1.0]]` and sum it by reducing along
+axis -1 and along axis 0. Explain each result.
+
+<details>
+<summary>Solution</summary>
+
+```python
+"""Exercise 5 solution: summation order changes the answer.
+
+Floating-point addition is not associative, so "sum these numbers" is not a
+complete instruction -- the ORDER is part of the answer.  Worse, neither of the
+two obvious orders has to be right.  `math.fsum` is, because it tracks the
+partial sums exactly and rounds once at the end.
+"""
+
+import math
+
+
+def fold(values):
+    """Left to right, the way a naive Python loop does it."""
+    total = 0.0
+    for v in values:
+        total += v
+    return total
+
+
+def pairwise(values):
+    """Split in half and recurse, which is what numpy and BLAS do.
+
+    Each half is summed first, then the two halves are added.  That keeps the
+    magnitudes that meet each other similar, so small terms are less likely to
+    be swallowed -- but 'less likely' is not 'never', as the first example
+    shows.
+    """
+    if len(values) <= 1:
+        return values[0] if values else 0.0
+    mid = len(values) // 2
+    return pairwise(values[:mid]) + pairwise(values[mid:])
+
+
+# --- 1. the textbook disaster, and the surprise that pairwise does not save ---
+
+xs = [1e16, 1.0, -1e16, 1.0]
+print("the list", xs)
+print(f"   the answer you want       2.0   (1e16 - 1e16 cancels, both 1's survive)")
+print(f"   fold, strictly left to right  {fold(xs)}")
+print(f"   pairwise, halves first         {pairwise(xs)}")
+print(f"   math.fsum, exactly then round  {math.fsum(xs)}")
+print()
+print("Left to right, 1e16 + 1.0 rounds back to 1e16: at that magnitude the")
+print("gap between representable numbers is 2.0, so the 1.0 is no longer there.")
+print("The -1e16 then cancels to exactly 0.0 and takes the last 1.0 with it.")
+print("Every individual step obeys the rounding rule and the total is wrong.")
+print()
+print("The surprise is the pairwise column.  It is also wrong, for a subtler")
+print("reason: it computes (1e16 + 1.0) + (-1e16 + 1.0), and BOTH halves")
+print("internally round their 1.0 away before the halves ever meet.  Pairwise")
+print("summation reduces how often a small term gets eaten; it does not stop it.")
+print("Only fsum, which never rounds until the very end, gets 2.0.")
+print()
+
+# --- 2. when the small terms DO survive, and what that depends on ------------
+
+print("now with a single large term and a tail of ones:")
+for big in (1e8, 1e12, 1e16, 1e20):
+    xs = [big, 1.0, 1.0, 1.0, 1.0]
+    print(f"   big = {big:.0e}: fold {fold(xs):>22.1f}, "
+          f"pairwise {pairwise(xs):>22.1f}, fsum {math.fsum(xs):>22.1f}")
+print()
+print("At 1e8 and 1e12, big + 1.0 is still exactly representable, so every")
+print("order keeps the tail and all three agree on the right answer.")
+print()
+print("At 1e16, fold returns 1e16 and is simply wrong: it dropped the whole")
+print("tail of ones.  Pairwise and fsum both get 1e16 + 4, the correct value,")
+print("because pairwise happens to add the four small numbers together before")
+print("they meet the big one.  So pairwise is not a guarantee, it is a bet that")
+print("usually pays.")
+print()
+print("At 1e20 every method returns 1e20, and here that is CORRECT: the exact")
+print("total is 1e20 + 4, but the gap between representable numbers near 1e20 is")
+print("about 16384, so 1e20 + 4 rounds to 1e20 no matter how you sum it.  The")
+print("information was never there to keep.  A method cannot be blamed for a")
+print("loss the format already committed.")
+print()
+print("The threshold is therefore not a property of the algorithm at all.  It")
+print("is the size of the gap between representable numbers near the leading")
+print("magnitude, compared with the size of the terms you are trying to keep.")
+print("When the terms are smaller than the gap, they are gone before any")
+print("algorithm sees them.  That is catastrophic cancellation, and Lesson 121")
+print("is entirely about it.")
+print()
+
+# --- 3. many comparable terms: the case pairwise was invented for ------------
+
+xs = [0.1] * 1000
+print(f"summing 1000 copies of 0.1, true sum {0.1 * 1000}:")
+print(f"   fold     {fold(xs)}")
+print(f"   pairwise {pairwise(xs)}")
+print(f"   fsum     {math.fsum(xs)}")
+print()
+print("Here the terms are all the same size, so there is no magnitude for a")
+print("small term to hide behind.  Pairwise keeps the running total close to")
+print("the final answer and lands on it exactly; a running fold accumulates one")
+print("rounding per step and drifts.  This is the case the pairwise trick is")
+print("genuinely good at, and it is the common case: summing many similar")
+print("numbers.")
+print()
+
+# --- 4. the layout point: the SAME numbers, reduced in two orders ------------
+
+GRID = [[1e16, 1.0, -1e16], [1.0, 1.0, 1.0]]
+
+row_major = [v for row in GRID for v in row]
+column_major = [GRID[i][j] for j in range(len(GRID[0])) for i in range(len(GRID))]
+
+print(f"the same 6 numbers, reduced two ways")
+print(f"   row-major order    {row_major}")
+print(f"     fold gives {fold(row_major)}")
+print(f"   column-major order {column_major}")
+print(f"     fold gives {fold(column_major)}")
+print(f"   fsum on either gives {math.fsum(row_major)}")
+print()
+print("Reducing along axis -1 sums each row, then adds the row sums.")
+print("Reducing along axis 0 sums each column, then adds those.  Both are legal")
+print("and both are 'the sum', and they disagree: 3.0 against 1.0, for a true")
+print("answer of 4.0.  Whichever axis you reduce along, the ORDER is part of the")
+print("problem, and no shape check will warn you.")
+print()
+
+# --- 5. what to actually do ---------------------------------------------------
+
+print("the practical rules this yields:")
+print("   1. If you need the answer to be right, use math.fsum (or an equivalent")
+print("      exact accumulator).  It is a few times slower and exactly right.")
+print("   2. If you need it fast, reduce along the axis that groups similar")
+print("      magnitudes together, and use a library, because they already do.")
+print("   3. If a sum is supposed to be near zero and the terms are large, you")
+print("      have a cancellation problem no summation order will save.  Restructure")
+print("      the algebra instead -- that is the subject of Lesson 121.")
+print()
+print(f"the three methods give {fold(row_major)}, {math.fsum(row_major)} and")
+print("the true value 4.0, so on six numbers the spread between a naive loop")
+print("and an exact accumulator is the entire answer.")
+```
+
+**The three methods are not a ranking, they are different guarantees.** On
+`[1e16, 1.0, -1e16, 1.0]` the true answer is 2.0. `fold` gives 1.0 and
+`pairwise` gives 0.0 -- both wrong, for different reasons -- and only `fsum`
+gives 2.0. The instructive part is that pairwise fails too: it computes
+`(1e16 + 1.0) + (-1e16 + 1.0)`, and each half has already rounded its `1.0`
+away before the halves meet. Pairwise reduces how *often* a small term gets
+swallowed; it does not make it impossible. `fsum` keeps every partial sum as an
+exact rational and rounds once, which is why it cannot lose anything.
+
+**The `big` sweep shows where the threshold is, and it is not in the
+algorithm.** At `1e8` and `1e12` all three methods agree, because `big + 1.0` is
+still exactly representable. At `1e16` only `fold` is wrong: `pairwise` happens
+to add the four ones together before they meet the big term, and gets
+`1e16 + 4`. At `1e20` all three return `1e20` and all three are *correct*, since
+the exact total `1e20 + 4` rounds to `1e20` at that magnitude no matter how you
+add it. The gap between representable numbers near `1e20` is about 16384, so
+the information was destroyed before any algorithm saw it.
+
+**The axis sweep is the one that matters for this lesson.** The same six
+numbers reduce to 3.0 along axis -1 and 1.0 along axis 0, against a true value
+of 4.0. Neither is a shape error, neither raises, and both are `arr.sum()` in
+some library. The order of summation is part of the problem statement, and
+choosing an axis is choosing an order.
+
+**Where that leaves you.** Use `math.fsum` when correctness matters more than
+speed and the list is short. Use a library reduction when speed matters, because
+pairwise blocking is already the default there. And when a sum is supposed to be
+near zero while the terms are large, no summation order will save you -- the
+algebra has to be restructured so the large terms cancel symbolically instead of
+numerically. That is the subject of
+[Lesson 121](121_numerical_methods_and_floating_point.md).
+
+</details>
+
+**[ ] Exercise 6 —** You are given a 3x5 array, a bias of 3 values, and a
+scale of 5 values. Write your own `broadcast_shape` from the rule, then show
+that adding the 3-value bias directly to the 3x5 array is rejected, that adding
+it to a 3x3 array is accepted, and that on the 3x3 array the "per row" and "per
+column" readings give different answers with the same shape. Finally, show that
+the mistake is silent on square data and loud on rectangular data.
+
+<details>
+<summary>Solution</summary>
+
+```python
+"""Exercise 6 solution: implement broadcasting, then catch a real bug with it.
+
+You are given three functions that are individually fine and jointly wrong.  The
+only way to find the bug is to build the operation the way a library does and
+compare, which is the point of writing the rule out by hand.
+"""
+
+
+def broadcast_shape(*shapes):
+    """The one rule: right-align, then each pair must match or contain a 1."""
+    rank = max(len(s) for s in shapes)
+    out = []
+    for offset in range(1, rank + 1):
+        dim = 1
+        for shape in shapes:
+            if offset > len(shape):
+                continue
+            d = shape[-offset]
+            if d == 1:
+                continue
+            if dim == 1:
+                dim = d
+            elif d != dim:
+                raise ValueError(
+                    f"axis -{offset}: {dim} against {d}, neither is 1")
+        out.append(dim)
+    return tuple(reversed(out))
+
+
+# The three functions, each individually reasonable.
+
+def add_bias_rows(data, bias):
+    """Add one bias per ROW.  bias has one entry per row."""
+    return [[v + bias[i] for v in row] for i, row in enumerate(data)]
+
+
+def add_bias_columns(data, bias):
+    """Add one bias per COLUMN.  bias has one entry per column."""
+    return [[v + bias[j] for j, v in enumerate(row)] for row in data]
+
+
+def scale_columns(data, scale):
+    """Multiply each COLUMN by one scale factor."""
+    return [[v * scale[j] for j, v in enumerate(row)] for row in data]
+
+
+# A deliberately asymmetric data set: 3 rows, 5 columns.
+DATA = [
+    [1.0, 2.0, 3.0, 4.0, 5.0],
+    [10.0, 20.0, 30.0, 40.0, 50.0],
+    [100.0, 200.0, 300.0, 400.0, 500.0],
+]
+ROWS, COLS = 3, 5
+BIAS = [1.0, 2.0, 3.0]          # one per row: 3 values
+SCALE = [1.0, 2.0, 3.0, 4.0, 5.0]   # one per column: 5 values
+
+print(f"DATA is {ROWS} rows by {COLS} columns")
+print(f"BIAS  is {len(BIAS)} values -- clearly per row")
+print(f"SCALE is {len(SCALE)} values -- clearly per column")
+print()
+
+# Now do the same things with broadcasting, and look at the shapes.
+
+# A bias per row, done naively as an ordinary 1D add, lands on the LAST axis.
+# So `DATA + BIAS` is only legal when COLS == len(BIAS).  Here 5 != 3, so
+# broadcasting refuses -- which is the good case.
+try:
+    broadcast_shape((ROWS, COLS), (len(BIAS),))
+    print("DATA + BIAS was accepted, which should not happen")
+except ValueError as exc:
+    print(f"DATA + BIAS raises: {exc}")
+print("   caught, because the row count and the bias length disagree with")
+print("   the column count.  Broadcasting earned its keep.")
+print()
+
+# But a per-COLUMN bias is legal, and if the data is SQUARE the two cases are
+# indistinguishable.  Show that on a square array.
+SQUARE = [[1.0, 2.0, 3.0], [10.0, 20.0, 30.0], [100.0, 200.0, 300.0]]
+VEC = [1.0, 2.0, 3.0]
+
+broadcast = broadcast_shape((3, 3), (3,))
+print(f"on a 3x3 array, a length-3 vector broadcasts: {broadcast}")
+print("   added as a column (per row) :",
+      add_bias_rows(SQUARE, VEC))
+print("   added as a row (per column) :",
+      add_bias_columns(SQUARE, VEC))
+print(f"   the two are different: "
+      f"{add_bias_rows(SQUARE, VEC) != add_bias_columns(SQUARE, VEC)}")
+print("   the two have the same shape, so nothing catches it.")
+print()
+
+# The fix: state the axis.  Both forms are correct, but only one of them is
+# correct for the thing you meant.
+per_row = [[v + VEC[i] for v in row] for i, row in enumerate(SQUARE)]
+per_column = [[v + VEC[j] for j, v in enumerate(row)] for row in SQUARE]
+print("state the axis instead of relying on it:")
+print(f"   rows broadcast a (3,1) column -> {broadcast_shape((3, 3), (3, 1))}")
+print(f"   columns broadcast a (1,3) row    -> {broadcast_shape((3, 3), (1, 3))}")
+print(f"   per-row    result: {per_row}")
+print(f"   per-column result: {per_column}")
+print("   neither is 'the' answer; you have to say which one you meant.")
+print()
+
+# Finally: scale_columns against the same data, which is where the original
+# bug actually bites.  Scaling columns needs a length-COLS vector.
+print(f"scale_columns with a length-{len(SCALE)} vector on {ROWS}x{COLS}:")
+for row in scale_columns(DATA, SCALE):
+    print("   ", row)
+print(f"that is legal because {len(SCALE)} == COLS == {COLS}.")
+print(f"Passing the per-ROW bias instead ({len(BIAS)} values) is not legal here:")
+try:
+    broadcast_shape((ROWS, COLS), (len(BIAS),))
+except ValueError as exc:
+    print(f"   ValueError: {exc}")
+print()
+print("So the same mistake that is silent on square data becomes a loud error")
+print("the moment the data stops being square.  That is the whole lesson: shape")
+print("bugs do not announce themselves, they wait for your dimensions to become")
+print("equal, and then they hide again.")
+```
+
+**Why the rectangular case raises and the square case does not.** A bare 1D
+vector aligns with axis $-1$. On the 3x5 array axis $-1$ has length 5 while the
+bias has length 3, and neither is 1, so the rule rejects it: `axis -1: 5
+against 3, neither is 1`. On the 3x3 array axis $-1$ has length 3 and the bias
+has length 3, so it is accepted — and the alignment it chose was the one you
+did not want, because it applied the bias down the columns.
+
+**The two square results are genuinely different, not a formatting
+difference.** Per row gives `[[2, 3, 4], [12, 22, 32], [103, 203, 303]]`; per
+column gives `[[2, 4, 6], [11, 22, 33], [101, 202, 303]]`. Both are 3x3, so
+`assert result.shape == (3, 3)` passes for either. This is the trap the lesson
+keeps returning to: the shape is not the answer.
+
+**What actually prevents it** is naming the axis rather than letting it be
+inferred. Reshaping the bias to `(3, 1)` broadcasts down the rows and `(1, 3)`
+across the columns, and both are legal and both are correct — for different
+questions. Once you write `bias[:, None]` or `bias[None, :]`, a reader can see
+which one you meant, and a wrong answer is a visible mistake rather than a
+plausible one.
+
+**The last observation is the one to carry.** The identical mistake is a loud
+`ValueError` on 3x5 data and completely silent on 3x3 data. So a test suite
+built on square fixtures proves nothing about the axis, and a shape bug waits
+for your dimensions to become equal in order to hide. Test with a deliberately
+non-square case, every time.
+
+</details>
+
+**Challenge —** Build a strided array view class like the one in the lesson,
 then show that: (a) transposing a `(2,3)` array is free and equals the nested
 transpose; (b) reshaping the same buffer to `(3,2)` does **not** equal the
 transpose; (c) a slice with step 2 is non-contiguous; and (d) a `(2,2,2,3)`
@@ -2084,30 +2686,33 @@ factors, as in `(2,3,4)` to `(4,6)`, is the case that actually moves memory.
 - An n-dimensional array is a function from a product of index sets to a set of
   numbers; its shape is the tuple of axis lengths and its size is their product.
 - Broadcasting aligns shapes from the right; each pair of axes must match or one
-  must be 1, and a 1 stretches. Incompatible axes raise rather than guess.
-- A 1D array broadcasts over the **last** axis, which is why `x * w` on a
-  `(batch, features)` array scales feature columns, not rows.
+  must be 1, and a 1 stretches. Incompatible axes raise rather than guess. A 1D
+  array therefore broadcasts over the **last** axis, which is why `x * w` on a
+  `(batch, features)` array scales feature columns and not rows.
 - einsum sums a letter when it appears in more than one operand **and is absent
   from the output**. Keeping it in the output turns a batched contraction into a
-  collapsed one, with identical operands.
-- `'ij,jk->ik'` is matrix multiply; `'bij,bjk->bik'` is a batch of matrix
-  multiplies; `'ii->i'` is a diagonal; `'ij,ij->'` is the Frobenius inner
-  product.
-- A tensor is a flat buffer plus a shape plus strides. Stride = elements to
-  jump to increment that axis; row-major means the last stride is 1.
-- Transposing reverses the stride tuple and copies nothing. Reshaping re-reads
-  row-major, so `reshape(3,2)` is **not** `transpose`.
-- A reshape is a view only when the new axes come from splitting or merging
-  consecutive old ones; otherwise numpy must copy.
+  collapsed one, from identical operands. `'ij,jk->ik'` is matrix multiply,
+  `'bij,bjk->bik'` a batch of them, `'ii->i'` a diagonal, `'ij,ij->'` the
+  Frobenius inner product.
+- A tensor is a flat buffer plus a shape plus strides, where a stride is how
+  many elements to jump to increment that axis. Row-major means the last stride
+  is 1, so transposing is just reversing two tuples and copies nothing.
+- A reshape is a view exactly when the addresses, read in the new order, are
+  evenly spaced; otherwise numpy must copy. Reshaping re-reads row-major, so
+  `reshape(3,2)` is **not** `transpose` even though both are free.
+- Broadcasting an axis that gets *summed* builds the whole outer product first,
+  at `M` times the output size; broadcasting one that gets *repeated* costs only
+  the output. Matrix products sum, biases repeat, and that decides the memory
+  bill for a layer.
 - A strided slice is non-contiguous, which costs memory bandwidth downstream
   until you call `.copy()`.
-- Float addition is not associative, so summation order — which layout controls
-  — can change the last digits, as `[1e16, 1, -1e16, 1]` shows.
+- Float addition is not associative, so summation order -- which layout controls
+  -- can change the last digits, as `[1e16, 1, -1e16, 1]` shows.
 
 ## Next
 
 [121 — Numerical Methods and Floating Point](121_numerical_methods_and_floating_point.md)
 moves from how to *hold* numbers to how *accurate* they are. The
-`1e16 + 1.0 = 1e16` result at the end of this lesson is a preview:
-[IEEE 754](121_numerical_methods_and_floating_point.md), catastrophic
-cancellation, conditioning, and root-finding all follow from that one fact.
+`[1e16, 1.0, -1e16, 1.0]` sum that folds to `1.0` when the true answer is `2.0`
+is the preview: IEEE 754, machine epsilon, catastrophic cancellation,
+conditioning and root-finding all follow from that one fact.

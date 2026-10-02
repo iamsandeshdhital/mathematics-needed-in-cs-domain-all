@@ -193,8 +193,8 @@ users".
 *and* same country". That relation is also reflexive, symmetric and transitive — it
 is also an equivalence relation, and also gives a partition. But it is the *wrong*
 relation for the question, because r4 (u9, JP) and r6 (u9, FR) are the same user in
-different countries. That rule produces 5 classes where the business question wants
-4. The lesson: an equivalence relation is not automatically the one you meant, and
+different countries. That rule produces 4 classes where the business question wants
+3. The lesson: an equivalence relation is not automatically the one you meant, and
 the choice of what counts as "same" is a modelling decision with real consequences.
 This is precisely why SQL asks you to be explicit about which columns go in the
 `GROUP BY`.

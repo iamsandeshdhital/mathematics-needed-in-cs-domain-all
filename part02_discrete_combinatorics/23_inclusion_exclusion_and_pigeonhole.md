@@ -594,9 +594,8 @@ perfectly comfortable; for 30 it is over a billion.
 - A) counts the singles and forgets that higher intersections exist. The formula
   for two sets has 2 terms, which is why the mistake is invisible at small `n`.
 - B) counts only the pair terms — a formula that is wrong for every `n ≥ 3`,
-  because it omits the triple, quadruple and higher corrections that
-  [Lesson 23](../part02_discrete_combinatorics/23_inclusion_exclusion_and_pigeonhole.md)
-  Mistake 2 is about.
+  because it omits the triple, quadruple and higher corrections that Mistake 2
+  of this lesson is about.
 - D) has the right base and the wrong constant. The empty subset *is* excluded
   from the union formula, but it is *included* in the complement form, where it
   contributes `|U|`. Both formulas are legitimate; they are different formulas.
