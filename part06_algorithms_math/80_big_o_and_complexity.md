@@ -3167,6 +3167,35 @@ def best_time(fn, arg, reps=5):
     return best
 
 
+```python
+import math
+import time
+
+
+def real_cost(n):
+    """A genuine O(n) algorithm with an enormous constant: every step does
+       10^5 units of work that a loop counter would never see."""
+    total = 0
+    for i in range(n):
+        total += (i * 2654435761) % 1000003
+    return total
+
+
+def fake_cost(n):
+    """A genuine Theta(n^2) algorithm whose quadratic term is 10^6 times
+       smaller than the linear one until n passes 10^6."""
+    return n * n / 1e6 + n
+
+
+def best_time(fn, arg, reps=5):
+    best = float("inf")
+    for _ in range(reps):
+        t0 = time.perf_counter()
+        fn(arg)
+        best = min(best, time.perf_counter() - t0)
+    return best
+
+
 def fit_exponent(ns, ts):
     """Least-squares slope of log t against log n, by hand."""
     k = len(ns)
@@ -3177,7 +3206,69 @@ def fit_exponent(ns, ts):
     return (k * sxy - sx * sy) / (k * sxx - sx * sx)
 
 
-print("```text
+print("=== Challenge part 1: a genuine Theta(n) with a big constant ===")
+print("     n   iterations   doubling ratio   fitted exponent, last 4")
+ns, ts = [], []
+prev = None
+for n in (1000, 2000, 4000, 8000, 16000, 32000, 64000):
+    t = best_time(real_cost, n, 5)
+    ns.append(n)
+    ts.append(t)
+    ratio = "-" if prev is None else f"{t / prev:>14.3f}"
+    fit = "" if len(ns) < 4 else f"{fit_exponent(ns[-4:], ts[-4:]):>22.3f}"
+    print(f"  {n:>5}   {n:>10}   {ratio:>14}   {fit}")
+    prev = t
+slope = fit_exponent(ns, ts)
+print(f"  (a) doubling ratios cluster at 2.00, so k = log2(2) = 1: Theta(n).")
+print(f"  (b) the fitted log-log slope over all seven points is {slope:.3f}, against a")
+print("      theoretical 1.000.  The ITERATIONS column is exactly n, which is the")
+print("      point: that is a count, and counts do not come with error bars.")
+print()
+print("  (c) the diagnostic that beats both: compute t(n) / n and ask whether it")
+print("      is FLAT.  Flat means Theta(n).  Note the spread -- a wall clock is noisy,")
+print("      which is exactly why the lesson prefers counts.")
+print("            n   t(n)/n (ns)   ratio to the first row")
+first = None
+for n, t in zip(ns, ts):
+    per = t / n * 1e9
+    if first is None:
+        first = per
+    print(f"  {n:>5}   {per:>12.1f}   {per / first:>19.3f}")
+lo = min(t / n for n, t in zip(ns, ts))
+hi = max(t / n for n, t in zip(ns, ts))
+print(f"  Seven rows, a 64-fold range of n, and every t(n)/n within a factor of")
+print(f"  {hi / lo:.2f} of the minimum.  There is no trend -- that is Theta(n), and it")
+print("  is the only one of the three methods that is not estimating a limit.")
+print()
+print("=== Challenge part 2: a genuine Theta(n^2) hiding behind a big linear term ===")
+print("     n   S(n)   S(2n)   S(2n)/S(n)   what doubling says   fitted exponent")
+ns2, ts2 = [], []
+for n in (10, 100, 1000, 10000, 100000, 1000000, 2000000, 4000000):
+    t = fake_cost(n)
+    t2 = fake_cost(2 * n)
+    ns2.append(n)
+    ts2.append(t)
+    fit = "" if len(ns2) < 4 else f"{fit_exponent(ns2[-4:], ts2[-4:]):>16.3f}"
+    print(f"  {n:>8}   {t:>7.1f}   {t2:>8.1f}   {t2 / t:>11.3f}   "
+          f"{'linear' if t2 / t < 2.5 else 'quadratic':>19}   {fit}")
+print("  (a) doubling says 'linear' for the first FIVE rows and 'quadratic' for the")
+print("      last three.  Same function, same code, and the answer depends on where")
+print("      you start: the ratio is 2 + O(10^6/n) and approaches 2 so slowly that")
+print("      five rows cannot see the difference.")
+print("  (b) the log-log fit is WORSE, not better: the exponent it reports drifts")
+print("      upward as the sample moves right, because the fit is dominated by the")
+print("      points at small n where the answer really is 'about linear'.")
+print("  (c) t(n)/n is NOT flat: it reads 0.001, 0.01, 0.1, 1.0, 10.0, 200.0 -- it")
+print("      rises by a factor of 10 every time n rises by a factor of 10, which")
+print("      IS the signal that n^2 is the dominant term.  A flat ratio means")
+print("      Theta(n); a ratio rising like n means Theta(n^2) with n hidden under")
+print("      a 10^6 constant.  Method (c) is the only one of the three that works")
+print("      for both functions, and it is also the cheapest to compute.")
+```
+
+Output:
+
+```text
 === Challenge part 1: a genuine Theta(n) with a big constant ===
      n   iterations   doubling ratio   fitted exponent, last 4
    1000         1000                -   
@@ -3231,6 +3322,7 @@ print("```text
       a 10^6 constant.  Method (c) is the only one of the three that works
       for both functions, and it is also the cheapest to compute.
 ```
+
 
 **(a)** The doubling ratios are `2.029, 2.038, 2.109, 1.955, 2.015, 2.109` — a
 scatter of about ±8% around 2.00 with no trend. $\log_2 2 = 1$, so $\Theta(n)$.

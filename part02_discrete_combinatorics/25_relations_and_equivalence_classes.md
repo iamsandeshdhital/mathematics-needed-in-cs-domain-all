@@ -574,6 +574,655 @@ for c in sorted(components, key=sorted):
 
 ---
 
+## Formula Sheet
+
+Every symbol and formula this lesson introduces. `A` is a finite set, `R ⊆ A × A`
+a binary relation, `a R b` means `(a, b) ∈ R`, `~` denotes an equivalence
+relation, and `[n]` is the index set `1, …, n`.
+
+| Symbol | Formula | In plain words | When you use it |
+| --- | --- | --- | --- |
+| Relation on `A` | `$R \subseteq A \times A$`, written `$a\,R\,b$` | a yes/no test on ordered pairs | the general object this lesson classifies |
+| Reflexive | `$\forall a \in A,\ a\,R\,a$ | every object is related to itself | required for equivalence relations and partial orders |
+| Irreflexive | `$\nexists a \in A$ with `$a\,R\,a$ | no object is related to itself | the *opposite* of reflexive; `R` and `Rᶜ` cannot both be reflexive unless `A = ∅` |
+| Symmetric | `$a\,R\,b \Rightarrow b\,R\,a$ | relatedness is mutual | required for equivalence relations |
+| Antisymmetric | `$a\,R\,b \wedge b\,R\,a \Rightarrow a = b$ | mutual relatedness forces equality | required for partial orders; the *opposite* of symmetric |
+| Transitive | `$a\,R\,b \wedge b\,R\,c \Rightarrow a\,R\,c$ | relatedness chains | required for equivalence relations and partial orders |
+| Equivalence relation | `reflexive $\wedge$ symmetric $\wedge$ transitive` | behaves like `=` | `=`, `≡ mod n`, "same user id", connectivity |
+| Equivalence class | `$[a] = \{b \in A : a \sim b\}$` | everything interchangeable with `a` | the blocks of the partition |
+| Quotient set | `$A/{\sim} = \{[a] : a \in A\}$` | the set of classes | `DISTINCT` and `GROUP BY` return one row per class |
+| Partition theorem | `$\{[a] : a \in A\}$` is a partition of `A` | classes are pairwise disjoint and cover `A` | every element is in **exactly one** class |
+| Converse | `$a \sim b \iff a,b$ lie in the same block | each partition gives exactly one equivalence relation | equivalence relations and partitions are one object seen two ways |
+| Representative set | `$\lvert R\rvert = \lvert A/{\sim}\rvert$`, each `a` equivalent to exactly one element of `R` | keep one member per class | the legitimacy of `set()`, `DISTINCT`, interning |
+| Congruence | `$a \equiv b \pmod n \iff n \mid (a-b)$` | `a` and `b` leave the same remainder | exactly `n` classes on `ℤ`, namely `{a + kn : k ∈ ℤ}`; valid for `n ≥ 1` |
+| Composition | `$R \circ S = \{(a,c) : \exists b,\ a\,S\,b \wedge b\,R\,c\}$` | relation-multiplication: two steps at once | reflexive and transitive if both are; need not be symmetric |
+| Transitive closure | `$R^{*} = \bigcup_{k \ge 0} R^{k}$` | every pair joined by a chain | the repair that makes "reachable from" an equivalence |
+| Components | `classes of `R^{*}`$` | exactly the connected components of the graph with edges `R` | the formal reason union–find solves connectivity |
+| Partial order | `reflexive $\wedge$ antisymmetric $\wedge$ transitive | `<=`-shaped: a direction of strictness | sorting, topological order, the type hierarchy |
+| Total order | partial order in which every two elements are comparable | `<` on a totally ordered set | `x <= y` on `{1,2,3,4}` is a total order |
+| Bell number | `$B_n$` = number of partitions of an `n`-element set | how many equivalence structures exist on `A` | `B₁..B₇ = 1, 2, 5, 15, 52, 203, 877`; see [Lesson 28](../part02_discrete_combinatorics/28_counting_strategies.md) |
+| Partitions of 4 by block count | `1, 7, 6, 1` for 1, 2, 3, 4 blocks | `15` in total | the worked example's table |
+| Partitions of 6 by block count | `1, 31, 90, 65, 15, 1` for 1 … 6 blocks | `203` in total | what the code prints at `n = 6` |
+| Symmetric-relation count | `$2^{C(n,2)}$` | each unordered pair is an edge or is not | `2^6 = 64` acquaintance patterns on 4 people; feasible for `n ≤ 5` |
+| Degree argument | among `n+1` people two repeat a degree | the degrees can never be exactly `0, 1, …, n` | whoever knows nobody is known by nobody |
+| Union–find | `find(x)` gives the class representative; `union(x,y)` merges | maintain the classes incrementally | path compression + union by rank gives `O(α(n))` amortised |
+| Grouping key | `rows equivalent iff `tuple(row[k] for k in keys)` is equal | `GROUP BY` is an equivalence-class operation | the number of groups is the number of classes |
+
+---
+
+## Multiple Choice Questions
+
+**Q1.** Let `A = {a, b, c, d}` and define `x ~ y` iff `|x − y| ≤ 2` in alphabet
+order. Which statement is correct?
+
+- A) It is an equivalence relation: it sounds symmetric, so symmetry is all that
+  matters
+- B) It is symmetric but not transitive — `a ~ c` and `c ~ d` hold while `a ≁ d`
+- C) It is transitive but not symmetric
+- D) It is irreflexive, so no equivalence class contains more than one element
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) It is symmetric but not transitive — `a ~ c` and `c ~ d` hold while
+`a ≁ d`.**
+
+`a` is 2 from `c` and `c` is 1 from `d`, but `a` is 3 from `d`. Transitivity
+fails, so the classes computed from it are not a partition. The lesson's code
+prints `'within 2 letters' transitive? False ('ac' and 'cd' leave 'cd' 3 apart)`.
+
+- A) is Mistake 1 of this lesson. The phrase *is* symmetric in the everyday
+  sense, so you check symmetry, get a yes, and stop. Transitivity is the property
+  people forget to test, because it is the one that requires three distinct
+  elements and a chain.
+- C) has the failure backwards. If `a ~ b` then `b ~ a`, since the distance is
+  symmetric; `|x − y| = |y − x|` is immediate.
+- D) confuses irreflexive with non-transitive. `a ~ a` holds (distance 0), so the
+  relation is reflexive and every element is in at least its own class — the
+  classes are just not disjoint.
+
+</details>
+
+**Q2.** Which of these relations on `A = {1, 2, 3, 4}` is an equivalence relation?
+
+- A) `x ≤ y`
+- B) `x + y = 6`
+- C) `3 | (x − y)`
+- D) `|x − y| = 1`
+
+<details>
+<summary>Answer and explanation</summary>
+
+**C) `3 | (x − y)`.**
+
+Reflexive: `0` is divisible by 3. Symmetric: `3 | (a−b) ⟹ 3 | (b−a)`.
+Transitive: `3 | (a−b)` and `3 | (b−c) ⟹ 3 | (a−c)`. Its two classes are
+`{1, 4}` and `{2, 3}` — the same "congruence mod 3" as the code's example on
+`{0, …, 8}`, restricted to this set.
+
+- A) is reflexive, antisymmetric and transitive — so it is a partial order, and
+  indeed a total one. But it is not symmetric: `1 ≤ 4` while `4 ≰ 1`. That is
+  exactly the direction of strictness that makes `<` useful for sorting.
+- B) is symmetric and antisymmetric, but not reflexive: `1 + 1 = 2 ≠ 6`, so `1`
+  is in no class at all — a partition must cover `A`.
+- D) is symmetric but neither reflexive (`1 ≁ 1`) nor transitive (`1 ~ 2` and
+  `2 ~ 3` while `1 ≁ 3`).
+
+</details>
+
+**Q3.** The partition theorem says the equivalence classes of an equivalence
+relation on `A` form a partition. What does that rule out?
+
+- A) Two classes sharing an element
+- B) An element belonging to no class
+- C) Two elements in the same class
+- D) A class with exactly one element
+
+<details>
+<summary>Answer and explanation</summary>
+
+**A) Two classes sharing an element.**
+
+If `[a] ∩ [b] ≠ ∅`, pick `x` in the intersection. Then `a ~ x` and `b ~ x`, so `a
+~ b` by symmetry and transitivity, hence `[a] = [b]` — they are the same class,
+not two. The theorem's proof is that one sentence, and it is what makes
+"collecting into a set" the correct way to compute classes in the code.
+
+- B) is excluded too, by reflexivity: `a ∈ [a]`. But the *argument* is different
+  — coverage comes from reflexivity, disjointness from symmetry plus
+  transitivity — so option B is testing whether you know which property does
+  which work.
+- C) is the *point* of an equivalence relation. Everything inside a class is
+  interchangeable by definition.
+- D) is entirely legitimate: `20` distinct users is 20 classes of size 1, and the
+  worked example's `u9` pair shows the other extreme.
+
+</details>
+
+**Q4.** How many equivalence classes does congruence mod 3 have on
+`{0, 1, …, 8}`?
+
+- A) 3
+- B) 9
+- C) 4
+- D) 2
+
+<details>
+<summary>Answer and explanation</summary>
+
+**A) 3.**
+
+The classes are `{0, 3, 6}`, `{1, 4, 7}` and `{2, 5, 8}` — one per remainder. The
+lesson's code prints exactly these three blocks and then
+`number of classes = 3 = the modulus 3`. On `ℤ` there are `n` classes for modulus
+`n`, since `ℤ/~` is the remainder ring.
+
+- B) is `|A|` itself. It counts elements, not classes; the distinction is exactly
+  what `DISTINCT` versus `GROUP BY` surfaces in a database.
+- C) is the number of `n`-subsets of a 3-element set, which is unrelated. It is
+  attractive only because 3 is the answer to a different question involving 3.
+- D) is what you would get from grouping by `x mod 2` — a different modulus, a
+  different relation, and a different partition. The class count is always the
+  modulus.
+
+</details>
+
+**Q5.** Which relation on `{1, 2, 3, 4}` is a partial order?
+
+- A) `x < y`
+- B) `x ≤ y`
+- C) `x + y = 6`
+- D) `|x − y| = 1`
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) `x ≤ y`.**
+
+A partial order is reflexive, antisymmetric and transitive. For `≤` on a linearly
+ordered set: `x ≤ x` holds; `x ≤ y` and `y ≤ x` force `x = y`; and `≤` chains.
+Since every two elements are comparable it is in fact a **total** order, which is
+the shape sorting and topological order need.
+
+- A) is the same relation with the diagonal removed, and dropping the diagonal is
+  fatal: a partial order must be reflexive. This is a common slip when someone
+  writes a strict version of a real order and expects the same machinery to work.
+- C) is symmetric, not reflexive, and not transitive (`1 ~ 5` and `5 ~ 1` while
+  `1 ≁ 1`) — the opposite of a partial order.
+- D) is symmetric, not reflexive, not transitive: it has all three wrong for a
+  partial order and one right for an equivalence relation.
+
+</details>
+
+**Q6.** How many different partitions does a 4-element set have, and how does
+that break down by number of blocks?
+
+- A) 8: `2⁴`
+- B) 15: 1 with one block, 7 with two, 6 with three, 1 with four
+- C) 52: the same count for a 5-element set
+- D) 64: 8 possible subsets
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) 15: 1 with one block, 7 with two, 6 with three, 1 with four.**
+
+This is `B₄`, the fourth Bell number. The lesson's worked example tabulates
+exactly these figures and the code reproduces them for `n = 1, …, 7`:
+`1, 2, 5, 15, 52, 203, 877`. The lesson makes the point that "group these 4
+things" has more answers than you would guess by hand.
+
+- A) is `2^|A|`, the number of subsets. Subsets are not partitions: a partition
+  must have *disjoint, non-empty* blocks, and `{{1}, {1, 2}}` is a family of
+  subsets that is not a partition at all.
+- C) is `B₅`, one size up. It is the answer to "how many groupings of 5 things",
+  and it is a common off-by-one when reading a table of Bell numbers.
+- D) is `2^{C(4,2)}`, the number of undirected "knows" relations on 4 people —
+  the count from the degree argument, a different object with a coincidentally
+  equal value.
+
+</details>
+
+**Q7.** How many undirected "knows" relations are there on 4 people — that is,
+how many ways can friendships be drawn among them?
+
+- A) `2⁴ = 16`
+- B) `2^{C(4,2)} = 2⁶ = 64`
+- C) `4! = 24`
+- D) `B₄ = 15`
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) `2^{C(4,2)} = 2⁶ = 64`.**
+
+There are `C(4,2) = 6` unordered pairs of people, and each is independently an
+edge or is not — the product rule applied six times. The lesson's
+`all_symmetric_relations` enumerates exactly `2^6 = 64` patterns for 4 labels and
+prints the count.
+
+- A) is `2^{|A|}`, the power-set count. It is the right answer for a different
+  question — how many subsets of 4 people exist — and confusing the two is easy
+  because both are powers of 2 with 4 in them.
+- C) counts the orderings of 4 people, i.e. tournaments with an orientation on
+  every pair. An undirected friendship relation has no orientation, so
+  `4! = 24` is the count of *directed* complete relations, not undirected ones.
+- D) is `B₄`, the number of ways to *group* 4 people, which quotients away
+  information: 15 partitions collapse 64 relations. Each partition of `n` into `k`
+  blocks corresponds to `k!` distinct relation patterns, so the count is not
+  recoverable from the Bell number alone.
+
+</details>
+
+**Q8.** In an undirected graph, is "is reachable from `x` by a path" an
+equivalence relation as usually defined?
+
+- A) Yes — reachability is reflexive and symmetric and transitive, so the classes
+  are the components
+- B) No — it is reflexive and symmetric but **not** transitive; the transitive
+  closure `R*` is what repairs it, and `R*`'s classes are the components
+- C) No — it is symmetric but not reflexive, because you need at least one edge
+- D) Yes, provided the graph is connected; otherwise it fails
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) No — it is reflexive and symmetric but not transitive; the transitive closure
+`R*` is what repairs it, and `R*`'s classes are the components.**
+
+Take the lesson's own example: vertices 3 and 4 are adjacent, and 4 and 5 are
+adjacent, so 3 and 5 are both "reachable from" 4 — but 3 and 5 are not connected
+to each other directly, and reachability is defined by paths, not edges. The code
+prints exactly this: `H: 'reachable from 0' is NOT transitive-safe without taking
+the closure: 3 -> 4 and 4 -> 5, yet 3 and 0 are not equivalent`.
+
+- A) is what the naive implementation assumes. It is the reason the lesson warns
+  that the naive connectivity computation is `O(n³)` while union–find does it in
+  near-linear time.
+- C) confuses "reachable" with "adjacent". A vertex reaches itself by the
+  length-zero path, so the relation is reflexive — which is exactly why `R*`
+  automatically includes `(v, v)`.
+- D) is a tempting half-truth. Connectivity is not the issue at all: `R*` is an
+  equivalence relation whether or not the graph is connected, and when the graph
+  is connected it has a single class.
+
+</details>
+
+**Q9.** The worked example has six records: `r1(u7,DE), r2(u3,US), r3(u7,DE),
+r4(u9,JP), r5(u3,US), r6(u9,FR)`. What does "how many distinct users" report, and
+what does "how many distinct countries" report?
+
+- A) 4 users and 3 countries
+- B) 3 users and 4 countries
+- C) 3 users and 3 countries
+- D) 4 users and 4 countries
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) 3 users and 4 countries.**
+
+The users are `{u7, u3, u9}` — note that `u9` appears on two records with
+*different* countries, so it is one user. The countries are `{DE, US, JP, FR}`.
+The lesson's code prints `distinct users (DISTINCT): ['u3', 'u7', 'u9']` and
+`distinct countries: ['DE', 'FR', 'JP', 'US']`, and the worked example says so in
+Step 6: "three distinct users, even though there are four distinct countries,
+because `{r4, r6}` spans two countries."
+
+- A) has the two swapped. It is the natural guess from reading the table's column
+  order, and the reason the lesson insists on *computing* the classes rather than
+  reading the columns.
+- C) makes the same mistake in the other direction, treating a user as a
+  (user, country) pair — which is Mistake 2 of this lesson: grouping by the key
+  the report happens to display rather than the key the question asks for.
+- D) double-counts on both sides, as if `u9/JP` and `u9/FR` were two users. That
+  is exactly the grouping that produces the wrong partition, and it is a
+  perfectly valid equivalence relation — just not the one the question wants.
+
+</details>
+
+**Q10.** Why does a Python `set` need equality and hashing to agree, and what
+breaks when they do not?
+
+- A) Nothing; `set()` uses `__eq__` alone, and `__hash__` is a performance
+  optimisation
+- B) A set stores objects by *hash bucket*, so equal objects must hash equally or
+  the second insertion lands in a different bucket and the duplicate survives;
+  mutating a key after insertion breaks it too
+- C) `set()` preserves insertion order in Python 3.7+, so equality and hashing
+  must agree for the ordering to be meaningful
+- D) `__hash__` must be a prime, so objects whose hash changes fail an internal
+  primality test
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) A set stores objects by *hash bucket*, so equal objects must hash equally or
+the second insertion lands in a different bucket and the duplicate survives;
+mutating a key after insertion breaks it too.**
+
+The correctness requirement for hashing is exactly that equal objects hash
+equally — a relation that must be symmetric and consistent. If `x == y` but
+`hash(x) ≠ hash(y)`, the set holds two entries it believes are different, so
+deduplication silently fails and `len(s)` is wrong. The Python documentation says
+so explicitly. Mistake 4 of this lesson is that this contract is invisible until
+it breaks: `set()` works on almost everything, so the invariant is not something
+you notice you are relying on.
+
+- A) is the mistake in reverse. `__hash__` is not only performance — it is part
+  of the *lookup* contract. A set is a hash table with a set interface.
+- C) confuses `set` with `dict`. Plain `set` and `dict` preserve insertion order
+  since Python 3.7, but that is an unrelated guarantee; ordering places no
+  constraint on hashing.
+- D) invents a requirement. Python truncates hashes to `Py_hash_t` and never
+  requires primality; the only documented requirement is that equal objects hash
+  equally, plus the warning about mutability.
+
+</details>
+
+---
+
+## Subjective Questions
+
+### Short Answer
+
+**Q1. Define *reflexive*, *symmetric*, *antisymmetric* and *transitive* for a
+relation `R` on `A`.**
+
+<details>
+<summary>Answer</summary>
+
+- **Reflexive:** `a R a` for every `a ∈ A`.
+- **Symmetric:** `a R b` implies `b R a`, for all `a, b`.
+- **Antisymmetric:** `a R b` and `b R a` imply `a = b`, for all `a, b`.
+- **Transitive:** `a R b` and `b R c` imply `a R c`, for all `a, b, c`.
+
+Note that symmetric and antisymmetric are opposites: `≤` is antisymmetric and not
+symmetric, `=` is both, and a relation can be neither (`x < y` on `ℝ`). Reflexive
+is independent of all three — `x ≤ y` is reflexive, antisymmetric and transitive
+but not symmetric.
+
+</details>
+
+**Q2. State the equivalence-relation theorem and the partition theorem, and say
+what the partition theorem asserts.**
+
+<details>
+<summary>Answer</summary>
+
+**Theorem.** `R` is an equivalence relation if and only if it is reflexive,
+symmetric and transitive.
+
+**Partition theorem.** If `~` is an equivalence relation on `A`, then the
+equivalence classes `{[a] : a ∈ A}` form a **partition** of `A`: they are
+pairwise disjoint, and their union is `A`.
+
+Disjointness: if `[a] ∩ [b] ≠ ∅`, pick `x` in it. Then `a ~ x` and `b ~ x`, so
+`a ~ b` by symmetry and transitivity, hence `[a] = [b]`. Coverage: `a ∈ [a]` by
+reflexivity. So every element is in exactly one class.
+
+</details>
+
+**Q3. State the converse: what does every partition of `A` give you? Verify each
+of the three properties.**
+
+<details>
+<summary>Answer</summary>
+
+Every partition of `A` determines exactly one equivalence relation: `a ~ b` iff
+`a` and `b` lie in the same block.
+
+- **Reflexive**, because every block contains each of its elements, so `a` is in
+  the same block as itself.
+- **Symmetric**, because blocks are undirected: if `a` and `b` share a block then
+  so do `b` and `a`.
+- **Transitive**, because `a ~ b` and `b ~ c` put `a`, `b` and `c` in one block,
+  so `a ~ c`.
+
+This is the punchline: **equivalence relations and partitions are the same object
+viewed two ways.** A partition is the grouping; the equivalence relation is the
+test. Counting one counts the other.
+
+</details>
+
+**Q4. Prove that `a ≡ b (mod n)` is an equivalence relation on `ℤ`, and count its
+classes.**
+
+<details>
+<summary>Answer</summary>
+
+`a ≡ b (mod n)` means `n` divides `a − b`, for `n ≥ 1`.
+
+- **Reflexive:** `n` divides `0`.
+- **Symmetric:** `n | (a − b)` implies `n | −(a − b) = (b − a)`.
+- **Transitive:** `n | (a − b)` and `n | (b − c)` imply `n | ((a − b) + (b − c))
+  = (a − c)`.
+
+The classes are `{a + kn : k ∈ ℤ}` — one per residue — so there are exactly `n` of
+them. The lesson's code checks reflexivity, symmetry and transitivity explicitly
+on `ℤ` restricted to `{0, …, 8}` and prints `number of classes = 3 = the modulus`.
+
+</details>
+
+**Q5. What is the composition of two relations, and which of the three properties
+does it preserve?**
+
+<details>
+<summary>Answer</summary>
+
+$$R \circ S = \{(a,c) : \exists b \text{ with } a\,S\,b \text{ and } b\,R\,c\}$$
+
+Composition is relation-multiplication: "a relates to c by two steps". It is
+**reflexive** and **transitive** if `R` and `S` are, but it need not be
+**symmetric** — composing two symmetric relations can give an asymmetric one,
+because `a R∘S b` via `z` and `b R∘S a` via `y` says nothing about each other
+individually.
+
+Taking the transitive closure — adding every pair connected by a chain — is what
+repairs it, which is why `R*` rather than `R` is what defines connected
+components.
+
+</details>
+
+**Q6. What are the Bell numbers, and how do the partitions of a 6-element set
+break down by block count?**
+
+<details>
+<summary>Answer</summary>
+
+The **Bell numbers** `B_n` count the partitions of an `n`-element set — that is,
+the distinct equivalence structures on it. The lesson's code computes them by
+recursively inserting the first element into an existing block or into a new one:
+
+`B₁, …, B₇ = 1, 2, 5, 15, 52, 203, 877`.
+
+For `n = 6` the breakdown by block count is 1 partition with 1 block, 31 with 2,
+90 with 3, 65 with 4, 15 with 5, and 1 with 6 — totalling **203**. Counting these
+is the subject of
+[Lesson 28](../part02_discrete_combinatorics/28_counting_strategies.md).
+
+</details>
+
+### Long Answer
+
+**Q1. Why must you take the transitive closure before "reachable from `x`" is an
+equivalence relation? What exactly breaks if you use the raw edge relation?**
+
+<details>
+<summary>Model answer</summary>
+
+Three properties are needed and the raw edge relation supplies only two. It is
+reflexive only if you add the length-zero path, and it is symmetric only if the
+graph is undirected; but transitivity fails for *any* graph with more than one
+edge, in either direction. The lesson's counterexample is minimal: vertices 3 and
+4 are adjacent and 4 and 5 are adjacent, so 3 and 5 are both reachable from 4,
+yet they are in different components. In a directed graph even symmetry fails.
+
+What breaks is not a small edge case — it is the whole algorithm. The
+equivalence-class machinery the rest of this lesson provides assumes the relation
+is an equivalence relation: that classes are disjoint, that they cover `A`, that
+`[a] = [b]` iff `a ~ b`, and that one representative per class is a complete
+description. With a non-transitive relation none of that holds. Classes computed
+from the raw relation *overlap* — 4 appears in the class of 3 and in the class of
+5 — so `len(classes)` no longer equals the number of components, `DISTINCT` no
+longer returns one row per group, and any code that assumes "one representative
+per class covers everything" is wrong. That is not a degraded result; it is a
+wrong one.
+
+The closure fixes it by construction. `R* = ⋃_{k≥0} Rᵏ` adds every pair joined by a
+*chain*, so relatedness is automatically chained: if `a R* b` via a path of length
+`j` and `b R* c` via a path of length `k`, then concatenating them is a path of
+length `j + k`, so `a R* c`. Reflexivity comes from `k = 0`, the empty path, and
+symmetry from reversing a path in an undirected graph. So `R*` is reflexive,
+symmetric and transitive — an equivalence relation — and its classes are exactly
+the connected components, by the definition of "in the same component".
+
+The lesson's Mistake 5 is the engineering lesson attached to this. The naive
+closure costs `O(n³)` with Floyd–Warshall and `O(nm)` with repeated BFS, and both
+must emit at least `n²` bits of output. Union–find computes the classes in
+`O(α(n))` per union without ever materialising the closure, because it maintains
+the classes *incrementally* — merging two when an edge connects them — and the
+classes are all you wanted. The closure was a means to an end; `find` and `union`
+reach the end directly. This is why "is reachable from" appears in
+[Lesson 26](../part02_discrete_combinatorics/26_graph_theory.md) as a relation
+that "is reflexive and symmetric but not transitive — which is why you must take
+the transitive closure before the classes are an equivalence".
+
+</details>
+
+**Q2. Why is the choice of equivalence relation a *modelling decision* rather
+than a discovery? Use the worked example.**
+
+<details>
+<summary>Model answer</summary>
+
+Because more than one equivalence relation can be true of the same data at the
+same time, and they answer different questions. The worked example makes this
+concrete: six records carrying `(user, country)`. Define `a ~ b` to mean "same
+user id". Then the classes are `{r1, r3}`, `{r2, r5}` and `{r4, r6}`, and the
+question "how many distinct users" has the answer 3.
+
+Now define `a ~ b` to mean "same user *and* same country". This relation is
+*also* reflexive, symmetric and transitive — it is also an equivalence relation,
+and it also gives a clean partition. The difference is that `r4 (u9, JP)` and
+`r6 (u9, FR)` are now in different blocks, because their countries differ. Both
+relations are mathematically impeccable. Only one answers the question that was
+asked.
+
+That is why the lesson's Mistake 2 says "equivalence relations are chosen, not
+discovered; the wrong key gives a perfectly valid partition of the wrong thing".
+Nothing in the mathematics distinguishes them. The distinction is a statement
+about what "the same" is *for*, which is a business decision. The lesson is blunt
+about the consequence: "an equivalence relation is not automatically the one you
+meant, and the choice of what counts as 'same' is a modelling decision with real
+consequences."
+
+This is exactly why SQL asks you to be explicit about which columns go in the
+`GROUP BY`. `GROUP BY user` and `GROUP BY user, country` are both equivalence
+relations, both partition the rows, both are implemented the same way — and they
+return different numbers of groups. The engine cannot guess which you meant,
+because both are defensible. The failure mode is silent: the query runs, returns
+a plausible number, and the report is wrong in a way nobody notices until someone
+audits it.
+
+The transferable habit is to *state the key* before computing the classes, and to
+say what question the key answers. In code that means naming the tuple you group
+on. In prose it means writing "distinct users" rather than "distinct
+user-country pairs". In both cases the cost of being explicit is one clause, and
+the cost of being vague is a wrong answer with no error message.
+
+</details>
+
+**Q3. Why must a hashable type satisfy "equal objects hash equally"? What breaks
+in each direction, and why is the contract invisible until it breaks?**
+
+<details>
+<summary>Model answer</summary>
+
+Because a Python `set` is a hash table with a set interface. Lookup is not "scan
+the list comparing with `==`"; it is "compute `hash(x)`, go to that bucket,
+compare only what is in it". Soundness of that procedure needs the invariant:
+
+$$x = y \ \Rightarrow\ \operatorname{hash}(x) = \operatorname{hash}(y)$$
+
+which the documentation states explicitly. The two failure directions behave
+differently and both are silent.
+
+If equality and hashing *disagree*, a duplicate survives. Insert `x`, then insert
+an equal `y`. The two land in different buckets, so the set believes it holds two
+distinct objects. `len(s)` is now wrong, `x in s` still works for `x` but the
+deduplication you relied on did not happen, and iteration yields both. The set's
+documented guarantees — that its elements are pairwise distinct — are violated,
+with no exception raised. This is the failure that reaches production: a type
+whose `__eq__` ignores a field that `__hash__` includes, so two "equal" objects
+hash differently.
+
+If an object's hash *changes after insertion*, the set is silently corrupted. The
+bucket index is computed at insertion time and stored; a later lookup computes the
+*new* hash and visits a different bucket, so the object cannot be found even
+though it is present. Iteration still shows it, so the object appears to be in the
+set while `in` says otherwise. The Python documentation calls this out
+explicitly, which is unusual and is a hint about how quietly it fails otherwise.
+
+The contract is invisible until it breaks because `set()` works on almost
+everything. Mutable objects cannot be dictionary keys or set members at all —
+`TypeError: unhashable type` — so the worst case is caught. The dangerous case is
+the one with no error: a type that *is* hashable and whose fields change after
+insertion, or whose `__eq__` and `__hash__` were written inconsistently. Lesson 25
+Mistake 4 puts it as "an invariant, not a feature", and the broader point is that
+`==` and `hash` must describe the *same* equivalence relation — get one right and
+the other and the data structure is broken while remaining a perfectly ordinary
+Python object.
+
+</details>
+
+**Q4. Why does computing the transitive closure cost `O(n³)` while union–find
+costs `O(α(n))`? What is each one actually computing?**
+
+<details>
+<summary>Model answer</summary>
+
+They compute overlapping things, and the difference is *which* thing.
+
+The transitive closure is a **materialised relation**: `R*` as an explicit subset
+of `A × A`, with `(a, c)` present whenever a path of any length joins `a` to `c`.
+That output alone is `Θ(n²)` pairs, so no algorithm can do better than `Ω(n²)`
+time or space, whatever the input. Floyd–Warshall's `O(n³)` comes from its triple
+loop over `(k, i, j)`, propagating "if `i` reaches `k` and `k` reaches `j`, then
+`i` reaches `j`" once per intermediate vertex; the lesson's `warshall` function
+implements exactly that, and a repeated-BFS variant costs `O(nm)`. When you
+genuinely need the relation — to answer "can `a` reach `c`?" for arbitrary pairs
+in one query — that cost is the honest one and you cannot dodge it.
+
+Union–find computes something smaller: the **partition**, i.e. the list of
+connected components. The lesson is explicit that this is all the classes you
+wanted, and it is enough for the questions that matter: "are these two in the
+same component?", "how many components are there?", "what are they?". It never
+stores a pair of elements; it stores one integer per element, a parent pointer,
+and path compression plus union by rank to keep trees shallow. Each `find` is
+`O(α(n))` amortised — `α` is the inverse Ackermann function, which is below 5 for
+every `n` that exists in practice — so `O(α(n))` per union, essentially constant.
+
+The conceptual difference is what I want to underline: **the partition is a
+sufficient statistic for connectivity queries, and the closure is not.** You can
+answer every "same component?" question from 6 integers in the worked example's
+six-vertex graph. You cannot answer them from `R` without closing it first. So
+the right design is to decide which question you will actually ask. If you will
+ask "same component?", maintain the components. If you will ask "what is the set
+of vertices reachable from `a`?", you need `R*` — or, better, you need the
+*transitive closure of one row*, which BFS computes in `O(V + E)` and which is
+what the lesson's `bfs` actually returns along with the predecessor tree.
+
+There is a cost to choosing the partition, and it is worth naming: union–find
+does not support splitting. If a later edge *removes* connectivity, there is no
+way to undo a `union`, and you would need a different data structure entirely. That
+asymmetry is the price of the near-constant amortised bound, and it is exactly
+why Kruskal's minimum-spanning-tree algorithm in
+[Lesson 27](../part02_discrete_combinatorics/27_trees_and_spanning_trees.md) can
+use it: it only ever adds edges.
+
+</details>
+
 ## Exercises and Solutions
 
 **[ ] Exercise 1 — Classify five relations.** For each relation on

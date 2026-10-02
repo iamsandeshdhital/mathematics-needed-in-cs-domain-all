@@ -1,6 +1,6 @@
 # 120 — Tensors and Broadcasting
 
-**Part**: part10_tensors_numerical · **Prerequisites**: 31, 41 · **Time**: 35 min
+**Part**: part10_tensors_numerical · **Prerequisites**: 113 · **Time**: 30 min
 
 ---
 
@@ -47,7 +47,7 @@ copies everything, and why transposing a big matrix costs nothing.
 
 ## The Formal Version
 
-Notation follows [SYMBOLS.md](../../SYMBOLS.md).
+Notation follows [SYMBOLS.md](../SYMBOLS.md).
 
 **Definition.** An n-dimensional *array* over a set F is a function
 T : I₀ × I₁ × … × I_{n−1} → F. Its *shape* is (d₀, …, d_{n−1}) with
@@ -104,6 +104,47 @@ entry of the output is a sum over all assignments of the contracted indices of
 the product of the operand entries,
 `C[i, …] = Σ Σ … ∏ₐ Aₐ[indices]`. This is the general form of matrix
 multiplication, where "matrix" means any n-dimensional array.
+
+## Formula Sheet
+
+Notation follows [SYMBOLS.md](../SYMBOLS.md). `T` is an n-dimensional array,
+`F` is the field of entries (`ℝ`, `ℤ` or `ℂ`), and `sₖ` is a stride in elements.
+
+| Symbol | Formula | In plain words | When you use it |
+| --- | --- | --- | --- |
+| array as a function | `$T : I_0 \times I_1 \times \cdots \times I_{n-1} \to F$` | a rule from an n-fold index set to a number | the definition; note it says nothing about memory |
+| index set | `$I_k = \{0, 1, \ldots, d_k - 1\}$` | axis `k` runs from 0 to `dₖ−1` | reading any shape |
+| shape | `$(d_0, d_1, \ldots, d_{n-1})$` | the length of each axis | the first thing to check when a broadcast fails |
+| size (numel) | `$\lvert T\rvert = \prod_{k=0}^{n-1} d_k$` | how many entries there are in total | `numel`; `2 × 3 × 4` is 24, not 9 |
+| rank | `$n$`, the number of axes | how many dimensions, *not* how many entries | `ndim`; a `100 × 100` matrix has rank 2 |
+| slice | `$T[i_0, \ldots, i_{n-1}]$` | the entry at that index | the only way values are read |
+| axis 0 | the outermost axis | the slowest-varying index | it is *not* the axis a 1D array broadcasts over |
+| broadcast-compatible | after right-alignment every pair satisfies `$a_k = c_k$` or `$a_k = 1$` or `$c_k = 1$` | axes either match or one of them can stretch | the precondition for any elementwise op |
+| broadcast shape | `$b_k = \max(a_k, c_k)$` with 1 treated as "stretch me" | the output shape | `(3,) + (3,1) → (3,3)`; `(2,2) + (3,3)` raises |
+| stretch map | `$B(x)_i = x$` for every output index `i` | the length-1 axis replicates its single value | why `B` is order-independent and associative |
+| C-contiguous stride | `$s_k = \prod_{j>k} d_j$` | every dimension to the right of axis `k` | `(2,3,4)` has strides `(12,4,1)`; row-major |
+| F-contiguous stride | `$s_k = \prod_{j<k} d_j$` | every dimension to the left of axis `k` | `(2,3,4)` has strides `(1,2,6)`; column-major |
+| flat offset | `$\operatorname{off}(i) = \sum_k i_k s_k$` | where an entry physically sits in the buffer | why `A[1][0] = 3` on a `(2,3)` buffer holding `1 2 3 4 5 6` |
+| last stride is 1 | `$s_{n-1} = 1$` | moving along the last axis moves one element | C-contiguity is exactly this, for all axes |
+| transpose | shape `← (d₀, …, d_{n−1})`, strides `← (s_{n−1}, …, s₀)` | flip axes and reverse the stride tuple | always a **view**, never a copy |
+| reshape is free iff | the new axes come from splitting or merging **consecutive** old axes | no element has to move, so only metadata changes | `(2,3) → (6,)` and `(2,3) → (3,2)` are free; `(2,3,4) → (4,6)` copies |
+| einsum contraction | `$C[i,\ldots] = \sum\sum\cdots \prod_a A_a[\text{indices}]$` | multiply the operands entrywise and add over the contracted axes | the general form of every matmul-shaped op |
+| matrix product | `$[AB]_{ik} = \sum_j A_{ij}B_{jk}$` | contract the shared middle axis | `A @ B`, and `'ij,jk->ik'` |
+| summed letter | appears in **more than one operand** and is **absent from the output** | shared indices get added over | `'ij,jk->ik'` sums `j`; `'bij,bjk->bik'` sums only `j` |
+| free letter | appears exactly once, or appears in the output | a surviving axis of the result | `b` in `'bij,bjk->bik'` is kept, not summed |
+| implicit output | free letters sorted alphabetically | `'ij,jk'` means `'ij,jk->ik'` | same result as the explicit form |
+| Frobenius inner product | `$\sum_{i,j} A_{ij}B_{ij}$` | multiply entrywise and add everything up | `'ij,ij->'`; for `[[1,2],[3,4]]` that is `30.0` |
+| trace | `$\sum_i A_{ii}$` | add the diagonal | `'ii->'`; for `[[1,2],[3,4]]` that is `5.0` |
+| diagonal | `$(A_{11}, A_{22}, \ldots)$` | read the diagonal out | `'ii->i'`; for `[[1,2],[3,4]]` that is `[1.0, 4.0]` |
+| outer product | `$(x \otimes y)_{ij} = x_i y_j$` | every pair multiplied, making a table | `'i,j->ij'`; used by the rank-one update trick |
+| float addition is not associative | `$(1 \times 10^{16} + 1) - 10^{16} + 1 = 1.0$` but `$(10^{16} - 10^{16}) + (1 + 1) = 2.0$` | summation order changes the answer | why layout and pairwise blocking affect the last digits |
+
+Three restrictions to carry. The C-contiguous stride formula
+`sₖ = ∏_{j>k} dⱼ` is an *element* count; numpy's `.strides` reports **bytes**,
+so a `(2,3)` float64 array reports `(24, 8)`, not `(3, 1)`. And the rule "a letter
+appearing twice is summed" is incomplete — it is summed only when it is also
+absent from the output, which is the whole difference between
+`'bij,bjk->bik'` and `'bij,bjk->ik'`.
 
 ## Worked Example
 
@@ -799,49 +840,6 @@ and the copy is often the dominant cost in a pipeline.
 at offset `i*ncols + j`. When you are reading a raw buffer, reading a file, or
 writing a shader, getting this backwards transposes your data — which looks
 like a plausible image with the wrong orientation.
-
----
-
-## Formula Sheet
-
-Notation follows [SYMBOLS.md](../SYMBOLS.md). `T` is an n-dimensional array,
-`F` is the field of entries (`ℝ`, `ℤ` or `ℂ`), and `sₖ` is a stride in elements.
-
-| Symbol | Formula | In plain words | When you use it |
-| --- | --- | --- | --- |
-| array as a function | `$T : I_0 \times I_1 \times \cdots \times I_{n-1} \to F$` | a rule from an n-fold index set to a number | the definition; note it says nothing about memory |
-| index set | `$I_k = \{0, 1, \ldots, d_k - 1\}$` | axis `k` runs from 0 to `dₖ−1` | reading any shape |
-| shape | `$(d_0, d_1, \ldots, d_{n-1})$` | the length of each axis | the first thing to check when a broadcast fails |
-| size (numel) | `$\lvert T\rvert = \prod_{k=0}^{n-1} d_k$` | how many entries there are in total | `numel`; `2 × 3 × 4` is 24, not 9 |
-| rank | `$n$`, the number of axes | how many dimensions, *not* how many entries | `ndim`; a `100 × 100` matrix has rank 2 |
-| slice | `$T[i_0, \ldots, i_{n-1}]$` | the entry at that index | the only way values are read |
-| axis 0 | the outermost axis | the slowest-varying index | it is *not* the axis a 1D array broadcasts over |
-| broadcast-compatible | after right-alignment every pair satisfies `$a_k = c_k$` or `$a_k = 1$` or `$c_k = 1$` | axes either match or one of them can stretch | the precondition for any elementwise op |
-| broadcast shape | `$b_k = \max(a_k, c_k)$` with 1 treated as "stretch me" | the output shape | `(3,) + (3,1) → (3,3)`; `(2,2) + (3,3)` raises |
-| stretch map | `$B(x)_i = x$` for every output index `i` | the length-1 axis replicates its single value | why `B` is order-independent and associative |
-| C-contiguous stride | `$s_k = \prod_{j>k} d_j$ | every dimension to the right of axis `k` | `(2,3,4)` has strides `(12,4,1)`; row-major |
-| F-contiguous stride | `$s_k = \prod_{j<k} d_j$ | every dimension to the left of axis `k` | `(2,3,4)` has strides `(1,2,6)`; column-major |
-| flat offset | `$\operatorname{off}(i) = \sum_k i_k s_k$ | where an entry physically sits in the buffer | why `A[1][0] = 3` on a `(2,3)` buffer holding `1 2 3 4 5 6` |
-| last stride is 1 | `$s_{n-1} = 1$` | moving along the last axis moves one element | C-contiguity is exactly this, for all axes |
-| transpose | shape `← (d₀, …, d_{n−1})`, strides `← (s_{n−1}, …, s₀)` | flip axes and reverse the stride tuple | always a **view**, never a copy |
-| reshape is free iff | the new axes come from splitting or merging **consecutive** old axes | no element has to move, so only metadata changes | `(2,3) → (6,)` and `(2,3) → (3,2)` are free; `(2,3,4) → (4,6)` copies |
-| einsum contraction | `$C[i,\ldots] = \sum\sum\cdots \prod_a A_a[\text{indices}]$` | multiply the operands entrywise and add over the contracted axes | the general form of every matmul-shaped op |
-| matrix product | `$[AB]_{ik} = \sum_j A_{ij}B_{jk}$` | contract the shared middle axis | `A @ B`, and `'ij,jk->ik'` |
-| summed letter | appears in **more than one operand** and is **absent from the output** | shared indices get added over | `'ij,jk->ik'` sums `j`; `'bij,bjk->bik'` sums only `j` |
-| free letter | appears exactly once, or appears in the output | a surviving axis of the result | `b` in `'bij,bjk->bik'` is kept, not summed |
-| implicit output | free letters sorted alphabetically | `'ij,jk'` means `'ij,jk->ik'` | same result as the explicit form |
-| Frobenius inner product | `$\sum_{i,j} A_{ij}B_{ij}$` | multiply entrywise and add everything up | `'ij,ij->'`; for `[[1,2],[3,4]]` that is `30.0` |
-| trace | `$\sum_i A_{ii}$` | add the diagonal | `'ii->'`; for `[[1,2],[3,4]]` that is `5.0` |
-| diagonal | `$(A_{11}, A_{22}, \ldots)$` | read the diagonal out | `'ii->i'`; for `[[1,2],[3,4]]` that is `[1.0, 4.0]` |
-| outer product | `$(x \otimes y)_{ij} = x_i y_j$` | every pair multiplied, making a table | `'i,j->ij'`; used by the rank-one update trick |
-| float addition is not associative | `$(1\!\times\!10^{16} + 1) - 10^{16} + 1 = 1.0$ but `(10^16 - 10^16) + (1 + 1) = 2.0` | summation order changes the answer | why layout and pairwise blocking affect the last digits |
-
-Three restrictions to carry. The C-contiguous stride formula
-`sₖ = ∏_{j>k} dⱼ` is an *element* count; numpy's `.strides` reports **bytes**,
-so a `(2,3)` float64 array reports `(24, 8)`, not `(3, 1)`. And the rule "a letter
-appearing twice is summed" is incomplete — it is summed only when it is also
-absent from the output, which is the whole difference between
-`'bij,bjk->bik'` and `'bij,bjk->ik'`.
 
 ## Multiple Choice Questions
 
