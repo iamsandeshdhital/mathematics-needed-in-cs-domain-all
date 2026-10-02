@@ -87,6 +87,37 @@ remainder when divided by `m`. Formal version:
 from the mean. It is the single number that summarises spread. Formal version:
 [Lesson 64](../part05_probability_statistics/64_expectation_variance.md).
 
+## Formula Sheet
+
+This lesson has no formal definitions of its own — it is a catalogue — but it
+does use three ideas informally (big-O, modular arithmetic, variance) and a
+handful of formulas in its code. Every one of them is here.
+
+| Symbol | Formula | In plain words | When you use it |
+| --- | --- | --- | --- |
+| `$f(n) = O(g(n))$` | `$\exists\, c>0,\ n_0>0:\ \forall n \ge n_0,\ f(n) \le c\,g(n)$` | $f$ never grows faster than a fixed multiple of $g$, once $n$ is past a fixed threshold | describing how a cost **scales**, never as a speed. The constants $c$ and $n_0$ may be enormous; the label is about growth only |
+| `$a \equiv b \pmod m$` | `$m \mid (a - b)$` | $a$ and $b$ leave the same remainder when divided by $m$ | hash slots (`hash(k) % size`), RSA keys, calendars. Requires $m > 0$; for $m=1$ every pair is congruent, which is a vacuous claim |
+| `$\varphi(n)$` | for $n = pq$ with distinct primes: `$\varphi(n) = (p-1)(q-1)$`, here `$= 3120$` | how many numbers from 1 to $n$ share no factor with $n$ | computing the RSA private exponent $d$. It is also why knowing $\varphi(n)$ is equivalent to knowing $p$ and $q$, which is why factoring $n$ breaks RSA |
+| `$\gcd(m,n) = 1$` | `$\gcd$` is the greatest common divisor | $m$ and $n$ share no factor, so $m$ may be cancelled from a congruence | **checking the hypothesis of Euler's theorem before trusting the RSA proof** |
+| Euler's theorem | `$m^{\varphi(n)} \equiv 1 \pmod n$` | raising $m$ to $\varphi(n)$ gives back 1, for any $m$ sharing no factor with $n$ | the step that makes RSA decryption return $m$. **Requires `$\gcd(m,n)=1$`**; without it the value is 0 on the offending prime, not 1 |
+| `$\operatorname{modpow}(b,e,m)$` | square the base and halve the exponent each step: $\lceil \log_2 (e+1) \rceil$ steps | compute $b^e \bmod m$ without ever building $b^e$ | `pow(m, e, n)` in RSA. $e = 17$ needs 5 steps here; the count depends on the *bit length* of $e$, not its value |
+| `$e \cdot d \equiv 1 \pmod{\varphi(n)}$` | `$17 \cdot 2753 = 46801 = 15 \cdot 3120 + 1$` | $d$ undoes $e$ | making the surplus powers of $m$ in $m^{ed}$ cancel against Euler's theorem |
+| `$\sigma(z) = \dfrac{1}{1+e^{-z}}$` | $e$ here is Euler's number, not the exponent $e$ above | squashes any real number into the open interval from 0 to 1 | the logistic regression output layer. Note `$\sigma(0) = 0.5$` and `$\sigma(z) \to 1$` as $z \to +\infty$, but never equals 1 |
+| `$\hat y_i = \sigma(\mathbf{w} \cdot \mathbf{x}_i + b)$` | | the model's predicted pass probability for student $i$ | the forward pass |
+| `$L(\mathbf{w}, b) = \dfrac{1}{n}\sum_{i=1}^{n} (\hat y_i - y_i)^2$` | the $1/n$ is the mean; dropping it changes the gradient's scale, not its direction | one number that has to shrink for learning to be happening | printed every few epochs. Averaging matters: it makes $L$ comparable between datasets of different size |
+| `$\mathbf{w} \leftarrow \mathbf{w} - \eta \nabla L$` | minus, not plus: we walk downhill | move every weight against the slope of the loss | the training loop. $\nabla L$ is the vector of partial derivatives of $L$ with respect to the weights |
+| `$\eta$` (learning rate) | `0.05` in the lesson's run | the size of one step downhill | too small crawls; too large makes the predictions saturate at 0 and 1. There is no universally safe value |
+| `$\bar{x} = \dfrac{1}{n}\sum_i x_i$` | `$(3.500,\ 5.160)$` for the five PCA points | the average point of the data | centring, so the axis of greatest spread passes through the origin |
+| `$\operatorname{Var}(X) = \dfrac{1}{n}\sum_i (x_i - \bar x)^2$` | | average squared distance from the mean | the quantity PCA maximises. Population variance, so it divides by $n$, not $n-1$ |
+| `$\Sigma = \begin{pmatrix} s_{xx} & s_{xy} \\ s_{xy} & s_{yy} \end{pmatrix} = \begin{pmatrix} 8.000 & 9.400 \\ 9.400 & 11.154 \end{pmatrix}` | `$s_{xy} = s_{yx}$`, so $\Sigma$ is symmetric | how the two axes spread, and how much they lean together | the input to PCA. A symmetric matrix is what makes one real principal direction exist per eigenvalue |
+| `$\theta = \tfrac12\operatorname{atan2}(2s_{xy},\, s_{xx} - s_{yy})$` | `$\approx 49.76°$` | the angle of the direction of greatest spread, in 2D | doing 2D PCA with no linear-algebra library. `atan2(y, x)` is safe where `atan` would divide by zero when $s_{xx} = s_{yy}$ |
+| `$\operatorname{proj}_v(x) = (x \cdot v)\,v$` | valid when `$\|v\| = 1$`; in general divide by `$v \cdot v$` | the part of $x$ that lies along direction $v$ | turning 2D points into the 1D numbers PCA outputs: `(1.00, 2.00) ↦ −4.027` |
+| `$\lambda_1,\ \lambda_2$` | `$\lambda_{1,2} = \dfrac{s_{xx}+s_{yy} \pm \sqrt{(s_{xx}-s_{yy})^2 + 4s_{xy}^2}}{2}$` $\approx 19.109,\ 0.046$ | the two variances, along the two principal directions | computing PCA exactly in 2D; the bigger one is the direction to keep |
+| `$\lambda_1 / (\lambda_1 + \lambda_2)$` | `99.8%` in the lesson | the fraction of variance that survives the projection | deciding whether PCA is worth doing at all. `50%` on data with equal spread in every direction |
+| a finite binary float | `$x = \dfrac{m}{2^k}$` with `$m \in \mathbb{Z}$` | every finite float is a whole number over a power of two | explaining `0.1 + 0.2 != 0.3`. The stored `0.1` is `$\frac{3602879701896397}{2^{62}}$` |
+| `$\dfrac{1}{10} = \dfrac{1}{2 \cdot 5}$` | no power of two has a factor of 5, so the binary expansion never terminates | why `0.1` is inexact at 64, 128 or 256 bits alike | choosing `Decimal`, `Fraction`, or integer minor units. Widening the format shrinks the error, it never removes it |
+| `math.isclose(a, b, rel_tol, abs_tol)` | | compare two floats with a tolerance instead of `==` | the only safe way to test float equality |
+
 ## Worked Example
 
 The most convincing example is the one you have probably already been bitten by.
@@ -465,38 +496,6 @@ Testing checks finitely many inputs chosen by you. Every catastrophic bug you
 have shipped was a case where testing missed something a proof would have
 excluded, or where nobody wrote the specification precisely enough to prove
 anything. See [Lesson 13](../part01_logic_proof/13_proof_techniques.md).
-
-## Formula Sheet
-
-This lesson has no formal definitions of its own — it is a catalogue — but it
-does use three ideas informally (big-O, modular arithmetic, variance) and a
-handful of formulas in its code. Every one of them is here.
-
-| Symbol | Formula | In plain words | When you use it |
-| --- | --- | --- | --- |
-| `$f(n) = O(g(n))$` | `$\exists\, c>0,\ n_0>0:\ \forall n \ge n_0,\ f(n) \le c\,g(n)$` | $f$ never grows faster than a fixed multiple of $g$, once $n$ is past a fixed threshold | describing how a cost **scales**, never as a speed. The constants $c$ and $n_0$ may be enormous; the label is about growth only |
-| `$a \equiv b \pmod m$` | `$m \mid (a - b)$` | $a$ and $b$ leave the same remainder when divided by $m$ | hash slots (`hash(k) % size`), RSA keys, calendars. Requires $m > 0$; for $m=1$ every pair is congruent, which is a vacuous claim |
-| `$\varphi(n)$` | for $n = pq$ with distinct primes: `$\varphi(n) = (p-1)(q-1)$`, here `$= 3120$` | how many numbers from 1 to $n$ share no factor with $n$ | computing the RSA private exponent $d$. It is also why knowing $\varphi(n)$ is equivalent to knowing $p$ and $q$, which is why factoring $n$ breaks RSA |
-| `$\gcd(m,n) = 1$` | `$\gcd$` is the greatest common divisor | $m$ and $n$ share no factor, so $m$ may be cancelled from a congruence | **checking the hypothesis of Euler's theorem before trusting the RSA proof** |
-| Euler's theorem | `$m^{\varphi(n)} \equiv 1 \pmod n$` | raising $m$ to $\varphi(n)$ gives back 1, for any $m$ sharing no factor with $n$ | the step that makes RSA decryption return $m$. **Requires `$\gcd(m,n)=1$`**; without it the value is 0 on the offending prime, not 1 |
-| `$\operatorname{modpow}(b,e,m)$` | square the base and halve the exponent each step: $\lceil \log_2 (e+1) \rceil$ steps | compute $b^e \bmod m$ without ever building $b^e$ | `pow(m, e, n)` in RSA. $e = 17$ needs 5 steps here; the count depends on the *bit length* of $e$, not its value |
-| `$e \cdot d \equiv 1 \pmod{\varphi(n)}$` | `$17 \cdot 2753 = 46801 = 15 \cdot 3120 + 1$` | $d$ undoes $e$ | making the surplus powers of $m$ in $m^{ed}$ cancel against Euler's theorem |
-| `$\sigma(z) = \dfrac{1}{1+e^{-z}}$` | $e$ here is Euler's number, not the exponent $e$ above | squashes any real number into the open interval from 0 to 1 | the logistic regression output layer. Note `$\sigma(0) = 0.5$` and `$\sigma(z) \to 1$` as $z \to +\infty$, but never equals 1 |
-| `$\hat y_i = \sigma(\mathbf{w} \cdot \mathbf{x}_i + b)$` | | the model's predicted pass probability for student $i$ | the forward pass |
-| `$L(\mathbf{w}, b) = \dfrac{1}{n}\sum_{i=1}^{n} (\hat y_i - y_i)^2$` | the $1/n$ is the mean; dropping it changes the gradient's scale, not its direction | one number that has to shrink for learning to be happening | printed every few epochs. Averaging matters: it makes $L$ comparable between datasets of different size |
-| `$\mathbf{w} \leftarrow \mathbf{w} - \eta \nabla L$` | minus, not plus: we walk downhill | move every weight against the slope of the loss | the training loop. $\nabla L$ is the vector of partial derivatives of $L$ with respect to the weights |
-| `$\eta$` (learning rate) | `0.05` in the lesson's run | the size of one step downhill | too small crawls; too large makes the predictions saturate at 0 and 1. There is no universally safe value |
-| `$\bar{x} = \dfrac{1}{n}\sum_i x_i$` | `$(3.500,\ 5.160)$` for the five PCA points | the average point of the data | centring, so the axis of greatest spread passes through the origin |
-| `$\operatorname{Var}(X) = \dfrac{1}{n}\sum_i (x_i - \bar x)^2$` | | average squared distance from the mean | the quantity PCA maximises. Population variance, so it divides by $n$, not $n-1$ |
-| `$\Sigma = \begin{pmatrix} s_{xx} & s_{xy} \\ s_{xy} & s_{yy} \end{pmatrix} = \begin{pmatrix} 8.000 & 9.400 \\ 9.400 & 11.154 \end{pmatrix}` | `$s_{xy} = s_{yx}$`, so $\Sigma$ is symmetric | how the two axes spread, and how much they lean together | the input to PCA. A symmetric matrix is what makes one real principal direction exist per eigenvalue |
-| `$\theta = \tfrac12\operatorname{atan2}(2s_{xy},\, s_{xx} - s_{yy})$` | `$\approx 49.76°$` | the angle of the direction of greatest spread, in 2D | doing 2D PCA with no linear-algebra library. `atan2(y, x)` is safe where `atan` would divide by zero when $s_{xx} = s_{yy}$ |
-| `$\operatorname{proj}_v(x) = (x \cdot v)\,v$` | valid when `$\|v\| = 1$`; in general divide by `$v \cdot v$` | the part of $x$ that lies along direction $v$ | turning 2D points into the 1D numbers PCA outputs: `(1.00, 2.00) ↦ −4.027` |
-| `$\lambda_1,\ \lambda_2$` | `$\lambda_{1,2} = \dfrac{s_{xx}+s_{yy} \pm \sqrt{(s_{xx}-s_{yy})^2 + 4s_{xy}^2}}{2}$` $\approx 19.109,\ 0.046$ | the two variances, along the two principal directions | computing PCA exactly in 2D; the bigger one is the direction to keep |
-| `$\lambda_1 / (\lambda_1 + \lambda_2)$` | `99.8%` in the lesson | the fraction of variance that survives the projection | deciding whether PCA is worth doing at all. `50%` on data with equal spread in every direction |
-| a finite binary float | `$x = \dfrac{m}{2^k}$` with `$m \in \mathbb{Z}$` | every finite float is a whole number over a power of two | explaining `0.1 + 0.2 != 0.3`. The stored `0.1` is `$\frac{3602879701896397}{2^{62}}$` |
-| `$\dfrac{1}{10} = \dfrac{1}{2 \cdot 5}$` | no power of two has a factor of 5, so the binary expansion never terminates | why `0.1` is inexact at 64, 128 or 256 bits alike | choosing `Decimal`, `Fraction`, or integer minor units. Widening the format shrinks the error, it never removes it |
-| `math.isclose(a, b, rel_tol, abs_tol)` | | compare two floats with a tolerance instead of `==` | the only safe way to test float equality |
-
 ## Multiple Choice Questions
 
 **Q1.** A Python `float` is a 64-bit binary floating point number. Which exact
@@ -1447,6 +1446,12 @@ Output:
     61        61        610         61   True
      0      3233          0          0   True
   3233      3233          0          0  False
+
+Everything coprime to n round-trips exactly. m = 53 and m = 61 also
+round-trip, but only by luck: for those, m*phi(n) is 0 mod n rather than
+1 mod n, so m^phi(n) = m and the extra factor cancels trivially.
+m = 3233 (equal to n) encrypts to 0 and comes back as 0: the message is
+destroyed. That is why real RSA never encrypts an unpadded plaintext.
 ```
 
 The last row is the visible failure: `m = n` encrypts to `0`, and `0` decrypts to

@@ -134,6 +134,40 @@ probabilistic version shows up.
 
 ---
 
+## Formula Sheet
+
+Every symbol and definition this lesson uses. Restrictions are stated in the last
+column because omitting them is how people get answers wrong.
+
+| Symbol | Formula | In plain words | When you use it |
+| --- | --- | --- | --- |
+| `f : X \to Y` | `$\mathrm{dom}(f) = X$, $\mathrm{codom}(f) = Y$, and every $x \in X$ has exactly one $f(x) \in Y$` | a machine that accepts anything in $X$ and answers with exactly one thing from $Y$ | writing down a function's contract before implementing it |
+| `$(f \circ g)(x)$` | `$(f \circ g)(x) = f(g(x))$, valid when $\mathrm{codom}(g) \subseteq \mathrm{dom}(f)$` | run $g$ first, then feed its answer into $f$ | reading nested calls; stacking layers in a neural network |
+| `$\mathrm{im}(f)$` | `$\mathrm{im}(f) = \{ f(x) : x \in X \} \subseteq Y$` | the outputs actually reachable, which may be a smaller set than the codomain | deciding where an inverse is defined |
+| injective | `$f(a) = f(b) \Rightarrow a = b$` | no two different inputs share an output | the existence test for an inverse; why a hash table needs chaining |
+| surjective | `$\mathrm{im}(f) = Y$` | every promised output is actually reached | checking a range scan really covers its declared range |
+| bijective | injective **and** surjective | one-to-one and onto | when the inverse must live on the whole codomain |
+| `f^{-1}` | `$f^{-1}(f(x)) = x$` and `$f(f^{-1}(y)) = y$`, with `$\mathrm{dom}(f^{-1}) = \mathrm{im}(f)$` | the undo function | solving an equation for its input; undoing a linear layer |
+| limit point | `$a$ is a limit point of $\mathrm{dom}(f)$` | every neighbourhood of $a$ contains a point where $f$ is defined | checking that a limit at $a$ is even a meaningful question |
+| `$\lim_{x\to a} f(x) = L$` | `$\forall \varepsilon > 0\ \exists \delta > 0\ \forall x:\ 0 < \lvert x - a \rvert < \delta \Rightarrow \lvert f(x) - L \rvert < \varepsilon$` | meet any accuracy demand $\varepsilon$ by narrowing a window $\delta$ | proving and testing limits; the basis of every convergence claim |
+| `0 < \lvert x - a \rvert` | part of the limit definition above | $x$ is never allowed to *equal* $a$ | why a limit can exist where the function has no value (the `0/0` case) |
+| one-sided limits | `$\lim_{x \to a^{+}} f(x) = L_+$, $\ \lim_{x \to a^{-}} f(x) = L_{-}$` | approach $a$ from the right only, or the left only | classifying jump discontinuities; $1/0^{+}$ is $+\infty$ while $1/0^{-}$ is $-\infty$ |
+| limit laws | `$\lim (f+g) = L+M`, $\ \lim (fg) = LM$, $\ \lim \frac{f}{g} = \frac{L}{M}$ — the last needs `$M \neq 0$` | build new limits out of known ones | avoiding a table of thousands of memorised limits |
+| seed limits | `$\lim_{x \to 0}\frac{\sin x}{x} = 1$, $\ \lim_{x \to 0}\frac{1-\cos x}{x^2} = \tfrac12$` | the two facts all the trigonometric limits come from | deriving trig limits; explaining `math.sin(x)/x` losing resolution |
+| continuity at $a$ | `$\lim_{x \to a} f(x) = f(a)$, **and** `$a \in \mathrm{dom}(f)$` | the value there equals the value it was heading towards: no hole, no jump | checking a solver's hypothesis *before* trusting its answer |
+| composition of continuous functions | `$f$ continuous at `$a$` and `$g$` continuous at `$f(a)$` $\Rightarrow f \circ g$ continuous at `$a$` | continuous things compose | proving a whole pipeline is continuous |
+| Intermediate Value Theorem | `$f$ continuous on $[a,b]$ and `$f(a) < 0 < f(b)$` $\Rightarrow \exists c \in (a,b)$ with `$f(c) = 0$` | a sign change forces a crossing — **only** if $f$ is continuous | bisection search, every bracketing root finder |
+| Extreme Value Theorem | `$f$ continuous on the closed bounded interval $[a,b]$ $\Rightarrow$ $f$ attains a max and a min there | on a closed bounded interval, a continuous function has a best point and a worst point | guaranteeing that the minimiser gradient descent is chasing actually exists |
+| `$\lim_{n \to \infty} x_n = L$` | `$\forall \varepsilon > 0\ \exists N:\ n \ge N \Rightarrow \lvert x_n - L \rvert < \varepsilon$` | "eventually always this close", instead of "inside this small window" | the stopping criterion of every iterative loop |
+| monotone bounded sequence | `$x_n$ increasing and bounded above $\Rightarrow x_n \to L$ (decreasing and bounded below likewise)` | monotone and fenced in must settle down | proving the Babylonian loop for `math.sqrt(2)` terminates |
+| Babylonian step | `$x_{n+1} = \tfrac12\left(x_n + \frac{2}{x_n}\right)$, needs `$x_0 > 0$` | one Newton step on $x^2 - 2$, arranged symmetrically | producing `sqrt(2)` with provable quadratic convergence |
+| fixed-point iteration | `$x_{k+1} = g(x_k)$ converges to a fixed point $L$ when `$\lvert g'(L) \rvert < 1$` | the update rule's own slope at the fixed point decides everything | diagnosing a `while` loop that drifts or oscillates instead of converging |
+| forward difference | `$f'(x) \approx \frac{f(x+h) - f(x)}{h}$, error `$O(h)$` for `$h \to 0$` | slope measured with one step forward; overestimates on a convex function | cheap gradient estimates (finite differences, SPSA) |
+| `f \in O(g)` | `$\exists c > 0,\ \exists n_0:\ f(n) \le c\,g(n)$ for all `$n \ge n_0$` | from some point on, $f$ stays under a fixed multiple of $g$ | every runtime guarantee in [Part 06](../part06_algorithms_math/80_big_o_and_complexity.md) |
+| ratio form of Big-O | `$\lim_{n \to \infty} \frac{f(n)}{g(n)} = 0$` (or $\le c$) | compare growth by dividing, never by evaluating either side | ranking $n$, $n\log n$, $2^n$ |
+
+---
+
 ## Worked Example
 
 ### Example 1: A function, composed, and inverted
@@ -712,40 +746,6 @@ print("  Deciding O(n) vs O(n log n) needs the ratio's limit, not either value."
 You never need the exact limit value to use asymptotic analysis. You need to know which
 bound grows slowest, and that is decided by comparing ratios, not by computing limits.
 See [80 — Big-O and Complexity Analysis](../part06_algorithms_math/80_big_o_and_complexity.md).
-
----
-
-## Formula Sheet
-
-Every symbol and definition this lesson uses. Restrictions are stated in the last
-column because omitting them is how people get answers wrong.
-
-| Symbol | Formula | In plain words | When you use it |
-| --- | --- | --- | --- |
-| `f : X \to Y` | `$\mathrm{dom}(f) = X$, $\mathrm{codom}(f) = Y$, and every $x \in X$ has exactly one $f(x) \in Y$` | a machine that accepts anything in $X$ and answers with exactly one thing from $Y$ | writing down a function's contract before implementing it |
-| `$(f \circ g)(x)$` | `$(f \circ g)(x) = f(g(x))$, valid when $\mathrm{codom}(g) \subseteq \mathrm{dom}(f)$` | run $g$ first, then feed its answer into $f$ | reading nested calls; stacking layers in a neural network |
-| `$\mathrm{im}(f)$` | `$\mathrm{im}(f) = \{ f(x) : x \in X \} \subseteq Y$` | the outputs actually reachable, which may be a smaller set than the codomain | deciding where an inverse is defined |
-| injective | `$f(a) = f(b) \Rightarrow a = b$` | no two different inputs share an output | the existence test for an inverse; why a hash table needs chaining |
-| surjective | `$\mathrm{im}(f) = Y$` | every promised output is actually reached | checking a range scan really covers its declared range |
-| bijective | injective **and** surjective | one-to-one and onto | when the inverse must live on the whole codomain |
-| `f^{-1}` | `$f^{-1}(f(x)) = x$` and `$f(f^{-1}(y)) = y$`, with `$\mathrm{dom}(f^{-1}) = \mathrm{im}(f)$` | the undo function | solving an equation for its input; undoing a linear layer |
-| limit point | `$a$ is a limit point of $\mathrm{dom}(f)$` | every neighbourhood of $a$ contains a point where $f$ is defined | checking that a limit at $a$ is even a meaningful question |
-| `$\lim_{x\to a} f(x) = L$` | `$\forall \varepsilon > 0\ \exists \delta > 0\ \forall x:\ 0 < \lvert x - a \rvert < \delta \Rightarrow \lvert f(x) - L \rvert < \varepsilon$` | meet any accuracy demand $\varepsilon$ by narrowing a window $\delta$ | proving and testing limits; the basis of every convergence claim |
-| `0 < \lvert x - a \rvert` | part of the limit definition above | $x$ is never allowed to *equal* $a$ | why a limit can exist where the function has no value (the `0/0` case) |
-| one-sided limits | `$\lim_{x \to a^{+}} f(x) = L_+$, $\ \lim_{x \to a^{-}} f(x) = L_{-}$` | approach $a$ from the right only, or the left only | classifying jump discontinuities; $1/0^{+}$ is $+\infty$ while $1/0^{-}$ is $-\infty$ |
-| limit laws | `$\lim (f+g) = L+M`, $\ \lim (fg) = LM$, $\ \lim \frac{f}{g} = \frac{L}{M}$ — the last needs `$M \neq 0$` | build new limits out of known ones | avoiding a table of thousands of memorised limits |
-| seed limits | `$\lim_{x \to 0}\frac{\sin x}{x} = 1$, $\ \lim_{x \to 0}\frac{1-\cos x}{x^2} = \tfrac12$` | the two facts all the trigonometric limits come from | deriving trig limits; explaining `math.sin(x)/x` losing resolution |
-| continuity at $a$ | `$\lim_{x \to a} f(x) = f(a)$, **and** `$a \in \mathrm{dom}(f)$` | the value there equals the value it was heading towards: no hole, no jump | checking a solver's hypothesis *before* trusting its answer |
-| composition of continuous functions | `$f$ continuous at `$a$` and `$g$` continuous at `$f(a)$` $\Rightarrow f \circ g$ continuous at `$a$` | continuous things compose | proving a whole pipeline is continuous |
-| Intermediate Value Theorem | `$f$ continuous on $[a,b]$ and `$f(a) < 0 < f(b)$` $\Rightarrow \exists c \in (a,b)$ with `$f(c) = 0$` | a sign change forces a crossing — **only** if $f$ is continuous | bisection search, every bracketing root finder |
-| Extreme Value Theorem | `$f$ continuous on the closed bounded interval $[a,b]$ $\Rightarrow$ $f$ attains a max and a min there | on a closed bounded interval, a continuous function has a best point and a worst point | guaranteeing that the minimiser gradient descent is chasing actually exists |
-| `$\lim_{n \to \infty} x_n = L$` | `$\forall \varepsilon > 0\ \exists N:\ n \ge N \Rightarrow \lvert x_n - L \rvert < \varepsilon$` | "eventually always this close", instead of "inside this small window" | the stopping criterion of every iterative loop |
-| monotone bounded sequence | `$x_n$ increasing and bounded above $\Rightarrow x_n \to L$ (decreasing and bounded below likewise)` | monotone and fenced in must settle down | proving the Babylonian loop for `math.sqrt(2)` terminates |
-| Babylonian step | `$x_{n+1} = \tfrac12\left(x_n + \frac{2}{x_n}\right)$, needs `$x_0 > 0$` | one Newton step on $x^2 - 2$, arranged symmetrically | producing `sqrt(2)` with provable quadratic convergence |
-| fixed-point iteration | `$x_{k+1} = g(x_k)$ converges to a fixed point $L$ when `$\lvert g'(L) \rvert < 1$` | the update rule's own slope at the fixed point decides everything | diagnosing a `while` loop that drifts or oscillates instead of converging |
-| forward difference | `$f'(x) \approx \frac{f(x+h) - f(x)}{h}$, error `$O(h)$` for `$h \to 0$` | slope measured with one step forward; overestimates on a convex function | cheap gradient estimates (finite differences, SPSA) |
-| `f \in O(g)` | `$\exists c > 0,\ \exists n_0:\ f(n) \le c\,g(n)$ for all `$n \ge n_0$` | from some point on, $f$ stays under a fixed multiple of $g$ | every runtime guarantee in [Part 06](../part06_algorithms_math/80_big_o_and_complexity.md) |
-| ratio form of Big-O | `$\lim_{n \to \infty} \frac{f(n)}{g(n)} = 0$` (or $\le c$) | compare growth by dividing, never by evaluating either side | ranking $n$, $n\log n$, $2^n$ |
 
 ---
 

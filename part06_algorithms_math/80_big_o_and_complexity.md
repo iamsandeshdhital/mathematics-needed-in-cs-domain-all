@@ -2864,124 +2864,218 @@ threshold far enough.
 
 </details>
 
-**[ ] Exercise 5 — measure bit complexity and fit an exponent.** For $k$-bit
-Python integers, measure the cost of $a + b$, $a\cdot b$ and $\text{str}(a)$,
-where $a = 2^k - 1$ and $b = a - 3$.
-(a) Measure at $k = 2^{12}, 2^{14}, 2^{16}, 2^{18}$ and report
-$\text{add}/k$, $\text{mult}/k^{1.585}$ and $\text{str}/k^2$.
-(b) State the $\Theta$ conclusion for each and say which one the measurement
-*contradicts*.
+**[ ] Exercise 5 — bit complexity, and which textbook bound a real
+implementation contradicts.** For $k$-bit Python integers, consider $a + b$,
+$a\cdot b$ and $\text{str}(a)$, where $a = 2^k - 1$ and $b = a - 3$.
+(a) Establish the structural facts for $k = 2^{12}, 2^{14}, 2^{16}, 2^{18}$: how
+many base-$2^{30}$ limbs CPython allocates, how many decimal digits the value
+has, and how many bytes it occupies.
+(b) State the $\Theta$ bound for each operation and say which textbook answer the
+implementation *contradicts*.
 (c) Explain why Python 3.11 refuses to print a 79000-digit integer by default,
 and what the guard is protecting against.
 (d) Compute the space cost of storing one $k$-bit integer and explain why an
-algorithm that keeps $n$ such integers is $\Theta(n)$ before doing any work.
+algorithm that keeps $n$ such integers is $\Theta(nk)$ before doing any work.
 
 <details>
 <summary>Solution</summary>
 
-```python
-import math
-import sys
-import time
+**A note on method, because it matters here.** This exercise deliberately
+measures *structure* rather than *seconds*. Wall-clock timing of big-integer
+arithmetic is not reproducible: the absolute numbers depend on the CPU, on
+whether the operand is in cache, and on what else the machine is doing, so a
+recorded timing table is a snapshot of one machine at one moment. The quantities
+below — limb counts, digit counts, byte counts, and which multiplication
+algorithm CPython selects — are exact, and they are what the analysis actually
+rests on.
 
-#  Converting a 2^18-bit integer to decimal needs 79,000 digits, and CPython
+```python
+"""Exercise 5 (lesson 80): bit complexity, measured deterministically."""
+import sys
+
+#  Converting a 2^18-bit integer to decimal needs 78,914 digits, and CPython
 #  refuses by default.  Raising the limit is not cosmetic: the guard exists
 #  because the conversion is expensive and there are known DoS exploits that
 #  lean on exactly that.
 sys.set_int_max_str_digits(200000)
 
+#  CPython stores a big int as a sequence of base-2^30 "digits", so a k-bit
+#  integer occupies ceil(k/30) of them, and every arithmetic routine is
+#  expressed in terms of that count.  CPython also switches multiplication from
+#  schoolbook to Karatsuba once the operand passes KARATSUBA_CUTOFF digits.
+KARATSUBA_CUTOFF = 70
 
-def best_time(fn, arg, reps=3):
-    best = float("inf")
-    for _ in range(reps):
-        t0 = time.perf_counter()
-        fn(arg)
-        best = min(best, time.perf_counter() - t0)
-    return best
-
-
-print("=== Bit complexity, measured and fitted ===")
-print("     k   add (ms)   mult (ms)   to_str (ms)   add/k (ns)   mult/k^1.585 (ns)"
-      "   str/k^2 (ns)")
-for k in (1 << 12, 1 << 14, 1 << 16, 1 << 18):
-    a = (1 << k) - 1
-    b = a - 3
-    t_add = best_time(lambda p: p[0] + p[1], (a, b), 3) * 1e3
-    t_mul = best_time(lambda p: p[0] * p[1], (a, b), 3) * 1e3
-    t_str = best_time(str, a, 3) * 1e3
-    print(f"  {k:>5}   {t_add:>8.4f}   {t_mul:>9.4f}   {t_str:>11.4f}   "
-          f"{t_add * 1e6 / k:>10.4f}   {t_mul * 1e6 / (k ** 1.585):>17.4f}   "
-          f"{t_str * 1e6 / (k * k):>12.4f}")
-print("  add/k is flat, so addition is Theta(k).  mult/k^1.585 is flat, so")
-print("  multiplication is Theta(k^1.585) in this implementation.  str/k^2 is")
-print("  rising rather than flat, because CPython has a subquadratic decimal")
-print("  conversion (it works in 10^9-sized limbs) -- so the honest statement is")
-print("  'at most Theta(d^2)', and the measurement shows the implementation is")
-print("  better than the model.  Which is the normal relationship: the model is")
-print("  an upper bound on a real implementation, not a description of it.")
+print("=== Bit complexity: what is actually determined ===")
 print()
-print(f"  digits in 2^18 - 1: {len(str((1 << (1 << 18)) - 1)):,}"
-      f"   (CPython's default cap is 4300)")
-print(f"  sys.getsizeof of a {1 << 18}-bit int: "
-      f"{sys.getsizeof((1 << (1 << 18)) - 1):,} bytes")
-print(f"  its payload alone: {(1 << 18) // 8:,} bytes")
+print(f"  sys.int_info.bits_per_digit = {sys.int_info.bits_per_digit}")
+print(f"  CPython's Karatsuba cutoff  = {KARATSUBA_CUTOFF} base-{sys.int_info.bits_per_digit} digits")
+print()
+print(f"{'k (bits)':>9} {'limbs':>7} {'dec digits':>11} {'payload B':>10} {'getsizeof':>11} "
+      f"{'mult algorithm':>22} {'exponent':>9}")
+rows = []
+for e in (12, 14, 16, 18):
+    k = 1 << e
+    a = (1 << k) - 1
+    limbs = -(-k // sys.int_info.bits_per_digit)
+    algo = "schoolbook" if limbs <= KARATSUBA_CUTOFF else "Karatsuba"
+    exponent = 2.0 if algo == "schoolbook" else 1.5849625007
+    digits = len(str(a))
+    rows.append((k, limbs, digits, algo, exponent))
+    print(f"{k:9d} {limbs:7d} {digits:11,d} {k // 8:10,d} "
+          f"{sys.getsizeof(a):11,d} {algo:>22} {exponent:9.3f}")
+print()
+print("  Every column here is exact and reproducible; none of it depends on")
+print("  how fast your machine is.  That is the point of the exercise.")
+print()
+print("=== what the model says, and which part the model gets wrong ===")
+print()
+print("  a + b      CPython adds limb by limb, carrying: Theta(limbs) = Theta(k).")
+print("             The model is right, and so is the implementation.")
+print()
+print("  a * b      schoolbook is Theta(limbs^2) = Theta(k^2).")
+print("             Karatsuba splits each operand in half and does 3 half-size")
+print("             multiplications instead of 4, recursing until the operands")
+print("             fit in a digit.  The recursion has depth log2(limbs) and")
+print("             branching factor 3, so its cost is")
+print("                 Theta(limbs^(log2 3)) = Theta(k^1.585).")
+print("  a * b      Every size in the table above clears the 70-digit cutoff, so")
+print("             'multiplication is Theta(k^2)' -- the textbook answer -- is")
+print("             CONTRADICTED by the implementation.  The model is an upper")
+print("             bound on a real algorithm, not a description of it.")
+print()
+print("  str(a)     Converting k bits to decimal digits is 'at most Theta(k^2)'")
+print("             naively, and CPython does better by converting in chunks of")
+print("             9 digits at a time.  So again the honest statement is an")
+print("             upper bound and the implementation beats it.")
+print()
+print("  The cutoff is the interesting part: the SAME question has two different")
+print("  right answers either side of k = 70 * 30 = 2100 bits.  A complexity")
+print("  class that has no size range attached to it is not yet a description.")
+print()
+print("=== the space half, (d) ===")
+print()
+print(f"{'k (bits)':>9} {'payload B':>10} {'getsizeof B':>13} {'overhead':>10} {'digits':>9}")
+for e in (12, 16, 18):
+    k = 1 << e
+    a = (1 << k) - 1
+    print(f"{k:9d} {k // 8:10,d} {sys.getsizeof(a):13,d} "
+          f"{sys.getsizeof(a) - k // 8:10,d} {len(str(a)):9,d}")
+print()
+print("  One k-bit integer is Theta(k) BYTES -- no computation has happened yet.")
+print("  So an algorithm that holds n of them is Theta(n) space before it does a")
+print("  single operation, and if it also builds a second copy per step that is")
+print("  Theta(n) per step.  Space is not something you amortise away: it is")
+print("  whatever you are holding at the moment you are holding it.")
 ```
-
-Output:
 
 ```text
-=== Bit complexity, measured and fitted ===
-     k   add (ms)   mult (ms)   to_str (ms)   add/k (ns)   mult/k^1.585 (ns)   str/k^2 (ns)
-   4096     0.0018      0.0358        0.0484       0.4395              0.0673         0.0029
-  16384     0.0025      0.4116        0.7580       0.1526              0.0860         0.0028
-  65536     0.0054      3.6436       10.8347       0.0839              0.0846         0.0025
- 262144     0.0178     34.3127      173.2159       0.0679              0.0885         0.0025
-  add/k is flat, so addition is Theta(k).  mult/k^1.585 is flat, so
-  multiplication is Theta(k^1.585) in this implementation.  str/k^2 is
-  rising rather than flat, because CPython has a subquadratic decimal
-  conversion (it works in 10^9-sized limbs) -- so the honest statement is
-  'at most Theta(d^2)', and the measurement shows the implementation is
-  better than the model.  Which is the normal relationship: the model is
-  an upper bound on a real implementation, not a description of it.
+=== Bit complexity: what is actually determined ===
 
-  digits in 2^18 - 1: 78,914   (CPython's default cap is 4300)
-  sys.getsizeof of a 262144-bit int: 34,980 bytes
-  its payload alone: 32,768 bytes
+  sys.int_info.bits_per_digit = 30
+  CPython's Karatsuba cutoff  = 70 base-30 digits
+
+ k (bits)   limbs  dec digits  payload B   getsizeof         mult algorithm  exponent
+     4096     137       1,234        512         572              Karatsuba     1.585
+    16384     547       4,933      2,048       2,212              Karatsuba     1.585
+    65536    2185      19,729      8,192       8,764              Karatsuba     1.585
+   262144    8739      78,914     32,768      34,980              Karatsuba     1.585
+
+  Every column here is exact and reproducible; none of it depends on
+  how fast your machine is.  That is the point of the exercise.
+
+=== what the model says, and which part the model gets wrong ===
+
+  a + b      CPython adds limb by limb, carrying: Theta(limbs) = Theta(k).
+             The model is right, and so is the implementation.
+
+  a * b      schoolbook is Theta(limbs^2) = Theta(k^2).
+             Karatsuba splits each operand in half and does 3 half-size
+             multiplications instead of 4, recursing until the operands
+             fit in a digit.  The recursion has depth log2(limbs) and
+             branching factor 3, so its cost is
+                 Theta(limbs^(log2 3)) = Theta(k^1.585).
+  a * b      Every size in the table above clears the 70-digit cutoff, so
+             'multiplication is Theta(k^2)' -- the textbook answer -- is
+             CONTRADICTED by the implementation.  The model is an upper
+             bound on a real algorithm, not a description of it.
+
+  str(a)     Converting k bits to decimal digits is 'at most Theta(k^2)'
+             naively, and CPython does better by converting in chunks of
+             9 digits at a time.  So again the honest statement is an
+             upper bound and the implementation beats it.
+
+  The cutoff is the interesting part: the SAME question has two different
+  right answers either side of k = 70 * 30 = 2100 bits.  A complexity
+  class that has no size range attached to it is not yet a description.
+
+=== the space half, (d) ===
+
+ k (bits)  payload B   getsizeof B   overhead    digits
+     4096        512           572         60     1,234
+    65536      8,192         8,764        572    19,729
+   262144     32,768        34,980      2,212    78,914
+
+  One k-bit integer is Theta(k) BYTES -- no computation has happened yet.
+  So an algorithm that holds n of them is Theta(n) space before it does a
+  single operation, and if it also builds a second copy per step that is
+  Theta(n) per step.  Space is not something you amortise away: it is
+  whatever you are holding at the moment you are holding it.
 ```
 
-**(a)** The three normalised columns settle: `add/k` at `0.0679` (from `0.4395` at
-the smallest size, where the number fits in cache), `mult/k^{1.585}` at
-`0.0673`–`0.0885`, and `str/k²` at `0.0029`–`0.0025`. The first two are flat to
-within a factor of 1.3 over a 64-fold range of $k$; the third is *not*, and that
-is the point of (b).
+**(a)** At $k = 2^{18} = 262{,}144$ bits the value occupies `8,739` base-$2^{30}$
+limbs, has `78,914` decimal digits, and takes `34,980` bytes of which `32,768`
+are payload. CPython reports `sys.int_info.bits_per_digit = 30`, so every
+arithmetic routine is really written in terms of $\lceil k/30\rceil$, and the
+constant factor is $1/30$ — which is exactly the kind of thing that is
+invisible to a $\Theta$ and fatal to a benchmark.
 
-**(b)** Addition is $\Theta(k)$, and schoolbook multiplication's $\Theta(k^2)$ is
-**contradicted**: the measured exponent is 1.585, not 2.0, because CPython uses
-Karatsuba. So "$\Theta(k^2)$ for multiplication" is a true statement about a
-hand-written long multiply and a false one about this implementation — which is
-precisely why the cost model is part of the claim. Decimal conversion is
-*not* contradicted in the sense of being wrong: $\Theta(d^2)$ is an upper bound,
-and CPython beats it. The lesson's phrasing "at most $\Theta(d^2)$" is the
-correct way to state an upper bound that an implementation undercuts.
+**(b)** **Addition** is $\Theta(k)$: CPython adds limb by limb with carry
+propagation, so the cost tracks the limb count exactly. The model and the
+implementation agree.
 
-**(c)** $2^{18} - 1$ has `78,975` decimal digits, and the schoolbook conversion
-costs $\Theta(d^2)$ — about $6\times10^9$ digit operations, seconds of work for
-a single `print`. The guard was added in CPython 3.11 (CVE-2020-10735 was the
-original quadratic-conversion DoS) because the conversion cost is large enough
-that a single `int` of a few hundred thousand digits can be used to burn CPU in a
-service that parses untrusted JSON. Raising `sys.set_int_max_str_digits` in
-production is a real decision with a real cost, and the lesson's own code has to
-raise it to run the table above.
+**Multiplication** is where the textbook answer breaks. Schoolbook multiplication
+is $\Theta(\text{limbs}^2) = \Theta(k^2)$, and that is what most courses state.
+But CPython switches to **Karatsuba** once an operand passes `70` limbs, and
+Karatsuba splits each operand in half and performs **3** half-size
+multiplications instead of 4, recursing until the halves fit in one digit. The
+recursion has depth $\log_2(\text{limbs})$ and branching factor 3, so
 
-**(d)** A $k$-bit integer occupies $\lceil k/8\rceil$ bytes of payload plus a
-32-byte header: the code measures `32,796` bytes for a payload of `32,768`. So
-one $k$-bit integer is $\Theta(k)$ space, and keeping $n$ of them is
-$\Theta(nk) = \Theta(nk)$. With $k = \Theta(n)$ — the case where the numbers grow
-to the size of the answer — that is $\Theta(n^2)$ **space**, before a single
-arithmetic operation. This is why factorial-by-multiplication uses a running
-product of bounded size while the naive $n! = \prod_{k=1}^n k$ written out as
-$n$ factors has $\Theta(n^2 \log n)$ space, and why `math.factorial` is not a
-loop.
+$$T(L) = 3\,T(L/2) \;\Longrightarrow\; T(L) = \Theta\!\left(L^{\log_2 3}\right) = \Theta\!\left(k^{1.585}\right).$$
+
+Every size in the table clears the cutoff by a wide margin, so $\Theta(k^2)$ is
+**contradicted** for this implementation. The lesson to take is not "multiplication
+is $\Theta(k^{1.585})$" — that would be just as wrong, for a machine with no
+Karatsuba — but that **a complexity class is only meaningful together with the
+size range over which it holds**. The same question has two different right
+answers either side of $k = 70\times 30 = 2100$ bits.
+
+**Decimal conversion** is not contradicted in the same way: $\Theta(d^2)$ in the
+digit count $d$ is an *upper* bound, and CPython beats it by converting in
+chunks of 9 digits at a time. "At most $\Theta(d^2)$" is the correct way to
+state a bound that an implementation undercuts; "is $\Theta(d^2)$" is not.
+
+**(c)** $2^{18} - 1$ has `78,914` decimal digits, and a naive schoolbook
+conversion costs $\Theta(d^2) \approx 6\times 10^{9}$ digit operations —
+seconds of CPU for a single `print`. CPython added
+`sys.set_int_max_str_digits` in 3.11 (CVE-2020-10735 was the original
+quadratic-conversion DoS) because a single integer of a few hundred thousand
+digits is enough to burn CPU in any service that parses untrusted JSON. The
+lesson's own code has to raise the limit to run the table above, which is
+precisely the point: the guard is not a formality, and raising it in production
+is a real decision with a real cost.
+
+**(d)** One $k$-bit integer is $\lceil k/8\rceil$ bytes of payload plus a header:
+the measured `34,980` bytes for a `32,768`-byte payload is an overhead of `2,212`
+bytes, itself growing linearly with the limb count. So one $k$-bit integer is
+$\Theta(k)$ space, and $n$ of them is $\Theta(nk)$ **before a single arithmetic
+operation**. With $k = \Theta(n)$ — the case where the numbers grow to the size
+of the answer — that is $\Theta(n^2)$ space. This is why
+factorial-by-multiplication keeps a running product of bounded size while the
+naive $\prod_{k=1}^{n}k$ with all $n$ factors held at once needs
+$\Theta(n^2\log n)$ bits, and why `math.factorial` is not a loop.
+
+Space, unlike time, cannot be amortised away: it is whatever you are holding at
+the moment you are holding it.
 
 </details>
 
@@ -3148,215 +3242,348 @@ linked list of pending callbacks must not be $\Theta(n)$ to drain.
 
 </details>
 
-**[ ] Exercise 7 — Challenge: recovering a bound when the constant hides it.**
-The function below is genuinely $\Theta(n)$. Measure it for
-$n = 1000, 2000, \dots, 128000$ and recover the exponent three ways.
+**[ ] Exercise 7 — Challenge: recovering a bound when the constant hides
+it.** The two functions below are counted, not timed: each returns the **exact
+number of operations** it performs, so every figure is reproducible and the
+exercise has a right answer rather than a plausible one.
+
+```python
+def real_cost(n):
+    """A genuine Theta(n) algorithm wearing a 10^5 constant.
+
+    Each step performs 10^5 units of work, but each step is ONE loop
+    iteration, so anything that counts iterations sees a bare n."""
+    work = 0
+    for _ in range(n):
+        work += 100_000
+    return work
+
+
+def fake_cost(n):
+    """A genuine Theta(n^2) algorithm whose quadratic term is 10^6 times
+    smaller than the linear one until n passes 10^6."""
+    work = 0
+    for _ in range(n):
+        work += 1 + n / 1e6
+    return work
+```
+
+`real_cost` is $\Theta(n)$ with a constant of $10^5$. `fake_cost` is
+$\Theta(n^2)$ whose quadratic term is $10^6$ times smaller than its linear one
+until $n$ passes $10^6$. Measure both for $n = 1000, 2000, \dots, 128000$ and
+recover the exponent three ways.
 (a) By the doubling ratio $T(2n)/T(n)$.
 (b) By a least-squares fit of $\log T$ against $\log n$, implemented by hand.
-(c) By computing $T(n)/n$ at every $n$ and checking whether it is flat.
-(d) Now consider $S(n) = n^2/10^6 + n$, which is genuinely $\Theta(n^2)$. Repeat
-(a)–(c) and explain which method survives, and why.
+(c) By computing $T(n)/n$ at every $n$ and asking whether it is flat.
+(d) Now run (a)–(c) on $S(n) = n^2/10^6 + n$ over
+$n = 10, 100, \dots, 4000000$, and explain **which method survives, why, and what
+would break if you trusted the fits.**
 
 <details>
 <summary>Solution</summary>
 
 ```python
+"""Exercise 7 / Challenge (lesson 80): recover a bound when the constant hides it."""
 import math
-import time
 
 
 def real_cost(n):
-    """A genuine O(n) algorithm with an enormous constant: every step does
-       10^5 units of work that a loop counter would never see."""
-    total = 0
-    for i in range(n):
-        total += (i * 2654435761) % 1000003
-    return total
+    """A genuine Theta(n) algorithm with an enormous constant.
+
+    Each step performs 10^5 units of work, but each step is ONE loop
+    iteration, so anything that counts iterations sees a bare n.
+    Returns an exact operation count -- no wall clock anywhere.
+    """
+    work = 0
+    for _ in range(n):
+        work += 100_000
+    return work
 
 
 def fake_cost(n):
     """A genuine Theta(n^2) algorithm whose quadratic term is 10^6 times
-       smaller than the linear one until n passes 10^6."""
-    return n * n / 1e6 + n
+    smaller than the linear one until n passes 10^6."""
+    work = 0
+    for _ in range(n):
+        work += 1 + n / 1e6
+    return work
 
 
-def best_time(fn, arg, reps=5):
-    best = float("inf")
-    for _ in range(reps):
-        t0 = time.perf_counter()
-        fn(arg)
-        best = min(best, time.perf_counter() - t0)
-    return best
-
-
-def fit_exponent(ns, ts):
-    """Least-squares slope of log t against log n, by hand."""
+def fit_exponent(ns, ys):
+    """Least-squares slope of log y against log n, implemented by hand."""
     k = len(ns)
+    if k < 2:
+        return float("nan")
     sx = sum(math.log(n) for n in ns)
-    sy = sum(math.log(t) for t in ts)
+    sy = sum(math.log(y) for y in ys)
     sxx = sum(math.log(n) ** 2 for n in ns)
-    sxy = sum(math.log(n) * math.log(t) for n, t in zip(ns, ts))
-    return (k * sxy - sx * sy) / (k * sxx - sx * sx)
+    sxy = sum(math.log(n) * math.log(y) for n, y in zip(ns, ys))
+    denom = k * sxx - sx * sx
+    if denom == 0.0:
+        return float("nan")
+    return (k * sxy - sx * sy) / denom
 
 
-print("=== Challenge part 1: a genuine Theta(n) with a big constant ===")
-print("     n   iterations   doubling ratio   fitted exponent, last 4")
-ns, ts = [], []
+print("=== Counting work, not seconds ===")
+print()
+print("  No wall clock is used anywhere below, and that is a deliberate change of")
+print("  method rather than a convenience.  A timer measures the machine's")
+print("  constants along with the algorithm's, and the machine's constants are")
+print("  exactly what this exercise is trying to hide.  Both functions return an")
+print("  exact operation count, so every number here is reproducible on any")
+print("  machine and the exercise has a right answer rather than a plausible one.")
+
+print()
+print("=== Part 1: a genuine Theta(n) wearing a 10^5 constant ===")
+print()
+NS = (1000, 2000, 4000, 8000, 16000, 32000, 64000, 128000)
+print(f"{'n':>7} {'iterations':>11} {'operations':>15} {'T(2n)/T(n)':>13} "
+      f"{'fitted exp':>12} {'T(n)/n':>11}")
 prev = None
-for n in (1000, 2000, 4000, 8000, 16000, 32000, 64000):
-    t = best_time(real_cost, n, 5)
+ns, ys = [], []
+for n in NS:
+    t = real_cost(n)
     ns.append(n)
-    ts.append(t)
-    ratio = "-" if prev is None else f"{t / prev:>14.3f}"
-    fit = "" if len(ns) < 4 else f"{fit_exponent(ns[-4:], ts[-4:]):>22.3f}"
-    print(f"  {n:>5}   {n:>10}   {ratio:>14}   {fit}")
+    ys.append(t)
+    ratio = "-" if prev is None else f"{t / prev:>13.4f}"
+    print(f"{n:7d} {n:11,d} {t:15,d} {ratio:>13} {fit_exponent(ns, ys):>12.4f} "
+          f"{t / n:>11,.0f}")
     prev = t
-slope = fit_exponent(ns, ts)
-print(f"  (a) doubling ratios cluster at 2.00, so k = log2(2) = 1: Theta(n).")
-print(f"  (b) the fitted log-log slope over all seven points is {slope:.3f}, against a")
-print("      theoretical 1.000.  The ITERATIONS column is exactly n, which is the")
-print("      point: that is a count, and counts do not come with error bars.")
 print()
-print("  (c) the diagnostic that beats both: compute t(n) / n and ask whether it")
-print("      is FLAT.  Flat means Theta(n).  Note the spread -- a wall clock is noisy,")
-print("      which is exactly why the lesson prefers counts.")
-print("            n   t(n)/n (ns)   ratio to the first row")
-first = None
-for n, t in zip(ns, ts):
-    per = t / n * 1e9
-    if first is None:
-        first = per
-    print(f"  {n:>5}   {per:>12.1f}   {per / first:>19.3f}")
-lo = min(t / n for n, t in zip(ns, ts))
-hi = max(t / n for n, t in zip(ns, ts))
-print(f"  Seven rows, a 64-fold range of n, and every t(n)/n within a factor of")
-print(f"  {hi / lo:.2f} of the minimum.  There is no trend -- that is Theta(n), and it")
-print("  is the only one of the three methods that is not estimating a limit.")
+print("  (a) Doubling ratio: exactly 2.0000 at every step, so k = log2(2) = 1,")
+print("      i.e. T(n) = Theta(n).")
+print(f"  (b) Fitted log-log slope over all eight points: {fit_exponent(ns, ys):.10f},")
+print("      against a theoretical 1.0000000000.  A timing-based version of this")
+print("      exercise typically reports something like 1.03 and calls it close")
+print("      enough.  Counts do not come with error bars.")
+print("  (c) T(n)/n is exactly 100,000 at every n: perfectly flat, so Theta(n).")
 print()
-print("=== Challenge part 2: a genuine Theta(n^2) hiding behind a big linear term ===")
-print("     n   S(n)   S(2n)   S(2n)/S(n)   what doubling says   fitted exponent")
-ns2, ts2 = [], []
-for n in (10, 100, 1000, 10000, 100000, 1000000, 2000000, 4000000):
+print("  None of the three was fooled by the 10^5 constant, and that is why they")
+print("  are the right tools: a constant factor cancels in a ratio and in a log")
+print("  slope.  The ITERATIONS column is also exactly n, which shows the constant")
+print("  is invisible to both countings -- it is a property of what each step")
+print("  COSTS, not of how many steps there are.")
+
+print()
+print("=== Part 2: S(n) = n^2/10^6 + n, genuinely Theta(n^2) ===")
+print()
+NS2 = (10, 100, 1000, 10000, 100000, 1000000, 2000000, 4000000)
+print(f"{'n':>9} {'S(n)':>13} {'S(2n)':>15} {'S(2n)/S(n)':>12} {'doubling says':>16} "
+      f"{'fitted exp':>12}")
+ns2, ys2 = [], []
+for n in NS2:
     t = fake_cost(n)
     t2 = fake_cost(2 * n)
     ns2.append(n)
-    ts2.append(t)
-    fit = "" if len(ns2) < 4 else f"{fit_exponent(ns2[-4:], ts2[-4:]):>16.3f}"
-    print(f"  {n:>8}   {t:>7.1f}   {t2:>8.1f}   {t2 / t:>11.3f}   "
-          f"{'linear' if t2 / t < 2.5 else 'quadratic':>19}   {fit}")
-print("  (a) doubling says 'linear' for the first FIVE rows and 'quadratic' for the")
-print("      last three.  Same function, same code, and the answer depends on where")
-print("      you start: the ratio is 2 + O(10^6/n) and approaches 2 so slowly that")
-print("      five rows cannot see the difference.")
-print("  (b) the log-log fit is WORSE, not better: the exponent it reports drifts")
-print("      upward as the sample moves right, because the fit is dominated by the")
-print("      points at small n where the answer really is 'about linear'.")
-print("  (c) t(n)/n is NOT flat: it reads 0.001, 0.01, 0.1, 1.0, 10.0, 200.0 -- it")
-print("      rises by a factor of 10 every time n rises by a factor of 10, which")
-print("      IS the signal that n^2 is the dominant term.  A flat ratio means")
-print("      Theta(n); a ratio rising like n means Theta(n^2) with n hidden under")
-print("      a 10^6 constant.  Method (c) is the only one of the three that works")
-print("      for both functions, and it is also the cheapest to compute.")
+    ys2.append(t)
+    ratio = t2 / t
+    print(f"{n:9d} {t:13,.1f} {t2:15,.1f} {ratio:12.4f} "
+          f"{'linear' if ratio < 2.5 else 'quadratic':>16} "
+          f"{fit_exponent(ns2, ys2):>12.4f}")
+print()
+print("  (a) Doubling says 'linear' for the first FIVE rows and 'quadratic' for")
+print("      the last three.  Same function, same code, and the answer depends on")
+print("      where you start: the ratio is 2 + O(10^6/n), which approaches 4 so")
+print("      slowly that five rows cannot see the difference.  A threshold on a")
+print("      ratio is a threshold on the SIZE RANGE you happen to have sampled.")
+print()
+print("  (b) The log-log fit is WORSE, not better.  Its exponent drifts upward")
+print(f"      from {fit_exponent(ns2[:4], ys2[:4]):.4f} on the first four points to "
+      f"{fit_exponent(ns2[-4:], ys2[-4:]):.4f} on the last four, because the")
+print("      earlier points sit in a region where the answer really is 'about")
+print("      linear'.  A least-squares slope cannot tell you that it is")
+print("      extrapolating.")
+print()
+print("  (c) S(n)/n = 1 + n/10^6 is NOT flat.  It is affine in n with a slope of")
+print("      10^-6: the '1' is the linear term divided by n, and n/10^6 is the")
+print("      quadratic term divided by n.  From n = 10^6 upward the quadratic part")
+print("      dominates the constant, and S(n)/n then rises by a factor of 10 for")
+print("      every factor of 10 in n -- the exact signature of a hidden n^2:")
+print()
+print(f"      {'n':>9} {'S(n)/n':>10}")
+for n in NS2:
+    print(f"      {n:9d} {fake_cost(n) / n:10.4f}")
+print()
+print("      A flat ratio means Theta(n).  A ratio that grows in proportion to n")
+print("      means Theta(n^2).  Method (c) is the only one of the three that")
+print("      works for BOTH functions, and it is also the cheapest to compute.")
+print()
+print("=== what would break if you trusted the fits ===")
+print()
+print("  Both fits are computed correctly.  Both are wrong about the algorithm.")
+print("  A fit describes the range you sampled; a Theta class is a statement")
+print("  about every n.  For S(n) they disagree exactly where you would most")
+print("  want the measurement to be right -- in the region where the constant")
+print("  does the hiding.")
+print()
+print("  The method that is always right is the one that never infers the class")
+print("  from a fit at all.  Read the algorithm: fake_cost runs `for _ in")
+print("  range(n)` and adds 1 + n/10^6 to a counter, so there is one pass and one")
+print("  update per iteration -- the LOOP is Theta(n), and the n/10^6 is a WEIGHT")
+print("  on an update rather than a second loop, and it is that weight which")
+print("  makes the totals Theta(n^2).  Change the loop structure and the fit would")
+print("  have told you; change the constant and the fit tells you nothing.")
+print()
+print("  Practical rule: use a measurement to CHECK a guess you already have a")
+print("  structural reason to believe, and never to make the guess.  A ratio or")
+print("  a slope is a diagnostic, not an oracle.")
 ```
-
-Output:
 
 ```text
-=== Challenge part 1: a genuine Theta(n) with a big constant ===
-     n   iterations   doubling ratio   fitted exponent, last 4
-   1000         1000                -   
-   2000         2000            2.029   
-   4000         4000            2.038   
-   8000         8000            2.109                    1.040
-  16000        16000            1.955                    1.029
-  32000        32000            2.015                    1.013
-  64000        64000            2.109                    1.017
-  (a) doubling ratios cluster at 2.00, so k = log2(2) = 1: Theta(n).
-  (b) the fitted log-log slope over all seven points is 1.027, against a
-      theoretical 1.000.  The ITERATIONS column is exactly n, which is the
-      point: that is a count, and counts do not come with error bars.
+=== Counting work, not seconds ===
 
-  (c) the diagnostic that beats both: compute t(n) / n and ask whether it
-      is FLAT.  Flat means Theta(n).  Note the spread -- a wall clock is noisy,
-      which is exactly why the lesson prefers counts.
-            n   t(n)/n (ns)   ratio to the first row
-   1000          299.8                 1.000
-   2000          304.2                 1.015
-   4000          309.9                 1.034
-   8000          326.8                 1.090
-  16000          319.4                 1.065
-  32000          321.9                 1.074
-  64000          339.3                 1.132
-  Seven rows, a 64-fold range of n, and every t(n)/n within a factor of
-  1.13 of the minimum.  There is no trend -- that is Theta(n), and it
-  is the only one of the three methods that is not estimating a limit.
+  No wall clock is used anywhere below, and that is a deliberate change of
+  method rather than a convenience.  A timer measures the machine's
+  constants along with the algorithm's, and the machine's constants are
+  exactly what this exercise is trying to hide.  Both functions return an
+  exact operation count, so every number here is reproducible on any
+  machine and the exercise has a right answer rather than a plausible one.
 
-=== Challenge part 2: a genuine Theta(n^2) hiding behind a big linear term ===
-     n   S(n)   S(2n)   S(2n)/S(n)   what doubling says   fitted exponent
-        10      10.0       20.0         2.000                linear   
-       100     100.0      200.0         2.000                linear   
-      1000    1001.0     2004.0         2.002                linear   
-     10000   10100.0    20400.0         2.020                linear              1.001
-    100000   110000.0   240000.0         2.182                linear              1.013
-  1000000   2000000.0   6000000.0         3.000             quadratic              1.094
-  2000000   6000000.0  20000000.0         3.333             quadratic              1.199
-  4000000  20000000.0  72000000.0         3.600             quadratic              1.386
-  (a) doubling says 'linear' for the first FIVE rows and 'quadratic' for the
-      last three.  Same function, same code, and the answer depends on where
-      you start: the ratio is 2 + O(10^6/n) and approaches 2 so slowly that
-      five rows cannot see the difference.
-  (b) the log-log fit is WORSE, not better: the exponent it reports drifts
-      upward as the sample moves right, because the fit is dominated by the
-      points at small n where the answer really is 'about linear'.
-  (c) t(n)/n is NOT flat: it reads 0.001, 0.01, 0.1, 1.0, 10.0, 200.0 -- it
-      rises by a factor of 10 every time n rises by a factor of 10, which
-      IS the signal that n^2 is the dominant term.  A flat ratio means
-      Theta(n); a ratio rising like n means Theta(n^2) with n hidden under
-      a 10^6 constant.  Method (c) is the only one of the three that works
-      for both functions, and it is also the cheapest to compute.
+=== Part 1: a genuine Theta(n) wearing a 10^5 constant ===
+
+      n  iterations      operations    T(2n)/T(n)   fitted exp      T(n)/n
+   1000       1,000     100,000,000             -          nan     100,000
+   2000       2,000     200,000,000        2.0000       1.0000     100,000
+   4000       4,000     400,000,000        2.0000       1.0000     100,000
+   8000       8,000     800,000,000        2.0000       1.0000     100,000
+  16000      16,000   1,600,000,000        2.0000       1.0000     100,000
+  32000      32,000   3,200,000,000        2.0000       1.0000     100,000
+  64000      64,000   6,400,000,000        2.0000       1.0000     100,000
+ 128000     128,000  12,800,000,000        2.0000       1.0000     100,000
+
+  (a) Doubling ratio: exactly 2.0000 at every step, so k = log2(2) = 1,
+      i.e. T(n) = Theta(n).
+  (b) Fitted log-log slope over all eight points: 1.0000000000,
+      against a theoretical 1.0000000000.  A timing-based version of this
+      exercise typically reports something like 1.03 and calls it close
+      enough.  Counts do not come with error bars.
+  (c) T(n)/n is exactly 100,000 at every n: perfectly flat, so Theta(n).
+
+  None of the three was fooled by the 10^5 constant, and that is why they
+  are the right tools: a constant factor cancels in a ratio and in a log
+  slope.  The ITERATIONS column is also exactly n, which shows the constant
+  is invisible to both countings -- it is a property of what each step
+  COSTS, not of how many steps there are.
+
+=== Part 2: S(n) = n^2/10^6 + n, genuinely Theta(n^2) ===
+
+        n          S(n)           S(2n)   S(2n)/S(n)    doubling says   fitted exp
+       10          10.0            20.0       2.0000           linear          nan
+      100         100.0           200.0       2.0002           linear       1.0000
+     1000       1,001.0         2,004.0       2.0020           linear       1.0002
+    10000      10,100.0        20,400.0       2.0198           linear       1.0013
+   100000     110,000.0       240,000.0       2.1818           linear       1.0087
+  1000000   2,000,000.0     6,000,000.0       3.0000        quadratic       1.0467
+  2000000   6,000,000.0    20,000,000.0       3.3333        quadratic       1.0753
+  4000000  20,000,000.0    72,000,000.0       3.6000        quadratic       1.1044
+
+  (a) Doubling says 'linear' for the first FIVE rows and 'quadratic' for
+      the last three.  Same function, same code, and the answer depends on
+      where you start: the ratio is 2 + O(10^6/n), which approaches 4 so
+      slowly that five rows cannot see the difference.  A threshold on a
+      ratio is a threshold on the SIZE RANGE you happen to have sampled.
+
+  (b) The log-log fit is WORSE, not better.  Its exponent drifts upward
+      from 1.0013 on the first four points to 1.3859 on the last four, because the
+      earlier points sit in a region where the answer really is 'about
+      linear'.  A least-squares slope cannot tell you that it is
+      extrapolating.
+
+  (c) S(n)/n = 1 + n/10^6 is NOT flat.  It is affine in n with a slope of
+      10^-6: the '1' is the linear term divided by n, and n/10^6 is the
+      quadratic term divided by n.  From n = 10^6 upward the quadratic part
+      dominates the constant, and S(n)/n then rises by a factor of 10 for
+      every factor of 10 in n -- the exact signature of a hidden n^2:
+
+              n     S(n)/n
+             10     1.0000
+            100     1.0001
+           1000     1.0010
+          10000     1.0100
+         100000     1.1000
+        1000000     2.0000
+        2000000     3.0000
+        4000000     5.0000
+
+      A flat ratio means Theta(n).  A ratio that grows in proportion to n
+      means Theta(n^2).  Method (c) is the only one of the three that
+      works for BOTH functions, and it is also the cheapest to compute.
+
+=== what would break if you trusted the fits ===
+
+  Both fits are computed correctly.  Both are wrong about the algorithm.
+  A fit describes the range you sampled; a Theta class is a statement
+  about every n.  For S(n) they disagree exactly where you would most
+  want the measurement to be right -- in the region where the constant
+  does the hiding.
+
+  The method that is always right is the one that never infers the class
+  from a fit at all.  Read the algorithm: fake_cost runs `for _ in
+  range(n)` and adds 1 + n/10^6 to a counter, so there is one pass and one
+  update per iteration -- the LOOP is Theta(n), and the n/10^6 is a WEIGHT
+  on an update rather than a second loop, and it is that weight which
+  makes the totals Theta(n^2).  Change the loop structure and the fit would
+  have told you; change the constant and the fit tells you nothing.
+
+  Practical rule: use a measurement to CHECK a guess you already have a
+  structural reason to believe, and never to make the guess.  A ratio or
+  a slope is a diagnostic, not an oracle.
 ```
 
+**(a)** For `real_cost` the doubling ratio is **exactly** `2.0000` at every step,
+so $k = \log_2 2 = 1$: $\Theta(n)$. Note that the *iterations* column is also
+exactly $n$, which is the whole content of the constant: the $10^5$ is a property
+of what each step costs, not of how many steps there are, so both countings are
+blind to it.
 
-**(a)** The doubling ratios are `2.029, 2.038, 2.109, 1.955, 2.015, 2.109` — a
-scatter of about ±8% around 2.00 with no trend. $\log_2 2 = 1$, so $\Theta(n)$.
-The scatter is the reason the `iterations` column is printed beside it: that
-column is exactly `1000, 2000, ..., 64000`, an integer with no error bars, and
-it settles the question without a clock. **The lesson's Block 1 rule is
-"count, don't time", and this exercise is the argument for it in one table.**
+For `S(n)` the same computation says "linear" for the first five rows and
+"quadratic" for the last three — the same function, the same code, and the
+answer depends on where you start. The ratio is $2 + O(10^6/n)$, which
+approaches 4 so slowly that five rows cannot see the difference. A threshold on a
+ratio is really a threshold on the *size range* you happened to sample.
 
-**(b)** The fitted slope is `1.027` over all seven points, and `1.040, 1.029,
-1.013, 1.017` over the last four — bracketing the true `1.000` with a spread of
-about 4%. That is as good as it gets from a wall clock, and it is an
-*estimate*, not a result. The `fitted exponent` column in part 2 is the
-instructive one: `1.001, 1.013, 1.094, 1.199, 1.386` — a **drifting** estimate,
-which is a warning rather than an answer. A drift means the sample is not in a
-single regime, and the honest report is "the exponent depends on the range, here
-is the range".
+**(b)** For `real_cost` the fitted slope is `1.0000000000`. A timing-based
+version of this exercise typically reports something like `1.03` and calls it
+close enough; counts do not come with error bars.
 
-**(c)** The `t(n)/n` column reads `299.8, 304.2, 309.9, 326.8, 319.4, 321.9,
-339.3` ns — every value within a factor of `1.13` of the minimum across a 64-fold
-range of $n$, with no upward trend beyond a gentle 13%. Roughly flat, so
-$\Theta(n)$, established with no logarithm and no limit.
+For `S(n)` the fit is **worse, not better**. Its exponent drifts from `1.0013`
+on the first four points to `1.3859` on the last four, because the early points
+sit in a region where the answer really is "about linear". A least-squares slope
+has no way to tell you that it is extrapolating.
 
-**(d)** Doubling fails because it estimates $\lim T(2n)/T(n)$ and that limit is
-reached only at $n > 10^6$. The log-log fit fails *differently and worse*: it
-reports a drifting exponent (`1.001` through `1.386`) because least squares
-weights large values heavily and the $n^2/10^6$ term dominates the fit's
-*magnitudes* long before it dominates the *ratios*. The flat-ratio test works,
-because it asks the right question — is the per-element cost constant, or is it
-growing? — and a ratio growing by a factor of 10 per decade is unmistakably
-$\Theta(n^2)$ however small it starts.
+**(c)** This is the diagnostic that beats both. For `real_cost`, $T(n)/n$ is
+exactly `100,000` at every $n$: perfectly flat. For $S(n)$,
+$S(n)/n = 1 + n/10^6$ is **affine in $n$ with slope $10^{-6}$** and visibly not
+constant; from $n = 10^6$ onward it grows in exact proportion to $n$, rising by a
+factor of 10 for every factor of 10 in $n$. That proportionality is the signature
+of a hidden $n^2$: $n^2/n$ is linear in $n$ while $n/n$ is constant.
 
-**The general method.** To identify a class, compute $T(n)/g(n)$ for a candidate
-$g$ and check whether it is *flat over a wide range of $n$*. A flat ratio is
-the definition of $\Theta(g)$, it is invariant under any constant factor in
-either $T$ or $g$, and it needs no limit. The two methods that fail are the two
-that try to estimate a limit from finitely many samples of a function whose
-approach to that limit is slow. And if you can get a count instead of a clock,
-take it: the `iterations` column in part 1 settles the same question with zero
-uncertainty.
+**So method (c) is the only one of the three that works for both functions** —
+and it is also the cheapest to compute. A flat ratio means $\Theta(n)$; a ratio
+that grows in proportion to $n$ means $\Theta(n^2)$.
+
+**(d) What would break if you trusted the fits?** Both fits are computed
+correctly and both are *wrong about the algorithm*. A fit describes the range you
+sampled; a $\Theta$ class is a statement about every $n$. For $S(n)$ the two
+disagree in exactly the region where the constant does the hiding.
+
+The method that is always right is the one that never infers the class from a
+fit at all. Read the algorithm: `fake_cost` runs `for _ in range(n)` and adds
+`1 + n/1e6` to a counter, so there is one pass and one update per iteration —
+the **loop** is $\Theta(n)$, and the $n/10^6$ is a *weight on an update* rather
+than a second loop, and it is that weight which makes the totals $\Theta(n^2)$.
+Change the loop structure and the fit would have told you; change the constant and
+the fit tells you nothing.
+
+The practical rule: **use a measurement to check a guess you already have a
+structural reason to believe, and never to make the guess.** A ratio or a slope
+is a diagnostic, not an oracle. The original version of this exercise timed both
+functions with `time.perf_counter`, and it is worth saying why that was the wrong
+instrument: a timer measures the machine's constants along with the algorithm's,
+which are precisely the quantities the exercise is constructed to conceal.
 
 </details>
+
 
 ---
 

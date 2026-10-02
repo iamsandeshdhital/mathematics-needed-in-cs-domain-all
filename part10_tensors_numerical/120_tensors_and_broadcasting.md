@@ -1,6 +1,6 @@
 # 120 — Tensors and Broadcasting
 
-**Part**: part10_tensors_numerical · **Prerequisites**: 31, 41 · **Time**: 30 min
+**Part**: part10_tensors_numerical · **Prerequisites**: 113 · **Time**: 30 min
 
 ---
 

@@ -1,5 +1,4 @@
 # 121 — Numerical Methods and Floating Point
-
 **Part**: part10_tensors_numerical · **Prerequisites**: 113 · **Time**: 30 min
 
 ---
@@ -27,36 +26,30 @@ is most of the diagnosis.
 ## Why Computer Science Cares
 
 - **`0.1 + 0.2 != 0.3` is in every language.** It is not a bug in Python, it is
-
   a fact about binary. Anyone who writes a test with `assert a + b == c` on
   floating-point values will eventually ship that failure. The correct response
   is a scaled comparison or an exact type, and the reasoning is in this lesson.
 
 - **Money.** Storing an amount as a float and adding it up accumulates error
-
   until a reconciliation fails and nobody can explain why. Integer cents, or
   `decimal.Decimal`, is the answer, and the reason why is the first section.
 
 - **`np.linalg.solve` versus `np.linalg.lstsq`.** The first is fast and breaks on
-
   near-singular matrices; the second is slower and returns a stable, biased
   answer. The condition number is what tells you which one you need, and
   Lesson 101's regularisation is what fixes the problem.
 
 - **Simulators, games and physics engines.** Fixed timestep integration with
-
   `dt = 0.001` is a claim that your error is small. Whether it is depends on
   how stiff your equations are, and the answer is a step size, not a wish.
 
 - **Convergence tests in optimisation.** A gradient descent that stops when the
-
   loss changes by less than `1e-9` can stop on a plateau or in a region where
   the loss has stopped responding to the parameters at all. The condition
   number of your problem is why, and it decides whether more iterations or more
   precision can possibly help.
 
 - **`scipy.optimize.brentq` versus a hand-rolled Newton loop.** Brent's method
-
   is a bisection skeleton with Newton accelerants, and that specific shape
   exists because Newton alone cycles. This lesson builds both and shows the
   cycle.
@@ -67,7 +60,6 @@ Notation follows [SYMBOLS.md](../SYMBOLS.md). Used here: $\varepsilon$, $O()$,
 $h$, $n$, $\kappa$, $|x|$, $\delta$.
 
 **Definition.** A **float64** is a float64 is a 64-bit encoding of
-
 $$x = (-1)^s \cdot (1 + f) \cdot 2^{e - 1023}$$
 
 with a 1-bit sign $s$, an 11-bit exponent $e$, and a 52-bit fraction $f$ taken
@@ -75,67 +67,53 @@ as an integer in $[0, 2^{52})$. Equivalently, every non-negative float64 is
 exactly $m \cdot 2^j$ for integers $m < 2^{53}$ and $j$.
 
 **Definition.** The **unit in the last place** (ulp) at $x > 0$ is
-
 $\operatorname{ulp}(x) = 2^{j-52}$ where $x = m 2^j$ with $m$ odd. It is the gap
 to the next float up.
 
 **Definition.** **Machine epsilon** for float64 is
-
 $\varepsilon = 2^{-52} \approx 2.22 \times 10^{-16}$, the ulp at $1.0$ and also
 the smallest $h$ for which $1 + h \neq 1$ up to the rounding tie.
 
 **Theorem (representable decimals).** A decimal $d = p/q$ in lowest terms is
-
 exactly representable in binary floating point **iff** $q$ is a power of two.
 
 Hence $1/2, 1/4, 1/8$ are exact and $1/10, 1/5, 3/10$ are not.
 
 *Explanation.* A float64 is $m 2^j$, so its reduced denominator is a power of
-
 two. $1/10 = 1/(2 \cdot 5)$ has a factor of 5, which no power of two absorbs. ∎
 
 **Definition.** The **absolute error** of $\hat{x}$ for exact $x$ is
-
 $|\hat{x} - x|$. The **relative error** is $|\hat{x} - x| / |x|$.
 
 **Definition.** **Cancellation** occurs when a formula subtracts two quantities
-
 of similar magnitude to produce a much smaller result, so the absolute error of
 the operands becomes a large relative error of the output.
 
 **Definition.** The **condition number** of a function at $x$ is
-
 $\kappa(x) = |x f'(x)| / |f(x)|$. It is the factor by which a relative input
 error is amplified into a relative output error, to first order. For a linear
 system it is $\operatorname{cond}(A)$, the ratio of largest to smallest
 singular value.
 
 **Theorem (error amplification).** If the relative input error is $\le \delta$
-
 then the relative output error is $\approx \kappa \delta$, and this is
 asymptotically tight. $\kappa$ is a property of the problem and does not depend
 on the algorithm.
 
 **Theorem (error bound for bisection).** If $f$ is continuous, $f(a)f(b) < 0$,
-
 and the bracket $[a_n, b_n]$ has width $w$, then after $n$ halvings
 $w_n = w / 2^n$ and the returned midpoint is within $w / 2^{n+1}$ of the root.
 
 **Definition.** Newton's iteration is $x_{n+1} = x_n - f(x_n)/f'(x_n)$. It is
-
 **quadratically convergent** near a root: the number of correct digits roughly
-
 doubles per iteration. It is **linearly convergent** for bisection.
 
 **Definition.** A forward difference $D^+f(x) = (f(x+h) - f(x))/h$ has
-
 truncation error $O(h)$; a central difference
 $Df(x) = (f(x+h) - f(x-h))/(2h)$ has truncation error $O(h^2)$.
 
 **Theorem (the step-size optimum).** The total error of a finite difference is
-
 truncation plus rounding, roughly
-
 $$\text{forward: } C_1 h + \frac{2\varepsilon |f|}{h},
 \qquad \text{central: } C_2 h^2 + \frac{2\varepsilon |f|}{h}.$$
 
@@ -149,7 +127,6 @@ Choosing $h$ smaller than $h^*$ makes the answer strictly worse, because
 $f(x+h)$ rounds back to $f(x)$ and the numerator is zero.
 
 *Explanation.* The Taylor expansion gives the $C_1 h$ and $C_2 h^2$ terms; each
-
 of $f(x+h)$ and $f(x-h)$ carries a rounding error of order $\varepsilon |f|$,
 so their difference carries order $2 \varepsilon |f|$, and dividing by $h$
 turns that into $2\varepsilon|f|/h$. Setting the derivative of the sum to zero
@@ -161,59 +138,32 @@ attainable relative accuracy is about $\varepsilon^{2/3} \approx 3.7 \times
 ## Formula Sheet
 
 | Symbol | Formula | In plain words | When you use it |
-
 | --- | --- | --- | --- |
-
 | float64 value | `$x = (-1)^s (1 + f) 2^{e-1023}$` | sign, times 11 exponent bits, times 52 fraction bits | understanding what can and cannot be stored |
-
 | machine epsilon | `$\varepsilon = 2^{-52} \approx 2.22\times10^{-16}$` | the gap between 1.0 and the next double | every error estimate; `sys.float_info.epsilon` |
-
 | ulp at $x$ | `$\operatorname{ulp}(x) = 2^{j-52}$`, $x = m2^j$, $m$ odd | how far to the next float from $x$ | asking "is this step even representable?" |
-
 | representable decimals | $d = p/q$ exact **iff** $q$ is a power of two | only binary fractions are exact | why 0.1 is not 0.1 |
-
-| absolute error | `$|\hat{x} - x|$` | how far off, in these units | physical quantities with a fixed scale |
-
+| absolute error | `$\lvert \hat{x} - x\rvert$` | how far off, in these units | physical quantities with a fixed scale |
 | relative error | `$\lvert \hat{x}-x\rvert / \lvert x\rvert$` | how far off compared to the target | unit-free quantities, computed values |
-
 | condition number | `$\kappa(x) = \lvert x f'(x)\rvert / \lvert f(x)\rvert$` | input error is amplified by this factor | deciding whether a problem is solvable at all |
-
 | matrix condition number | `$\operatorname{cond}(A) = \sigma_{max}/\sigma_{min}$` | largest vs smallest singular value | `np.linalg.cond`; choosing solve vs lstsq |
-
 | digits lost | `$\approx \log_{10}\kappa$` | each factor of 10 in kappa costs a digit | "will float64 be enough here?" |
-
 | error amplification | relative error out $\approx \kappa \cdot$ relative error in | the problem decides, not your code | diagnosing a wrong answer |
-
 | stable $\sqrt{x^2+1}-x$ | `$\dfrac{1}{\sqrt{x^2+1}+x}$` | the same number, no subtraction | the canonical cancellation repair |
-
 | error of a long sum | `$\approx n\varepsilon/2$` | $n$ additions cost about $n\varepsilon/2$ relative | `math.fsum`, pairwise summation |
-
 | bisection width after $n$ | `$w_n = w/2^n$` | halving every step | predicting iteration counts |
-
 | bisection error | `$\lvert x_n - r\rvert \le w/2^{n+1}$` | the guarantee | choosing a tolerance |
-
 | Newton iteration | `$x_{n+1} = x_n - f(x_n)/f'(x_n)$` | follow the tangent to the axis | fast roots where you have a derivative |
-
 | Newton convergence | `$\text{digits roughly double per step}$` | quadratic, so float64 needs 4-5 steps | when the start is close to the root |
-
 | forward difference | `$D^+ = \dfrac{f(x+h)-f(x)}{h}$`, error $O(h)$ | one extra evaluation | boundary cases, cheapness |
-
 | central difference | `$D = \dfrac{f(x+h)-f(x-h)}{2h}$`, error $O(h^2)$ | two extra evaluations | accuracy, when you can go both ways |
-
 | optimal step, forward | `$h^* = \sqrt{2\varepsilon\lvert f\rvert/\lvert f''\rvert}$` | balance truncation against rounding | choosing a step |
-
 | optimal step, central | `$h^* = (3\varepsilon\lvert f\rvert/\lvert f'''\rvert)^{1/3}$` | the cube-root rule | choosing a step, no derivatives known |
-
 | practical step rule | `$h \approx \varepsilon^{1/3}\lvert f(x)\rvert \approx 6\times10^{-6}$` | usable with no derivative at all | shipping a derivative routine |
-
 | central-difference ceiling | `$\varepsilon^{2/3} \approx 3.7\times10^{-11}$` | about 11 digits is all you get | when a caller wants more, change method |
-
 | complex-step derivative | `$f'(x) = \operatorname{Im}(f(x+ih))/h$` | no subtraction, so no cancellation | beating the 11-digit ceiling |
-
 | convergence test | `$\lvert f(x)/f'(x)\rvert < \tau\max(1,\lvert x\rvert)$` | estimated distance to the root | scale-invariant stopping rule |
-
 | Simpson error | `$O(h^4) = O(1/n^4)$` | four orders in panel count | smooth integrands |
-
 | Richardson comparison | compare $n$ panels against $2n$ | trust agreement, not theory | picking $n$ honestly |
 
 Three restrictions to carry. The definitions of $\varepsilon$ and ulp are for
@@ -230,16 +180,13 @@ The smallest interesting example in the repository: **why
 $0.1 + 0.2 \neq 0.3$**, done exactly.
 
 **Step 1. Establish what the machine stores.** Both $1/10$ and $1/5$ have a
-
 factor of 5 in their denominator, so by the theorem above neither is
 representable. Each is rounded to the nearest double when written. The stored
 values, computed with `fractions.Fraction`, are
-
 $$\mathrm{fl}(0.1) = \frac{3602879701896397}{36028797018963968},
 \qquad \mathrm{fl}(0.2) = \frac{3602879701896397}{18014398509481984}.$$
 
 **Step 2. Check the direction of the error.** Both fractions are *above* their
-
 true values: $\mathrm{fl}(0.1) > 1/10$ and $\mathrm{fl}(0.2) > 1/5$. This
 matters, because it means the sum will be too large.
 
@@ -255,9 +202,7 @@ gets wrong -- floating-point addition is correctly rounded, so $a + b$ is the
 correctly rounded value of the two stored numbers.
 
 **Step 4. Compare against the other route.** Writing the literal `0.3` rounds
-
 $3/10$ once, to $\frac{5404319552844595}{18014398509481984}$, which is
-
 *below* $3/10$. The literal and the sum round in opposite directions.
 
 **Step 5. Conclude.** The two results are one ulp apart:
@@ -270,7 +215,6 @@ literal. Rounding once, at the end, would have given a different and more
 accurate answer.
 
 **Step 6. Sanity check that settles it.** $0.1 + 0.5 = 0.6$ **exactly**, because
-
 $1/2$ is representable, so only one rounding is involved on its side and the
 two errors cancel. If the story were "floating point addition is broken", this
 case would also fail. It does not.
@@ -285,7 +229,6 @@ subtracted.
 ## Runnable Code
 
 ### 1. IEEE 754, machine epsilon, and the addition that does not add up
-
 ```python
 """IEEE 754 and why 0.1 + 0.2 != 0.3.
 
@@ -485,7 +428,6 @@ print("lesson.")
 ```
 
 ### 2. Absolute versus relative error, and catastrophic cancellation
-
 ```python
 """Absolute versus relative error, and catastrophic cancellation.
 
@@ -662,7 +604,6 @@ print("subtracting large ones.")
 ```
 
 ### 3. Conditioning: which problems are fragile, and which algorithms are
-
 ```python
 """Conditioning: how much a small input change can move the answer.
 
@@ -925,7 +866,6 @@ print("made unnecessary.")
 ```
 
 ### 4. Bisection and Newton, from scratch, with the error bounds
-
 ```python
 """Bisection and Newton-Raphson, from scratch, with their error guarantees.
 
@@ -1083,10 +1023,10 @@ for n, x, fx in hist2:
 print(f"   stopped after {iters2} iterations at {root2!r}")
 print(f"   error = {abs(root2 - TARGET):.3e}")
 print()
-print("Newton went from 0 correct digits to about 4, then 8, then 15.  That is")
-print("quadratic convergence: each step doubles the number of correct digits.")
-print("Bisection added about one digit per step and needed 40 iterations for")
-print("the same precision.")
+print("Newton went from no correct digits to 0.6, then 2.2, then 5.2, then")
+print("11.3, then 15.4.  That is quadratic convergence: each step roughly")
+print("doubles the number of correct digits, which is why five iterations")
+print("beat bisection's 39 on the same problem.")
 print()
 rule("2. The error guarantee, and why bisection is bulletproof")
 width = 1.0
@@ -1265,7 +1205,6 @@ print("absolute constant.")
 ```
 
 ### 5. Finite differences, and why a tiny step is a terrible step
-
 ```python
 """Finite differences: measuring a derivative you cannot differentiate for.
 
@@ -1626,7 +1565,6 @@ tools are the real library ones. numpy's `finfo.eps`, `spacing`,
 in the lesson's arguments.
 
 not runnable
-
 ```python
 """The same facts, checked against numpy, mpmath and Python's own tools.
 
@@ -1847,61 +1785,34 @@ print(f"   2**53              = {2 ** 53}   (integers stop being exact here)")
 ```
 
 ## Common Mistakes
-
 **Wrong.** Testing floats with `==`, or with a fixed absolute epsilon.
 
 ```python
-
 import math
-
-
-
 a, b, c = 0.1 + 0.2, 0.1 + 0.2, 0.3
-
-
-
 print("the two computed values are equal:", a == b)
-
 print("but neither equals the literal:  ", a == c)
-
 print()
-
 print("a fixed ABSOLUTE threshold, which is scale-dependent:")
-
 for value in (1e-2, 1.0, 1e4):
-
     approx = value * (1 + 1e-9)
-
     print(f"   value {value:>8.0e}, abs error {abs(approx - value):.2e}, "
-
           f"same 1e-9 threshold {'passes' if abs(approx - value) < 1e-9 else 'FAILS'}")
-
 print()
-
 print("a RELATIVE threshold, which scales with the quantity:")
-
 for value in (1e-2, 1.0, 1e4):
-
     approx = value * (1 + 1e-9)
-
     ok = math.isclose(approx, value, rel_tol=1e-9)
-
     print(f"   value {value:>8.0e}, rel error "
-
           f"{abs(approx - value) / value:.2e}, isclose(rel_tol=1e-9) {ok}")
-
 print()
-
 print("math.isclose(0.1 + 0.2, 0.3) =", math.isclose(a, c, rel_tol=1e-9))
-
 ```
 
 Why the wrong version is tempting: `==` is the reflexive test, and a fixed
-
 `abs(...) < eps` looks like it accounts for rounding. It does not account for
 it *correctly*: 1e-9 absolute is 1e-10 relative on a value of 10 and 1e-7
 relative on a value of 1e-2, so one threshold cannot be right for both. And
-
 `==` fails for ordinary arithmetic, not for exotic inputs.
 
 ---
@@ -1909,59 +1820,29 @@ relative on a value of 1e-2, so one threshold cannot be right for both. And
 **Wrong.** Choosing a finite-difference step as small as possible.
 
 ```python
-
 import math
-
-
-
 EPS = 2.0**-52
-
 f = math.sin
-
 X = 1.3
 
 
-
-
-
 def central(x, h):
-
     return (f(x + h) - f(x - h)) / (2.0 * h)
-
-
-
-
-
 exact = math.cos(1.3)
-
 print(f"{'h':>10} {'f(x+h) == f(x)':>16} {'central difference':>20} {'rel err':>10}")
-
 for h in (1e-3, 1e-5, 1e-7, 1e-9, 1e-12, 1e-16, 1e-20):
-
     d = central(X, h)
-
     print(f"{h:>10.0e} {str(f(X + h) == f(X)):>16} {d:>20.16f} "
-
           f"{abs(d - exact) / abs(exact):>10.3e}")
-
 print()
-
 good = (3.0 * EPS * abs(f(X))) ** (1.0 / 3.0)
-
 print(f"the cube-root rule picks h = {good:.3e}, giving a relative error of "
-
       f"{abs(central(X, good) - exact) / abs(exact):.3e}")
-
 print(f"h = 1e-16 gives a relative error of "
-
       f"{abs(central(X, 1e-16) - exact) / abs(exact):.3e}")
-
 print()
-
 print("A step of 1e-16 looks maximally careful and returns 0.0, because")
-
 print("f(1.3 + 1e-16) is bit-for-bit f(1.3) and the numerator vanishes.")
-
 ```
 
 Why the wrong version is tempting: a smaller step looks like a more faithful
@@ -1975,99 +1856,50 @@ not. The error curve has a finite minimum and you are past it.
 **Wrong.** Running plain Newton and hoping the starting point is good.
 
 ```python
-
 import math
 
 
-
-
-
 def f(x):
-
     return x**3 - 2.0 * x + 2.0
 
 
-
-
-
 def df(x):
-
     return 3.0 * x * x - 2.0
 
 
-
-
-
 def plain_newton(x0, n=12):
-
     x = x0
-
     path = []
-
     for _ in range(n):
-
         x = x - f(x) / df(x)
-
         path.append(x)
-
     return x, path
-
-
-
 
 
 def safeguarded_newton(a, b, n=12):
-
     fa = f(a)
-
     x = 0.5 * (a + b)
-
     path = []
-
     for _ in range(n):
-
         fx = f(x)
-
         if fa * fx < 0.0:
-
             b = x
-
         else:
-
             a, fa = x, fx
-
         step = x - fx / df(x)
-
         x = step if a < step < b else 0.5 * (a + b)
-
         path.append(x)
-
     return x, path
-
-
-
-
-
 print(f"{'n':>3} {'plain Newton from x0=0':>26} {'safeguarded from [-3,0]':>26}")
-
 p, ppath = plain_newton(0.0)
-
 s, spath = safeguarded_newton(-3.0, 0.0)
-
 for i in range(12):
-
     print(f"{i:>3} {ppath[i]:>26.17f} {spath[i]:>26.17f}")
-
 print()
-
 print(f"plain Newton ends at {p!r}, and |f(x)| there is {abs(f(p)):.3e}"
-
       f" -- it never converged")
-
 print(f"safeguarded ends at {s!r}, |f(x)| = {abs(f(s)):.3e}")
-
 print(f"the true root is near {plain_newton(-2.0, 40)[0]!r}")
-
 ```
 
 Why the wrong version is tempting: Newton is quadratically convergent, which
@@ -2082,91 +1914,45 @@ crosses it back at 0, forever.
 **Wrong.** Treating a near-singular system as a precision problem.
 
 ```python
-
 import math
 
 
-
-
-
 def solve2(A, b):
-
     det = A[0][0] * A[1][1] - A[0][1] * A[1][0]
-
     return ((b[0] * A[1][1] - A[0][1] * b[1]) / det,
-
             (A[0][0] * b[1] - b[0] * A[1][0]) / det)
 
 
-
-
-
 def ridge(A, b, lam):
-
     n = len(A)
-
     AtA = [[sum(A[k][i] * A[k][j] for k in range(n)) + (lam if i == j else 0.0)
-
             for j in range(n)] for i in range(n)]
-
     Atb = [sum(A[k][i] * b[k] for k in range(n)) for i in range(n)]
-
     return solve2(AtA, Atb)
-
-
-
-
-
 eps = 1e-12
-
 A = [[1.0, 1.0], [1.0, 1.0 + eps]]
-
 b = [2.0, 2.0 + eps]
-
 perturbed = [b[0], b[1] + math.ulp(b[1])]
-
-
-
 # Wrong: spend effort adding precision.  In float64 there is none to add, and
-
 # in a wider type the AMPLIFICATION of 2/eps is unchanged, so you gain a fixed
-
 # number of digits and then the same disaster returns.
-
 print(f"condition number ~ 2/eps = {2 / eps:.3e}")
-
 print(f"float64 gives you about 16 digits, so you keep about "
-
       f"{16 - math.log10(2 / eps):.0f}")
-
 print(f"a 34-digit type would give you about {34 - math.log10(2 / eps):.0f}"
-
       " -- and break again when eps shrinks by the same factor")
-
 print()
-
 # Right: change the problem.  A ridge term makes the answer insensitive to the
-
 # perturbation, in exchange for a small deliberate bias.
-
 for label, bb in (("clean b", b), ("b perturbed by 1 ulp", perturbed)):
-
     plain = solve2(A, bb)
-
     ridged = ridge(A, bb, 1e-4)
-
     print(f"{label:<22} plain {[round(v, 9) for v in plain]}   "
-
           f"ridge {[round(v, 9) for v in ridged]}")
-
 print()
-
 print("The plain answer jumps by 1e-3 on a one-bit input change.  The ridge")
-
 print("answer is identical either way, and both differ from [1, 1] by a")
-
 print("predictable 3.5e-5.  Bounded bias instead of unbounded noise.")
-
 ```
 
 Why the wrong version is tempting: the answer is wrong, and "wrong" usually
@@ -2177,7 +1963,6 @@ the problem on purpose and accepts a known bias in exchange for stability,
 which is the trade that actually helps.
 
 ## Multiple Choice Questions
-
 **Q1.** Why is `0.1 + 0.2 != 0.3` in Python?
 
 - A) Python's floating-point addition is implemented incorrectly
@@ -2568,10 +2353,107 @@ least-squares residual.
 
 </details>
 
+**Q11.** A unit test compares a computed value against a reference with
+`assert abs(got - want) <= 1e-12`. The values under test range from `1e-30`
+(a residual) to `1e12` (a count). What is wrong with the test?
+
+- A) Nothing: an absolute tolerance is the honest one, because rounding error is absolute
+- B) A fixed absolute tolerance silently means a different relative tolerance at every magnitude -- `1e-12` is a *relative* tolerance of `1e18` at a value of `1e-30`, and of `1e-24` at `1e12`, where `ulp(1e12)` is already `1.2e-4` and no two distinct floats can pass
+- C) `1e-12` is smaller than $\varepsilon = 2.22\times10^{-16}$ per operation, so no float64 test can ever pass
+- D) It should use `>=` rather than `<=` to be robust to a sign error
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) A fixed absolute tolerance silently means a different relative tolerance
+at every magnitude -- `1e-12` is a *relative* tolerance of `1e18` at a value of
+`1e-30`, and of `1e-24` at `1e12`, where `ulp(1e12)` is already `1.2e-4` and no
+two distinct floats can pass.**
+
+The rule to ship is the one `math.isclose` implements: take the **larger** of a
+relative and an absolute bound,
+$|a - b| \le \max(\texttt{rel\_tol}\cdot\max(|a|,|b|), \texttt{abs\_tol})$.
+The relative term is what you want when the quantity has a scale, and the
+absolute term is what you need because near zero *every* nonzero difference is
+100 percent of the answer, so a purely relative test can never be satisfied
+there. This is the reason `numpy.allclose` without an `atol` collapses on
+arrays containing zeros.
+
+Option A is the real misconception, and it is a genuine one. Rounding error is
+*proportional*: perturbing $x$ by $\varepsilon$ perturbs the answer by about
+$\varepsilon\lvert x\rvert$, which scales with $x$ rather than with a fixed unit.
+Absolute error is still the right measure when the quantity has a fixed physical
+unit -- metres, seconds, cents -- and it is exactly the measure the lesson's
+Exercise 2(a) uses to show that a fixed absolute error of $10^{-4}$ is a
+relative error of $10^{-3}$ at `0.1` and $10^{-12}$ at $10^8$. Both statements
+are true at once; the error is in treating either one as universal.
+
+Option C misstates the size of $\varepsilon$. One operation rounds at about
+$\varepsilon/2 = 1.11\times10^{-16}$ relative, so a *single* comparison at
+unit scale can meet a `1e-12` absolute bound easily. What cannot be met is a
+tolerance that has been in force through $10^4$ chained operations, where the
+standard model permits an accumulated relative error of order $n\varepsilon/2$
+-- which is the whole reason Short Answer Q5's `1e-20` request has to be
+refused rather than attempted.
+
+Option D is nonsense: reversing the comparison would make the test pass exactly
+when the values differ, which is the opposite of a test.
+
+</details>
+
+**Q12.** You need twelve correct digits from `f'(0.7)` for
+$f(x) = e^x\sin x - 0.5$, and you have only float64. Which change actually
+delivers the digits?
+
+- A) Compute the forward difference with a much smaller step, `h = 1e-12`
+- B) Compute the derivative in closed form, $f'(x) = e^x(\sin x + \cos x)$
+- C) Promote every intermediate to `decimal.Decimal` with `prec=50`
+- D) Sum the forward difference over `h = 1e-8`, `1e-9`, `1e-10` and average the three results
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) Compute the derivative in closed form,
+$f'(x) = e^x(\sin x + \cos x)$.**
+
+The lesson's bounds are the whole answer. A finite difference bottoms out at
+$O(\sqrt{\varepsilon}) \approx 1.05\times10^{-8}$ for the forward rule and
+$O(\varepsilon^{2/3}) \approx 2.3\times10^{-11}$ for the central rule, at *any*
+step size: truncation error falls as you shrink $h$ while roundoff rises as
+$1/h$, and the best answer is where those two curves cross. Neither ceiling
+reaches twelve digits, so **no finite-difference step size satisfies the
+requirement** -- which is why the answer is to stop differencing altogether.
+
+Option A is the trap, and it fails in the most instructive way possible.
+Measured on this very function, the forward difference is best at `h = 1e-8`
+with an error of `3.2e-8`; at `h = 1e-9` it is `1.2e-7` and at `h = 1e-12` it
+is `9.9e-6`. Shrinking the step four decades past the optimum made the answer
+three hundred times worse. The lesson's finite-difference block tabulates that
+run, and the same shape appears in Exercise 4.
+
+Option C is a real misunderstanding about where the error lives. Extra precision
+reduces $\varepsilon$, and it genuinely helps when the limitation is cancellation:
+`math.expm1` evaluated in 50 digits gives you more digits of the *right* answer.
+It cannot give you twelve digits of a quantity the step size has already
+destroyed, because the destruction happened in the subtraction `f(x+h) - f(x)`,
+and recomputing that same subtraction in 50 digits produces the same wrong answer
+more accurately. Extended precision is the right tool for an ill-conditioned
+*problem* you cannot reformulate; it is the wrong tool for an ill-conditioned
+*step*, and the two look identical until you ask where $\kappa$ is large.
+
+Option D is averaging three wrong answers. Averaging shrinks the random part of
+an error but not the systematic part, and the systematic part here is the
+cancellation, which enters with the same sign in all three estimates. Averaging
+is a legitimate technique when you have a genuine error *model* and Richardson
+extrapolation is the principled version of it -- but plain averaging of three
+forward differences is not that, and it spends three evaluations to reach a
+worse place.
+
+</details>
+
 ## Subjective Questions
 
 ### Short Answer
-
 **Q1. Define machine epsilon, and say precisely what it is not.**
 
 <details>
@@ -2693,7 +2575,6 @@ which one you have is most of the diagnosis.
 </details>
 
 ### Long Answer
-
 **Q1. Why is `0.1 + 0.2 != 0.3` a property of the arithmetic rather than a
 defect, and what does that imply for how you should write comparisons?**
 
@@ -2766,7 +2647,6 @@ function of order 1. Below that, the roundoff term dominates and the error
 *rises*. The lesson's own sweep shows the relative error bottoming out at
 `7.478e-12` at $h = 10^{-5}$ and then climbing to `1.000e+00` at
 $h = 10^{-16}$.
-
 **What breaks if you do not understand it.** The failure is silent and total,
 which is the combination that makes it dangerous. At $h$ below the spacing of
 $f$, `f(x+h)` rounds back to bit-for-bit `f(x)`, the numerator is exactly zero,
@@ -2783,8 +2663,7 @@ a hard-coded value will pass on any function whose derivative is near zero,
 because the expected value and the computed value are both near zero.
 
 The rule to take away is not "use a large step" but "derive the step, or
-measure your own progress". Concretely: use $h \approx \varepsilon^{1/3}
-|f(x)|$ as a default when you have no derivatives to hand, and when you need
+measure your own progress". Concretely: use $h \approx \varepsilon^{1/3} f(x)|$ as a default when you have no derivatives to hand, and when you need
 more than about 11 digits, stop tuning $h$ and change method -- the complex
 step $f'(x) = \operatorname{Im}(f(x+ih))/h$ involves no subtraction at all and
 returned the exact derivative of $x^2$ at $x = 1.3$ with $h = 10^{-30}$.
@@ -2807,9 +2686,7 @@ $2/\varepsilon \approx 2 \times 10^{12}$. In float64 you keep roughly 4 usable
 digits. In a 34-digit type you keep roughly 26 -- you have not recovered the
 lost information, you have only moved the cliff 18 orders of magnitude further
 away, and the same code will fail again when the inputs grow.
-
 **The diagnostic order.**
-
 1. **Is the algorithm stable here?** Look for a subtraction of two nearly equal
    quantities. `sqrt(x*x + 1) - x` returns `0.0` at $x = 10^8$ while its
    condition number is exactly 1, so no input perturbation of that size could
@@ -2817,7 +2694,6 @@ away, and the same code will fail again when the inputs grow.
    $1/(\sqrt{x^2+1}+x)$, or `math.expm1` instead of `math.exp(x) - 1`, or
    `math.hypot` instead of `math.sqrt(x*x + y*y)`. This is free and should
    always be tried first.
-
 2. **Is the problem well conditioned?** Compute $\kappa$: for a scalar function
    $|x f'(x)/f(x)|$, for a matrix $\sigma_{max}/\sigma_{min}$ via
    `np.linalg.cond`. If $\kappa$ is large, no algorithm saves you. The
@@ -2825,14 +2701,12 @@ away, and the same code will fail again when the inputs grow.
    $(A^\top A + \lambda I)x = A^\top b$ in block 3 returned a bit-identical
    answer under perturbation, buying stability with a known bias. This is the
    same objective Lesson 101 minimises.
-
 3. **Only now, was the input precise enough?** If the algorithm is stable and
    $\kappa$ is moderate, then input error propagates by exactly $\kappa$, and
    this is the one case where a wider type genuinely helps. Worth knowing how
    much is needed: each factor of 10 in $\kappa$ costs a digit, so
    $\kappa = 10^{10}$ means no choice of precision exceeds about 6 useful
    digits in float64.
-
 **Why the order matters.** Most people start at step 3 and buy precision that
 step 1 would have made unnecessary. A `decimal` conversion of the quadratic
 formula for $x^2 + 10^9 x + 1 = 0$ produces the correct small root at 60
@@ -2863,13 +2737,11 @@ because halving an interval that contains a sign change cannot produce an empty
 one, and it *detects* failure, because Newton proposing to leave the bracket is
 an observable event you can respond to. Together they convert a method with no
 global guarantee into one that always terminates with a certified answer.
-
 **How.** Keep the bracket $[a, b]$ with $f(a)f(b) < 0$ invariant. At each step,
 update the bracket using the sign of $f$ at the current iterate, then take the
 Newton step *only if it lands strictly inside* the updated bracket; otherwise
 take the midpoint. Block 4 applies this to the cycling example and converges in
 5 iterations to the exact root, where plain Newton never converged at all.
-
 **The cost.** One derivative evaluation, one division, and one comparison per
 iteration, plus the bookkeeping to maintain the endpoints. That is genuinely
 small next to the cost of the function evaluation you are already doing, which
@@ -2887,7 +2759,6 @@ let the fast method accelerate.
 </details>
 
 ## Exercises and Solutions
-
 **[ ] Exercise 1 —** Build the floating point model from integers, with no
 floating point arithmetic in the derivation. (a) Show that machine epsilon for
 float64 is $2^{-52}$ by finding the smallest $h$ with `1 + h != 1` and doubling
@@ -3048,20 +2919,17 @@ first $h$ for which $1 + h \neq 1$ is the rounding tie at $2^{-53}$: below it
 the exact sum is nearer to $1.0$, and at or above it rounds up to
 $1.0 + 2^{-52}$. Machine epsilon is that full gap, and `math.ulp(1.0)` confirms
 it, so three independent routes agree to within one ulp.
-
 **Part B is the whole answer to "why is 0.1 special".** It is not that 0.1 is
 large or awkward or that decimals are somehow second-class. It is that
 $1/10 = 1/(2 \cdot 5)$ has a factor of 5 in its reduced denominator, and a
 float64's reduced denominator is always a power of two. Every value in the
 table with denominator $2^k$ is exact; every value with a 3 or a 5 in the
 denominator is not.
-
 **Part C is the subtle one.** The addition of the two stored doubles is
 *exact* -- the lesson prints that explicitly -- so the error is entirely in the
 inputs. Both stored values sit above their true values, so their sum sits above
 $3/10$ and rounds up, while the literal `0.3` rounds down. The gap is exactly
 one ulp, `math.ulp(0.3)`.
-
 **And the cross-check proves it.** `0.1 + 0.5 == 0.6` is `True`. If
 floating-point addition were broken, that case would fail too.
 
@@ -3277,7 +3145,6 @@ is not a specification. Absolute error is the right measure when the unit has
 physical meaning at a fixed scale -- metres, seconds, cents. Relative error is
 right for pure numbers, ratios, and anything compared against another computed
 value. Report both when you can.
-
 **Part B: the naive fold tracks the $n\varepsilon/2$ bound closely, and
 pairwise beats it.** That is not luck. The bound says each addition contributes
 about half an ulp of relative error, and a running fold accumulates all of them.
@@ -3285,13 +3152,11 @@ Pairwise summation keeps the running total close to the final answer, so each
 individual rounding is small relative to what is being accumulated. The lesson
 measures a relative error of `1.407e-14` for the fold against a bound of
 `1.110e-13`.
-
 **Part C contains the correction that matters most.** `sqrt(x^2+1) - x` has
 $\kappa \approx 1$, so it is a *well conditioned* problem, yet its naive float64
 evaluation returns exactly `0.0` at $x = 10^8$. That is an unstable algorithm,
 not an ill-conditioned problem, and the fixes are different: rephrase the
 computation rather than buy precision.
-
 **Part D is where conditioning earns its keep in practice.** The input moves by
 one bit and the answer's error jumps from zero to about `6e-4`, an amplification
 of $2/\varepsilon$. The ridge solve returns a bit-identical answer with or
@@ -3449,19 +3314,16 @@ $b = 10^9$, $b^2 = 10^{18}$ and the gap between doubles there is 128, so
 subtracting $4ac = 4$ rounds straight back to $10^{18}$. The small root is
 $(-b + \sqrt{b^2 - 4ac})/2a$, whose numerator is now zero. The true root is
 $-10^{-9}$, so the relative error is 100%.
-
 **Both repairs give exactly `-1e-09`**, matching the 60-digit reference to
 `0.0e+00` relative. The algebraic one rationalises the numerator: since
 $r_{small} r_{large} = c/a$, divide by the large root instead of subtracting.
 The conjugate form is $2ac/(-b - \sqrt{b^2-4ac})$, where the big terms now
 *add* rather than cancel. Same operation count, correct answer, in float64.
-
 **Part B: `math.expm1` sums small things together.** The series
 $\exp(x) = 1 + x + x^2/2 + \dots$ means the answer is dominated by $x$, so
 adding the tail $x + x^2/2 + \dots$ from the small end up never subtracts two
 nearby quantities. `math.exp(x) - 1` does subtract, and at $x = 10^{-17}$ the
 result is exactly `0.0` -- a 100% error on a perfectly ordinary float.
-
 **Part C is the trap of this exercise.** The naive formula at 60 digits is
 already correct, which proves the *formula* was never broken. The combination
 of that formula with float64 was. So switching to `decimal` fixes this input and
@@ -3651,18 +3513,15 @@ shows the relative error falling to `7.478e-12` at $h = 10^{-5}$ and then rising
 by seven orders of magnitude as $h$ shrinks further. The shape is the sum of
 the two competing terms: truncation falling like $h^2$, roundoff rising like
 $1/h$.
-
 **Part B: at $h = 10^{-16}$ the answer is exactly `0.0`,** a 100% relative
 error, and the sweep prints `f(x+h) == f(x)` as `True` to show why. The gap
 between doubles near $f(1.3)$ is `2.220e-16`, so the step lands below the
 resolution of the function value and the numerator vanishes. Nothing raises.
-
 **Part C: $\varepsilon^{1/3}|f(x)|$ needs no derivatives and works.** The lesson
 checks it at five values of $x$ and gets between `2.553e-12` and `5.460e-11`
 every time, without being told anything about $f'$. The scaling by $|f(x)|$ is
 what makes it transfer: the step should be small relative to the *size of the
 function's output*, not a fixed constant.
-
 **Part D: the complex step is exact, not merely better.** For
 $f(x) = x e^x$ at $x = 2$ it returns `22.16716829679195` with relative error
 `0.000e+00`, where the best central difference manages `1.329e-10`. The reason
@@ -3901,7 +3760,6 @@ because it changes verdict when the function is rescaled: multiplying $f$ by
 $10^{-9}$ divides every residual by a billion and leaves every root unchanged.
 The estimate $|f/f'|$ is invariant under exactly that rescaling, because $f$
 and $f'$ scale together.
-
 **The solver reports failure, and that is the feature.** For
 `rel_tol=1e-16` and below it returns `converged=False` after 100 iterations.
 Crucially, the *value* it hands back is still perfectly plausible --
@@ -3909,11 +3767,9 @@ Crucially, the *value* it hands back is still perfectly plausible --
 tolerance does not produce an obviously broken answer; it produces the best
 available answer and then cannot confirm it. Only the status distinguishes the
 two, which is why a production solver returns it.
-
 **`no bracket` is also a real outcome.** Asked to solve $x^2 - 2$ on $[3,4]$,
 where $f$ is positive at both ends, the solver raises rather than returning a
 number. A solver that guesses here will be believed.
-
 **On the default.** Around `1e-12` for float64 and `1e-6` for float32: both
 achievable, both far below anything a caller will notice, and both comfortably
 above the noise floor. The rule to remember is that a tolerance is a
@@ -4099,7 +3955,7 @@ for func, a, b, exact, label in EXACTS:
 print("Read the panel counts against the target of 1e-10.")
 print()
 print("On the smooth integrand Simpson needs 1024 panels and midpoint needs")
-print("65536 -- a factor of 64 in work for the extra two powers of accuracy.")
+print("65,536 -- a factor of 64 in work for the extra two powers of accuracy.")
 print("The trapezoid does not reach the target at all within 200000 panels,")
 print("which is the O(h^2) rate being honest about what it costs.")
 print()
@@ -4163,14 +4019,12 @@ break it, and they break it *differently*:
   5.7, losing its second power. Simpson's advantage comes from cubic
   cancellation across a whole panel, and a corner inside a panel destroys that
   while leaving the leading term intact.
-
 **So "accurate to 1e-12" is incomplete without saying what was integrated.**
 The lesson confirms this by searching for panel counts that reach $10^{-10}$:
-on the smooth integrand Simpson needs 1024 and midpoint 65536, a factor of 64
+on the smooth integrand Simpson needs 1024 and midpoint 65,536, a factor of 64
 in work for the extra two powers; on $\sqrt{x}$ *nothing* reaches the target
 within 200000 panels; on $|x|^{1.5}$ Simpson needs 16384, sixteen times worse
 than the smooth case.
-
 **Which is why production quadrature does not trust the asymptotic order.** It
 computes the answer with $n$ panels and with $2n$, and stops when the two agree
 to the tolerance regardless of what the theory predicted. That is the same
@@ -4448,7 +4302,6 @@ evidence, not just a value:
   digits to expect from that step.
 - `audit` converts an absolute error into a DIGIT count and asserts against a
   stated requirement.
-
 **The harness is the part worth copying.** Every number in this lesson was wrong
 at some point while it was being written -- a swapped sign, an off-by-one axis,
 a `Fraction` with no `sqrt`, a root-finding bracket with no root in it. None of
@@ -4489,18 +4342,11 @@ digits against an independently computed reference" can.
 - Bisection's guarantee is a theorem ($w/2^{n+1}$ after $n$ halvings) and
   needs only a sign change. Newton's is local and can cycle: on
   $x^3 - 2x + 2$ from $x_0 = 0$ it alternates 0 and 1 forever. Keeping a
-  bisection bracket around a Newton step gives both the speed and the safety,
-  which is why Brent's method is shaped that way.
-- Bisection's guarantee is a theorem ($w/2^{n+1}$ after $n$ halvings) and
-  needs only a sign change. Newton's is local and can cycle: on
-  $x^3 - 2x + 2$ from $x_0 = 0$ it alternates 0 and 1 forever. Keeping a
   bisection bracket around a Newton step gives both the speed and the
   safety, which is why Brent's method is shaped that way -- and a
   tolerance is a request, not a guarantee: choose about `1e-12` for
   float64, always pass `max_iter`, and report rather than hide a solver
   that could not reach it.
-  always pass `max_iter`, and treat a solver that cannot reach its tolerance as
-  something to report rather than something to hide.
 
 ## Next
 
@@ -4513,13 +4359,11 @@ before it can be trusted, and that proof is the tool that makes it precise.
 stopped being hand-waving. **Part 03** gave you vectors and matrices, which
 turned out to be the native data type of essentially all of modern computing,
 and **Part 04** gave you the calculus that describes how those things change.
-
 **Part 05** added uncertainty, because most real systems must act without
 knowing; **Part 06** gave you the formal language for cost; **Part 07** put the
 linear algebra into 3D; **Part 08** used the calculus to find optima.
 **Part 09** went back to arithmetic itself and showed that exact arithmetic --
 modular, with its own geometry -- is what integrity and security rest on.
-
 **Part 10**, which ends here, closed the loop from both ends. Lesson 120 gave
 you the array type that every one of those mathematical ideas is actually
 implemented as, plus the exact rules governing its shape -- including the rules

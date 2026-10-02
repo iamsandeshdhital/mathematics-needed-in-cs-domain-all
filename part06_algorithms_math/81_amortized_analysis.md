@@ -264,7 +264,9 @@ aggregate method may still work.
 `$\Phi$` the potential, `$C$` the capacity of a dynamic array, `$n$` its size
 (also used for the number of operations where no array is involved), `$f > 1$` the
 growth factor, `$k` the constant growth increment, and `$c$` the constant in the
-aggregate bound. `$\epsilon$` is the heavy-operation fraction.
+aggregate bound. `$\epsilon$` is the heavy-operation fraction, `$K` the sliding
+window's width, `$N` a disjoint-set universe, `$m` its number of operations,
+and `$\alpha$` the inverse Ackermann function.
 
 | Symbol | Formula | In plain words | When you use it |
 | --- | --- | --- | --- |
@@ -288,14 +290,14 @@ aggregate bound. `$\epsilon$` is the heavy-operation fraction.
 | $\epsilon$-heavy theorem | rare-but-expensive $\Rightarrow$ amortised `$O(1/\epsilon)$` | the expensive ones need not be rare *in time* | queue compaction: 8 of 4000, measured `0.331` moves per operation |
 | peak vs amortised | amortised $\hat c$ and worst case $w(n)$ hold **simultaneously** | the average says nothing about the maximum | why amortised bounds are the right tool for throughput and the wrong one for latency |
 | shrink thrash | alternating append/pop, halving at half full | resizes on *every* operation | still $\Theta(1)$ — but the constant is `511.98` copies per operation instead of `1` |
+| balance ≡ potential | `$B_k = \hat T\, k - \sum_{i\le k}T_i = \Phi_k - \Phi_0$` | the bank balance **is** the potential, up to a constant | the crispest statement that accounting and potential are one method |
+| union-find total | `$\sum T_i \le c\, m\,\alpha(N)$`, so `$O(N\alpha(N))$` | about 4 parent traversals per operation, **for every sequence** | disjoint-set union; needs rank **and** compression together |
+| rank bound on depth | `$d \le \lfloor \log_2 N \rfloor$` | rank `r` needs `2^r` elements, so merging equal ranks sets the bound | union by rank alone — amortised $O(\log N)$, not $\alpha$ |
+| α definition | `$A(0)=1`, `$A(k+1)=2^{A(k)}`, `$\alpha(n)=\min\{k\ge0: A(k)\ge n\}$` | a **tower of twos**, not a tower of threes | `$\le 4$` for `$n \le 65{,}536$`, and `$\le 5$` for every `$n$` that exists |
+| sliding window, rolling sum | `$s_{i+1} = s_i - v_i + v_{i+K}$`, total `$K + 2(n-K) = 2n - K$` | consecutive windows share `K-1` elements | `2.0050` touches per window at `$n=100000$`, `$K=500$`; `249.4x` better than rescanning |
+| sliding window, monotonic deque | `$\sum T_i \le 2n$` — one push and at most one pop per element | the rolling **maximum** at any window size | `2.0000` deque ops per element; longest deque `19` in a window of `500` |
 
 ---
-| union-find cost | `$m \cdot \alpha(N)$` | `α` is the inverse Ackermann function; `α(N) ≤ 4` for every `N` in 64 bits | disjoint-set union, Kruskal, connected components |
-| rank bound on depth | `$d \le \lfloor \log_2 N \rfloor` | rank `r` needs `2^r` elements, so merging equal ranks sets the bound | union by rank alone, without path compression |
-| α definition | `$\alpha$ = least `k` with a tower of `k` threes `$\ge N$` | grows so slowly it is never worth computing | justifying the claim that DSU is 'constant time' |
-| sliding window | `$s_{i+1} = s_i - v_i + v_{i+k}$` | consecutive window sums share `k-1` elements | max/min window sums, longest distinct substring |
-| potential identity | `$\sum c_i \le \sum \hat c_i + \Phi(s_n) - \Phi(s_0)$` with `$\Phi \ge 0$` | real cost bounded by amortised charge plus banked potential | proving any amortised bound |
-| array potential | `$\Phi = \lvert A\rvert - \text{size}$` | unused slots are banked credit | the doubling-array proof under the potential method |
 
 ## Worked Example
 
@@ -1037,8 +1039,8 @@ Output:
   1 + 2 + ... + k, because the keys were inserted in order.  It is
   Theta(n) PER LOOKUP -- worst case and average case both, and there is no
   sequence of operations to amortise, because each lookup stands alone.
-  GoodHash/n sits between 1.22 and 1.33: about 1.25 probes per lookup, the
-  signature of a chain of length 1.25 in a half-full table.
+  GoodHash/n sits between 1.12 and 1.28: about 1.2 probes per lookup, the
+  signature of a chain of length about 1.2 in a half-full table.
 
   A dynamic array is the mirror image: its per-operation worst case is
   Theta(n), it makes no probabilistic claim at all, and its amortised cost
@@ -2744,6 +2746,8 @@ print("  does take O(n/64) machine words.  Nobody measures it, because the")
 print("  interesting question was never the bit count.")
 ```
 
+Output:
+
 ```text
 === (a) exact total flips over 2^n - 1 increments ===
 
@@ -3180,6 +3184,8 @@ print("  than O(1) amortised.  The amortised bound is a statement about a")
 print("  TOTAL, so a rarer expensive event wins.  This is Exercise 6's queue")
 print("  arriving at the same place by a different route.")
 ```
+
+Output:
 
 ```text
 === (c) the proposed rule does NOT give O(1) amortised ===
@@ -3670,15 +3676,15 @@ itself, is an engineering decision that has to be measured.**
   accounting charges every operation the same price and tracks a balance, and
   potential picks $\Phi$ up front.
 - A geometric series is dominated by its last term and an arithmetic series is
-  not. That one distinction is the whole lesson: doubling gives resize sizes
+  not, and that one distinction is the whole lesson: doubling gives resize sizes
   $1, 2, 4, \dots$ and a total of `4,092` copies for $n = 4096$ (`0.9990` per
   append), while growing by a constant gives $1, 5, 9, \dots$ and `8,386,560`
-  copies (`2047.5000` per append) from an identical interface.
-- The growth factor is the only free parameter, and it moves the *constant*, not
-  the class: $\frac{1}{f-1}$ copies per append, measured at `8.8263` for
-  CPython's $f \approx 1.125$ and `0.9999` for $f = 2$, for `9.3%` versus `0%`
-  wasted slots. $\frac{1}{f-1} + \frac{f-1}{2}$ is minimised at $f = 2.414$, and
-  no library uses it because a wasted byte and a wasted copy are not priced alike.
+  copies (`2047.5000` per append) from an identical interface. The growth factor
+  moves the *constant*, not the class: $\frac{1}{f-1}$ copies per append,
+  measured `8.8263` at CPython's $f \approx 1.125$ against `0.9999` at $f = 2$,
+  for `9.3%` versus `0%` wasted slots — and $\frac{1}{f-1} + \frac{f-1}{2}$ is
+  minimised at $f = 2.414$, which no library uses because a wasted byte and a
+  wasted copy are not priced alike.
 - A potential is a bounded quantity that rises when an operation is expensive
   and falls by little when it is cheap. $\Phi = 2n - C$ gives a constant `3` for
   both kinds of array append — the code's set of distinct amortised costs over

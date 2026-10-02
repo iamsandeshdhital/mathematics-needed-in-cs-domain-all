@@ -91,6 +91,45 @@ truth tables give equal DNFs. ∎
 *Proof.* One term per true row, and there are `2ⁿ` rows. ∎ This is the theorem
 that makes normal forms useless in practice, and section 5 shows it happening.
 
+## Formula Sheet
+
+Notation follows [SYMBOLS.md](../SYMBOLS.md). The five connectives come from
+[Lesson 10](10_propositions_and_connectives.md); this lesson adds the truth
+table, equivalence, and the normal forms.
+
+| Symbol | Formula | In plain words | When you use it |
+| --- | --- | --- | --- |
+| `$\perp \Vdash F$` | `$a \Vdash F$` for every assignment `a` of the variables in `F` | `F` is true on every row — a tautology | checking that a condition can never reject anything. A tautology used as an `if` is a bug report |
+| `$F \dashv\vdash$` | `$F \equiv G$ iff `col(F) == col(G)` | the two formulas do the same thing on every input | proving a rewrite preserves behaviour. One string comparison, exhaustively |
+| `$\neg$` | `$\neg T = F$`, `$\neg F = T$` | flip the value | the only unary connective. In Python use `not`, not `~`: `~True` is `-2` |
+| `$\wedge$` | true only when **both** are true | AND | Python `and`. **Short-circuits**, so operand order changes which parts run |
+| `$\vee$` | false only when **both** are false | OR | Python `or`. Also short-circuits |
+| `$F \to G$` | `$\neg F \vee G$` | false only when `F` is true and `G` is false | Python `~F or G`. Never `F and not G` |
+| `$F \leftrightarrow G$` | `$(F \to G) \wedge (G \to F)$` | both directions hold | biconditional. `F == G` on booleans is exactly this |
+| $2^n$ | | the number of rows over `n` variables, and also the number of distinct boolean functions on `n` variables | the cost of a truth table: 4 rows for `n=2`, 16 for `n=4`, 1,024 for `n=10` |
+| $2^{2^n}$ | | the number of *different formulas* over `n` variables, counting syntactically | why "all formulas" is not a search space anyone enumerates: `n=4` already gives 65,536 distinct behaviours |
+| De Morgan | `$\neg(F \wedge G) \equiv \neg F \vee \neg G$`, `$\neg(F \vee G) \equiv \neg F \wedge \neg G$` | push a NOT through by flipping the operator | the step that makes NAND universal: `~(a & b)` becomes `~a | ~b` |
+| idempotence | `$F \vee F \equiv F$`, `$F \wedge F \equiv F$` | repeating a thing changes nothing | first thing to try when a condition is long |
+| absorption | `$F \vee (F \wedge G) \equiv F$` | if `F` is already a disjunct, the rest is dead | the most common dead branch in real code. The lesson's own search finds it every time |
+| distributivity | `$F \wedge (G \vee H) \equiv (F \wedge G) \vee (F \wedge H)$` | AND over OR fans out | the reverse, `(F∨G)∧F = F∨(G∧F)`, is what removes a conjunct |
+| double negation | `$\neg\neg F \equiv F$` | two NOTs cancel | the normal-form step that guarantees every literal is a bare variable or its negation |
+| a *literal` | a variable or `~variable` | | the atoms of a normal form. A formula with no NOT on a compound is in **negation normal form** |
+| DNF | `$\bigvee_{i} \bigwedge_{j} \ell_{ij}$` — an OR of AND-terms of literals | "these are the combinations of facts that make it true" | rule engines, query planners, spreadsheet dependency trees. **At most `2ⁿ` terms** — one per true row |
+| CNF | `$\bigwedge_{i} \bigvee_{j} \ell_{ij}$` — an AND of OR-clauses of literals | "all of these constraints hold" | what SAT solvers consume, which is why clause-based solving works |
+| DNF of a contradiction | `$\varnothing$` — no terms | | the empty OR. `dnf_to_formula` writes it as `p & ~p` because an empty disjunction has nothing to return |
+| CNF of a tautology | `$\varnothing$` — no clauses | | the empty AND, written as `p | ~p` for the same reason |
+| `$F \models G$` | every assignment satisfying `F` also satisfies `G`; equivalently `$F \to G$` is a tautology | `F` is a stronger condition than `G` | one-directional: `$p \models p \vee q$` holds, and `$\neg(p \wedge q) \models p \to q$` does not |
+
+**Domain restrictions, which are where answers go wrong.** Row order is fixed
+once and for all (`FF, FT, TF, TT` over `p, q`) — a column is only comparable to
+another column if both were computed in the same order, and comparing `0111` to
+`0011` is a bug, not a proof. Truth tables are complete **only for the variables
+that actually appear**: `p & q | p & ~r` mentions `r`, so a table over `p` and
+`q` alone does not settle it. And the 16-row claim in the Worked Example depends
+on the four named variables; add a fifth and the "one false row" becomes one row
+out of 32, which changes the security argument even though the condition is
+unchanged.
+
 ## Worked Example
 
 **The condition.** An access check someone wrote last year:
@@ -769,46 +808,6 @@ optimise for gate count, because in hardware that is the cost that matters, and
 optimising for gate count is not the same as optimising for readability.
 Why tempting: "equivalent" gets read as "the same", and once two things are
 called the same you stop expecting them to look different.
-
-## Formula Sheet
-
-Notation follows [SYMBOLS.md](../SYMBOLS.md). The five connectives come from
-[Lesson 10](10_propositions_and_connectives.md); this lesson adds the truth
-table, equivalence, and the normal forms.
-
-| Symbol | Formula | In plain words | When you use it |
-| --- | --- | --- | --- |
-| `$\perp \Vdash F$` | `$a \Vdash F$` for every assignment `a` of the variables in `F` | `F` is true on every row — a tautology | checking that a condition can never reject anything. A tautology used as an `if` is a bug report |
-| `$F \dashv\vdash$` | `$F \equiv G$ iff `col(F) == col(G)` | the two formulas do the same thing on every input | proving a rewrite preserves behaviour. One string comparison, exhaustively |
-| `$\neg$` | `$\neg T = F$`, `$\neg F = T$` | flip the value | the only unary connective. In Python use `not`, not `~`: `~True` is `-2` |
-| `$\wedge$` | true only when **both** are true | AND | Python `and`. **Short-circuits**, so operand order changes which parts run |
-| `$\vee$` | false only when **both** are false | OR | Python `or`. Also short-circuits |
-| `$F \to G$` | `$\neg F \vee G$` | false only when `F` is true and `G` is false | Python `~F or G`. Never `F and not G` |
-| `$F \leftrightarrow G$` | `$(F \to G) \wedge (G \to F)$` | both directions hold | biconditional. `F == G` on booleans is exactly this |
-| $2^n$ | | the number of rows over `n` variables, and also the number of distinct boolean functions on `n` variables | the cost of a truth table: 4 rows for `n=2`, 16 for `n=4`, 1,024 for `n=10` |
-| $2^{2^n}$ | | the number of *different formulas* over `n` variables, counting syntactically | why "all formulas" is not a search space anyone enumerates: `n=4` already gives 65,536 distinct behaviours |
-| De Morgan | `$\neg(F \wedge G) \equiv \neg F \vee \neg G$`, `$\neg(F \vee G) \equiv \neg F \wedge \neg G$` | push a NOT through by flipping the operator | the step that makes NAND universal: `~(a & b)` becomes `~a | ~b` |
-| idempotence | `$F \vee F \equiv F$`, `$F \wedge F \equiv F$` | repeating a thing changes nothing | first thing to try when a condition is long |
-| absorption | `$F \vee (F \wedge G) \equiv F$` | if `F` is already a disjunct, the rest is dead | the most common dead branch in real code. The lesson's own search finds it every time |
-| distributivity | `$F \wedge (G \vee H) \equiv (F \wedge G) \vee (F \wedge H)$` | AND over OR fans out | the reverse, `(F∨G)∧F = F∨(G∧F)`, is what removes a conjunct |
-| double negation | `$\neg\neg F \equiv F$` | two NOTs cancel | the normal-form step that guarantees every literal is a bare variable or its negation |
-| a *literal` | a variable or `~variable` | | the atoms of a normal form. A formula with no NOT on a compound is in **negation normal form** |
-| DNF | `$\bigvee_{i} \bigwedge_{j} \ell_{ij}$` — an OR of AND-terms of literals | "these are the combinations of facts that make it true" | rule engines, query planners, spreadsheet dependency trees. **At most `2ⁿ` terms** — one per true row |
-| CNF | `$\bigwedge_{i} \bigvee_{j} \ell_{ij}$` — an AND of OR-clauses of literals | "all of these constraints hold" | what SAT solvers consume, which is why clause-based solving works |
-| DNF of a contradiction | `$\varnothing$` — no terms | | the empty OR. `dnf_to_formula` writes it as `p & ~p` because an empty disjunction has nothing to return |
-| CNF of a tautology | `$\varnothing$` — no clauses | | the empty AND, written as `p | ~p` for the same reason |
-| `$F \models G$` | every assignment satisfying `F` also satisfies `G`; equivalently `$F \to G$` is a tautology | `F` is a stronger condition than `G` | one-directional: `$p \models p \vee q$` holds, and `$\neg(p \wedge q) \models p \to q$` does not |
-
-**Domain restrictions, which are where answers go wrong.** Row order is fixed
-once and for all (`FF, FT, TF, TT` over `p, q`) — a column is only comparable to
-another column if both were computed in the same order, and comparing `0111` to
-`0011` is a bug, not a proof. Truth tables are complete **only for the variables
-that actually appear**: `p & q | p & ~r` mentions `r`, so a table over `p` and
-`q` alone does not settle it. And the 16-row claim in the Worked Example depends
-on the four named variables; add a fifth and the "one false row" becomes one row
-out of 32, which changes the security argument even though the condition is
-unchanged.
-
 ## Multiple Choice Questions
 
 **Q1.** The lesson's brute-force search returns
@@ -2796,13 +2795,22 @@ print("whether two formulas are the same formula.")
 Output:
 
 ```
+======================================================================
+Sanity check: diagram counts match brute force
+======================================================================
+
 function          nodes   accepts  brute force  match
 p and q               2         2            2  ok
 p or q                2         6            6  ok
 p iff q               3         4            4  ok
 ~p and (q or r)       3         3            3  ok
 
+All four agree with brute force, so the diagram computes the right
+function rather than merely a tidy structure.
+
+======================================================================
 1. Equivalence is diagram identity
+======================================================================
 
   (p | q) & (r | s)        -> node 7
   (p&r)|(p&s)|(q&r)|(q&s) -> node 7
@@ -2810,6 +2818,14 @@ p iff q               3         4            4  ok
   nodes needed            : 4
   assignments accepted    : 9 of 16
   brute force confirms    : 9
+
+One canonical diagram for two very different-looking formulas, and the
+count of 9 out of 16 matches brute force. That is the value proposition:
+you never enumerate the rows by hand.
+
+======================================================================
+2. A short formula with an enormous DNF and a small diagram
+======================================================================
 
 the function:  x0 OR (y0a AND y0b) OR (y1a AND y1b) OR ...
 
@@ -2821,7 +2837,14 @@ the function:  x0 OR (y0a AND y0b) OR (y1a AND y1b) OR ...
     16     33      232          8,589,934,592           17,179,869,185          33
     32     65      456 36,893,488,147,419,103,232 147,573,952,589,676,412,929          65
 
+At 32 units there are 65 variables. The truth table has 2^65 rows, the
+DNF has more than 10**36 terms, and the source is under 460 characters.
+The diagram has 65 nodes, because every clause has the same shape so
+every branch of the search computes the same subfunction.
+
+======================================================================
 3. Where it falls apart: the same function, a different variable order
+======================================================================
 
  clauses   source   nodes, good   nodes, bad     ratio
        2       36             3            3        1x
@@ -2830,6 +2853,22 @@ the function:  x0 OR (y0a AND y0b) OR (y1a AND y1b) OR ...
        8      120            15          255       17x
       10      148            19        1,023       54x
       12      176            23        4,095      178x
+
+Identical formula, identical variable count, identical source length.
+The only difference is the order in which the questions are asked, and
+it costs a factor of 178 at 12 clauses. The good order grows linearly
+and the bad order grows exponentially.
+
+That is the honest summary of the whole approach. A BDD's size depends
+on the regularity of the function, not the length of the program. Two
+formulas of identical length can differ by orders of magnitude in
+diagram size, and you cannot tell which from reading the source.
+
+Which is why practical equivalence checking is done with SAT solvers.
+They share no structure, so they pay no price when there is none to
+share, and they have strong heuristics for when there is. The logic is
+the same either way: turn a boolean problem into a formula, then decide
+whether two formulas are the same formula.
 ```
 
 Section 2 is the result that justifies the whole technique: 65 variables, a DNF

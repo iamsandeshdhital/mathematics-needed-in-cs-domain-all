@@ -78,6 +78,42 @@ a function, and it becomes a number only when you pin `x`. This is why textbooks
 distinguish a formula from a function at all, and it is not a distinction you
 need to make in code.
 
+## Formula Sheet
+
+This lesson introduces no mathematics of its own — it introduces the *marks* —
+so this table is a translation table. Every notation the lesson shows up,
+including the ones that only appear in the Common Mistakes section, because those
+are the ones that trip people up.
+
+| Symbol | Formula | In plain words | When you use it |
+| --- | --- | --- | --- |
+| `$\{x \in S : P(x)\}$` | read `S` left to right, `P(x)` right of the colon | build the set of everything in `S` that satisfies `P` | set comprehension. The colon is Python's `for` **plus** `if`: `{x for x in S if P(x)}` |
+| `$x \in S$` | | `x` is one of the members of `S` | stating a domain, as in `x ∈ ℤ` |
+| `$A \subseteq B$` | every `$a$` with `$a \in A$` also has `$a \in B$` | every member of `A` is in `B`, and `A` may equal `B` | the non-strict reading, which is standard. `A ⊂ B` may mean *proper* subset or just subset depending on the author — **check the convention** |
+| `$\Sigma_{i=1}^{n} g(i)$` | | add up `g(i)` for `i` counting `1, 2, 3, …, n` | every running total in the course. `range(1, n + 1)`, **not** `range(n)` |
+| `$\Sigma_{i=0}^{n-1} g(i)$` | | the same sum with zero-based bounds | the shape Python actually uses, and why the two conventions produce off-by-one bugs |
+| `$\Pi_{i=1}^{n} a_i$` | | multiply `a_1 · a_2 · … · a_n` | products, and `n!` which is `Π_{i=1}^{n} i` |
+| `$f(n) = O(g(n))$` | `$\exists c>0,\ n_0>0:\ \forall n \ge n_0,\ f(n) \le c\,g(n)$` | past some threshold, `f` never exceeds a fixed multiple of `g` | growth claims. About the limit, never about milliseconds. `Θ` additionally requires a matching lower bound |
+| `$\forall x \in D,\ P(x)$` | | every `x` in domain `D` satisfies `P` | `all(...)`. **The domain `D` is part of the claim**: `∀x ∈ ℕ, x > 0` is true, `∀x ∈ ℤ, x > 0` is false |
+| `$\exists x \in D,\ P(x)$` | | at least one `x` in `D` satisfies `P` | `any(...)`. True over an empty domain, and that is a real answer, not an error |
+| `$\neg(\forall x \in D,\ P(x)) \iff \exists x \in D,\ \neg P(x)$` | | "not every" is the same claim as "some … not" | negating a quantifier flips it **and** negates the predicate. Both are `True` in the lesson's user example |
+| `$\mu = \frac{1}{\lvert S\rvert}\Sigma_{s \in S} s$` | | the average of `S` | the mean. **Undefined when `S` is empty** — the `1/0` is the hidden bug, so the empty case is a real branch, not a pedantic point |
+| `$\sigma^2 = \frac{1}{\lvert S\rvert}\Sigma_{s \in S} (s - \mu)^2$` | | average squared distance from the mean | variance. Divides by `$\lvert S\rvert$`, not `$\lvert S\rvert - 1$` — population, not sample |
+| `$\lceil x \rceil$`, `$\lfloor x \rfloor$` | | `x` rounded up; `x` rounded down | index arithmetic, and $\lfloor \log_2 n \rfloor$ = how many times you can halve `n` = `n.bit_length() - 1` |
+| `$\lvert x \rvert$` | | absolute value | on a number. **`$f^{-1}$` is not `$1/f$`** — see the next two rows |
+| `$\lvert S \rvert$` | | how many elements `S` has | `len(S)`. A different meaning from the row above, and the two marks are identical |
+| `$f \circ g$` | `$f(g(x))$$ | apply `g` first, then `f` | composition. **Not commutative**: the lesson's `f(v)=v*10` and `g(v)=v+3` give `f∘g(3) = 60` but `g∘f(3) = 33` |
+| `$f^{-1}$` | | the function that undoes `f` | the inverse *function*. With `f(v) = 10v`, `f⁻¹(70) = 10`, while `$1/f(7) ≈ 0.0143$` |
+| `$A^{T}$` | | flip rows and columns | the transpose. A superscript that is **not** a power — same mark as `x²`, different meaning |
+| `$f^{2}$` (on a function) | `$f(f(x))$` | `f` applied twice | composition, in this book. Contrast `$x^{2}$` on a *number*, which is squaring. The mark is identical; the meaning depends on what sits underneath |
+| `$a \mid b$` | `$\exists k \in \mathbb{Z},\ b = ak$` | `b` is a whole multiple of `a` | divisibility. Reads "a divides b" |
+| `$x \bmod m$`, `$x \equiv r \pmod m$` | `$m \mid (x - r)$` | remainder; or "x and r leave the same remainder" | congruences, hashing, and the worked example's set builder |
+| `$x \equiv 3 \pmod{5^{2}}$` | | `x` and 3 agree mod **25**, not mod 5 | the Worked Example. `(mod 5)` is a trailing qualifier like a unit suffix, so the exponent applies to the modulus. The two readings give sets of 5 and 24 members in the window used |
+| `$x^{2} + 1$` with `x` free | | a *function* of `x`, not a number | any formula with a free variable. Calling it with `x = 0, 2, 5` gives `1, 5, 26` |
+| bound variable | introduced by `∀`, `∃`, `Σ_{i=…}`, set-builder braces | a name fixed inside its own subpart and destroyed with it | a Python function parameter or loop variable. `i` under a summation is a function local, not "whatever the last loop left" |
+| free variable | not introduced by any binder | its value comes from outside, so the formula is a function of it | a Python name resolved from an enclosing scope. Finding the free variables and their types is the first step of reading anything |
+| vacuous truth | "for every `x` in `∅`, `P(x)`" | true, because there is no `x` to fail | the trap in the `is_prime` guard: dropping `p > 1` makes `range(2, -4)` empty, and a naive translation returns `True` for `-4`, which is not prime |
+
 ## Worked Example
 
 Reading `{x ∈ ℤ : x ≡ 3 (mod 5)²}` slowly, clause by clause. This is the kind of
@@ -527,43 +563,6 @@ free variables and their types is the first step of reading anything, and
 getting it wrong makes the rest unreadable.
 Why tempting: it is a habit from function signatures, and it usually works, so
 the failures are rare and hard to attribute.
-
-## Formula Sheet
-
-This lesson introduces no mathematics of its own — it introduces the *marks* —
-so this table is a translation table. Every notation the lesson shows up,
-including the ones that only appear in the Common Mistakes section, because those
-are the ones that trip people up.
-
-| Symbol | Formula | In plain words | When you use it |
-| --- | --- | --- | --- |
-| `$\{x \in S : P(x)\}$` | read `S` left to right, `P(x)` right of the colon | build the set of everything in `S` that satisfies `P` | set comprehension. The colon is Python's `for` **plus** `if`: `{x for x in S if P(x)}` |
-| `$x \in S$` | | `x` is one of the members of `S` | stating a domain, as in `x ∈ ℤ` |
-| `$A \subseteq B$` | every `$a$` with `$a \in A$` also has `$a \in B$` | every member of `A` is in `B`, and `A` may equal `B` | the non-strict reading, which is standard. `A ⊂ B` may mean *proper* subset or just subset depending on the author — **check the convention** |
-| `$\Sigma_{i=1}^{n} g(i)$` | | add up `g(i)` for `i` counting `1, 2, 3, …, n` | every running total in the course. `range(1, n + 1)`, **not** `range(n)` |
-| `$\Sigma_{i=0}^{n-1} g(i)$` | | the same sum with zero-based bounds | the shape Python actually uses, and why the two conventions produce off-by-one bugs |
-| `$\Pi_{i=1}^{n} a_i$` | | multiply `a_1 · a_2 · … · a_n` | products, and `n!` which is `Π_{i=1}^{n} i` |
-| `$f(n) = O(g(n))$` | `$\exists c>0,\ n_0>0:\ \forall n \ge n_0,\ f(n) \le c\,g(n)$` | past some threshold, `f` never exceeds a fixed multiple of `g` | growth claims. About the limit, never about milliseconds. `Θ` additionally requires a matching lower bound |
-| `$\forall x \in D,\ P(x)$` | | every `x` in domain `D` satisfies `P` | `all(...)`. **The domain `D` is part of the claim**: `∀x ∈ ℕ, x > 0` is true, `∀x ∈ ℤ, x > 0` is false |
-| `$\exists x \in D,\ P(x)$` | | at least one `x` in `D` satisfies `P` | `any(...)`. True over an empty domain, and that is a real answer, not an error |
-| `$\neg(\forall x \in D,\ P(x)) \iff \exists x \in D,\ \neg P(x)$` | | "not every" is the same claim as "some … not" | negating a quantifier flips it **and** negates the predicate. Both are `True` in the lesson's user example |
-| `$\mu = \frac{1}{\lvert S\rvert}\Sigma_{s \in S} s$` | | the average of `S` | the mean. **Undefined when `S` is empty** — the `1/0` is the hidden bug, so the empty case is a real branch, not a pedantic point |
-| `$\sigma^2 = \frac{1}{\lvert S\rvert}\Sigma_{s \in S} (s - \mu)^2$` | | average squared distance from the mean | variance. Divides by `$\lvert S\rvert$`, not `$\lvert S\rvert - 1$` — population, not sample |
-| `$\lceil x \rceil$`, `$\lfloor x \rfloor$` | | `x` rounded up; `x` rounded down | index arithmetic, and $\lfloor \log_2 n \rfloor$ = how many times you can halve `n` = `n.bit_length() - 1` |
-| `$\lvert x \rvert$` | | absolute value | on a number. **`$f^{-1}$` is not `$1/f$`** — see the next two rows |
-| `$\lvert S \rvert$` | | how many elements `S` has | `len(S)`. A different meaning from the row above, and the two marks are identical |
-| `$f \circ g$` | `$f(g(x))$$ | apply `g` first, then `f` | composition. **Not commutative**: the lesson's `f(v)=v*10` and `g(v)=v+3` give `f∘g(3) = 60` but `g∘f(3) = 33` |
-| `$f^{-1}$` | | the function that undoes `f` | the inverse *function*. With `f(v) = 10v`, `f⁻¹(70) = 10`, while `$1/f(7) ≈ 0.0143$` |
-| `$A^{T}$` | | flip rows and columns | the transpose. A superscript that is **not** a power — same mark as `x²`, different meaning |
-| `$f^{2}$` (on a function) | `$f(f(x))$` | `f` applied twice | composition, in this book. Contrast `$x^{2}$` on a *number*, which is squaring. The mark is identical; the meaning depends on what sits underneath |
-| `$a \mid b$` | `$\exists k \in \mathbb{Z},\ b = ak$` | `b` is a whole multiple of `a` | divisibility. Reads "a divides b" |
-| `$x \bmod m$`, `$x \equiv r \pmod m$` | `$m \mid (x - r)$` | remainder; or "x and r leave the same remainder" | congruences, hashing, and the worked example's set builder |
-| `$x \equiv 3 \pmod{5^{2}}$` | | `x` and 3 agree mod **25**, not mod 5 | the Worked Example. `(mod 5)` is a trailing qualifier like a unit suffix, so the exponent applies to the modulus. The two readings give sets of 5 and 24 members in the window used |
-| `$x^{2} + 1$` with `x` free | | a *function* of `x`, not a number | any formula with a free variable. Calling it with `x = 0, 2, 5` gives `1, 5, 26` |
-| bound variable | introduced by `∀`, `∃`, `Σ_{i=…}`, set-builder braces | a name fixed inside its own subpart and destroyed with it | a Python function parameter or loop variable. `i` under a summation is a function local, not "whatever the last loop left" |
-| free variable | not introduced by any binder | its value comes from outside, so the formula is a function of it | a Python name resolved from an enclosing scope. Finding the free variables and their types is the first step of reading anything |
-| vacuous truth | "for every `x` in `∅`, `P(x)`" | true, because there is no `x` to fail | the trap in the `is_prime` guard: dropping `p > 1` makes `range(2, -4)` empty, and a naive translation returns `True` for `-4`, which is not prime |
-
 ## Multiple Choice Questions
 
 **Q1.** A textbook writes `f²(x)` where `f` is a function from the reals to the
@@ -1753,6 +1752,26 @@ Theta(f(n))             no  growth is exactly this
 lim f(x)                no  what f approaches, not a value of f
 ------------------------------------------------------------------------------
 27 of 31 notations evaluate to an actual value.
+
+Bindings: S = {1,2,3,4}, T = {3,4,5}, x = 2.7, n = 10, m = 7, a = 3, b = 12,
+          DOMAIN = 1..5, f = v*10, g = v+3, and f^-1 = v//10.
+
+Look at the two inverse entries:
+  f^-1(70) = 10  <- undo f: 70 came from 7
+  1 / f(7) = 0.014285714285714285  <- a fraction, not an inverse
+
+And at composition against application:
+  f o g at 3 = 60   (g first, then f)
+  g o f at 3 = 33   (f first, then g)
+
+The five that do NOT run, and why:
+  O(f(n)), Theta(f(n)): a growth claim about a function as n -> infinity.
+    There is no n and no value to print. You cannot call it.
+  |N| : a symbol, not an integer. Python cannot len() an infinite set.
+  lim f(x): what f approaches, not any value f actually takes.
+
+Those five are the interesting ones. Notation with no Python equivalent
+is notation carrying mathematics rather than mechanics.
 ```
 
 Three rows in that table are worth staring at, because they are where notation

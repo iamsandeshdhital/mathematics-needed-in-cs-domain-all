@@ -140,6 +140,41 @@ threshold is $\eta = 0.25$. The code below finds exactly that boundary.
 
 ---
 
+## Formula Sheet
+
+| Symbol | Formula | In plain words | When you use it |
+| --- | --- | --- | --- |
+| `$\partial f/\partial x_i(a)$` | `$\lim_{h\to0}\frac{f(a+he_i)-f(a)}{h}$`; $f$ must be defined on a neighbourhood | hold every coordinate but one fixed, take the ordinary one-variable derivative | the entrywise building block of everything below |
+| `$\nabla f(a)$` | `$\left(\frac{\partial f}{\partial x_1},\dots,\frac{\partial f}{\partial x_n}\right)(a)$` | all the partials as one vector | the object SGD moves along |
+| differentiability | `$f(a+h)=f(a)+\nabla f(a)\cdot h+o(\lVert h\rVert)$` as `$h\to0$` | the function is locally linear plus negligible error | the hypothesis under all the theorems; **stronger** than every partial existing |
+| `$\lVert\cdot\rVert$`, `$\cdot$` | dot product and Euclidean norm | multiply-and-add, and square-root-of-sum-of-squares | comparing a gradient with a direction |
+| directional derivative | `$D_u f(a)=\lim_{t\to0}\frac{f(a+tu)-f(a)}{t}=\nabla f(a)\cdot u$` — **requires $\lVert u\rVert = 1$** | how fast $f$ grows moving a unit step along $u$ | any "which way is steepest?" question |
+| steepest ascent / descent | `$\max_{\lVert u\rVert=1}\nabla f\cdot u=\lVert\nabla f\rVert$` at `$u=\nabla f/\lVert\nabla f\rVert$; the minimum is `$-(\lVert\nabla f\rVert)$` at `$u=-\nabla f/\lVert\nabla f\rVert$` | the single best direction, and the single worst | why gradient descent moves along `$\nabla f$` at all (Cauchy–Schwarz) |
+| perpendicularity | `$u$ tangent to `$\{x:f(x)=c\}$` `$\Rightarrow \nabla f\cdot u = 0$` | the gradient is the contour's normal vector | explains zigzagging; gradient descent crosses contours, never follows them |
+| Jacobian `$\left[\frac{\partial g_i}{\partial x_j}\right]$` | `$n\times m$ matrix for `$g:\mathbb{R}^m\to\mathbb{R}^n$`; for `$n=1$` it **is** the gradient as a row | the derivative of a vector-valued function | `torch.autograd` backward of a linear layer |
+| multivariable chain rule | `$\nabla(f\circ g)(x)=J_g(x)^{\mathsf T}\nabla f(g(x))$` | the transpose of the inner Jacobian times the outer gradient | backprop: one transpose-times-vector per layer |
+| scalar form of the chain rule | `$\frac{\partial h}{\partial x_i}=\sum_j\frac{\partial f}{\partial g_j}\frac{\partial g_j}{\partial x_i}$` | sum over every intermediate coordinate | deriving $\nabla(u^2)=2u\,\nabla u$ by hand |
+| Jacobian of a linear layer | `$J_{Wx+b}=W$` (the weight matrix itself) | for `y = Wx`, the derivative *is* `$W$` | why backprop is literally a `GEMM` |
+| adjoint of a linear layer | `$J^{\mathsf T}\bar{y}$`, one matrix-vector product | the transposed multiply on the way back | Exercise 3(d): `dL/dx = [3.7375, 6.7]` |
+| `$\bar{r} = \partial L/\partial r$` for `L=\tfrac12\lVert r\rVert^2` | `$\bar r = r$`; then `$\partial L/\partial W_2 = r\,h^{\mathsf T}$`, `$\partial L/\partial h = W_2^{\mathsf T}r$` | seed the backward pass with the residual | the opening move of every autodiff implementation |
+| total differential / first-order expansion | `$f(a+h)=f(a)+\nabla f(a)\cdot h+O(\lVert h\rVert^2)$` | linear prediction, with the remainder written down | any local model; the reason linearisation is *only* local |
+| second-order term | `$\tfrac12 h^{\mathsf T}Hh$` with `$H=\nabla^2 f$` | the leading thing you threw away | for the quadratic `$x^2+3xy+y^2$, `err = \tfrac12 d^2\cdot 4.97345` exactly |
+| Hessian `$\nabla^2 f$` | for `$x^3+2xy^2-5y$`: `$\begin{pmatrix}6x & 4y\\ 4y & 4x\end{pmatrix}$`, `$\det = 24x^2-16y^2$` | the matrix of second partials | classifying critical points; curvature caps the step size |
+| per-coordinate contraction | for `$f=(x-3)^2+4(y+1)^2$` at step size `$\eta$`: `$x$ shrinks by `$1-2\eta$`, `$y$ by `$1-8\eta$` | each eigen-direction contracts independently | why anisotropic valleys are slow; the slow one sets the rate |
+| Lipschitz gradient | `$\lVert\nabla f(x)-\nabla f(y)\rVert \le L\lVert x-y\rVert$`; for a quadratic `$L=\lambda_{\max}(\nabla^2 f)$` | the gradient never changes faster than $L$ per unit step | the standard convergence hypothesis for gradient methods |
+| stability condition | `$x_{k+1}=x_k-\eta\nabla f(x_k)$` converges for `$0<\eta<2/L$`, is undamped at `$\eta=2/L$`, diverges above | one number decides everything | `$L=8` here, so the boundary is `$\eta=0.25$` |
+| saddle | `$\nabla f=0$ with an indefinite Hessian, e.g. `$x^2+3xy+y^2$` at the origin, eigenvalues `5` and `-1$` | flat point that is not a minimum | why "`grad == 0`" is not a stopping certificate |
+| `$\text{div}\,F$` | `$\frac{\partial F_1}{\partial x}+\frac{\partial F_2}{\partial y}+\frac{\partial F_3}{\partial z}$`; `3` for `$F=(x,2y)$` | net outflow per unit volume | divergence theorems; PDE solvers |
+| `$\text{curl}\,F$` | `$(\partial_yF_3-\partial_zF_2,\ \partial_zF_1-\partial_xF_3,\ \partial_xF_2-\partial_yF_1)$`; `-1` for `$F=(x,2y)$` | local rotation | distinguishing conservative from rotational fields |
+| `$\text{curl}(\nabla f)=0$` | holds wherever `$f$` is **twice continuously differentiable** | mixed partials commute, so terms cancel pairwise | the condition adjoint methods and backprop rely on |
+| `$J^{\mathsf T}J$`, singular values, condition number | `$J^{\mathsf T}J=\begin{pmatrix}10&5\\5&5\end{pmatrix}$; `$\sigma=3.618034, 1.381966$`; `$\kappa=2.618034$` | how much a map stretches different directions | the mild form of vanishing/exploding gradients |
+| `$\tanh'$ and its shrinkage | `$\tanh'(a)=1-\tanh^2 a = \operatorname{sech}^2 a \le 1$` | the activation's Jacobian shrinks every gradient | why deep stacks of `tanh` lose gradient |
+| zero initialisation | with `$W_1=W_2=b_1=0$`: `$h=0$ `$\Rightarrow \bar r = rh^{\mathsf T}=0$ `$\Rightarrow$ every gradient exactly `0$` | a symmetric network at zero is a fixed point | dormant units; why PyTorch defaults to Kaiming init |
+| gradient clipping vs normalising | clip: `$\text{scale} = \min(1,\, c/\lVert g\rVert)$`; normalising divides by `$\lVert g\rVert$` | capping the step preserves the *direction*; dividing destroys the magnitude information | `torch.nn.utils.clip_grad_norm_` |
+| required step per function | `$\eta = 0.01/\lvert f'(0.1)\rvert$` spans `0.0019` to `2.5` across four simple `$f$` | one constant cannot serve a whole landscape | the motivation for Adam/Adagrad/RMSProp |
+
+---
+
 ## Worked Example
 
 ### Example 1: partial derivatives of $f(x,y) = x^2 + 3xy + y^2$
@@ -919,41 +954,6 @@ print(f"  same problem at lr=0.2:          x = {x:.10f},  f = {f(x, y):.3e}")
 print("  One number changed from 0.26 to 0.2 and the result went from infinity")
 print("  to exact. Always say what your step size is and why.")
 ```
-
----
-
-## Formula Sheet
-
-| Symbol | Formula | In plain words | When you use it |
-| --- | --- | --- | --- |
-| `$\partial f/\partial x_i(a)$` | `$\lim_{h\to0}\frac{f(a+he_i)-f(a)}{h}$`; $f$ must be defined on a neighbourhood | hold every coordinate but one fixed, take the ordinary one-variable derivative | the entrywise building block of everything below |
-| `$\nabla f(a)$` | `$\left(\frac{\partial f}{\partial x_1},\dots,\frac{\partial f}{\partial x_n}\right)(a)$` | all the partials as one vector | the object SGD moves along |
-| differentiability | `$f(a+h)=f(a)+\nabla f(a)\cdot h+o(\lVert h\rVert)$` as `$h\to0$` | the function is locally linear plus negligible error | the hypothesis under all the theorems; **stronger** than every partial existing |
-| `$\lVert\cdot\rVert$`, `$\cdot$` | dot product and Euclidean norm | multiply-and-add, and square-root-of-sum-of-squares | comparing a gradient with a direction |
-| directional derivative | `$D_u f(a)=\lim_{t\to0}\frac{f(a+tu)-f(a)}{t}=\nabla f(a)\cdot u$` — **requires $\lVert u\rVert = 1$** | how fast $f$ grows moving a unit step along $u$ | any "which way is steepest?" question |
-| steepest ascent / descent | `$\max_{\lVert u\rVert=1}\nabla f\cdot u=\lVert\nabla f\rVert$` at `$u=\nabla f/\lVert\nabla f\rVert$; the minimum is `$-(\lVert\nabla f\rVert)$` at `$u=-\nabla f/\lVert\nabla f\rVert$` | the single best direction, and the single worst | why gradient descent moves along `$\nabla f$` at all (Cauchy–Schwarz) |
-| perpendicularity | `$u$ tangent to `$\{x:f(x)=c\}$` `$\Rightarrow \nabla f\cdot u = 0$` | the gradient is the contour's normal vector | explains zigzagging; gradient descent crosses contours, never follows them |
-| Jacobian `$\left[\frac{\partial g_i}{\partial x_j}\right]$` | `$n\times m$ matrix for `$g:\mathbb{R}^m\to\mathbb{R}^n$`; for `$n=1$` it **is** the gradient as a row | the derivative of a vector-valued function | `torch.autograd` backward of a linear layer |
-| multivariable chain rule | `$\nabla(f\circ g)(x)=J_g(x)^{\mathsf T}\nabla f(g(x))$` | the transpose of the inner Jacobian times the outer gradient | backprop: one transpose-times-vector per layer |
-| scalar form of the chain rule | `$\frac{\partial h}{\partial x_i}=\sum_j\frac{\partial f}{\partial g_j}\frac{\partial g_j}{\partial x_i}$` | sum over every intermediate coordinate | deriving $\nabla(u^2)=2u\,\nabla u$ by hand |
-| Jacobian of a linear layer | `$J_{Wx+b}=W$` (the weight matrix itself) | for `y = Wx`, the derivative *is* `$W$` | why backprop is literally a `GEMM` |
-| adjoint of a linear layer | `$J^{\mathsf T}\bar{y}$`, one matrix-vector product | the transposed multiply on the way back | Exercise 3(d): `dL/dx = [3.7375, 6.7]` |
-| `$\bar{r} = \partial L/\partial r$` for `L=\tfrac12\lVert r\rVert^2` | `$\bar r = r$`; then `$\partial L/\partial W_2 = r\,h^{\mathsf T}$`, `$\partial L/\partial h = W_2^{\mathsf T}r$` | seed the backward pass with the residual | the opening move of every autodiff implementation |
-| total differential / first-order expansion | `$f(a+h)=f(a)+\nabla f(a)\cdot h+O(\lVert h\rVert^2)$` | linear prediction, with the remainder written down | any local model; the reason linearisation is *only* local |
-| second-order term | `$\tfrac12 h^{\mathsf T}Hh$` with `$H=\nabla^2 f$` | the leading thing you threw away | for the quadratic `$x^2+3xy+y^2$, `err = \tfrac12 d^2\cdot 4.97345` exactly |
-| Hessian `$\nabla^2 f$` | for `$x^3+2xy^2-5y$`: `$\begin{pmatrix}6x & 4y\\ 4y & 4x\end{pmatrix}$`, `$\det = 24x^2-16y^2$` | the matrix of second partials | classifying critical points; curvature caps the step size |
-| per-coordinate contraction | for `$f=(x-3)^2+4(y+1)^2$` at step size `$\eta$`: `$x$ shrinks by `$1-2\eta$`, `$y$ by `$1-8\eta$` | each eigen-direction contracts independently | why anisotropic valleys are slow; the slow one sets the rate |
-| Lipschitz gradient | `$\lVert\nabla f(x)-\nabla f(y)\rVert \le L\lVert x-y\rVert$`; for a quadratic `$L=\lambda_{\max}(\nabla^2 f)$` | the gradient never changes faster than $L$ per unit step | the standard convergence hypothesis for gradient methods |
-| stability condition | `$x_{k+1}=x_k-\eta\nabla f(x_k)$` converges for `$0<\eta<2/L$`, is undamped at `$\eta=2/L$`, diverges above | one number decides everything | `$L=8` here, so the boundary is `$\eta=0.25$` |
-| saddle | `$\nabla f=0$ with an indefinite Hessian, e.g. `$x^2+3xy+y^2$` at the origin, eigenvalues `5` and `-1$` | flat point that is not a minimum | why "`grad == 0`" is not a stopping certificate |
-| `$\text{div}\,F$` | `$\frac{\partial F_1}{\partial x}+\frac{\partial F_2}{\partial y}+\frac{\partial F_3}{\partial z}$`; `3` for `$F=(x,2y)$` | net outflow per unit volume | divergence theorems; PDE solvers |
-| `$\text{curl}\,F$` | `$(\partial_yF_3-\partial_zF_2,\ \partial_zF_1-\partial_xF_3,\ \partial_xF_2-\partial_yF_1)$`; `-1` for `$F=(x,2y)$` | local rotation | distinguishing conservative from rotational fields |
-| `$\text{curl}(\nabla f)=0$` | holds wherever `$f$` is **twice continuously differentiable** | mixed partials commute, so terms cancel pairwise | the condition adjoint methods and backprop rely on |
-| `$J^{\mathsf T}J$`, singular values, condition number | `$J^{\mathsf T}J=\begin{pmatrix}10&5\\5&5\end{pmatrix}$; `$\sigma=3.618034, 1.381966$`; `$\kappa=2.618034$` | how much a map stretches different directions | the mild form of vanishing/exploding gradients |
-| `$\tanh'$ and its shrinkage | `$\tanh'(a)=1-\tanh^2 a = \operatorname{sech}^2 a \le 1$` | the activation's Jacobian shrinks every gradient | why deep stacks of `tanh` lose gradient |
-| zero initialisation | with `$W_1=W_2=b_1=0$`: `$h=0$ `$\Rightarrow \bar r = rh^{\mathsf T}=0$ `$\Rightarrow$ every gradient exactly `0$` | a symmetric network at zero is a fixed point | dormant units; why PyTorch defaults to Kaiming init |
-| gradient clipping vs normalising | clip: `$\text{scale} = \min(1,\, c/\lVert g\rVert)$`; normalising divides by `$\lVert g\rVert$` | capping the step preserves the *direction*; dividing destroys the magnitude information | `torch.nn.utils.clip_grad_norm_` |
-| required step per function | `$\eta = 0.01/\lvert f'(0.1)\rvert$` spans `0.0019` to `2.5` across four simple `$f$` | one constant cannot serve a whole landscape | the motivation for Adam/Adagrad/RMSProp |
 
 ---
 

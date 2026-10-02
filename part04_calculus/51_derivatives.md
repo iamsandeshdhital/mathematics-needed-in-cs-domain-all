@@ -112,6 +112,42 @@ $f'$ does not exist. A *stationary point* is the former type.
 
 ---
 
+## Formula Sheet
+
+| Symbol | Formula | In plain words | When you use it |
+| --- | --- | --- | --- |
+| `f'(a)` | `$\lim_{h\to 0}\frac{f(a+h)-f(a)}{h}$`; $f$ must be defined on a whole neighbourhood of $a$, not only at $a$ | the slope of the curve at $a$, as the limit of chord slopes | the definition behind every derivative; what `torch.autograd.gradcheck` approximates |
+| forward difference | `$\frac{f(a+h)-f(a)}{h} = f'(a) + \frac{h}{2}f''(a) + O(h^2)$` | one-sided slope estimate; error shrinks like $h$ | cheapest gradient probe; one function evaluation |
+| backward difference | `$\frac{f(a)-f(a-h)}{h} = f'(a) - \frac{h}{2}f''(a) + O(h^2)$` | the same estimate approached from the left | when you can only step backwards, e.g. at a boundary |
+| central difference | `$\frac{f(a+h)-f(a-h)}{2h} = f'(a) + \frac{h^2}{6}f'''(a) + O(h^4)$` | two-sided slope estimate; the $h$ term cancels, error shrinks like $h^2$ | gradient *checking*; two extra evaluations buy a factor of $h$ |
+| Taylor expansion used above | `$f(a+h) = f(a) + h f'(a) + \frac{h^2}{2}f''(a) + O(h^3)$` | near $a$ the curve is a quadratic plus a small remainder | deriving both error formulas; full version in Lesson [54](../part04_calculus/54_taylor_series.md) |
+| symmetric expansion | `$f(a+h)-f(a-h) = 2h f'(a) + \frac{h^3}{3}f'''(a) + O(h^5)$` | the even-order terms cancel, the odd ones survive | why central differences gain a full order of accuracy |
+| truncation error | `$\Theta(h)$` forward, `$\Theta(h^2)$` central, valid while truncation dominates | how wrong you are for being too bold with $h$ | choosing a step size; the left arm of the U-curve |
+| roundoff error | `$\sim \frac{\varepsilon\lvert f\rvert}{h}` with `$\varepsilon = 2^{-53} \approx 2.22\times10^{-16}$` | differencing two near-equal floats loses about $\log_{10}(1/h)$ significant digits | the reason a *smaller* $h$ can be worse |
+| accuracy ceilings | `$\varepsilon^{1/3} \approx 6.1\times10^{-6}$` forward, `$\varepsilon^{2/3} \approx 3.7\times10^{-11}$` central | the best accuracy any floating-point derivative of that kind can reach | predicting what is attainable before you tune anything |
+| power rule | `$\frac{d}{dx}(c x^p) = c\,p\,x^{p-1}$` | bring the exponent down and multiply | the workhorse; `make_power_rule(p)` in the code |
+| constant / exp / trig / log | `$\frac{d}{dx}c = 0$`, `$(e^x)' = e^x$`, `$(\sin x)'=\cos x$`, `(\cos x)'=-\sin x$`, `$(\ln x)'=\frac1x$` for $x>0$ | the standard small table every CAS stores | assembling a derivative function out of rules |
+| sigmoid derivative | `$\sigma'(z) = \sigma(z)\bigl(1-\sigma(z)\bigr)$` | reuse the value already computed instead of a second `exp` | numerically stable backward passes |
+| product rule | `$(fg)' = f'g + fg'$` | one term for each factor being the differentiating one | `d/dx (x^3 sin x) = 7.5823944295` at $x = 2$ |
+| quotient rule | `$\left(\frac{f}{g}\right)' = \frac{f'g - fg'}{g^2}$`, requires `$g \neq 0$` | the order of the two terms is not optional | `d/dx (x^3/sin x) = 17.2234738303` at $x = 2$ |
+| chain rule | `$(f\circ g)'(a) = f'(g(a))\cdot g'(a)$` | derivative of a composition is the product of the local slopes | **backpropagation**; $y = \sin^2 3x$ gives $6\sin 3x\cos 3x$ |
+| implicit differentiation | `$\frac{dy}{dx} = -\frac{F_x}{F_y}\big|_{(a,b)}$`, valid only when `$F_y(a,b)\neq 0$` | slope of a curve you never solved for | constraints; failure at $F_y = 0$ means a genuinely vertical tangent |
+| Newton step | `$x_{k+1} = x_k - \frac{f(x_k)}{f'(x_k)}$`, needs `$f'(x_k)\neq 0$` | follow the tangent, then go where it crosses the axis | root finding; converges quadratically, unlike bisection |
+| gradient descent step | `$x \leftarrow x - \eta f'(x)$`, stable for `$0<\eta<2/L$` when `$\lvert f'\rvert\le L$` | move a little against the current slope | every optimiser; a fixed $\eta$ can stall once the update falls below one ulp |
+| second-order error estimate | `$f(x+h) = f(x) + h f'(x) + \frac{h^2}{2}f''(x) + \cdots$` | the term dropped when you linearise is `$\frac{h^2}{2}f''$` | certifying root-finder results; interval Newton |
+| `f^{(n)}` | `$f''=(f')'$, `$f^{(n)}`` the $n$-fold derivative; *$n$-times differentiable* if it exists | higher-order rates of change | curvature; the price of curvature in optimisation |
+| Lipschitz condition | `$\lvert f(x)-f(y)\rvert \le L\lvert x-y\rvert$`; bounded `$\lvert f'\rvert \le L$` implies it | $f$ never changes faster than $L$ per unit input | the standard hypothesis for gradient-descent rates and the `$\sigma/\sqrt{n}$` Monte Carlo bound |
+| Fermat's theorem | local extremum at an **interior** point $a$ with `$f'(a)$` existing `$\Rightarrow f'(a)=0$` | a flat spot is *necessary* for a turn | finding candidate turning points; Newton and gradient descent |
+| critical point | any `$a$ with `f'(a)=0$` **or** where `$f'$` does not exist, e.g. `$|x|$` at 0 | a point that could hide an extremum | exhaustive turning-point searches |
+| stationary point | the `f'(a) = 0` case only | a genuine flat spot | separating minima from corners |
+| monotonicity | `$f'>0$` throughout an interval `$\Rightarrow$` strictly increasing there; `$f'<0 \Rightarrow$` decreasing | the sign of the derivative classifies the graph | `g(x)=x^3-3x` turns at $x=\pm1$; polygon clipping |
+| tanh derivative | `$\tanh'(a) = 1-\tanh^2(a) = \operatorname{sech}^2 a$` | reuse the already-computed `h` | `d_a = d_h * (1 - h*h)` in the backward pass |
+| Jacobian (2×2 here) | `$J = \begin{bmatrix}F_x & F_y\\ G_x & G_y\end{bmatrix}$` | implicit derivatives collected as a matrix | Newton's method for a system; solved by Cramer's rule |
+| forward vs reverse mode | forward: one pass per input; reverse: one forward plus one backward regardless of input count | what the chain rule actually costs | why `autograd` is reverse mode: $n$ parameters, one scalar loss |
+| cost of finite differences | `$n+1$` forward passes for $n$ parameters, against `2` for backprop | each parameter needs its own perturbed run | `4` parameters → `5` vs `2` passes in the lesson's code |
+
+---
+
 ## Worked Example
 
 ### Example 1: derivative of $f(x) = 3x^4$ from the definition
@@ -972,42 +1008,6 @@ version is tempting because it needs no derivation at all. That is a real virtue
 `torch.autograd.gradcheck` uses it. But when you can write down the derivative, do: it is
 exact, it is faster, and it does not lie to you when the gradient is `1e-20` and the
 function values are all `1.0`.
-
----
-
-## Formula Sheet
-
-| Symbol | Formula | In plain words | When you use it |
-| --- | --- | --- | --- |
-| `f'(a)` | `$\lim_{h\to 0}\frac{f(a+h)-f(a)}{h}$`; $f$ must be defined on a whole neighbourhood of $a$, not only at $a$ | the slope of the curve at $a$, as the limit of chord slopes | the definition behind every derivative; what `torch.autograd.gradcheck` approximates |
-| forward difference | `$\frac{f(a+h)-f(a)}{h} = f'(a) + \frac{h}{2}f''(a) + O(h^2)$` | one-sided slope estimate; error shrinks like $h$ | cheapest gradient probe; one function evaluation |
-| backward difference | `$\frac{f(a)-f(a-h)}{h} = f'(a) - \frac{h}{2}f''(a) + O(h^2)$` | the same estimate approached from the left | when you can only step backwards, e.g. at a boundary |
-| central difference | `$\frac{f(a+h)-f(a-h)}{2h} = f'(a) + \frac{h^2}{6}f'''(a) + O(h^4)$` | two-sided slope estimate; the $h$ term cancels, error shrinks like $h^2$ | gradient *checking*; two extra evaluations buy a factor of $h$ |
-| Taylor expansion used above | `$f(a+h) = f(a) + h f'(a) + \frac{h^2}{2}f''(a) + O(h^3)$` | near $a$ the curve is a quadratic plus a small remainder | deriving both error formulas; full version in Lesson [54](../part04_calculus/54_taylor_series.md) |
-| symmetric expansion | `$f(a+h)-f(a-h) = 2h f'(a) + \frac{h^3}{3}f'''(a) + O(h^5)$` | the even-order terms cancel, the odd ones survive | why central differences gain a full order of accuracy |
-| truncation error | `$\Theta(h)$` forward, `$\Theta(h^2)$` central, valid while truncation dominates | how wrong you are for being too bold with $h$ | choosing a step size; the left arm of the U-curve |
-| roundoff error | `$\sim \frac{\varepsilon\lvert f\rvert}{h}` with `$\varepsilon = 2^{-53} \approx 2.22\times10^{-16}$` | differencing two near-equal floats loses about $\log_{10}(1/h)$ significant digits | the reason a *smaller* $h$ can be worse |
-| accuracy ceilings | `$\varepsilon^{1/3} \approx 6.1\times10^{-6}$` forward, `$\varepsilon^{2/3} \approx 3.7\times10^{-11}$` central | the best accuracy any floating-point derivative of that kind can reach | predicting what is attainable before you tune anything |
-| power rule | `$\frac{d}{dx}(c x^p) = c\,p\,x^{p-1}$` | bring the exponent down and multiply | the workhorse; `make_power_rule(p)` in the code |
-| constant / exp / trig / log | `$\frac{d}{dx}c = 0$`, `$(e^x)' = e^x$`, `$(\sin x)'=\cos x$`, `(\cos x)'=-\sin x$`, `$(\ln x)'=\frac1x$` for $x>0$ | the standard small table every CAS stores | assembling a derivative function out of rules |
-| sigmoid derivative | `$\sigma'(z) = \sigma(z)\bigl(1-\sigma(z)\bigr)$` | reuse the value already computed instead of a second `exp` | numerically stable backward passes |
-| product rule | `$(fg)' = f'g + fg'$` | one term for each factor being the differentiating one | `d/dx (x^3 sin x) = 7.5823944295` at $x = 2$ |
-| quotient rule | `$\left(\frac{f}{g}\right)' = \frac{f'g - fg'}{g^2}$`, requires `$g \neq 0$` | the order of the two terms is not optional | `d/dx (x^3/sin x) = 17.2234738303` at $x = 2$ |
-| chain rule | `$(f\circ g)'(a) = f'(g(a))\cdot g'(a)$` | derivative of a composition is the product of the local slopes | **backpropagation**; $y = \sin^2 3x$ gives $6\sin 3x\cos 3x$ |
-| implicit differentiation | `$\frac{dy}{dx} = -\frac{F_x}{F_y}\big|_{(a,b)}$`, valid only when `$F_y(a,b)\neq 0$` | slope of a curve you never solved for | constraints; failure at $F_y = 0$ means a genuinely vertical tangent |
-| Newton step | `$x_{k+1} = x_k - \frac{f(x_k)}{f'(x_k)}$`, needs `$f'(x_k)\neq 0$` | follow the tangent, then go where it crosses the axis | root finding; converges quadratically, unlike bisection |
-| gradient descent step | `$x \leftarrow x - \eta f'(x)$`, stable for `$0<\eta<2/L$` when `$\lvert f'\rvert\le L$` | move a little against the current slope | every optimiser; a fixed $\eta$ can stall once the update falls below one ulp |
-| second-order error estimate | `$f(x+h) = f(x) + h f'(x) + \frac{h^2}{2}f''(x) + \cdots$` | the term dropped when you linearise is `$\frac{h^2}{2}f''$` | certifying root-finder results; interval Newton |
-| `f^{(n)}` | `$f''=(f')'$, `$f^{(n)}`` the $n$-fold derivative; *$n$-times differentiable* if it exists | higher-order rates of change | curvature; the price of curvature in optimisation |
-| Lipschitz condition | `$\lvert f(x)-f(y)\rvert \le L\lvert x-y\rvert$`; bounded `$\lvert f'\rvert \le L$` implies it | $f$ never changes faster than $L$ per unit input | the standard hypothesis for gradient-descent rates and the `$\sigma/\sqrt{n}$` Monte Carlo bound |
-| Fermat's theorem | local extremum at an **interior** point $a$ with `$f'(a)$` existing `$\Rightarrow f'(a)=0$` | a flat spot is *necessary* for a turn | finding candidate turning points; Newton and gradient descent |
-| critical point | any `$a$ with `f'(a)=0$` **or** where `$f'$` does not exist, e.g. `$|x|$` at 0 | a point that could hide an extremum | exhaustive turning-point searches |
-| stationary point | the `f'(a) = 0` case only | a genuine flat spot | separating minima from corners |
-| monotonicity | `$f'>0$` throughout an interval `$\Rightarrow$` strictly increasing there; `$f'<0 \Rightarrow$` decreasing | the sign of the derivative classifies the graph | `g(x)=x^3-3x` turns at $x=\pm1$; polygon clipping |
-| tanh derivative | `$\tanh'(a) = 1-\tanh^2(a) = \operatorname{sech}^2 a$` | reuse the already-computed `h` | `d_a = d_h * (1 - h*h)` in the backward pass |
-| Jacobian (2×2 here) | `$J = \begin{bmatrix}F_x & F_y\\ G_x & G_y\end{bmatrix}$` | implicit derivatives collected as a matrix | Newton's method for a system; solved by Cramer's rule |
-| forward vs reverse mode | forward: one pass per input; reverse: one forward plus one backward regardless of input count | what the chain rule actually costs | why `autograd` is reverse mode: $n$ parameters, one scalar loss |
-| cost of finite differences | `$n+1$` forward passes for $n$ parameters, against `2` for backprop | each parameter needs its own perturbed run | `4` parameters → `5` vs `2` passes in the lesson's code |
 
 ---
 
@@ -1955,7 +1955,7 @@ for name, expr, plain in (
 ```
 
 ```text
-  sin x cos x + x^3 e^x  value  58.7340475438  grad  147.1274783577  numeric  147.1274783640  ok True
+  sin x cos x + x^3 e^x  value  58.7340475438  grad 147.1274783577  numeric 147.1274783640  ok True
   (x^4+1)/(x^2+3)        value   2.4285714286  grad   3.1836734694  numeric   3.1836734693  ok True
   log(1+x^2)             value   1.6094379124  grad   0.8000000000  numeric   0.8000000000  ok True
 ```

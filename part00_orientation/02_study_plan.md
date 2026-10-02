@@ -64,6 +64,33 @@ plans your study schedule is a topological sort of that graph, with a tie-break
 rule to make the output deterministic. Both are on the list because the same
 algorithm schedules your semester, your build, and your reading queue.
 
+## Formula Sheet
+
+This lesson is about a graph, not about a theorem, so the formulas are the
+prerequisite relation, the transitive closure, and the arithmetic used to price a
+track. Notation follows [SYMBOLS.md](../SYMBOLS.md).
+
+| Symbol | Formula | In plain words | When you use it |
+| --- | --- | --- | --- |
+| `$L_2 \to L_1$` | | Lesson `L₂` is a prerequisite of `L₁`: you cannot do `L₁` properly without `L₂` | labelling the edge in the header of a lesson. Note the direction: prerequisite **to** dependent, so an edge points *forward* in study order |
+| transitive closure | `$P(L) = \{\, M : M \to \cdots \to L \,\}$` over any path of length $\ge 1$ | every lesson you can reach by walking prerequisite edges backwards from `L` | the list you must actually have done. **The one or two prerequisites printed on a lesson are not this set** — for Lesson 40 the closure is 17 lessons, not 1 |
+| partial order | `A → B` and `B → C ⟹ A → C` | prerequisites chain: if you need `B` for `C`, you need `A` for `B` and therefore for `C` | justifying "you have to do 10 before 40" without listing every intermediate edge |
+| acyclic | no cycle: `$\nexists\, L_1 \to L_2 \to \cdots \to L_k \to L_1$` with $k \ge 1$ | you can never end up needing a lesson in order to take itself | the hypothesis under which a study order **exists**. A cycle means the plan is impossible, not merely hard |
+| a *study order* | a sequence containing each lesson exactly once, with no lesson before any of its prerequisites | a legal reading schedule | the output of a topological sort. Every legal order is equally valid; the graph does not pick one for you |
+| topological sort | | repeatedly take any lesson whose prerequisites are all done, until none remain | the `study_order` function. The `if not ready` guard is what turns a cycle into a `ValueError` instead of an infinite loop |
+| tie-break rule | `chosen = min(ready, key=number)` | when several lessons are ready, take the lowest-numbered one | makes the schedule **deterministic**. Without it the same catalog gives a different plan on every run, which makes the output untestable |
+| `all_prereqs(L)` | seen-set filled by a stack walk from `L.prereqs` | the transitive closure, computed | costs $O(\lvert V\rvert + \lvert E\rvert)$ on the whole graph if you do it for every lesson, but $O(\lvert E\rvert)$ per goal because each node is visited once and re-visits are skipped via `seen` |
+| `dangling_prereqs` | `$\{p : p \in L.\mathrm{prereqs},\ p \notin \mathrm{catalog}\}$` | prerequisites that name a lesson which does not exist | a **distinct failure** from a cycle. A dangling edge makes the scheduler report "blocked", which reads like a cycle but means a missing node |
+| track cost | `needed = P(goal) ∪ {goal}`; `minutes = Σ minutes(l), l ∈ needed` | the lessons you must read, and their total reading minutes | pricing a goal. For Lesson 40: 18 lessons, 12.4 hours of reading |
+| `hours` | `minutes / 60` | reading time in hours | the lesson reports **reading only**, about 40% of the real work |
+| real cost | `(minutes + 60·|needed|) / 60` | reading plus 60 minutes of exercises per lesson | the honest figure. For Lesson 40 it is **30.4 hours**, not 12.4 — the ratio the lesson's own Common Mistakes section insists on |
+| `weeks@k` | `minutes / (k · 60)` | how many weeks of reading at `k` sessions a week | `k = 4` in the lesson. 12.4 h of reading is 3.1 weeks; with exercises it is 7.6 |
+| session packing | pack lessons in order into slots, start a new slot when `used + minutes > 60` | group lessons into study sessions of at most an hour | `make_sessions`. Gives **59** sessions. The *volume* bound $\lceil 2570/60\rceil = 43$ is **unreachable**: 51 of the 62 lessons are 40 min or longer, so the true optimum is **57** and the greedy packer is within 2 of it |
+| the achievable bound | any pair summing to $\le 60$ must contain a lesson $\le 30$, and only 6 lessons are | at most 6 pairs, so at least `62 - 6 = 56` sessions; the two 30s cannot take a 35, so at most 5 pairs and the optimum is **57** | the honest yardstick for a packer. Report against the *achievable* bound, not the volume bound - the lesson's own "report both numbers" rule |
+| capability score | `points_earned / (5 · |lessons|)` | the fraction of the five-item checklist you can actually demonstrate | measuring progress. Never `hours read` — see the Challenge's 9.0-versus-20.0 minutes-per-point contrast |
+| minutes per point | `minutes / max(points, 1)` | how long each demonstrated capability cost | the diagnostic column. High values mean you are re-reading rather than practising |
+| diagnostic bands | thorough `16–20`, fast `10–15`, Part 01 `4–9`, Part 00 `0–3` | which track your score picks | applied to a 20-question test. **A coin-flip guesser scores 10 on average**, and has a 58.8% chance of landing 10 or more, so a score of 10 means nothing without knowing how you got it |
+
 ## Worked Example
 
 You are a backend engineer, 34 years old, comfortable in Python, you took calculus
@@ -411,34 +438,6 @@ highest-return 25 minutes in the repository.
 Why tempting: notation feels like bookkeeping rather than mathematics, so it
 looks like something you can pick up in passing. You can, and then you pay for it
 in every later lesson.
-
-## Formula Sheet
-
-This lesson is about a graph, not about a theorem, so the formulas are the
-prerequisite relation, the transitive closure, and the arithmetic used to price a
-track. Notation follows [SYMBOLS.md](../SYMBOLS.md).
-
-| Symbol | Formula | In plain words | When you use it |
-| --- | --- | --- | --- |
-| `$L_2 \to L_1$` | | Lesson `L₂` is a prerequisite of `L₁`: you cannot do `L₁` properly without `L₂` | labelling the edge in the header of a lesson. Note the direction: prerequisite **to** dependent, so an edge points *forward* in study order |
-| transitive closure | `$P(L) = \{\, M : M \to \cdots \to L \,\}$` over any path of length $\ge 1$ | every lesson you can reach by walking prerequisite edges backwards from `L` | the list you must actually have done. **The one or two prerequisites printed on a lesson are not this set** — for Lesson 40 the closure is 17 lessons, not 1 |
-| partial order | `A → B` and `B → C ⟹ A → C` | prerequisites chain: if you need `B` for `C`, you need `A` for `B` and therefore for `C` | justifying "you have to do 10 before 40" without listing every intermediate edge |
-| acyclic | no cycle: `$\nexists\, L_1 \to L_2 \to \cdots \to L_k \to L_1$` with $k \ge 1$ | you can never end up needing a lesson in order to take itself | the hypothesis under which a study order **exists**. A cycle means the plan is impossible, not merely hard |
-| a *study order* | a sequence containing each lesson exactly once, with no lesson before any of its prerequisites | a legal reading schedule | the output of a topological sort. Every legal order is equally valid; the graph does not pick one for you |
-| topological sort | | repeatedly take any lesson whose prerequisites are all done, until none remain | the `study_order` function. The `if not ready` guard is what turns a cycle into a `ValueError` instead of an infinite loop |
-| tie-break rule | `chosen = min(ready, key=number)` | when several lessons are ready, take the lowest-numbered one | makes the schedule **deterministic**. Without it the same catalog gives a different plan on every run, which makes the output untestable |
-| `all_prereqs(L)` | seen-set filled by a stack walk from `L.prereqs` | the transitive closure, computed | costs $O(\lvert V\rvert + \lvert E\rvert)$ on the whole graph if you do it for every lesson, but $O(\lvert E\rvert)$ per goal because each node is visited once and re-visits are skipped via `seen` |
-| `dangling_prereqs` | `$\{p : p \in L.\mathrm{prereqs},\ p \notin \mathrm{catalog}\}$` | prerequisites that name a lesson which does not exist | a **distinct failure** from a cycle. A dangling edge makes the scheduler report "blocked", which reads like a cycle but means a missing node |
-| track cost | `needed = P(goal) ∪ {goal}`; `minutes = Σ minutes(l), l ∈ needed` | the lessons you must read, and their total reading minutes | pricing a goal. For Lesson 40: 18 lessons, 12.4 hours of reading |
-| `hours` | `minutes / 60` | reading time in hours | the lesson reports **reading only**, about 40% of the real work |
-| real cost | `(minutes + 60·|needed|) / 60` | reading plus 60 minutes of exercises per lesson | the honest figure. For Lesson 40 it is **30.4 hours**, not 12.4 — the ratio the lesson's own Common Mistakes section insists on |
-| `weeks@k` | `minutes / (k · 60)` | how many weeks of reading at `k` sessions a week | `k = 4` in the lesson. 12.4 h of reading is 3.1 weeks; with exercises it is 7.6 |
-| session packing | pack lessons in order into slots, start a new slot when `used + minutes > 60` | group lessons into study sessions of at most an hour | `make_sessions`. Gives **59** sessions. The *volume* bound $\lceil 2570/60\rceil = 43$ is **unreachable**: 51 of the 62 lessons are 40 min or longer, so the true optimum is **57** and the greedy packer is within 2 of it |
-| the achievable bound | any pair summing to $\le 60$ must contain a lesson $\le 30$, and only 6 lessons are | at most 6 pairs, so at least `62 - 6 = 56` sessions; the two 30s cannot take a 35, so at most 5 pairs and the optimum is **57** | the honest yardstick for a packer. Report against the *achievable* bound, not the volume bound - the lesson's own "report both numbers" rule |
-| capability score | `points_earned / (5 · |lessons|)` | the fraction of the five-item checklist you can actually demonstrate | measuring progress. Never `hours read` — see the Challenge's 9.0-versus-20.0 minutes-per-point contrast |
-| minutes per point | `minutes / max(points, 1)` | how long each demonstrated capability cost | the diagnostic column. High values mean you are re-reading rather than practising |
-| diagnostic bands | thorough `16–20`, fast `10–15`, Part 01 `4–9`, Part 00 `0–3` | which track your score picks | applied to a 20-question test. **A coin-flip guesser scores 10 on average**, and has a 58.8% chance of landing 10 or more, so a score of 10 means nothing without knowing how you got it |
-
 ## Multiple Choice Questions
 
 **Q1.** Lesson 40 prints one direct prerequisite, `[39]`, but its transitive
@@ -1329,6 +1328,159 @@ point.
 
 **[ ] Exercise 1 — Extend the catalog and verify the graph.**
 
+ Build a cut-down
+catalog of 14 lessons that includes Lesson 40 with prerequisite `[39]` while
+Lesson 39 is *not* declared. Report which prerequisites dangle. Then fill in the
+missing linear algebra chain 31 through 39 and confirm nothing dangles. Then add
+a hypothetical Lesson 42, "Applications of SVD", with prerequisites `[40, 70]`,
+and confirm the topological sort produces a valid order with 42 appearing after
+both 40 and 70. Finally, deliberately create a cycle by giving Lesson 42 the
+prerequisite `[43]` and giving 43 the prerequisite `[42]`, and confirm
+`study_order` raises `ValueError` rather than looping forever. Report exactly
+what each step printed.
+
+<details>
+<summary>Solution</summary>
+
+```python
+class Lesson:
+    """A lesson: its number, title, reading time, and direct prerequisites."""
+
+    def __init__(self, number, title, minutes, prereqs=None):
+        self.number = number
+        self.title = title
+        self.minutes = minutes
+        self.prereqs = list(prereqs) if prereqs else []
+
+
+# A cut-down catalog: enough structure to exercise the graph, small enough to read.
+CATALOG = [
+    Lesson(0, "Why Mathematics Matters", 15),
+    Lesson(1, "How to Read Notation", 25),
+    Lesson(2, "Study Plan", 15),
+    Lesson(10, "Propositions and Connectives", 30, [1]),
+    Lesson(11, "Truth Tables and Equivalence", 40, [10]),
+    Lesson(12, "Predicates and Quantifiers", 40, [11]),
+    Lesson(13, "Proof Techniques", 45, [12]),
+    Lesson(14, "Mathematical Induction", 40, [13]),
+    Lesson(15, "Sets and Cardinality", 40, [14]),
+    Lesson(30, "Vectors and Vector Spaces", 40, [15]),
+    Lesson(40, "SVD and PCA", 50, [39]),          # 39 is not declared yet
+    Lesson(60, "Probability Foundations", 35, [15]),
+    Lesson(64, "Expectation and Variance", 45, [60]),
+    Lesson(70, "Information Theory and Entropy", 40, [64]),
+]
+
+BY_NUMBER = {lesson.number: lesson for lesson in CATALOG}
+
+
+def dangling_prereqs(table):
+    """Prerequisite numbers that no lesson in `table` satisfies."""
+    return sorted({p for l in table.values() for p in l.prereqs if p not in table})
+
+
+def study_order(lessons):
+    """Topological sort. A lesson appears only after everything it needs."""
+    done, order, remaining = set(), [], list(lessons)
+    while remaining:
+        ready = [l for l in remaining if set(l.prereqs) <= done]
+        if not ready:
+            raise ValueError(f"cycle, blocked: {[l.number for l in remaining]}")
+        chosen = min(ready, key=lambda l: l.number)
+        order.append(chosen.number)
+        done.add(chosen.number)
+        remaining.remove(chosen)
+    return order
+
+
+# --- Step 0: the graph has a hole. Lesson 40 needs 39, which is not declared.
+print(f"lessons declared: {len(CATALOG)}")
+print(f"dangling prerequisites: {dangling_prereqs(BY_NUMBER)}")
+print()
+
+# --- Step 1: fill the missing linear algebra chain 31..39.
+for number, title, minutes, needs in [
+    (39, "Diagonalization and Spectral Theory", 45, [38]),
+    (38, "Orthogonality and Least Squares", 45, [37]),
+    (37, "Inner Products, Norms, Geometry", 40, [36]),
+    (36, "Eigenvalues and Eigenvectors", 50, [35]),
+    (35, "Linear Transformations and Kernels", 45, [34]),
+    (34, "Basis, Dimension, and Rank", 40, [33]),
+    (33, "Determinant and Inverse", 40, [32]),
+    (32, "Linear Systems and Gaussian Elimination", 45, [31]),
+    (31, "Matrices and Matrix Algebra", 45, [30]),
+]:
+    BY_NUMBER[number] = Lesson(number, title, minutes, needs)
+
+declared = {l.number for l in CATALOG}
+CATALOG.extend(BY_NUMBER[n] for n in sorted(BY_NUMBER) if n not in declared)
+print(f"dangling prerequisites after filling 31..39: {dangling_prereqs(BY_NUMBER)}")
+print()
+
+# --- Step 2: add a hypothetical Lesson 42 that needs both 40 and 70.
+BY_NUMBER[42] = Lesson(42, "Applications of SVD", 40, [40, 70])
+CATALOG.append(BY_NUMBER[42])
+
+order = study_order(CATALOG)
+pos = {n: i for i, n in enumerate(order)}
+print(f"catalog size with the chain and 42 added: {len(CATALOG)}")
+print(f"lesson 42 prerequisites: {BY_NUMBER[42].prereqs}")
+print(f"  position of 42 : {pos[42]}")
+print(f"  position of 40 : {pos[40]}")
+print(f"  position of 70 : {pos[70]}")
+print(f"  42 after both  : {pos[42] > pos[40] and pos[42] > pos[70]}")
+print()
+
+# --- Step 3: break the graph on purpose. 42 needs 43, and 43 needs 42.
+BY_NUMBER[42].prereqs = [40, 70, 43]
+BY_NUMBER[43] = Lesson(43, "A Lesson That Does Not Exist", 30, [42])
+CATALOG.append(BY_NUMBER[43])
+
+try:
+    study_order(CATALOG)
+    print("BUG: the cycle was not detected")
+except ValueError as err:
+    print(f"cycle detected, as required: {err}")
+print()
+print("Without the `if not ready` guard the `while remaining` loop never")
+print("terminates, because no lesson ever becomes ready. Real schedulers hit")
+print("this on every build that introduces a dependency cycle.")
+```
+
+Output:
+
+```
+lessons declared: 14
+dangling prerequisites: [39]
+
+dangling prerequisites after filling 31..39: []
+
+catalog size with the chain and 42 added: 24
+lesson 42 prerequisites: [40, 70]
+  position of 42 : 23
+  position of 40 : 19
+  position of 70 : 22
+  42 after both  : True
+
+cycle detected, as required: cycle, blocked: [42, 43]
+
+Without the `if not ready` guard the `while remaining` loop never
+terminates, because no lesson ever becomes ready. Real schedulers hit
+this on every build that introduces a dependency cycle.
+```
+
+Two things came out of this worth keeping. First, the dangling prerequisite at
+step 0 was invisible to `study_order`: it reported `40` as "blocked", which reads
+like a cycle but is actually a missing node. Those are different bugs with
+different fixes, so a real scheduler should distinguish them, and the
+`dangling_prereqs` helper is exactly that distinction. Second, the honest answer
+to "does the catalog omit lessons?" is that it does not: all 62 lesson numbers in
+the full catalog above are covered by the repository index. The omissions people
+find when they write such a catalog by hand are how a real index goes stale.
+
+</details>
+
+
 **[ ] Exercise 2 — Price the tracks and compare.** Using the catalog, compute for
 each of these goals: (a) the number of lessons that must be read, (b) the total
 reading minutes, (c) the weeks required at four 60-minute sessions per week, and
@@ -1733,6 +1885,19 @@ worst minutes per capability point:
   Proof Techniques               42.5
   Mathematical Induction         36.7
   Truth Tables and Equivalence   30.0
+
+Reading this table
+
+If the two rankings agree, your time is going where the learning is, and
+you are on the fast track. If a lesson ranks high on minutes and low on
+capability, you are re-reading rather than practising, which feels like
+progress and is not. That is the single most common failure mode of
+self-directed study, and it is invisible unless capability is tracked
+separately from time.
+
+A lesson scoring 4+ points in under 100 minutes is a good one to revisit
+before an interview. A lesson at 2 or below after 100 minutes is a lesson
+to go back and re-plan, not to read again.
 ```
 
 Proof Techniques is the interesting row. It has both the most time *and* a
@@ -1751,6 +1916,8 @@ hours read they look comparable. By capability they are not comparable at all, a
 only one of them was worth the time.
 
 
+
+</details>
 
 **[ ] Exercise 5 — Prove the achievable session bound, and beat the lesson's
 packer.** Using only `MINUTES` (read them out of the catalog the lesson's code
@@ -2535,154 +2702,6 @@ and no explanation — and it is the reason a checker that distinguishes four
 categories is worth more than one that merely reports failure. A tool that says
 "something is wrong" is worth much less than a tool that says *which* something.
 
-</details>
- Build a cut-down
-catalog of 14 lessons that includes Lesson 40 with prerequisite `[39]` while
-Lesson 39 is *not* declared. Report which prerequisites dangle. Then fill in the
-missing linear algebra chain 31 through 39 and confirm nothing dangles. Then add
-a hypothetical Lesson 42, "Applications of SVD", with prerequisites `[40, 70]`,
-and confirm the topological sort produces a valid order with 42 appearing after
-both 40 and 70. Finally, deliberately create a cycle by giving Lesson 42 the
-prerequisite `[43]` and giving 43 the prerequisite `[42]`, and confirm
-`study_order` raises `ValueError` rather than looping forever. Report exactly
-what each step printed.
-
-<details>
-<summary>Solution</summary>
-
-```python
-class Lesson:
-    """A lesson: its number, title, reading time, and direct prerequisites."""
-
-    def __init__(self, number, title, minutes, prereqs=None):
-        self.number = number
-        self.title = title
-        self.minutes = minutes
-        self.prereqs = list(prereqs) if prereqs else []
-
-
-# A cut-down catalog: enough structure to exercise the graph, small enough to read.
-CATALOG = [
-    Lesson(0, "Why Mathematics Matters", 15),
-    Lesson(1, "How to Read Notation", 25),
-    Lesson(2, "Study Plan", 15),
-    Lesson(10, "Propositions and Connectives", 30, [1]),
-    Lesson(11, "Truth Tables and Equivalence", 40, [10]),
-    Lesson(12, "Predicates and Quantifiers", 40, [11]),
-    Lesson(13, "Proof Techniques", 45, [12]),
-    Lesson(14, "Mathematical Induction", 40, [13]),
-    Lesson(15, "Sets and Cardinality", 40, [14]),
-    Lesson(30, "Vectors and Vector Spaces", 40, [15]),
-    Lesson(40, "SVD and PCA", 50, [39]),          # 39 is not declared yet
-    Lesson(60, "Probability Foundations", 35, [15]),
-    Lesson(64, "Expectation and Variance", 45, [60]),
-    Lesson(70, "Information Theory and Entropy", 40, [64]),
-]
-
-BY_NUMBER = {lesson.number: lesson for lesson in CATALOG}
-
-
-def dangling_prereqs(table):
-    """Prerequisite numbers that no lesson in `table` satisfies."""
-    return sorted({p for l in table.values() for p in l.prereqs if p not in table})
-
-
-def study_order(lessons):
-    """Topological sort. A lesson appears only after everything it needs."""
-    done, order, remaining = set(), [], list(lessons)
-    while remaining:
-        ready = [l for l in remaining if set(l.prereqs) <= done]
-        if not ready:
-            raise ValueError(f"cycle, blocked: {[l.number for l in remaining]}")
-        chosen = min(ready, key=lambda l: l.number)
-        order.append(chosen.number)
-        done.add(chosen.number)
-        remaining.remove(chosen)
-    return order
-
-
-# --- Step 0: the graph has a hole. Lesson 40 needs 39, which is not declared.
-print(f"lessons declared: {len(CATALOG)}")
-print(f"dangling prerequisites: {dangling_prereqs(BY_NUMBER)}")
-print()
-
-# --- Step 1: fill the missing linear algebra chain 31..39.
-for number, title, minutes, needs in [
-    (39, "Diagonalization and Spectral Theory", 45, [38]),
-    (38, "Orthogonality and Least Squares", 45, [37]),
-    (37, "Inner Products, Norms, Geometry", 40, [36]),
-    (36, "Eigenvalues and Eigenvectors", 50, [35]),
-    (35, "Linear Transformations and Kernels", 45, [34]),
-    (34, "Basis, Dimension, and Rank", 40, [33]),
-    (33, "Determinant and Inverse", 40, [32]),
-    (32, "Linear Systems and Gaussian Elimination", 45, [31]),
-    (31, "Matrices and Matrix Algebra", 45, [30]),
-]:
-    BY_NUMBER[number] = Lesson(number, title, minutes, needs)
-
-declared = {l.number for l in CATALOG}
-CATALOG.extend(BY_NUMBER[n] for n in sorted(BY_NUMBER) if n not in declared)
-print(f"dangling prerequisites after filling 31..39: {dangling_prereqs(BY_NUMBER)}")
-print()
-
-# --- Step 2: add a hypothetical Lesson 42 that needs both 40 and 70.
-BY_NUMBER[42] = Lesson(42, "Applications of SVD", 40, [40, 70])
-CATALOG.append(BY_NUMBER[42])
-
-order = study_order(CATALOG)
-pos = {n: i for i, n in enumerate(order)}
-print(f"catalog size with the chain and 42 added: {len(CATALOG)}")
-print(f"lesson 42 prerequisites: {BY_NUMBER[42].prereqs}")
-print(f"  position of 42 : {pos[42]}")
-print(f"  position of 40 : {pos[40]}")
-print(f"  position of 70 : {pos[70]}")
-print(f"  42 after both  : {pos[42] > pos[40] and pos[42] > pos[70]}")
-print()
-
-# --- Step 3: break the graph on purpose. 42 needs 43, and 43 needs 42.
-BY_NUMBER[42].prereqs = [40, 70, 43]
-BY_NUMBER[43] = Lesson(43, "A Lesson That Does Not Exist", 30, [42])
-CATALOG.append(BY_NUMBER[43])
-
-try:
-    study_order(CATALOG)
-    print("BUG: the cycle was not detected")
-except ValueError as err:
-    print(f"cycle detected, as required: {err}")
-print()
-print("Without the `if not ready` guard the `while remaining` loop never")
-print("terminates, because no lesson ever becomes ready. Real schedulers hit")
-print("this on every build that introduces a dependency cycle.")
-```
-
-Output:
-
-```
-lessons declared: 14
-dangling prerequisites: [39]
-
-dangling prerequisites after filling 31..39: []
-
-catalog size with the chain and 42 added: 24
-lesson 42 prerequisites: [40, 70]
-  position of 42 : 23
-  position of 40 : 19
-  position of 70 : 22
-  42 after both  : True
-
-cycle detected, as required: cycle, blocked: [42, 43]
-```
-
-Two things came out of this worth keeping. First, the dangling prerequisite at
-step 0 was invisible to `study_order`: it reported `40` as "blocked", which reads
-like a cycle but is actually a missing node. Those are different bugs with
-different fixes, so a real scheduler should distinguish them, and the
-`dangling_prereqs` helper is exactly that distinction. Second, the honest answer
-to "does the catalog omit lessons?" is that it does not: all 62 lesson numbers in
-the full catalog above are covered by the repository index. The omissions people
-find when they write such a catalog by hand are how a real index goes stale.
-
-</details>
 </details>
 
 ## Summary

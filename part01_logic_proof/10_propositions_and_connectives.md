@@ -688,6 +688,76 @@ that the requirement was never expressed in a form a tool could check.
 
 </details>
 
+**Q9.** In Python, what does `not is_admin or is_superuser and not archived`
+evaluate to?
+
+- A) `not (is_admin or (is_superuser and not archived))`
+- B) `(not is_admin) or (is_superuser and not archived)`
+- C) `(not is_admin or is_superuser) and not archived`
+- D) `not ((is_admin or is_superuser) and not archived)`
+
+<details>
+<summary>Answer and explanation</summary>
+
+**B) `(not is_admin) or (is_superuser and not archived)`.**
+
+`not` binds tighter than `and`, which binds tighter than `or`, so the parse is
+`(not is_admin) or (is_superuser and not archived)`. This is exactly the lesson's
+precedence rule and exactly the ordering Python's own grammar uses.
+
+Option A is the misconception this question exists to catch. "Not" does not
+reach across a lower-precedence connective: you would need an explicit opening
+parenthesis, `not (is_admin or ...)`, for `not` to bind the whole right-hand
+side. The fact that A *looks* right is why people write it and are then surprised.
+
+Option C is what you get from the same text when the reader wrongly assumes `or`
+binds tighter than `and` — the grouping error the Common Mistakes section calls
+out. A single row separates them: `is_admin = False, is_superuser = True,
+archived = True` gives `False or (True and False) = False` under B and
+`(False or True) and False = False` under C — those agree — so take
+`is_admin = False, is_superuser = False, archived = True` instead: B gives
+`True or (False and False) = True`, C gives `(True or False) and False =
+False`. Two of the eight rows disagree.
+
+Option D negates everything and therefore flips the truth value of the whole
+expression, which is a different condition rather than a different grouping. On
+`is_admin = True, is_superuser = True, archived = False` it gives `False`
+where B gives `True`.
+
+</details>
+
+**Q10.** You need "the two flags disagree" — `is_admin` and `is_readonly` must
+not both be true and must not both be false. Which expression says that?
+
+- A) `not (is_admin or is_readonly)`
+- B) `not (is_admin and is_readonly)`
+- C) `(is_admin and not is_readonly) or (not is_admin and is_readonly)`
+- D) `is_admin or is_readonly`
+
+<details>
+<summary>Answer and explanation</summary>
+
+**C) `(is_admin and not is_readonly) or (not is_admin and is_readonly)`.**
+
+"The two disagree" is `is_admin ↔ is_readonly` negated, which is
+`¬(P ↔ Q) ≡ (P ∧ ¬Q) ∨ (¬P ∧ Q)` — exclusive-or, column `0110`. Both C's
+branches together say exactly one flag is set.
+
+Option A is `¬(P ∨ Q) ≡ ¬P ∧ ¬Q` by De Morgan, which is "neither is true": it
+is false on the `(False, False)` row, where the requirement is satisfied. Option
+B is `¬(P ∧ Q) ≡ ¬P ∨ ¬Q`, "not both": it is true on `(False, False)`, where the
+requirement fails. So A and B are the two halves of the biconditional, each of
+which is too strong in one direction, and confusing them for each other is the
+single most common De Morgan slip in code review.
+
+Option D is `P ∨ Q`, which is true on three of the four rows and agrees with the
+requirement on only two. It is the most tempting of the four distractors,
+because "not both false" sounds like "at least one is true"; the requirement is
+strictly about disagreement, and `P ∨ Q` says nothing about the row where both
+are true.
+
+</details>
+
 ---
 
 ## Subjective Questions
@@ -1104,14 +1174,44 @@ Output:
  7 not p -> not q                      1011  contingent
  8 (p and q) -> (p or q)               1111  tautology
 
+English, column by column. Rows are (p, q) = FF, FT, TF, TT.
+
+1  not (p and q) is true when at least one of them is false.
+2  p -> q is false only when p is true and q is false.
+3  p <-> q is true when they agree: both true, or both false.
+4  not p or (q -> p) is a tautology. If p is false the first disjunct
+   holds; if p is true the second has a true consequent. Either way.
+5  exclusive-or is true when exactly one of p, q holds.
+6  p -> (q -> p) is a tautology, for a reason worth reading below.
+7  not p -> not q is the CONVERSE, not the contrapositive.
+8  (p and q) -> (p or q) is a tautology: nothing satisfies both
+   conjuncts without satisfying at least one disjunct.
+
+====================================================================
+Why #6 is a tautology, one row at a time
+====================================================================
   p=False q=False q->p=True  p->(q->p)=True
   p=False q=True  q->p=False p->(q->p)=True
   p=True  q=False q->p=True  p->(q->p)=True
   p=True  q=True  q->p=True  p->(q->p)=True
 
+  When p is True, the inner q->p is automatically True because p holds,
+  so the outer implication has a True consequent and is True.
+  When p is False, the outer implication is True by definition.
+  Either way the outer is True. That is why it is a tautology.
+
+====================================================================
+Converse versus contrapositive
+====================================================================
   p -> q          1101
   not q -> not p  1101   contrapositive, equal to original: True
   not p -> not q  1011   converse, equal to original: False
+
+The contrapositive column is the original with the rows reversed, which
+is exactly what 'same false case' predicts. The converse column is not,
+and it is False on row 2 (p = F, q = T): p -> q is True there while
+not p -> not q is False. That single row is a real logical difference,
+and Lesson 13's contrapositive proof depends on it.
 ```
 
 Item 5's column `0110` is exactly `(p ∧ ¬q) ∨ (¬p ∧ q)`, which is
@@ -1309,7 +1409,10 @@ print("Connective mistakes, not arithmetic mistakes.")
 Output:
 
 ```
+======================================================================
 1. 'return 400 if malformed OR unauthenticated'
+======================================================================
+
 required : (not well_formed) or (not authenticated)
 written  : (not well_formed) and (not authenticated)
 
@@ -1317,12 +1420,32 @@ written  : (not well_formed) and (not authenticated)
   well_formed=False  authenticated=True   ->  True
   well_formed=True   authenticated=False  ->  True
   well_formed=True   authenticated=True   ->  False
-
   required column : 1110
   written column  : 1000
   agree           : False
 
+witness: well_formed=True, authenticated=False
+  a perfectly well-formed request that simply has no credentials
+  required says : True   -> 400
+  written says  : False   -> proceed as anonymous
+
+Verdict: BUG, and it fails OPEN. The requirement rejects an
+unauthenticated request however well formed it is. The code only
+rejects a request that is BOTH malformed AND unauthenticated, so every
+anonymous request sails through to whatever the handler does next.
+
+correct code:
+    if not well_formed or not authenticated:
+        return 400
+
+3 of 4 rows disagree, and the row count is the diagnosis. A table that
+disagrees on most rows has the wrong connective. One disagreeing row
+usually means a boundary case, not a swapped AND.
+
+======================================================================
 2. 'retry if failed AND idempotent'
+======================================================================
+
 required : failed and idempotent
 written  : (not failed) or (not idempotent)
 
@@ -1330,7 +1453,6 @@ written  : (not failed) or (not idempotent)
   failed=False  idempotent=True   ->  False
   failed=True   idempotent=False  ->  False
   failed=True   idempotent=True   ->  True
-
   required column : 0001
   written column  : 1110
   agree           : False
@@ -1339,7 +1461,25 @@ witness: failed=False, idempotent=False
   required says : False   -> do not retry
   written says  : True   -> RETRY
 
+Verdict: BUG. The written code retries whenever either the request did
+NOT fail, or it is not idempotent. So every successful non-idempotent
+request gets retried, which is precisely what idempotency exists to stop:
+a POST that succeeded, got retried, and charged the card twice.
+
+correct code:
+    if failed and idempotent:
+        retry()
+
+Or, if the real requirement is 'retry unless it succeeded', write that
+instead. Requirements of the form 'not (A and B)' are much harder to
+implement correctly than the thing you actually want:
+    if not succeeded:
+        retry()
+
+======================================================================
 3. 'grant if admin, or public and not archived'
+======================================================================
+
 required : is_admin or (is_public and not archived)
 written  : is_admin or is_public and not archived
             Python reads that as (is_admin or is_public) and not archived
@@ -1355,6 +1495,25 @@ written  : is_admin or is_public and not archived
      True       True       True       True    False  BUG
 
 2 of 8 rows disagree.
+
+Verdict: BUG. An admin is meant to reach an archived resource, but the
+written code ANDs `not archived` against the admin case too, so the
+admin is blocked from exactly the archive they need to fix.
+
+correct code, with the parentheses written out:
+    if is_admin or (is_public and not archived):
+
+Both failing rows have is_admin True and archived True, and they disagree
+only when is_public is False. The requirement grants access to the admin
+because is_admin alone suffices; the code demands the public branch too,
+because `not archived` was ANDed against the whole disjunction instead
+of only against the public branch.
+
+The lesson from all three: when a requirement mixes and with or, write
+the parentheses in the code. Python will sometimes infer the wrong ones
+and will not warn you. And every one of these failed by swapping a
+connective or dropping a grouping, never by an arithmetic slip.
+Connective mistakes, not arithmetic mistakes.
 ```
 
 The number of disagreeing rows is the fastest diagnostic in the table. Condition
@@ -1654,7 +1813,9 @@ print("if: 'if p then (if q then r)'.")
 Output:
 
 ```
+====================================================================
 (a) the parser agrees with Python's own reading of the same text
+====================================================================
 
 text                     parsed as                                 agrees
 p                        p                                              1
@@ -1682,25 +1843,46 @@ the python source each row was compared against:
 
 all ten agree on all 8 assignments: True
 
+====================================================================
 (b) precedence: ~ before & before |
+====================================================================
+
   ~p & q       parses to (~p & q)
   ~(p & q)     parses to ~(p & q)
   p & q | r    parses to ((p & q) | r)
   p | q & r    parses to (p | (q & r))
+
+If ~ bound loosely, '~p & q' would parse as ~(p & q). Compare columns:
   (~p) & q   00110000
   ~(p & q)   11111100
+Different columns, so the precedence is observable, and it is the tight
+one. This is the same rule as Python's own precedence table.
 
+====================================================================
 (c) p -> q is the same formula as ~p | q
+====================================================================
+
   p -> q   (p -> q)   column 11110011
   ~p | q   (~p | q)   column 11110011
   equivalent: True
 
+So a parser needs no special token for the arrow: NOT and OR already
+express it. That is why Python has no implication operator, and why
+anyone writing an implication in code writes 'if not p or q'.
+
+====================================================================
 (d) -> is right-associative
+====================================================================
+
   p -> q -> r       parses to (p -> (q -> r))
   (p -> q) -> r     parses to ((p -> q) -> r)
 
   column of the first  : 11111101
   column of the second : 01011101
+
+Different formulas, so associativity was a choice and the wrong one is a
+real bug. Right-associative is correct because it reads like a nested
+if: 'if p then (if q then r)'.
 ```
 
 Part (d) is the one to slow down on. `p -> q -> r` and `(p -> q) -> r` are

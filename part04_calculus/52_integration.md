@@ -124,6 +124,38 @@ integration applies this repeatedly, reaching order $2^k$ with $2^k$ evaluations
 
 ---
 
+## Formula Sheet
+
+| Symbol | Formula | In plain words | When you use it |
+| --- | --- | --- | --- |
+| partition | `$P = \{x_0=a < x_1 < \dots < x_n = b\}$`, `$\Delta x_i = x_i - x_{i-1}$` | the way you slice $[a,b]$ | every numerical rule; the slicing *is* the algorithm |
+| upper / lower sums | `$U(P,f)=\sum_i \bigl(\sup_{[x_{i-1},x_i]} f\bigr)\Delta x_i$`, and `L(P,f)` the same with `$\inf$` | tallest and shortest value on each slice, times width, added | the definition of "integrable" |
+| `$\int_a^b f(x)\,dx$` | `$\sup_P U(P,f) = \inf_P L(P,f)$` when the two agree; $f$ is then *integrable* | where the two squeeze values meet: the signed area | the whole object; $\int_0^\pi\sin x\,dx = 2$ |
+| Riemann sum | `$S_n = \sum_{i=1}^{n} f(\xi_i)\,\Delta x_i$` with `$\xi_i \in [x_{i-1},x_i]$` | value times width, once per slice, added | every quadrature rule and every ODE timestep |
+| midpoint rule | `$M_n = \sum_{i} f\bigl(a+(i+\tfrac12)h\bigr)h$`, error `$\le \frac{(b-a)}{24}h^2M_2$` | sample in the middle of each slice; second order | the cheapest second-order rule; `expectation_riemann` in the code |
+| left / right rule | `$L_n = h\sum_{i=0}^{n-1} f(a+ih)$`, `$R_n = h\sum_{i=1}^{n} f(a+ih)$`, error `$\sim \frac{h}{2}\lvert f(b)-f(a)\rvert$` | sample at one end only; the error has a definite sign | streaming accumulators; explains the running total `3.750000` |
+| composite trapezoid | `$T_n = h\left(\frac{f(a)+f(b)}{2} + \sum_{i=1}^{n-1} f(a+ih)\right)$` | fit a straight line on each slice and add its area | any $n$; the base of Romberg |
+| trapezoid error | `$\lvert E_T\rvert \le \frac{(b-a)}{12}h^2 M_2$`, `$\max\lvert f''\rvert \le M_2$` — needs $f''$ to exist and be bounded | doubling $n$ quarters the error | sizing $n$; measured `1.606639030e-03` at $n=32$ on $\int_0^\pi\sin$ |
+| composite Simpson | `$S_n = \frac{h}{3}\left(f_0 + 4\sum_{i\text{ odd}} f_i + 2\sum_{\substack{i\text{ even}\\ i\ne 0,n}} f_i + f_n\right)$` | 1-4-1 weights over pairs of slices | **$n$ must be even**; same cost as trapezoid |
+| Simpson error | `$\lvert E_S\rvert \le \frac{(b-a)}{180}h^4 M_4$`, `$\max\lvert f^{(4)}\rvert \le M_4$` — needs **four continuous derivatives** | doubling $n$ cuts the error by 16 | sizing $n$; measured `1.033369413e-06` at $n=32$ |
+| Simpson exactness | the error is `$\propto f^{(4)}$`, so it is **exact for every polynomial of degree $\le 3$, at every $n$** | three points get quadratics *and* cubics right | why Exercise 3(c) prints error `0.0e+00` |
+| $n$ from a tolerance | trapezoid `$n \ge \sqrt{\frac{(b-a)^3 M_2}{12\,\text{tol}}}$`; Simpson `$n \ge \left(\frac{(b-a)^5 M_4}{180\,\text{tol}}\right)^{1/4}$` | rearrange the bound to get a slice count | `n = 160744` vs `n = 362` for $10^{-10}$ on $\int_0^\pi\sin$ |
+| FTC part 1 | `$\int_a^b f(x)\,dx = F(b)-F(a)$`, with `$f$` continuous on `[a,b]` and `$F'=f$` there | given an antiderivative, subtract the endpoints | the closed-form route; unavailable for $\int e^{-x^2}$ |
+| FTC part 2 | `$F(x)=\int_a^x f(t)\,dt` gives `$F'(x)=f(x)$`, $f$ continuous | accumulate, then differentiate, and the integrand returns | the adjoint method; differentiating under an integral |
+| improper integral | `$\int_a^\infty f = \lim_{B\to\infty}\int_a^B f$`, existing when the limit is finite | integrate to a finite cut-off and take the limit | why the code integrates the Gaussian over $[-6,6]$ |
+| comparison | `$0\le f\le g$` and `$\int g$` converges `$\Rightarrow \int f$` converges with `$\int f\le\int g$` | bound an unknown tail by a known one | why Gaussian tails can be truncated safely |
+| $u$-substitution | `$\int_a^b f(g(x))\,g'(x)\,dx = \int_{g(a)}^{g(b)} f(u)\,du$` | rescale each slice: width $dx$ becomes $du = g'\,dx$ | `$\int_0^2 x e^{-x^2}dx = \tfrac12\int_0^4 e^{-u}du$`; **transform the limits too** |
+| integration by parts | `$\int u\,dv = uv - \int v\,du$` | the product rule, rearranged | `$\int_0^1 x e^x dx = (x-1)e^x\big|_0^1 = 1$` |
+| power rule reversed | `$\int x^n\,dx = \frac{x^{n+1}}{n+1} + C$`, `$n \ne -1$` | divide by the new exponent | `$\int_0^3 x^4 dx = 48.6$`; at `$n=-1$` you get `$\ln x$` instead |
+| partial fractions | `$\frac{1}{x^2-1} = \frac12\left(\frac{1}{x-1}-\frac{1}{x+1}\right)$` | split a rational function into easy pieces | `$\int_2^3 \frac{dx}{x^2-1} = 0.202732554$` |
+| Richardson / Romberg | `$R_{k,j} = R_{k,j-1} + \frac{R_{k,j-1}-R_{k-1,j-1}}{4^j-1}$` with `R_{k,0}=T_{2^k}`; order `2+j` from `2^k` evaluations | cancel the leading error term by differencing two step sizes | the first step **is** Simpson; why `scipy.integrate.quad` compares two orders |
+| expectation | `$E[X]=\int_{-\infty}^{\infty} x f_X(x)\,dx$`, needs `$\int\lvert x\rvert f_X<\infty$` | the sum form is `$\sum x_ip_i$`; only the operator changes | `U[0,1]` gives `0.5`, `U[-2,5]` gives `1.5` |
+| Monte Carlo error | `$O(\sigma/\sqrt n)$` for $n$ i.i.d. samples | the error falls as the *square root* of $n$ | Exercise 4: the `err * sqrt(n)` column ≈ constant |
+| density vs probability | `$P(X\le c)=\int_{-\infty}^c f_X$; the density is an **area**, not a value | you must integrate to get a probability | Gaussian peak `0.3989` but $\int f_X=1$; a uniform on $[0,0.01]$ has density 100 |
+| running accumulator | `$\sum_i y_i\,\Delta t$` | a streaming accumulator with fixed `dt` *is* a Riemann sum | the code's `3.750000` against the closed form `2.666667` |
+
+---
+
 ## Worked Example
 
 ### Example 1: $\int_0^\pi \sin x\,dx$ by hand, then by machine
@@ -935,38 +967,6 @@ print(f"  on kinked |x-0.3| : predicted err {predicted_err:.2e}, actual {actual_
 print(f"  The bound is 40x optimistic here. That is not rounding error; it is a")
 print(f"  broken hypothesis, and no amount of extra precision repairs it.")
 ```
-
----
-
-## Formula Sheet
-
-| Symbol | Formula | In plain words | When you use it |
-| --- | --- | --- | --- |
-| partition | `$P = \{x_0=a < x_1 < \dots < x_n = b\}$`, `$\Delta x_i = x_i - x_{i-1}$` | the way you slice $[a,b]$ | every numerical rule; the slicing *is* the algorithm |
-| upper / lower sums | `$U(P,f)=\sum_i \bigl(\sup_{[x_{i-1},x_i]} f\bigr)\Delta x_i$`, and `L(P,f)` the same with `$\inf$` | tallest and shortest value on each slice, times width, added | the definition of "integrable" |
-| `$\int_a^b f(x)\,dx$` | `$\sup_P U(P,f) = \inf_P L(P,f)$` when the two agree; $f$ is then *integrable* | where the two squeeze values meet: the signed area | the whole object; $\int_0^\pi\sin x\,dx = 2$ |
-| Riemann sum | `$S_n = \sum_{i=1}^{n} f(\xi_i)\,\Delta x_i$` with `$\xi_i \in [x_{i-1},x_i]$` | value times width, once per slice, added | every quadrature rule and every ODE timestep |
-| midpoint rule | `$M_n = \sum_{i} f\bigl(a+(i+\tfrac12)h\bigr)h$`, error `$\le \frac{(b-a)}{24}h^2M_2$` | sample in the middle of each slice; second order | the cheapest second-order rule; `expectation_riemann` in the code |
-| left / right rule | `$L_n = h\sum_{i=0}^{n-1} f(a+ih)$`, `$R_n = h\sum_{i=1}^{n} f(a+ih)$`, error `$\sim \frac{h}{2}\lvert f(b)-f(a)\rvert$` | sample at one end only; the error has a definite sign | streaming accumulators; explains the running total `3.750000` |
-| composite trapezoid | `$T_n = h\left(\frac{f(a)+f(b)}{2} + \sum_{i=1}^{n-1} f(a+ih)\right)$` | fit a straight line on each slice and add its area | any $n$; the base of Romberg |
-| trapezoid error | `$\lvert E_T\rvert \le \frac{(b-a)}{12}h^2 M_2$`, `$\max\lvert f''\rvert \le M_2$` — needs $f''$ to exist and be bounded | doubling $n$ quarters the error | sizing $n$; measured `1.606639030e-03` at $n=32$ on $\int_0^\pi\sin$ |
-| composite Simpson | `$S_n = \frac{h}{3}\left(f_0 + 4\sum_{i\text{ odd}} f_i + 2\sum_{\substack{i\text{ even}\\ i\ne 0,n}} f_i + f_n\right)$` | 1-4-1 weights over pairs of slices | **$n$ must be even**; same cost as trapezoid |
-| Simpson error | `$\lvert E_S\rvert \le \frac{(b-a)}{180}h^4 M_4$`, `$\max\lvert f^{(4)}\rvert \le M_4$` — needs **four continuous derivatives** | doubling $n$ cuts the error by 16 | sizing $n$; measured `1.033369413e-06` at $n=32$ |
-| Simpson exactness | the error is `$\propto f^{(4)}$`, so it is **exact for every polynomial of degree $\le 3$, at every $n$** | three points get quadratics *and* cubics right | why Exercise 3(c) prints error `0.0e+00` |
-| $n$ from a tolerance | trapezoid `$n \ge \sqrt{\frac{(b-a)^3 M_2}{12\,\text{tol}}}$`; Simpson `$n \ge \left(\frac{(b-a)^5 M_4}{180\,\text{tol}}\right)^{1/4}$` | rearrange the bound to get a slice count | `n = 160744` vs `n = 362` for $10^{-10}$ on $\int_0^\pi\sin$ |
-| FTC part 1 | `$\int_a^b f(x)\,dx = F(b)-F(a)$`, with `$f$` continuous on `[a,b]` and `$F'=f$` there | given an antiderivative, subtract the endpoints | the closed-form route; unavailable for $\int e^{-x^2}$ |
-| FTC part 2 | `$F(x)=\int_a^x f(t)\,dt` gives `$F'(x)=f(x)$`, $f$ continuous | accumulate, then differentiate, and the integrand returns | the adjoint method; differentiating under an integral |
-| improper integral | `$\int_a^\infty f = \lim_{B\to\infty}\int_a^B f$`, existing when the limit is finite | integrate to a finite cut-off and take the limit | why the code integrates the Gaussian over $[-6,6]$ |
-| comparison | `$0\le f\le g$` and `$\int g$` converges `$\Rightarrow \int f$` converges with `$\int f\le\int g$` | bound an unknown tail by a known one | why Gaussian tails can be truncated safely |
-| $u$-substitution | `$\int_a^b f(g(x))\,g'(x)\,dx = \int_{g(a)}^{g(b)} f(u)\,du$` | rescale each slice: width $dx$ becomes $du = g'\,dx$ | `$\int_0^2 x e^{-x^2}dx = \tfrac12\int_0^4 e^{-u}du$`; **transform the limits too** |
-| integration by parts | `$\int u\,dv = uv - \int v\,du$` | the product rule, rearranged | `$\int_0^1 x e^x dx = (x-1)e^x\big|_0^1 = 1$` |
-| power rule reversed | `$\int x^n\,dx = \frac{x^{n+1}}{n+1} + C$`, `$n \ne -1$` | divide by the new exponent | `$\int_0^3 x^4 dx = 48.6$`; at `$n=-1$` you get `$\ln x$` instead |
-| partial fractions | `$\frac{1}{x^2-1} = \frac12\left(\frac{1}{x-1}-\frac{1}{x+1}\right)$` | split a rational function into easy pieces | `$\int_2^3 \frac{dx}{x^2-1} = 0.202732554$` |
-| Richardson / Romberg | `$R_{k,j} = R_{k,j-1} + \frac{R_{k,j-1}-R_{k-1,j-1}}{4^j-1}$` with `R_{k,0}=T_{2^k}`; order `2+j` from `2^k` evaluations | cancel the leading error term by differencing two step sizes | the first step **is** Simpson; why `scipy.integrate.quad` compares two orders |
-| expectation | `$E[X]=\int_{-\infty}^{\infty} x f_X(x)\,dx$`, needs `$\int\lvert x\rvert f_X<\infty$` | the sum form is `$\sum x_ip_i$`; only the operator changes | `U[0,1]` gives `0.5`, `U[-2,5]` gives `1.5` |
-| Monte Carlo error | `$O(\sigma/\sqrt n)$` for $n$ i.i.d. samples | the error falls as the *square root* of $n$ | Exercise 4: the `err * sqrt(n)` column ≈ constant |
-| density vs probability | `$P(X\le c)=\int_{-\infty}^c f_X$; the density is an **area**, not a value | you must integrate to get a probability | Gaussian peak `0.3989` but $\int f_X=1$; a uniform on $[0,0.01]$ has density 100 |
-| running accumulator | `$\sum_i y_i\,\Delta t$` | a streaming accumulator with fixed `dt` *is* a Riemann sum | the code's `3.750000` against the closed form `2.666667` |
 
 ---
 

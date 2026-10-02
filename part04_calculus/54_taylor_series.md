@@ -130,6 +130,39 @@ production `exp` does.
 
 ---
 
+## Formula Sheet
+
+| Symbol | Formula | In plain words | When you use it |
+| --- | --- | --- | --- |
+| Taylor series about $a$ | `$f(x)=\sum_{k=0}^{\infty}\frac{f^{(k)}(a)}{k!}(x-a)^k$` | rebuild $f$ from its value and all derivatives at **one** point | the general local model; Maclaurin when `$a=0$` |
+| degree-$n$ polynomial `$T_n$` | `$T_n(x)=\sum_{k=0}^{n}\frac{f^{(k)}(a)}{k!}(x-a)^k$` | the series cut off after $n$ terms | everything you actually compute |
+| `$T_0$, `$T_1$` | `$f(a)$`, and `$f(a)+f'(a)(x-a)$` | a flat line, and a tangent line | linearisation: Newton, gradient descent, linear regression |
+| remainder `$R_n$` | `$R_n(x)=f(x)-T_n(x)$` | everything the truncation threw away | the quantity you must bound |
+| Lagrange remainder | `$R_n(x)=\frac{f^{(n+1)}(c)}{(n+1)!}(x-a)^{n+1}$` for some `$c$` **between** `$a$` and `$x$` | there is one unknown point whose derivative size sets the error | deriving every `O(h^n)` claim in this repository |
+| Lagrange **bound** | `$\lvert R_n\rvert\le\frac{M_{n+1}}{(n+1)!}\lvert x-a\rvert^{n+1}$` with `$\max\lvert f^{(n+1)}\rvert\le M_{n+1}$` | a computable promise, given a bound on one derivative | **certifying** `$n$ before computing anything |
+| hypothesis of the bound | $f$ must have $n+1$ continuous derivatives on an interval containing $a$ and $x$ | no kinks, no jumps | a kink voids the bound — as in [52](../part04_calculus/52_integration.md)'s $\lvert x-0.3\rvert$ |
+| index convention | the bound uses the **$(n+1)$-st** derivative, so `$M_{n+1}=\max\lvert f^{(n+1)}\rvert$` | off-by-one here silently invalidates the bound | for `$\ln(1+x)$`, `$M_{n+1}=n!$`, giving bound `$\lvert x\rvert^{n+1}/(n+1)$` |
+| `e^x` | `$\sum_{k\ge0}x^k/k!$`, radius `$\infty$` | the factorial makes it converge instantly | the model exponential-type function; 17 terms for `1e-15` on $[0,1]$ |
+| `$\sin x$`, `$\cos x$` | `$\sum (-1)^k x^{2k+1}/(2k+1)!$, `$\sum(-1)^k x^{2k}/(2k)!$`, radius `$\infty$`; derivatives all bounded by 1 | alternating but factorial-damped | cheap high accuracy: `$\sin(1)$ is exact to `0.00e+00` at 16 terms |
+| `$\ln(1+x)$`, `$\arctan x$` | `$\sum(-1)^{k+1}x^k/(k+1)`, `$\sum(-1)^k x^{2k+1}/(2k+1)$`, radius **1** | alternating, but **no factorial** — slow | why `math.log` exists: `$\ln(1.01)` takes 7 terms, `$\ln(1.5)$ takes 47 |
+| `(1-x)^{-1}` | `$\sum_{k\ge0}x^k$`, radius **1** | a geometric series with ratio $x$ | the clean example of a radius being a wall |
+| `(1+x)^p` | `$\sum\binom pk x^k$`, radius **1** | binomial series | where $p$ need not be an integer |
+| radius of convergence `$R$` | largest `$\lvert x-a\rvert$` for which the series equals $f(x)$ | a hard boundary, not a slow slope | check the term ratio $\lvert x\rvert\ge1$ and **refuse** |
+| alternating-series bound | for `$\lvert x\rvert<1$`: `$\lvert R_n\rvert\le$` the first omitted term | no derivative needed at all | often *tighter* than Lagrange |
+| term recurrence | `$t_k = t_{k-1}\cdot x/k$` | multiply the previous term by a small factor | Mistake 2: never write `x**k / factorial(k)` |
+| order of convergence $p$ | `$\lvert x_{k+1}-x^*\rvert\le C\lvert x_k-x^*\rvert^p$`; `$p=1$` linear, `$p=2$` quadratic | the exponent is the whole story | comparing Newton with a fixed step |
+| Newton step | `$x_{k+1}=x_k-\frac{f(x_k)}{f'(x_k)}$`, needs `$f'(x_k)\ne0$` | linearise at $x_k$, then solve the linear model exactly | the derivation **is** the first-order Taylor expansion |
+| Newton's error estimate | `$\lvert x_{k+1}-x^*\rvert\le\frac{M_2}{2\lvert f'(x^*)\rvert}\lvert x_k-x^*\rvert^2$` | quadratically, up to a constant you cannot remove | the *exponent* is free; the constant is not |
+| Newton error constant | `$\frac{\lvert f''(x^*)\rvert}{2\lvert f'(x^*)\rvert}$` — `0.5` for `$f(x)=e^x-3$` | the limit of `$e_k/e_{k-1}^2$` | predicting steps: 6 Newton vs 22 fixed-step to `$10^{-10}$` |
+| Taylor's theorem | `$f(x)=f(a)+f'(a)(x-a)+o(\lvert x-a\rvert)$` | the linear model's error is *smaller than any multiple of* the linear term | why Newton's step size self-corrects |
+| catastrophic cancellation | relative error `$\approx10^{-16+\log_{10}(1/x)}$$ for `1-exp(-x)` | subtracting two numbers close relative to their own magnitude | the answer shrinks and the *relative* error grows |
+| stable rearrangements | `1-cos x = 2\sin^2(x/2)`; `(1+x)^n-1 = \mathrm{expm1}(n\,\mathrm{log1p}(x))`; `$\sqrt{x^2+1}-1=\frac{x^2}{\sqrt{x^2+1}+1}$` | never form the near-cancellation | `math.expm1`, `math.log1p`, `math.hypot` |
+| range reduction | `$e^x=(e^{x/2^k})^{2^k}$` with `$\lvert x/2^k\rvert\le0.5$` | shrink the argument, then square back up | every production `exp`; turns `2.920e+20` terms into `0.39` |
+| working truncation rule | stop when `$\lvert t_k\rvert\le\text{tol}\cdot\max(\lvert\text{total}\rvert,1)$` | check the **term** against the tolerance, not the total against itself | Mistake 3; use a **relative** tolerance for large answers |
+| absolute vs relative tolerance | for `$e^{20}\approx4.85\times10^8$`, one ulp is `1.07e-07` | an absolute tolerance below one ulp is unreachable by any method | the `e^20` row's `1.2e-07` error is `2.5e-16` relative |
+
+---
+
 ## Worked Example
 
 ### Example 1: the Taylor series of $e^x$ about 0, by hand
@@ -1084,39 +1117,6 @@ print("  the answer.  'Keep adding until it stops changing' is a correct stoppin
 print("  rule ONLY if you also check the answer, which you cannot when you do not")
 print("  know it -- which is why the remainder bound is the right tool.")
 ```
-
----
-
-## Formula Sheet
-
-| Symbol | Formula | In plain words | When you use it |
-| --- | --- | --- | --- |
-| Taylor series about $a$ | `$f(x)=\sum_{k=0}^{\infty}\frac{f^{(k)}(a)}{k!}(x-a)^k$` | rebuild $f$ from its value and all derivatives at **one** point | the general local model; Maclaurin when `$a=0$` |
-| degree-$n$ polynomial `$T_n$` | `$T_n(x)=\sum_{k=0}^{n}\frac{f^{(k)}(a)}{k!}(x-a)^k$` | the series cut off after $n$ terms | everything you actually compute |
-| `$T_0$, `$T_1$` | `$f(a)$`, and `$f(a)+f'(a)(x-a)$` | a flat line, and a tangent line | linearisation: Newton, gradient descent, linear regression |
-| remainder `$R_n$` | `$R_n(x)=f(x)-T_n(x)$` | everything the truncation threw away | the quantity you must bound |
-| Lagrange remainder | `$R_n(x)=\frac{f^{(n+1)}(c)}{(n+1)!}(x-a)^{n+1}$` for some `$c$` **between** `$a$` and `$x$` | there is one unknown point whose derivative size sets the error | deriving every `O(h^n)` claim in this repository |
-| Lagrange **bound** | `$\lvert R_n\rvert\le\frac{M_{n+1}}{(n+1)!}\lvert x-a\rvert^{n+1}$` with `$\max\lvert f^{(n+1)}\rvert\le M_{n+1}$` | a computable promise, given a bound on one derivative | **certifying** `$n$ before computing anything |
-| hypothesis of the bound | $f$ must have $n+1$ continuous derivatives on an interval containing $a$ and $x$ | no kinks, no jumps | a kink voids the bound — as in [52](../part04_calculus/52_integration.md)'s $\lvert x-0.3\rvert$ |
-| index convention | the bound uses the **$(n+1)$-st** derivative, so `$M_{n+1}=\max\lvert f^{(n+1)}\rvert$` | off-by-one here silently invalidates the bound | for `$\ln(1+x)$`, `$M_{n+1}=n!$`, giving bound `$\lvert x\rvert^{n+1}/(n+1)$` |
-| `e^x` | `$\sum_{k\ge0}x^k/k!$`, radius `$\infty$` | the factorial makes it converge instantly | the model exponential-type function; 17 terms for `1e-15` on $[0,1]$ |
-| `$\sin x$`, `$\cos x$` | `$\sum (-1)^k x^{2k+1}/(2k+1)!$, `$\sum(-1)^k x^{2k}/(2k)!$`, radius `$\infty$`; derivatives all bounded by 1 | alternating but factorial-damped | cheap high accuracy: `$\sin(1)$ is exact to `0.00e+00` at 16 terms |
-| `$\ln(1+x)$`, `$\arctan x$` | `$\sum(-1)^{k+1}x^k/(k+1)`, `$\sum(-1)^k x^{2k+1}/(2k+1)$`, radius **1** | alternating, but **no factorial** — slow | why `math.log` exists: `$\ln(1.01)` takes 7 terms, `$\ln(1.5)$ takes 47 |
-| `(1-x)^{-1}` | `$\sum_{k\ge0}x^k$`, radius **1** | a geometric series with ratio $x$ | the clean example of a radius being a wall |
-| `(1+x)^p` | `$\sum\binom pk x^k$`, radius **1** | binomial series | where $p$ need not be an integer |
-| radius of convergence `$R$` | largest `$\lvert x-a\rvert$` for which the series equals $f(x)$ | a hard boundary, not a slow slope | check the term ratio $\lvert x\rvert\ge1$ and **refuse** |
-| alternating-series bound | for `$\lvert x\rvert<1$`: `$\lvert R_n\rvert\le$` the first omitted term | no derivative needed at all | often *tighter* than Lagrange |
-| term recurrence | `$t_k = t_{k-1}\cdot x/k$` | multiply the previous term by a small factor | Mistake 2: never write `x**k / factorial(k)` |
-| order of convergence $p$ | `$\lvert x_{k+1}-x^*\rvert\le C\lvert x_k-x^*\rvert^p$`; `$p=1$` linear, `$p=2$` quadratic | the exponent is the whole story | comparing Newton with a fixed step |
-| Newton step | `$x_{k+1}=x_k-\frac{f(x_k)}{f'(x_k)}$`, needs `$f'(x_k)\ne0$` | linearise at $x_k$, then solve the linear model exactly | the derivation **is** the first-order Taylor expansion |
-| Newton's error estimate | `$\lvert x_{k+1}-x^*\rvert\le\frac{M_2}{2\lvert f'(x^*)\rvert}\lvert x_k-x^*\rvert^2$` | quadratically, up to a constant you cannot remove | the *exponent* is free; the constant is not |
-| Newton error constant | `$\frac{\lvert f''(x^*)\rvert}{2\lvert f'(x^*)\rvert}$` — `0.5` for `$f(x)=e^x-3$` | the limit of `$e_k/e_{k-1}^2$` | predicting steps: 6 Newton vs 22 fixed-step to `$10^{-10}$` |
-| Taylor's theorem | `$f(x)=f(a)+f'(a)(x-a)+o(\lvert x-a\rvert)$` | the linear model's error is *smaller than any multiple of* the linear term | why Newton's step size self-corrects |
-| catastrophic cancellation | relative error `$\approx10^{-16+\log_{10}(1/x)}$$ for `1-exp(-x)` | subtracting two numbers close relative to their own magnitude | the answer shrinks and the *relative* error grows |
-| stable rearrangements | `1-cos x = 2\sin^2(x/2)`; `(1+x)^n-1 = \mathrm{expm1}(n\,\mathrm{log1p}(x))`; `$\sqrt{x^2+1}-1=\frac{x^2}{\sqrt{x^2+1}+1}$` | never form the near-cancellation | `math.expm1`, `math.log1p`, `math.hypot` |
-| range reduction | `$e^x=(e^{x/2^k})^{2^k}$` with `$\lvert x/2^k\rvert\le0.5$` | shrink the argument, then square back up | every production `exp`; turns `2.920e+20` terms into `0.39` |
-| working truncation rule | stop when `$\lvert t_k\rvert\le\text{tol}\cdot\max(\lvert\text{total}\rvert,1)$` | check the **term** against the tolerance, not the total against itself | Mistake 3; use a **relative** tolerance for large answers |
-| absolute vs relative tolerance | for `$e^{20}\approx4.85\times10^8$`, one ulp is `1.07e-07` | an absolute tolerance below one ulp is unreachable by any method | the `e^20` row's `1.2e-07` error is `2.5e-16` relative |
 
 ---
 

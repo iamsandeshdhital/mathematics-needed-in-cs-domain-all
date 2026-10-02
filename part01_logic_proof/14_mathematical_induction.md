@@ -3398,7 +3398,8 @@ Output:
   may assume) are independent.  Picking the wrong variable does not
   produce a false step -- it produces no step, which is the diagnostic
   sign that you are on the wrong one.
-```</details>
+```
+</details>
 ## Summary
 - Induction is two halves: a base case and a step from $P(k)$ to $P(k+1)$.
   Both are required and neither is optional, and the step is where all the
